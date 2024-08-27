@@ -684,7 +684,14 @@
 (define-base-type char) (define-base-type unsigned-char)
 (define-base-type _Bool) (define-base-type bool)
 
-(define-base-type void*)
+(define-fh-pointer-type void* (fhval-pointer-type 'void) void*? make-void*)
+
+(let ((was-make-char* make-char*))
+  (set! make-char* 
+        (case-lambda
+          ((arg)
+           (was-make-char* (if (string? arg) (ffi:string->pointer arg) arg)))
+          (() (was-make-char*)))))
 
 (define char**-desc (fhval-pointer-type char*-desc))
 (define-fh-pointer-type char** char**-desc char**? make-char**)

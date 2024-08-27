@@ -1095,10 +1095,10 @@
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (ppscm `(define-public ,desc* (bs:pointer ,desc)))
-              (ppscm `(define-public ,(strings->symbol "struct-" agname)
-                        ,desc))
-              (ppscm `(define-public ,(strings->symbol "struct-" agname "*")
-                        ,desc*))
+              (ppscm `(define-public
+                        ,(strings->symbol "struct-" agname) ,desc))
+              (ppscm `(define-public
+                        ,(strings->symbol "struct-" agname "*" (*ttag*)) ,desc*))
               (cnvt-struct-def label agname)
               (values (cons* label (w/* label) (w/struct agname)
                              (w/struct* agname) wrapped)
@@ -1115,10 +1115,10 @@
              ((union-def (ident ,agname) ,field-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (ppscm `(define-public ,desc* (bs:pointer ,desc)))
-              (ppscm `(define-public ,(strings->symbol "union-" agname (*ttag*))
-                        ,desc))
-              (ppscm `(define-public ,(strings->symbol "union-" agname "*")
-                        ,desc*))
+              (ppscm `(define-public
+                        ,(strings->symbol "union-" agname (*ttag*)) ,desc))
+              (ppscm `(define-public
+                        ,(strings->symbol "union-" agname "*" (*ttag*)) ,desc*))
               (cnvt-union-def label agname)
               (values (cons* label (w/* label) (w/union agname)
                              (w/union* agname) wrapped)
@@ -1240,14 +1240,14 @@
      ((sx-match tspec
 
         ((struct-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
-         (cond
-          ((bkref-getall attr) =>
-           (lambda (name-list)
-             (let* ((adesc (strings->symbol "struct-" agname (*ttag*)))
-                    (adesc* (strings->symbol "struct-" agname "*" (*ttag*)))
-                    (field-list (expand-field-list-typerefs field-list))
-                    (sflds (cnvt-fields (sx-tail field-list) mtail->target))
-                    (agdef `(bs:struct ,(packed? aggr-attr) (list ,@sflds))))
+         (let* ((adesc (strings->symbol "struct-" agname (*ttag*)))
+                (adesc* (strings->symbol "struct-" agname "*" (*ttag*)))
+                (field-list (expand-field-list-typerefs field-list))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->target))
+                (agdef `(bs:struct ,(packed? aggr-attr) (list ,@sflds))))
+           (cond
+            ((bkref-getall attr) =>
+             (lambda (name-list)
                (ppscm `(define-public ,adesc ,agdef))
                (ppscm `(define-public ,adesc* (bs:pointer ,adesc)))
                (cnvt-aggr-def 'struct #f agname)
@@ -1260,13 +1260,15 @@
                   (values (cons name wrapped) (cons name defined)))
 	        name-list
                 (cons (w/struct agname) wrapped)
-                (cons (w/struct agname) defined)))))
-	  ((not (member (w/struct agname) defined))
-	   (cnvt-aggr-def 'struct #f agname)
-	   (values (cons (w/struct agname) wrapped)
-                   (cons (w/struct agname) defined)))
-	  (else
-	   (values wrapped defined))))
+                (cons (w/struct agname) defined))))
+	    ((not (member (w/struct agname) defined))
+             (ppscm `(define-public ,adesc ,agdef))
+             (ppscm `(define-public ,adesc* (bs:pointer ,adesc)))
+	     (cnvt-aggr-def 'struct #f agname)
+	     (values (cons (w/struct agname) wrapped)
+                     (cons (w/struct agname) defined)))
+	    (else
+	     (values wrapped defined)))))
 
         ((union-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
          (cond

@@ -62,9 +62,9 @@
   #:use-module (ffi epoll)
   #:use-module (ffi dbus)
 
-  #:use-module (bytestructures guile)
   #:use-module (system ffi-help-rt)
-  #:use-module ((system foreign) #:prefix ffi:)
+  ;;#:use-module ((system foreign) #:prefix ffi:)
+  #:use-module (system foreign)
 
   #:use-module (ice-9 threads)
   #:use-module ((srfi srfi-1) #:select (fold))
@@ -77,10 +77,10 @@
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
 (define (ensure-pointer maybe-ptr)
-  (if (ffi:pointer? maybe-ptr) maybe-ptr (ffi:make-pointer maybe-ptr)))
+  (if (pointer? maybe-ptr) maybe-ptr (make-pointer maybe-ptr)))
 
 (define (ensure-address maybe-ptr)
-  (if (ffi:pointer? maybe-ptr) (ffi:pointer-address maybe-ptr) maybe-ptr))
+  (if (pointer? maybe-ptr) (pointer-address maybe-ptr) maybe-ptr))
 
 ;; ====================================
 
@@ -96,10 +96,10 @@
                    (fh-object-ref mic))))
 
 (define (dbus-bus-get-unique-name conn)
-  (ffi:pointer->string (dbus_bus_get_unique_name conn)))
+  (pointer->string (dbus_bus_get_unique_name conn)))
 
 (define (dbus-message-get-sender conn)
-  (ffi:pointer->string (dbus_message_get_sender conn)))
+  (pointer->string (dbus_message_get_sender conn)))
 
 ;; @deffn {Procedure} dbus-error error => #f|string
 ;; If @var{error} (a @code{DBusError} value) represents an error return
@@ -107,7 +107,7 @@
 ;; @end deffn
 (define (dbus-error error)
   (and (!0 (dbus_error_is_set (pointer-to error)))
-       (ffi:pointer->string (ensure-pointer (fh-object-ref error 'message)))))
+       (pointer->string (ensure-pointer (fh-object-ref error 'message)))))
 
 (define (get-bval &iter key)
   (let* ((bval (make-DBusBasicValue)))
@@ -128,7 +128,7 @@
     ((116) (get-bval &iter 'u32))                   ; t - uint64
     ((100) (get-bval &iter 'dbl))                   ; d - double
     ((115 111 103)                                  ; s, o, g
-     (ffi:pointer->string (ensure-pointer (get-bval &iter 'str))))
+     (pointer->string (ensure-pointer (get-bval &iter 'str))))
     ((104) (get-bval &iter 'fd))        ; h - unix fd
     ((97)                               ; a - array
      (let* ((sub-iter (make-DBusMessageIter))
@@ -399,6 +399,14 @@
 ;; 2) It is safe to use scm->pointer and pointer->scm as long as the pointed
 ;;    object was allocated with scm_gc_malloc().  (Ludo answer to Q on list)
 
+(use-modules (bytestructures guile))
+(define struct-epoll_event-vec-desc (bs:vector 0 struct-epoll_event-desc))
+(define-fh-vector-type struct-epoll_event-vec struct-epoll_event-vec-desc
+  struct-epoll_event-vec? make-struct-epoll_event-vec)
+(fh-ref<=>deref! struct-epoll_event* make-struct-epoll_event*
+                 struct-epoll_event-vec make-struct-epoll_event-vec)
+;;(export struct-epoll_event-vec? make-struct-epoll_event-vec)
+
 ;; Convert mask of DBUS_WATCH to enum EPOLL_EVENTS.
 (define (dbus-watch-flags->epoll-events dbus-flags)
   (fold
@@ -426,10 +434,10 @@
          dbus-flags))
    0 '(1 4 8 16)))
 
-(define (scm->addr scm)
-  (ffi:pointer-address (ffi:scm->pointer scm)))
-(define (addr->scm addr)
-  (ffi:pointer->scm (ffi:make-pointer addr)))
+;;(define (scm->addr scm)
+;;  (ffi:pointer-address (ffi:scm->pointer scm)))
+;;(define (addr->scm addr)
+;;  (ffi:pointer->scm (ffi:make-pointer addr)))
 
 ;; This is the user-data associated with a watch, i.e., an FD to be monitored.
 ;; Guile needs something equivalent to epoll-OR-kevent.
@@ -449,7 +457,7 @@
       (let* ((event (make-struct-epoll_event))
              (ddent (make-dbus-data fd event (make-vector *dbus-maxw* #f))))
         (hashv-set! *dbus-fd-dict* fd ddent)
-        (fh-object-set! event 'data 'ptr (scm->addr ddent))
+        (fh-object-set! event 'data 'ptr (scm->pointer ddent))
         ddent)))
 
 ;; Find an available slot in the watch-vector.
@@ -476,70 +484,74 @@
   (if #f #f))
 
 ;; no need implement this with use of the get_dispatch_status/dispatch loop
-(define (dispatch-status connection ~status data)
-  ;;(display "dispatch-status called\n")
-  (if #f #f))
+(define dispatch-status
+  (make-DBusDispatchStatusFunction
+   (lambda (connection status data)
+     (if #f #f))))
 
 ;; @deffn {Procedure} add-watch watch data
 ;; @end deffn
-(define (add-watch ~watch data)
-  (let* ((watch (make-DBusWatch* ~watch))
-         (muxfd (ffi:pointer-address data))
-         (addfd (dbus_watch_get_unix_fd watch))
-         (flags (dbus_watch_get_flags watch))
-         (ddent (dbus-lookup-fd muxfd))
-         (event (dbus-data-ev ddent)))
+(define add-watch
+  (make-DBusAddWatchFunction
+   (lambda (watch data)
+     (let* ((muxfd (pointer-address data))
+            (addfd (dbus_watch_get_unix_fd watch))
+            (flags (dbus_watch_get_flags watch))
+            (ddent (dbus-lookup-fd muxfd))
+            (event (dbus-data-ev ddent))
+            )
 
-    (dbus_watch_set_data watch (ffi:scm->pointer ddent) dbus-data-free)
+       (dbus_watch_set_data watch (scm->pointer ddent) dbus-data-free)
 
-    ;; Set up the indended set of epoll events.
-    (if (!0 (dbus_watch_get_enabled watch))
-        (fh-object-set! event 'events
-                        (logior (fh-object-ref event 'events)
-                                (dbus-watch-flags->epoll-events flags))))
+       ;; Set up the indended set of epoll events.
+       (if (!0 (dbus_watch_get_enabled watch))
+           (fh-object-set! event 'events
+                           (logior (fh-object-ref event 'events)
+                                   (dbus-watch-flags->epoll-events flags))))
 
-    ;; If this is the use of this fd, then initialize the ev and add to epoll.
-    (if (dbus-data-watchless? ddent)
-        (epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (pointer-to event)))
+       ;; If this is the use of this fd, then initialize the ev and add to epoll.
+       (if (dbus-data-watchless? ddent)
+           (epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (pointer-to event)))
 
-    ;; Set watches based on flags.
-    (let* ((wv (dbus-data-wv ddent)) (wx (find-wv-slot wv)))
-      (if (negative? wx) (error "max exceeded")
-          (vector-set! wv wx watch)))
-
-    TRUE))
+       ;; Set watches based on flags.
+       (let* ((wv (dbus-data-wv ddent)) (wx (find-wv-slot wv)))
+         (if (negative? wx) (error "max exceeded")
+             (vector-set! wv wx watch)))
+       #|
+       |#
+       TRUE))))
 
 ;; @deffn {Procedure} remove-watch watch data
 ;; @end deffn
-(define (remove-watch ~watch data)
-  (let* ((watch (make-DBusWatch* ~watch))
-         (muxfd (ffi:pointer-address data))
-         (delfd (dbus_watch_get_unix_fd watch))
-         ;;(ddent (dbus_watch_get_data watch))
-         (ddent (hashv *dbus-fd-dict* delfd))
-         (event (dbus-data-ev ddent))
-         (events (fh-object-ref event 'events))
+(define remove-watch
+  (make-DBusRemoveWatchFunction
+   (lambda (watch data)
+     (let* ((muxfd (pointer-address data))
+            (delfd (dbus_watch_get_unix_fd watch))
+            ;;(ddent (dbus_watch_get_data watch))
+            (ddent (hashv *dbus-fd-dict* delfd))
+            (event (dbus-data-ev ddent))
+            (events (fh-object-ref event 'events)))
+       (when #f
+         (sf "\nrem-watch  ~S  ~S\n" watch data)
          )
-    (when #f
-      (sf "\nrem-watch  ~S  ~S\n" watch data)
-      )
-    ;; remove watch from ddent and fix events mask.
-    ;; if no watches left then remove fd from epoll
-    ;;(if (no more watches on this fd)
-    ;;    (epoll_ctl muxfd (EPOLL '_CTL_DEL) delfd (ffi:scm->pointer ddent)))
-    (if #f #f)))
+       ;; remove watch from ddent and fix events mask.
+       ;; if no watches left then remove fd from epoll
+       ;;(if (no more watches on this fd)
+       ;;    (epoll_ctl muxfd (EPOLL '_CTL_DEL) delfd (scm->pointer ddent)))
+       (if #f #f)))))
 
 ;; @deffn {Procedure} watch-toggled watch data
 ;; @end deffn
-(define (watch-toggled ~watch data)
-  (let* ((watch (make-DBusWatch* ~watch))
-         (muxfd (ffi:pointer-address data))
-         (flags (dbus_watch_get_flags watch))
-         )
-    (when #f
-      (sf "watch-tog  ~S  ~S ...\n" watch data)
-      (sf "  enabled: ~S\n" (dbus_watch_get_enabled watch)))
-    (if #f #f)))
+(define watch-toggled
+  (make-DBusWatchToggledFunction
+   (lambda (watch data)
+     (let* ((muxfd (pointer-address data))
+            (flags (dbus_watch_get_flags watch)))
+       (when #f
+         (sf "watch-tog  ~S  ~S ...\n" watch data)
+         (sf "  enabled: ~S\n" (dbus_watch_get_enabled watch)))
+       (if #f #f)))))
 
 
 (define *dbus-sched* (make-scheduler))
@@ -549,42 +561,39 @@
   (dbus_timeout_handle timeout))
 
 ;; timeout is DBusTimeout
-(define (add-timeout ~timeout data)
-  (let* ((tod (gettimeofday))
-         (timeout (make-DBusWatch* ~timeout))
-         (interval (dbus_timeout_get_interval timeout))
-         (exp (t+us tod interval)))
-    (schedule-event *dbus-sched* exp dbus-timeout-handler timeout)
-    (write #\x (ffi:pointer->scm data)) ; wake up mainloop
-    TRUE))
+(define add-timeout
+  (make-DBusAddTimeoutFunction
+   (lambda (timeout data)
+     (let* ((tod (gettimeofday))
+            (interval (dbus_timeout_get_interval timeout))
+            (exp (t+us tod interval)))
+       (schedule-event *dbus-sched* exp dbus-timeout-handler timeout)
+       (write #\x (pointer->scm data)) ; wake up mainloop
+       TRUE))))
 
-(define (remove-timeout ~timeout data)
-  (let* ((timeout (make-DBusWatch* ~timeout)))
-    (cancel-events/data *dbus-sched* timeout)
-    (if #f #f)))
+(define remove-timeout
+  (make-DBusRemoveTimeoutFunction
+   (lambda (timeout data)
+     (cancel-events/data *dbus-sched* timeout)
+     (if #f #f))))
 
-(define (timeout-toggled timeout data)
-  (let ()
-    (display "tmout-tog called (to be completed!)\n")
-    (if #f #f)))
+(define timeout-toggled
+  (make-DBusTimeoutToggledFunction
+   (lambda (maketimeout data)
+     (display "tmout-tog called (to be completed!)\n")
+     (if #f #f))))
 
-;; This sets up capability to make runtime-sized vectors and use
-;; @code{pointer-to} cast for function args.  See @code{epoll_wait} below.
-(define-fh-vector-type struct-epoll_event-vec struct-epoll_event-desc
-  struct-epoll_event-vec? make-struct-epoll_event-vec)
-(fh-ref<=>deref! struct-epoll_event* make-struct-epoll_event*
-                 struct-epoll_event-vec make-struct-epoll_event-vec)
-(export make-struct-epoll_event-vec)
-
-(define (filter-func c m data)
-  (when #f
-    (sf "filter-func called ...\n  iface : ~S\n  member: ~S\n  path  : ~S\n"
-        (ffi:pointer->string (dbus_message_get_interface m))
-        (ffi:pointer->string (dbus_message_get_member m))
-        (ffi:pointer->string (dbus_message_get_path m))))
-  (DBUS 'HANDLER_RESULT_NOT_YET_HANDLED)
-  ;;(DBUS 'HANDLER_RESULT_HANDLED)
-  )
+(define filter-func
+  (make-DBusHandleMessageFunction
+   (lambda (c m data)
+     (when #f
+       (sf "filter-func called ...\n  iface : ~S\n  member: ~S\n  path  : ~S\n"
+           (pointer->string (dbus_message_get_interface m))
+           (pointer->string (dbus_message_get_member m))
+           (pointer->string (dbus_message_get_path m))))
+     (DBUS 'HANDLER_RESULT_NOT_YET_HANDLED)
+     ;;(DBUS 'HANDLER_RESULT_HANDLED)
+     )))
 
 (define (set-nonblocking! port)
   (fcntl port F_SETFL (logior O_NONBLOCK (fcntl port F_GETFL))))
@@ -603,9 +612,9 @@
         (sleep 1))))
 
   (let* ((muxfd (epoll_create 1))
-         (muxpt (ffi:make-pointer muxfd))
+         (muxpt (make-pointer muxfd))
          (wpipe (pipe)) (wiport (car wpipe)) (woport (cdr wpipe))
-         (~woport (ffi:scm->pointer woport))
+         (~woport (scm->pointer woport))
          (eventv (make-struct-epoll_event-vec max-events))
          (eventp (pointer-to eventv)))
 
@@ -644,14 +653,14 @@
         ;; events: wake-up or watches
         (unless (= i n)
           (let* ((event (fh-object-ref eventv i))
-                 (events (bytestructure-ref event 'events))
-                 (data-ptr (bytestructure-ref event 'data 'ptr)))
+                 (events (fhval-ref event 'events))
+                 (data-ptr (fhval-ref event 'data 'ptr)))
             (cond
-             ((zero? data-ptr)
+             ((equal? data-ptr %null-pointer)
               (read-char wiport))
              (else
               (let* ((flags (epoll-events->dbus-watch-flags events))
-                     (ddent (addr->scm data-ptr)))
+                     (ddent (pointer->scm data-ptr)))
                 (vector-for-each
                  (lambda (ix watch)
                    (when watch
@@ -661,8 +670,8 @@
                      (dbus_connection_unref connection)))
                  (dbus-data-wv ddent))))))
           (iter (1+ i) n)))
+      (usleep 100)
       (loop))
-    ;;
     (close-fdes muxfd)))
 
 (define (spawn-dbus-mainloop service)

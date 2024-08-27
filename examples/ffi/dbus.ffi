@@ -25,6 +25,15 @@
   #:include '("dbus/dbus.h")
   #:inc-filter (lambda (file path) (string-contains path "dbus/" 0)))
 
+
+(define-public DBusPendingCall**-desc
+  (bs:pointer DBusPendingCall*-desc))
+(define-fh-pointer-type DBusPendingCall** DBusPendingCall**-desc
+  DBusPendingCall**? make-DBusPendingCall**)
+(export DBusPendingCall** DBusPendingCall**? make-DBusPendingCall**)
+(fh-ref<=>deref! DBusPendingCall** make-DBusPendingCall**
+                 DBusPendingCall* make-DBusPendingCall*)
+
 (define-public dbus-symval ffi-dbus-symbol-val)
 
 ;; (DBUS 'SERVICE_BUS) => "org.freedesktop.DBus"

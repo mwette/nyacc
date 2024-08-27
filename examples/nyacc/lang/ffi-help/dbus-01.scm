@@ -19,7 +19,7 @@
 (use-modules (system dbus))
 (use-modules (ffi dbus))
 (use-modules (system ffi-help-rt))
-(use-modules ((system foreign) #:prefix ffi:))
+(use-modules (system foreign))
 (use-modules (bytestructures guile))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -37,7 +37,7 @@
 
 (define conn (dbus_bus_get 'DBUS_BUS_SESSION (pointer-to error)))
 (check-error error)
-(sf "conn: ~S = ~S\n" conn (ffi:pointer->string (dbus_bus_get_unique_name conn)))
+(sf "conn: ~S = ~S\n" conn (pointer->string (dbus_bus_get_unique_name conn)))
 
 (define msg (dbus_message_new_method_call
              "org.freedesktop.DBus"             ; bus name (was NULL)
@@ -48,14 +48,14 @@
 (define pending (make-DBusPendingCall*))
 (or (dbus_connection_send_with_reply conn msg (pointer-to pending) -1)
     (error "*** send_with_reply FAILED\n"))
-(if (equal? (fh-object-ref pending) ffi:%null-pointer)
+(if (equal? (fh-object-ref pending) %null-pointer)
     (display "*** pending NULL\n"))
 (dbus_connection_flush conn)
 (dbus_message_unref msg)
 (dbus_pending_call_block pending)
 
 (set! msg (dbus_pending_call_steal_reply pending))
-(if (equal? (fh-object-ref msg) ffi:%null-pointer)
+(if (equal? (fh-object-ref msg) %null-pointer)
     (error "*** reply message NULL\n"))
 (sf "msg reply: ~S, serial: ~S, type: ~A\n" msg (dbus_message_get_serial msg)
     (let ((msg-type (dbus_message_get_type msg)))
