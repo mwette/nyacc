@@ -1092,11 +1092,12 @@
 
           (__
            (sx-match (car mtail)
+             
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (ppscm `(define-public ,desc* (bs:pointer ,desc)))
               (ppscm `(define-public
-                        ,(strings->symbol "struct-" agname) ,desc))
+                        ,(strings->symbol "struct-" agname (*ttag*)) ,desc))
               (ppscm `(define-public
                         ,(strings->symbol "struct-" agname "*" (*ttag*)) ,desc*))
               (cnvt-struct-def label agname)

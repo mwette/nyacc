@@ -123,17 +123,20 @@
 
 ;; ---- hookups ----------------------------------------------------------------
 
-;; fhval-base-type
-;; fhval-pointer-type
+;; fhval-base-type  => make-fhval-base-type
+;; fhval-pointer-type => make-fhval-pointer-type
 ;; fhval?
 ;; fhval-ref
 ;; fhval-set!
 ;; fhval-sel
-;; fhval-addr
-;; fhval-pointer
-;; fhval*
-;; fhval&
+;; fhval-addr               : provide underlying address
+;; fhval-pointer            : ???
+;; fhval*                   : dereference a pointer
+;; fhval&                   : pointer to value
 ;; make-fhval
+
+;; reorder: make-fhval fhval? fhval-ref fhval-set! fhval* fhval&
+;;    fhval-sel fhval-pointer fhval-addr fhval-base-type fhval-pointer-type
 
 (define bs-base-type-map
   `((void* . *) (char . ,int8) (unsigned-char . ,uint8) (int8_t . ,int8)
@@ -243,7 +246,7 @@
 
 
 ;; @deffn {Syntax} fhval& obj
-;; dereference a pointer
+;; generate pointer to value
 ;; @end deffn
 (define-syntax-rule (fhval& val)
   (let* ((desc (bytestructure-descriptor val))
@@ -828,26 +831,5 @@
     (lambda (file)
       (~fclose file))))
 
-
-#|
-;; @deffn {Procedure} fh-link-proc return name args dy-lib-list
-;; Generate Guile procedure from C library.
-;; @end deffn
-(define* (fh-link-proc return name args dl-lib-list)
-  ;; Given a list of links (output of @code{(dynamic-link @it{library})}
-  ;; try to get the dynamic-func for the provided function.  Usually
-  ;; the first dynamic link is @code{(dynamic-link)} and that should work.
-  ;; But on some systems we need to find the actual library :(, apparently.
-  (let ((dfunc (fh-find-symbol-addr name dl-lib-list)))
-    (and dfunc (ffi:pointer->procedure return dfunc args))))
-
-;; @deffn {Procedure} fh-link-extern name desc db-lib-list => bs
-;; Generate a bytestructure from the bytes in the library at the var addr.
-;; @end deffn
-(define* (fh-link-extern name desc dl-lib-list)
-  (let* ((addr (fh-find-symbol-addr name dl-lib-list))
-         (size (bytestructure-descriptor-size desc)))
-    (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
-|#
 
 ;; --- last line ---
