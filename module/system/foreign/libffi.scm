@@ -50,7 +50,7 @@
 (define libffi (load-foreign-library "libffi"))
 
 (define (get-ft-prim mtype ptype)
-  (make-cdata ffi_type* #:from-pointer (foreign-library-pointer libffi ptype)))
+  (make-cdata* ffi_type* #:from-pointer (foreign-library-pointer libffi ptype)))
 (export get-ft-prim)
 
 (define mtype->ffi-prim

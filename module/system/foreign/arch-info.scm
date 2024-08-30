@@ -1,4 +1,4 @@
-;;; system/foreign/arch-info.scm - sizeof and alignof
+;;; system/foreign/arch-info.scm - map c types to machine arch' types
 
 ;; Copyright (C) 2020-2024 Matthew Wette
 ;;
@@ -17,7 +17,7 @@
 
 ;;; Notes:
 
-;; have: avr i686 ppc riscv32 riscv64 x86_64
+;; have: avr i686 ppc riscv32 riscv64 sparc x86_64
 ;; Can we remove non-le/be mtypes?
 
 ;;; Code:
@@ -31,12 +31,9 @@
             mtypeof-basetype sizeof-mtype alignof-mtype
             base-type-name-list base-type-symbol-list
             c-strname->symname c-symname->strname
-            mtype-signed?
-            ;;mtype-bv-ref mtype-bv-set! <= requires (rnrs bytevectors)
-            )
+            mtype-signed?)
   #:declarative? #t
-  #:use-module (srfi srfi-9)
-  #:use-module (rnrs bytevectors))
+  #:use-module (srfi srfi-9))
 
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
@@ -53,16 +50,28 @@
 (define-public symname->strname c-symname->strname)
 (define-public strname->symname c-strname->symname)
 
-;;(display "arch reified types should not be called ctypes\n")
-;; maybe mtype for machine type
-
+;; @defty {Record} <arch-info>
+;; @table @code
+;; @item endianness
+;; either 'little or 'big.
+;; @item mtype-map
+;; an alist mapping symbolic C types (e.g. unsigned-int) to symbolic
+;; machine type (e.g., i32le)
+;; @item align-map
+;; an alist mapping machine type (e.g., i32le) to alignment (e.g., 4)
+;; @end table
+;; @end defty
 (define-record-type <arch-info>
-  (make-arch-info name endianness mtype-map align-map)
+  (%make-arch-info name endianness mtype-map align-map)
   arch-info?
   (name arch-name)                      ; e.g., "x86_64"
   (endianness arch-endianness)          ; 'little or 'big
   (mtype-map arch-mtype-map)            ; c-ish name => f32l3, u8, ...
   (align-map arch-align-map))            ; f32, u8 => alignment
+
+(define (make-arch-info name endianness mtype-map align-map)
+  (unless (eq? 'void* (car mtype-map)) (error "expecting void*"))
+  (%make-arch-info name endianness mtype-map align-map))
 
 (define sizeof-mtype-map
   '((s8 . 1) (u8 . 1)
@@ -122,12 +131,15 @@
   (assoc-ref (*arch-map*) name))
 
 ;; @deffn {Parameter} *arch*
-;; parameter set to global architecture record
-;; NEW => if #f then native
+;; Parameter set to global architecture record; initialized to native arch.
+;; Currently supported machine architectures are @emph{avr}, @emph{i686},
+;; @emph{powerpc}, @emph{riscv32}, @emph{riscv64}, @emph{sparc}, @emph{x86_64}.
 ;; @end deffn
 (define *arch* (make-parameter #f))
 
 ;; @deffn {Syntax} with-arch arch body ...
+;; Evaluate @var{body} with arch set to @var{arch}, which can be an
+;; @code{<arch>} object or a string (e.g., @code{"x86_64"}
 ;; @end deffn
 (define-syntax-rule (with-arch arch body ...)
   (parameterize

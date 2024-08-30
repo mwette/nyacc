@@ -17,15 +17,23 @@
 
 ;;; Notes:
 
-;; (cdata-ref data tag ...) -> scheme-value | #f
+;; cbase, cstruct, cunion, cpointer, carray,
+;; (ctype-equal? a b)
+;; (ctype-sel type tag ...) -> bv os ct
+
+;; make-cdata ct [val [name]]
+;; (cdata-ref data tag ...) -> Guile value | cdata
 ;; (cdata-set! data val tag ...) -> undefined
 ;; (cdata-sel data tag ...) -> <cdata>
-;; (ctype-sel type ix tags) -> (values ix ct)
-;; (ctype-equal? a b)
-;; (make-cdata ct)
-;; (make-cdata ct val)
+;; (cdata* data) -> <cdata>
+;; (cdata& data) -> <cdata>
+
+;; extras:
+;; (
 
 ;; working this:
+;; (ctype-sel type ix tags) -> (values ix ct)
+;; (make-cdata ct)
 ;; (make-cdata bv ix ct)
 ;; (make-cdata bv ix ct val)
 ;; (make-named-cdata "foo" ct)
@@ -37,7 +45,7 @@
 ;; use existing bytevector
 ;; (%make-cdata bv ix ct tn)
 
-;; (cbase symb) and cstruct cunion carray cpointer cfunction*
+;; (cbase symb) and cstruct cunion carray cpointer cfunction
 ;; (list->vector (map (lambda (ix) (cdata-ref data ix)) (iota 10)))
 
 ;; ffi:
@@ -49,7 +57,7 @@
 
 (define-module (system foreign cdata)
   #:export (cbase
-            cstruct cunion cpointer carray cenum cfunction*
+            cstruct cunion cpointer carray cenum cfunction
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             make-cdata*
@@ -64,7 +72,7 @@
             cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-signed?
             cpointer-type cpointer-mtype
             carray-type carray-length
-            cfunction*-ret-type cfunction*-arg-types cfunction*-mtype
+            cfunction-ptr->proc cfunction-proc->ptr
             pretty-print-ctype)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
@@ -167,17 +175,18 @@
   (let ((type (%cpointer-type info)))
     (if (promise? type) (force type) type)))
 
-;; @deftp {Record} <cfunction*> mtype unwrapper wrapper
-;; The @var{unwrapper} argument is a procedure to convert from pointer to
-;; lambda.  The @var{wrapper} takes lambda and generates a pointer.
-;; @var{mtype} is the underlying pointer type.
+;; @deftp {Record} <cfunction> ptr->proc proc->ptr variadic?
+;; The @var{ptr->proc} argument is a procedure to convert from pointer to
+;; procedure (typically calling Guile's @code{pointer->procedure}).  The
+;; @var{proc->ptr} converts a Guile procedure to a Guile pointer (typically
+;; using Guile's @code{procedure->pointer}).
 ;; @end deftp
 (define-record-type <cfunction>
-  (%make-cfunction* mtype unwrapper wrapper)
-  cfunction*?
-  (mtype cfunction*-mtype)
-  (unwrapper cfunction*-unwrapper)
-  (wrapper cfunction*-wrapper))
+  (%make-cfunction mtype ptr->proc proc->ptr)
+  cfunction?
+  (ptr->proc cfunction-ptr->proc)
+  (proc->ptr cfunction-proc->ptr)
+  (variadic? cfunction-variadic?))
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
@@ -379,7 +388,7 @@
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
 ;; @*note: Should we allow @ver{type} to be a promise?
 ;; @example
-;; (define foo_t (cbase 'void))
+;; (define foo_t (cbase 'int))
 ;; (cpointer (delay foo_t))
 ;; @end example
 ;; @end deffn
@@ -608,17 +617,17 @@
           (((? symbol? n)) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
           (_ (error "cenum: bad enum def'n"))))))
 
-;; @deffn {Procedure} cfunction* unwrapper wrapper [#:variadic?=#f]
+;; @deffn {Procedure} cfunction ptr->proc proc->ptr [variadic?]
 ;; Generate a C function pointer type.  You must pass the @var{wrapper}
 ;; and @var{unwrapper} procedures that convert a pointer to a procedure,
 ;; and procedure to pointer, respectively.  Pass @code{#t} for
 ;; @var{#:variadic} if the function uses variadic arguments.  For this
 ;; case, (to be documented).
 ;; @end deffn
-(define* (cfunction* unwrapper wrapper #:key variadic? arg-names)
-  (let* ((type (cbase 'void*)) (mtype (ctype-info type)))
+(define* (cfunction unwrapper wrapper #:optional variadic?)
+  (let* ((type (cbase 'int)) (mtype (ctype-info type)))
     (%make-ctype (ctype-size type) (ctype-align (type)) 'function
-                 (%make-cfunction* mtype unwrapper wrapper))))
+                 (%make-cfunction mtype unwrapper wrapper))))
 
 ;; @deffn {Procedure} make-cdata type [value [name]]
 ;; Generate a @emph{cdata} object of type @var{type} with optional
@@ -649,45 +658,13 @@
        (if value (cdata-set! data value))
        data))))
 
-;; @deffn {Procedure} make-cdata-from-pointer type pointer [name]
-;; @end deffn
-(define* (make-cdata-from-pointer type pointer #:optional name)
-   (assert-ctype 'make-cdata/ type)
-   (let* ((size (ctype-size type))
-          (bvec (pointer->bytevector from-pointer size))
-          (data (%make-cdata bvec 0 type name)))
-     (if value (cdata-set! data value))
-     data))
-
-;; @deffn {Procedure} cdata-sel data tag ... => cdata
-;; Return a new @code{cdata} object representing the associated selection.
-;; For example,
-;; @example
-;; dat1 -> <cdata 0x12345678 struct>
-;; (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
-;; @end example
-;; @end deffn
-(define (cdata-sel data . tags)
-  "- Procedure: cdata-sel data tag ...
-     Return a new ‘cdata’ object representing the associated selection.
-     For example,
-          dat1 -> <cdata 0x12345678 struct>
-          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>"
-  (assert-cdata 'cdata-sel data)
-  (if (null? tags)
-      data
-      (call-with-values
-          (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
-        (lambda (ix ct)
-          (%make-cdata (cdata-bv data) ix ct #f)))))
-
 ;; @deffn {Procedure} cdata-ref data [tag ...]
 ;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
 ;; respect to the cdata object @var{data}.
 ;; @example
 ;; (cdata-ref my-struct-value 'a 'b 'c))
 ;; @end example
-;; This procedure works for cdata kinds @emph{base}, @emph{pointer} and (in
+;; This procedure returns XXX for cdata kinds @emph{base}, @emph{pointer} and (in
 ;; the future) @emph{function}.  Attempting to obtain values for C-type kinds
 ;; @emph{struct}, @emph{union}, @emph{array} will result in @code{#f}.
 ;; If, in those cases, you would like a cdata then use this:
@@ -726,7 +703,7 @@
                   (mtype (cenum-mtype info))
                   (vnl (cenum-symd info)))
              (assq-ref vnl (mtype-bv-ref mtype bv ix))))
-          ((function*)
+          ((function)
            (let* ((info (ctype-info ct))
                   (mtype (cfunction*-mtype info))
                   (ptr (make-pointer (mtype-bv-ref mtype bv ix))))
@@ -791,6 +768,42 @@
               ((array) (error "cdata-set!: can't set! array value"))
               (else (error "cdata-set!: bad arg 2" value))))))))
 
+;; @deffn {Procedure} cdata-sel data tag ... => cdata
+;; Return a new @code{cdata} object representing the associated selection.
+;; For example,
+;; @example
+;; dat1 -> <cdata 0x12345678 struct>
+;; (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
+;; @end example
+;; @end deffn
+(define (cdata-sel data . tags)
+  "- Procedure: cdata-sel data tag ...
+     Return a new ‘cdata’ object representing the associated selection.
+     For example,
+          dat1 -> <cdata 0x12345678 struct>
+          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>"
+  (assert-cdata 'cdata-sel data)
+  (if (null? tags)
+      data
+      (call-with-values
+          (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
+        (lambda (ix ct)
+          (%make-cdata (cdata-bv data) ix ct #f)))))
+
+;; @deffn {Procedure} make-cdata/* type pointer [name]
+;; Make a cdata object from a pointer.   That is, instead of creating a
+;; bytevector to hold the data use the memory at the pointer using
+;; @code{pointer->bytevector}.
+;; @* Maybe cdata-cast can do this?
+;; @end deffn
+(define* (make-cdata/* type pointer #:optional name)
+   (assert-ctype 'make-cdata/ type)
+   (let* ((size (ctype-size type))
+          (bvec (pointer->bytevector from-pointer size))
+          (data (%make-cdata bvec 0 type name)))
+     (if value (cdata-set! data value))
+     data))
+
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
 ;; bytevector.
@@ -830,14 +843,16 @@
 ;; TODO: check for (cdata-tn data)
 
 
+;; @deffn {Procedure} cdata-cast data type [do-check] => <cdata>
 ;; need to be able to cast array to pointer
-(define* (cdata-cast data type #:key skip-check)
-  ;;(assert-cdata 'cdata-cast data)
-  ;;(assert-ctype 'cdata-cast type)
+(define* (cdata-cast data type #:key do-check)
+  (assert-cdata 'cdata-cast data)
+  (assert-ctype 'cdata-cast type)
   (define (type-miss)
     (error "cdata-cast: type-mismatch:" (list (cdata-ct data) type)))
   (define (type-check ft tt)
-    (unless (or skip-check (ctype-equal? ft tt)) (type-miss)))
+    (when (and skip-check (ctype-equal? ft tt)) (type-miss)))
+  (error "cdata-cast not done")
   (let ((bv (cdata-bv data))
         (ix (cdata-ix data))
         (ct (cdata-ct data))
@@ -848,6 +863,8 @@
          ((base)
           #f)
          (else (type-miss))))
+      ((pointer)
+       (make-cdata ct bv ix))
       ((array)
        (case tokind
          ((pointer)
@@ -907,6 +924,7 @@
 
 
 ;; --- guile ffi api support ---------------------------------------------------
+;; maybe this should all be pulled out
 
 (define (mtype->ffi mtype)
   (or

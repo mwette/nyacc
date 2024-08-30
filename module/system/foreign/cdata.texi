@@ -115,7 +115,9 @@ except bitfield types are not allowed.
 @end deffn
 
 @deffn {Procedure} cpointer type
-Create a pointer type referencing @var{type}.
+Create a pointer type referencing @var{type}.  @var{type} can be
+a ctype, the symbol @code{'void}, a symbol represending a base type,
+or a promise evaluating to a ctype.
 A non-negative selector can be used with this type to generate an
 increment.  Say you have, in C, the variables @code{x} defined from
 @code{int *x;} which represents an array in memory.  Then the

@@ -7,7 +7,7 @@
 (use-modules (system foreign))
 (use-modules (system foreign-library))
 (use-modules (system foreign arch-info))
-(use-modules (system foreign lang cdata))
+(use-modules (system foreign cdata))
 
 (use-modules (ice-9 pretty-print))
 (define (pp exp)
@@ -244,5 +244,7 @@
 (define tU1 (cunion fU1))
 (define dU1 (make-cdata tU1))
 (define pU1 (cdata& dU1))
+
+(do-test/struct)
 
 ;; --- last line ---a
