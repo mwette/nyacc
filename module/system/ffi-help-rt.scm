@@ -27,8 +27,7 @@
             fh-wrap fh-unwrap fht-wrap fht-unwrap 
 
             make-fhval fhval? fhval-ref fhval-set! fhval* fhval&
-            fhval-sel fhval-addr
-            make-fhval-base-type make-fhval-pointer-type
+            fhval-sel fhval-addr fhval-base-type fhval-pointer-type
 
             NULL !0 ffi-void*
 
@@ -120,8 +119,8 @@
 ;; fhval&                   : pointer to value
 ;; fhval-sel                : like ref, but don't convert
 ;; fhval-addr               : provide underlying address
-;; fhval-base-type  => make-fhval-base-type
-;; fhval-pointer-type => make-fhval-pointer-type
+;; fhval-base-type          : generate C base type for a fhval
+;; fhval-pointer-type       : generate pointer type from type
 
 ;; @deffn {Procedure} make-fhval desc [arg] [#:name name])
 ;; FIXME
@@ -190,14 +189,17 @@
 ;; @deffn {Syntax} fhval-set! val arg tag ...
 ;; Set the object value from a Scheme object.
 ;; If you are using @code{'*} you probably don't intend to:
-;; look at @code{value-at}.
+;; look at @code{value-at}.  
 ;; @end deffn
 (define-syntax-rule (fhval-set! val tag ... arg)
-  (cond
-   ((ffi:pointer? arg)
-    (bytestructure-set! val tag ... (ffi:pointer-address arg)))
-   (else
-    (bytestructure-set! val tag ... arg))))
+  ;; prob use fhval-sel 
+  (let ((rarg (cond ((ffi:pointer? arg) (ffi:pointer-address arg)) (else arg))))
+    (bytestructure-set! val tag ... rarg)
+    #;(call-with-values
+        (lambda () (bytestructure-unwrap val tag ...))
+      (lambda (bvec oset desc)
+        (let ((setter (bytestructure-descriptor-setter desc)))
+          (setter #f bvec oset rarg))))))
 
 ;; @deffn {Syntax} fhval* obj
 ;; dereference a pointer
@@ -271,16 +273,15 @@
     (signed-long-long-int . long-long)
     (unsigned-long-long-int . unsigned-long-long)))
 
-(define-syntax-rule (make-fhval-base-type ctype)
+(define-syntax-rule (fhval-base-type ctype)
   (or (assq-ref bs-base-type-map ctype)
       (assq-ref bs-base-type-map (assq-ref base-type-alias-map ctype))))
 
-(define-syntax-rule (make-fhval-pointer-type desc)
+(define-syntax-rule (fhval-pointer-type desc)
   (bs:pointer desc))
 
 
 ;; ----------------------------------------------------------------------------
-
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
@@ -334,10 +335,11 @@
 ;; I'm sad that I did it this way.  Oh well.
 ;; @end deffn
 (define-syntax-rule (fh-object-set! obj tag ... val)
-  (cond
-   ((fh-object? obj) (fhval-set! (struct-ref obj 0) tag ... val))
-   ((fhval? obj) (fhval-set! obj tag ... val))
-   (else (fherr "fh-object-set!: bad obj arg"))))
+  (let ((rval (cond ((fh-object? val) (fh-object-ref val)) (else val))))
+    (cond
+     ((fhval? obj) (fhval-set! obj tag ... rval))
+     ((fh-object? obj) (fhval-set! (struct-ref obj 0) tag ... rval))
+     (else (fherr "fh-object-set!: bad obj arg")))))
 
 (define-syntax-rule (fh-object-sel obj tag ...)
   (cond
@@ -491,6 +493,10 @@
               (ffi:pointer-address (fhval-ref (struct-ref obj 0))) 16) port)
     (display ">" port)))
 
+;;;
+;; make-<type> arg:
+;; 1) what if (fh-object? arg) a: identity, b: new from val, c: #f
+;; 2) fhval 
 
 ;; @deffn {Syntax} define-fh-pointer-type name desc type? make
 ;; @example
@@ -511,8 +517,12 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-        ((arg) (make-struct/no-tail type (make-fhval desc arg)))
-        (() (make ffi:%null-pointer))))))
+        ((arg)
+         (cond
+          ((fh-object? arg) (make-struct/no-tail type (fh-object-ref arg)))
+          ((fhval? arg) (make-struct/no-tail type arg))
+          (else (make-struct/no-tail type (make-fhval desc arg)))))
+        (() (make-struct/no-tail type (make-fhval desc ffi:%null-pointer)))))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
 ;; Generates an FH aggregate type based on the underlying type.
@@ -529,7 +539,11 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-        ((arg) (make-struct/no-tail type (make-fhval desc arg)))
+        ((arg)
+         (cond
+          ((fh-object? arg) (make-struct/no-tail type (fh-object-val arg)))
+          ((fhval? arg) (make-struct/no-tail type arg))
+          (else (make-struct/no-tail type (make-fhval desc arg)))))
         (() (make-struct/no-tail type (make-fhval desc)))))))
 
 ;; @deffn {Syntax} define-fh-vector-type type desc type? make
@@ -548,14 +562,18 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-        ((arg) (make-struct/no-tail type (make-fhval desc arg)))
+        ((arg)
+         (cond
+          ((fh-object? arg) (make-struct/no-tail type (fh-object-val arg)))
+          ((fhval? arg) (make-struct/no-tail type arg))
+          (else (make-struct/no-tail type (make-fhval desc arg)))))
         (() (make-struct/no-tail type (make-fhval desc)))))))
 
 ;; @deffn {Syntax} define-fh-type-alias alias type
 ;; set up type alias.  Caller needs to match type? and make.
 ;; This is one of the places we use generated id's.
 ;; The following are generated: @emph{alias} @code{make-}@emph{alias}
-;; @emph{alias}@code{?}.
+;; @emph{alias}@code{?}.  This macro is not hygenic.
 ;; @end deffn
 (define-syntax define-fh-type-alias
   (lambda (x)
@@ -565,18 +583,23 @@
              (pred (gen-id x #'alias "?"))
              (make (gen-id x "make-" #'alias)))
          #`(begin
-             (define (#,pred obj)
-               (and (fh-object? obj) (eq? (struct-vtable obj) alias)))
-             (define #,make
-               (case-lambda
-                 ((arg) (make-struct/no-tail alias (make-fhval #,desc arg)))
-                 (() (make-struct/no-tail alias (make-fhval #,desc)))))
              (define alias
                (make-fht (quote alias)
                          (fht-unwrap type)
                          (lambda (arg) (#,make arg))
                          #f #f
                          (make-printer (quote alias))))
+             (define (#,pred obj)
+               (and (fh-object? obj) (eq? (struct-vtable obj) alias)))
+             (define #,make
+               (case-lambda
+                 ((arg)
+                  (cond
+                   ((fh-object? arg)
+                    (make-struct/no-tail alias (fh-object-ref arg)))
+                   ((fhval? arg) (make-struct/no-tail alias arg))
+                   (else (make-struct/no-tail alias (make-fhval #,desc arg)))))
+                 (() (make-struct/no-tail alias (make-fhval #,desc)))))
              (export #,pred #,make)))))))
 
 ;; @deffn {Syntax} define-fh-function-type type desc pred make
@@ -613,7 +636,7 @@
                      (type*? (gen-id #'type #'type "*?"))
                      (make* (gen-id #'type "make-" #'type "*")))
          #'(begin
-             (define desc (make-fhval-base-type (quote type)))
+             (define desc (fhval-base-type (quote type)))
              (define ~type
                (make-fht (quote type)
                          (lambda (obj) (fhval-ref (fh-object-val obj)))
@@ -626,9 +649,13 @@
              (define-public make
                (case-lambda
                  ((arg)
-                  (make-struct/no-tail ~type (make-fhval desc arg)))
+                  (cond
+                   ((fh-object? arg)
+                    (make-struct/no-tail ~type (fh-object-ref arg)))
+                   ((fhval? arg) (make-struct/no-tail ~type arg))
+                   (else (make-struct/no-tail ~type (make-fhval desc arg)))))
                  (() (make-struct/no-tail ~type (make-fhval desc)))))
-             (define desc* (make-fhval-pointer-type desc))
+             (define desc* (fhval-pointer-type desc))
              (define type*
                (make-fht (quote type*)
                          (lambda (obj) (unwrap~pointer obj))
@@ -641,7 +668,11 @@
              (define make*
                (case-lambda
                  ((arg)
-                  (make-struct/no-tail type* (make-fhval desc* arg)))
+                  (cond
+                   ((fh-object? arg)
+                    (make-struct/no-tail type* (fh-object-ref arg)))
+                   ((fhval? arg) (make-struct/no-tail type* arg))
+                   (else (make-struct/no-tail type* (make-fhval desc* arg)))))
                  (() (make* ffi:%null-pointer))))
              (export desc type? make desc* type*? make*)))))))
 
@@ -662,7 +693,7 @@
 (define-base-type char) (define-base-type unsigned-char)
 (define-base-type _Bool) (define-base-type bool)
 
-(define-fh-pointer-type void* (make-fhval-pointer-type 'void) void*? make-void*)
+(define-fh-pointer-type void* (fhval-pointer-type 'void) void*? make-void*)
 
 (let ((was-make-char* make-char*))
   (set! make-char* 
@@ -671,7 +702,7 @@
            (was-make-char* (if (string? arg) (ffi:string->pointer arg) arg)))
           (() (was-make-char*)))))
 
-(define char**-desc (make-fhval-pointer-type char*-desc))
+(define char**-desc (fhval-pointer-type char*-desc))
 (define-fh-pointer-type char** char**-desc char**? make-char**)
 (fh-ref<=>deref! char** make-char** char* make-char*)
 (export char**? make-char**)
@@ -684,6 +715,7 @@
 ;; (fh-cast Foo* bar) => <Foo* 0xabcd1234>
 ;; @end example
 ;; @end deffn
+;; C allows cast of base types and pointer types
 (define-syntax fh-cast
   (lambda (x)
     "- Syntax: fh-cast type value
@@ -692,7 +724,7 @@
           (fh-cast Foo* bar) => <Foo* 0xabcd1234>"
     (syntax-case x ()
       ((_ type expr)
-       #`(#,(gen-id x "make-" #'type) (fh-object-ref expr))))))
+       #`(#,(gen-id x "make-" #'type) (fh-object-val expr))))))
 (export fh-cast)
 
 ;; @deffn {Procedure} fh-varg type value
