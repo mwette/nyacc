@@ -1022,7 +1022,7 @@
 	    (lambda (,@names . ~rest)
 	      (let ((~proc (ffi:pointer->procedure
                             ,decl-ret ~fptr
-                            (append ,@decl-par (map car ~rest)))
+                            (cons* ,@decl-par (map car ~rest)))
 	                   ,@urap-par))
 		,(if exec-ret (list exec-ret va-call) va-call))))
          ;; pointer->procedure
@@ -1043,14 +1043,14 @@
          (urap-par (fold-right (lambda (n u s) (if u (cons `(,n (,u ,n)) s) s))
                                '() names exec-par))
          (call `((force ~proc) ,@names))
-	 (va-call `(apply (force ~proc) ,@names (map cdr ~rest))))
+	 (va-call `(apply ~proc ,@names (map cdr ~rest))))
     (ppscm
      `(define-public ,(string->symbol name)
         ,(if varargs?
              `(lambda (,@names . ~rest)
 	        (let ((~proc (ffi:pointer->procedure
                               ,decl-ret (foreign-pointer-search ,name)
-                              (append ,@decl-par (map car ~rest))))
+                              (cons* ,@decl-par (map car ~rest))))
 	              ,@urap-par)
 		  ,(if exec-ret (list exec-ret va-call) va-call)))
 	     `(let ((~proc
