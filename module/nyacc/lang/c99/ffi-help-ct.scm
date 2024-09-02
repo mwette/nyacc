@@ -115,7 +115,7 @@
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
 (define *defined* (make-parameter '()))    ; defined by define-fh-...
 (define *wrapped* (make-parameter '()))    ; wrapped or defined
-(define *ttag* (make-parameter "-desc"))
+(define *ttag* (make-parameter ""))
 
 (define *errmsgs* (make-parameter '()))	; list of warnings
 
@@ -496,36 +496,23 @@
 (define target 'ct)
 
 (case target
-  ;;((bs) (*ttag* "-desc"))
   ((ct) (*ttag* ""))
   (else (error "bad target" target)))
 
 (define Tmodules
   (case target
-    ;;((bs) '((bytestructures guile) (system ffi-help-rt)))
     ((ct) '((system foreign cdata)))
     (else (error "bad target" target))))
 
 (define Tpointer
   (case target
-    ;;((bs) 'bs:pointer)
     ((ct) 'cpointer)
     (else (error "bad target" target))))
 
 (define mtail->ttype
   (case target
-    ;;((bs) mtail->bs-desc)
     ((ct) mtail->ctype)
     (else (error "bad target" target))))
-
-;;(define (make-bs type . args)
-
-#;(define make-data
-  (case target
-    ((bs) make-bs)
-    ((ct) make-ct)
-    (else (error "bad target" target))))
-
 
 ;; === output ffi-module header ================================================
 
@@ -1050,11 +1037,7 @@
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
              (call-with-values (lambda () (function*-wraps return params))
-               (let ((*type (strings->symbol "*" name (*ttag*)))
-                     ;;(*name (strings->symbol "*" name))
-                     ;;(*pred (strings->symbol "*" name "?"))
-                     ;;(*make (strings->symbol "make-*" name))
-                     )
+               (let ((*type (strings->symbol "*" name (*ttag*))))
                  (lambda (ptr->proc proc->ptr)
                    (ppscm `(define-public ,*type
                              (cfunction ,ptr->proc ,proc->ptr)))
@@ -1191,10 +1174,7 @@
 	          (if (member (w/* typename) defined)
                       (let* ((name* (strings->symbol name "*"))
                              (aka* (strings->symbol typename "*"))
-                             (atype* (strings->symbol typename "*" (*ttag*)))
-                             ;;(amake (strings->symbol "make-" typename))
-                             ;;(amake* (strings->symbol "make-" typename "*"))
-                             )
+                             (atype* (strings->symbol typename "*" (*ttag*))))
 	                (ppscm `(define-public ,type* ,atype*))
 	                (values (cons* name (w/* name) wrapped)
                                 (cons* name (w/* name) defined)))
@@ -1275,7 +1255,6 @@
 	  ((member (w/enum enum-name) wrapped)
 	   (values wrapped defined))
 	  (else
-	   ;;(cnvt-enum-def #f enum-name enum-def-list)
 	   (values (cons (w/enum enum-name) wrapped) defined))))
 
         ((enum-def ,enum-def-list)
@@ -1290,10 +1269,7 @@
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
              (mtail* `((pointer-to) . ,mtail))
              (type* (mtail->ttype `mtail*))
-             (name* (strings->symbol name "*"))
-             ;;(pred* (strings->symbol name "*?"))
-             ;;(make* (strings->symbol "make-" name "*"))
-             )
+             (name* (strings->symbol name "*")))
         (ppscm `(define ,name* ,type*))
         (ppscm
          `(define-public ,(string->symbol name)
