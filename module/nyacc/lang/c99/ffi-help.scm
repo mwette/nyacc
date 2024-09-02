@@ -519,7 +519,7 @@
           (fherr "mtail->bs-desc missed:\n~A" (ppstr mtail))))))))
 
 
-;; === cdata support ===========================================================
+;; === cdata/ctype support =====================================================
 
 (use-modules (system foreign arch-info))
 (use-modules (system foreign cdata))
@@ -578,10 +578,12 @@
          ((fixed-type ,name) `(cbase ',(cstrnam->symnam name)))
          ((float-type ,name) `(cbase ',(cstrnam->symnam name)))
          ((enum-def (@ . ,attr) (ident ,ident) ,rest)
-          (mtail->ctype `(enum-def (@ . ,attr) ,rest)))
+          (mtail->ctype `((enum-def (@ . ,attr) ,rest))))
          ((enum-def (@ . ,attr) ,edl)
           (let ((def-list (canize-enum-def-list edl (*udict*) (*ddict*))))
-            `(cenum ',(enum-def-list->alist def-list) ,(packed? attr))))
+            (if (packed? attr)
+                `(cenum ',(enum-def-list->alist def-list) #t)
+                `(cenum ',(enum-def-list->alist def-list)))))
          ((enum-ref ,name) (strings->symbol "enum-" name ttag))
          ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
           (mtail->ctype `((struct-def (@ . ,attr) ,field-list))))
@@ -603,21 +605,37 @@
 
 ;; === hookup ==================================================================
 
-(define target 'bs)
+(define target 'ct)
+
+(case target
+  ((bs) (*ttag* "-desc"))
+  ((ct) (*ttag* ""))
+  (else (error "bad target" target)))
 
 (define Tmodules
   (case target
     ((bs) '((bytestructures guile) (system ffi-help-rt)))
+    ((ct) '((system foreign cdata) (system ffi-help-rt)))
     (else (error "bad target" target))))
 
 (define Tpointer
   (case target
     ((bs) 'bs:pointer)
+    ((ct) 'cpointer)
     (else (error "bad target" target))))
 
-(define mtail->target
+(define mtail->ttype
   (case target
     ((bs) mtail->bs-desc)
+    ((ct) mtail->ctype)
+    (else (error "bad target" target))))
+
+;;(define (make-bs type . args)
+
+#;(define make-data
+  (case target
+    ((bs) make-bs)
+    ((ct) make-ct)
     (else (error "bad target" target))))
 
 
@@ -705,7 +723,7 @@
   (fhscm-gen-def 'define-fh-vector-type name))
 
 (define* (cnvt-param/fh-decl udecl #:optional namer)
-  (mtail->target
+  (mtail->ttype
    (md-tail (udecl->mdecl
              (udecl-rem-type-qual
               (expand-typerefs udecl (*udict*) ffi-defined))
@@ -1071,7 +1089,7 @@
 ;; Returns (values wrapped, defined), where defined is a fh-def for a type
 ;; and wrapped means there is are converters to/from fh to scheme.
 ;; @end deffn
-(define (cnvt-udecl udecl udict wrapped defined)
+(define (cnvt-udecl/bs udecl udict wrapped defined)
 
   (define (specl-props specl)
     (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
@@ -1123,7 +1141,7 @@
         (match mtail
 
           (`((array-of ,dim) . ,rest)
-           (ppscm `(define-public ,desc ,(mtail->target mtail)))
+           (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
            (ppscm `(define-public ,desc* (bs:pointer ,desc)))
            (ppscm `(define-fh-vector-type ,name ,desc ,pred ,make))
            (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
@@ -1164,7 +1182,7 @@
            (values (cons label wrapped) (cons label defined)))
 
           (`((pointer-to) . ,rest)
-           (ppscm `(define-public ,desc ,(mtail->target mtail)))
+           (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
            (ppscm `(define-fh-pointer-type ,name ,desc ,pred ,make))
            (ppscm `(export ,name ,pred ,make))
            ;; fh-ref<=>deref! ???
@@ -1176,7 +1194,7 @@
            (sx-match (car mtail)
              
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
               (ppscm `(define-public ,desc* (bs:pointer ,desc)))
               (ppscm `(define-public
                         ,(strings->symbol "struct-" agname (*ttag*)) ,desc))
@@ -1189,14 +1207,14 @@
                              (w/struct* agname) defined)))
 
              ((struct-def ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
               (ppscm `(define-public ,desc* (bs:pointer ,desc)))
               (cnvt-struct-def label #f)
               (values  (cons* label (w/* label) wrapped)
                        (cons* label (w/* label) defined)))
 
              ((union-def (ident ,agname) ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
               (ppscm `(define-public ,desc* (bs:pointer ,desc)))
               (ppscm `(define-public
                         ,(strings->symbol "union-" agname (*ttag*)) ,desc))
@@ -1209,7 +1227,7 @@
                              (w/union* agname) defined)))
 
              ((union-def ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
               (ppscm `(define-public ,desc* (bs:pointer ,desc)))
               (cnvt-union-def label #f)
               (values (cons* label (w/* label) wrapped)
@@ -1218,7 +1236,7 @@
              ((struct-ref (ident ,agname))
               (cond
                ((member (w/struct agname) defined) ;; defined previously
-                (ppscm `(define-public ,desc ,(mtail->target mtail)))
+                (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
 	        (ppscm `(define-public ,desc* ,(sfsym "struct-~A*-desc" agname)))
                 (fhscm-def-compound label))
                ((udict-struct-ref udict agname) ;; defined later
@@ -1237,7 +1255,7 @@
              ((union-ref (ident ,agname))
               (cond
                ((member (w/union agname) defined) ;; defined previously
-                (ppscm `(define-public ,desc ,(mtail->target mtail)))
+                (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
 	        (ppscm `(define-public ,desc* ,(sfsym "union-~A*-desc" agname)))
                 (fhscm-def-compound label))
                ((udict-union-ref udict agname) ;; defined later
@@ -1254,16 +1272,16 @@
                       (cons* label (w/* label) defined)))
 
              (((fixed-type float-type) ,basename)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
               (values wrapped defined))
 
              ((enum-def ,enum-def-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
               (cnvt-enum-def name #f enum-def-list)
               (values (cons label wrapped) defined))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc ,(mtail->ttype mtail)))
               (cnvt-enum-def name enum-name enum-def-list)
               (values (cons* label (w/enum enum-name) wrapped) defined))
 
@@ -1306,9 +1324,9 @@
 	              (values (cons label wrapped) (cons label defined)))))
 	       (else
 	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
-	          (cnvt-udecl xdecl udict wrapped defined)))))
+	          (cnvt-udecl/bs xdecl udict wrapped defined)))))
              (,__
-              (sferr "cnvt-udecl missed typedef:\n") (pperr mdecl)
+              (sferr "cnvt-udecl/bs missed typedef:\n") (pperr mdecl)
               (values wrapped defined)))))))
 
      ((ftn-declr? declr)
@@ -1326,7 +1344,7 @@
          (let* ((adesc (strings->symbol "struct-" agname (*ttag*)))
                 (adesc* (strings->symbol "struct-" agname "*" (*ttag*)))
                 (field-list (expand-field-list-typerefs field-list))
-                (sflds (cnvt-fields (sx-tail field-list) mtail->target))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->ttype))
                 (agdef `(bs:struct ,(packed? aggr-attr) (list ,@sflds))))
            (cond
             ((bkref-getall attr) =>
@@ -1360,7 +1378,7 @@
              (let* ((adesc (strings->symbol "union-" agname (*ttag*)))
                     (adesc* (strings->symbol "union-" agname "*" (*ttag*)))
                     (field-list (expand-field-list-typerefs field-list))
-                    (sflds (cnvt-fields (sx-tail field-list) mtail->target))
+                    (sflds (cnvt-fields (sx-tail field-list) mtail->ttype))
                     (agdef `(bs:union (list ,@sflds))))
                (ppscm `(define-public ,adesc ,agdef))
                (ppscm `(define-public ,adesc* (bs:pointer ,adesc)))
@@ -1403,7 +1421,7 @@
              (name (string->symbol label))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
              (mtail* `((pointer-to) . ,mtail))
-             (desc* (mtail->target mtail*))
+             (desc* (mtail->ttype mtail*))
              (name* (strings->symbol label "*"))
              (pred* (strings->symbol label "*?"))
              (make* (strings->symbol "make-" label "*")))
@@ -1428,7 +1446,7 @@
       (values wrapped defined)))))
 
 
-(define (cnvt-udecl/cdata udecl udict wrapped defined)
+(define (cnvt-udecl/ct udecl udict wrapped defined)
 
   (define (specl-props specl)
     (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
@@ -1458,8 +1476,6 @@
   (*wrapped* wrapped)
   (*defined* defined)
 
-  (*ttag* "")
-
   (let* ((tag attr specl declr (split-udecl udecl))
          (sspec tqual tspec (specl-props specl)))
 
@@ -1482,8 +1498,8 @@
         (match mtail
 
           (`((array-of ,dim) . ,rest)
-           (ppscm `(define-public ,type ,(mtail->target mtail)))
-           (ppscm `(define-public ,type* (bs:pointer ,type)))
+           (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+           (ppscm `(define-public ,type* (cpointer ,type)))
            (values (cons label wrapped) (cons label defined)))
 
           (`((function-returning (param-list . ,params)) . ,rest)
@@ -1491,8 +1507,8 @@
              (call-with-values (lambda () (function*-wraps return params))
                (lambda (ptr->proc proc->ptr)
                  (ppscm `(define-public ,type
-                           (fh:function ,ptr->proc ,proc->ptr)))
-                 (ppscm `(define-public ,type* (bs:pointer ,type))))))
+                           (cfunction ,ptr->proc ,proc->ptr)))
+                 (ppscm `(define-public ,type* (cpointer ,type))))))
            (values (cons* label (w/* label) wrapped)
                    (cons* label (w/* label) defined)))
 
@@ -1505,12 +1521,12 @@
                      (*make (strings->symbol "make-*" label)))
                  (lambda (ptr->proc proc->ptr)
                    (ppscm `(define-public ,*type
-                             (fh:function ,ptr->proc ,proc->ptr)))
-                   (ppscm `(define-public ,type (bs:pointer ,*type)))))))
+                             (cfunction ,ptr->proc ,proc->ptr)))
+                   (ppscm `(define-public ,type (cpointer ,*type)))))))
            (values (cons label wrapped) (cons label defined)))
 
           (`((pointer-to) . ,rest)
-           (ppscm `(define-public ,type ,(mtail->target mtail)))
+           (ppscm `(define-public ,type ,(mtail->ttype mtail)))
            (case (caar rest)
              ((fixed-type float-type) (values wrapped defined))
              (else (values (cons label wrapped) (cons label defined)))))
@@ -1519,8 +1535,8 @@
            (sx-match (car mtail)
              
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
-              (ppscm `(define-public ,type ,(mtail->target mtail)))
-              (ppscm `(define-public ,type* (bs:pointer ,type)))
+              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm `(define-public ,type* (cpointer ,type)))
               (ppscm `(define-public
                         ,(strings->symbol "struct-" agname (*ttag*)) ,type))
               (ppscm `(define-public
@@ -1531,14 +1547,14 @@
                              (w/struct* agname) defined)))
 
              ((struct-def ,field-list)
-              (ppscm `(define-public ,type ,(mtail->target mtail)))
-              (ppscm `(define-public ,type* (bs:pointer ,type)))
+              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm `(define-public ,type* (cpointer ,type)))
               (values  (cons* label (w/* label) wrapped)
                        (cons* label (w/* label) defined)))
 
              ((union-def (ident ,agname) ,field-list)
-              (ppscm `(define-public ,type ,(mtail->target mtail)))
-              (ppscm `(define-public ,type* (bs:pointer ,type)))
+              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm `(define-public ,type* (cpointer ,type)))
               (ppscm `(define-public
                         ,(strings->symbol "union-" agname (*ttag*)) ,type))
               (ppscm `(define-public
@@ -1549,15 +1565,15 @@
                              (w/union* agname) defined)))
 
              ((union-def ,field-list)
-              (ppscm `(define-public ,type ,(mtail->target mtail)))
-              (ppscm `(define-public ,type* (bs:pointer ,type)))
+              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm `(define-public ,type* (cpointer ,type)))
               (values (cons* label (w/* label) wrapped)
                       (cons* label (w/* label) defined)))
 
              ((struct-ref (ident ,agname))
               (cond
                ((member (w/struct agname) defined) ;; defined previously
-                (ppscm `(define-public ,type ,(mtail->target mtail)))
+                (ppscm `(define-public ,type ,(mtail->ttype mtail)))
 	        (ppscm `(define-public ,type*
                           ,(sfsym "struct-~A*-type" agname))))
                ((udict-struct-ref udict agname) ;; defined later
@@ -1565,53 +1581,67 @@
                 (lambda (decl)
                   (bkref-extend! decl label)
                   (ppscm `(define-public ,type 'void))
-                  (ppscm `(define-public ,type* (bs:pointer (delay ,type))))))
+                  (ppscm `(define-public ,type* (cpointer (delay ,type))))))
                (else ;; not defined
                 (ppscm `(define-public ,type 'void))
-                (ppscm `(define-public ,type* (bs:pointer ,type)))))
+                (ppscm `(define-public ,type* (cpointer ,type)))))
+              (ppscm `(define-public (,(sfsym "make-~A" type*) arg)
+                        (make-cdata ,type* arg ',type*)))
               (values (cons* label (w/* label) wrapped)
                       (cons* label (w/* label) defined)))
 
              ((union-ref (ident ,agname))
               (cond
                ((member (w/union agname) defined) ;; defined previously
-                (ppscm `(define-public ,type ,(mtail->target mtail)))
+                (ppscm `(define-public ,type ,(mtail->ttype mtail)))
 	        (ppscm `(define-public ,type* ,(sfsym "union-~A*-type" agname))))
                ((udict-union-ref udict agname) ;; defined later
                 =>
                 (lambda (decl)
                   (bkref-extend! decl label)
                   (ppscm `(define-public ,type 'void))
-                  (ppscm `(define-public ,type* (bs:pointer (delay ,type))))))
+                  (ppscm `(define-public ,type* (cpointer (delay ,type))))))
                (else ;; not defined
                 (ppscm `(define-public ,type 'void))
-                (ppscm `(define-public ,type* (bs:pointer ,type)))))
+                (ppscm `(define-public ,type* (cpointer ,type)))))
               (fhscm-def-pointer (sw/* label))
               (values (cons* label (w/* label) wrapped)
                       (cons* label (w/* label) defined)))
 
              (((fixed-type float-type) ,basename)
-              (ppscm `(define-public ,type ,(mtail->target mtail)))
+              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
               (values wrapped defined))
 
              ((enum-def ,enum-def-list)
-              (ppscm `(define-public ,type ,(mtail->target mtail)))
+              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm `(define ,(sfsym "unwrap-~A" label)
+                        (let ((vald (cenum-vald (ctype-info ,type))))
+                          (lambda (arg) (or (assq-ref vald arg) arg)))))
+              (ppscm `(define ,(sfsym "wrap-~A" label)
+                        (let ((symd (cenum-symd (ctype-info ,type))))
+                          (lambda (arg) (or (assq-ref symd arg) arg)))))
               (values (cons label wrapped) defined))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
-              (ppscm `(define-public ,type ,(mtail->target mtail)))
+              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm `(define ,(sfsym "unwrap-~A" label)
+                        (let ((vald (cenum-vald (ctype-info ,type))))
+                          (lambda (arg) (or (assq-ref vald arg) arg)))))
+              (ppscm `(define ,(sfsym "wrap-~A" label)
+                        (let ((symd (cenum-symd (ctype-info ,type))))
+                          (lambda (arg) (or (assq-ref symd arg) arg)))))
               (values (cons* label (w/enum enum-name) wrapped) defined))
 
              ((enum-ref (ident ,enum-name))
-              (ppscm `(define-public ,(sfscm "wrap-~A" name)
-                        ,(sfscm "wrap-enum-~A" enum-name)))
-              (ppscm `(define-public ,(sfscm "unwrap-~A" name)
-                        ,(sfscm "unwrap-enum-~A" enum-name)))
+              (ppscm `(define-public ,(sfsym "wrap-~A" name)
+                        ,(sfstr "wrap-enum-~A" enum-name)))
+              (ppscm `(define-public ,(sfsym "unwrap-~A" name)
+                        ,(sfsym "unwrap-enum-~A" enum-name)))
               (values (cons (w/enum enum-name) wrapped) defined))
 
              ((void)
               (ppscm `(define-public ,type 'void))
-              (ppscm `(define-public ,type* (bs:pointer ,type)))
+              (ppscm `(define-public ,type* (cpointer ,type)))
               (values (cons* label (w/* label) wrapped)
                       (cons* label (w/* label) defined)))
 
@@ -1635,9 +1665,9 @@
 	              (values (cons label wrapped) (cons label defined)))))
 	       (else
 	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
-	          (cnvt-udecl xdecl udict wrapped defined)))))
+	          (cnvt-udecl/ct xdecl udict wrapped defined)))))
              (,__
-              (sferr "cnvt-udecl missed typedef:\n") (pperr mdecl)
+              (sferr "cnvt-udecl/ct missed typedef:\n") (pperr mdecl)
               (values wrapped defined)))))))
 
      ((ftn-declr? declr)
@@ -1655,13 +1685,13 @@
          (let* ((atype (strings->symbol "struct-" agname (*ttag*)))
                 (atype* (strings->symbol "struct-" agname "*" (*ttag*)))
                 (field-list (expand-field-list-typerefs field-list))
-                (sflds (cnvt-fields (sx-tail field-list) mtail->target))
-                (agdef `(bs:struct ,(packed? aggr-attr) (list ,@sflds))))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->ttype))
+                (agdef `(cstruct ,(packed? aggr-attr) (list ,@sflds))))
            (cond
             ((bkref-getall attr) =>
              (lambda (name-list)
                (ppscm `(define-public ,atype ,agdef))
-               (ppscm `(define-public ,atype* (bs:pointer ,atype)))
+               (ppscm `(define-public ,atype* (cpointer ,atype)))
                (fold-values
 	        (lambda (name wrapped defined)
                   (let ((type (strings->symbol name (*ttag*))))
@@ -1672,7 +1702,7 @@
                 (cons (w/struct agname) defined))))
 	    ((not (member (w/struct agname) defined))
              (ppscm `(define-public ,atype ,agdef))
-             (ppscm `(define-public ,atype* (bs:pointer ,atype)))
+             (ppscm `(define-public ,atype* (cpointer ,atype)))
 	     (values (cons (w/struct agname) wrapped)
                      (cons (w/struct agname) defined)))
 	    (else
@@ -1685,10 +1715,10 @@
              (let* ((atype (strings->symbol "union-" agname (*ttag*)))
                     (atype* (strings->symbol "union-" agname "*" (*ttag*)))
                     (field-list (expand-field-list-typerefs field-list))
-                    (sflds (cnvt-fields (sx-tail field-list) mtail->target))
-                    (agdef `(bs:union (list ,@sflds))))
+                    (sflds (cnvt-fields (sx-tail field-list) mtail->ttype))
+                    (agdef `(cunion (list ,@sflds))))
                (ppscm `(define-public ,atype ,agdef))
-               (ppscm `(define-public ,atype* (bs:pointer ,atype)))
+               (ppscm `(define-public ,atype* (cpointer ,atype)))
 	       (fold-values
 	        (lambda (name wrapped defined)
                   (let ((type (strings->symbol name (*ttag*)))
@@ -1724,18 +1754,19 @@
              (name (string->symbol label))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
              (mtail* `((pointer-to) . ,mtail))
-             (type* (mtail->target mtail*))
+             (type* (mtail->ttype mtail*))
              (name* (strings->symbol label "*"))
              (pred* (strings->symbol label "*?"))
              (make* (strings->symbol "make-" label "*")))
-        (ppscm `(define-fh-pointer-type ,name* ,type* ,pred* ,make*))
+        (ppscm `(define ,name* ,type*))
         (ppscm
          `(define-public ,name
 	    (let* ((obj
-                    (delay (value-at (,make* (foreign-pointer-search ,label))))))
+                    (delay
+                      (make-cdata ,name* (foreign-pointer-search ,label)))))
 	      (case-lambda
-	        (() (fh-object-ref (force obj)))
-	        ((arg) (fh-object-set! (force obj) arg)))))))
+	        (() (cdata*-ref (force obj)))
+	        ((arg) (cdata*-set! (force obj) arg)))))))
       (values wrapped defined))
 
      ((memq 'const sspec)
@@ -1745,7 +1776,7 @@
       (values wrapped defined))
 
      (else
-      (sferr "cnvt-udecl: total miss\n") (pperr udecl)
+      (sferr "cnvt-udecl/ct: total miss\n") (pperr udecl)
       (values wrapped defined)))))
 
 
@@ -1898,6 +1929,7 @@
 (define* (process-decls decls udict
 			#:optional (wrapped '()) (defined '())
 			#:key (declf (lambda (k) #t)))
+  (define cnvt-udecl cnvt-udecl/ct)
   (fold-values			  ; from (sxml fold)
    (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
      (catch 'ffi-help-error
@@ -2045,7 +2077,7 @@
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
 		 (*renamer* identity) (*errmsgs* '()) (*prefix* prefix)
 		 (*mport* (open-output-string)) (*udict* udict))
-    (cnvt-udecl udecl udict '() '())
+    (cnvt-udecl/ct udecl udict '() '())
     (let ((res (get-output-string (*mport*))))
       (close (*mport*))
       res)))
