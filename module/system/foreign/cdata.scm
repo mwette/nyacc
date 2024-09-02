@@ -27,9 +27,9 @@
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (cdata* data) -> <cdata>
 ;; (cdata& data) -> <cdata>
+;; (cdata-kind data) => '(base pointer struct union array function)
+;; (cdata&-ref data) -> pointer
 
-;; extras:
-;; (
 
 ;; working this:
 ;; (ctype-sel type ix tags) -> (values ix ct)
@@ -60,9 +60,11 @@
             cstruct cunion cpointer carray cenum cfunction
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
-            make-cdata*
+            make-cdata* cdata-kind cdata&-ref
             cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata* cdata-cast
             ctype->ffi
+            ;;
+            unwrap-number unwrap-pointer unwrap-array
             ;;
             mtype-bv-ref mtype-bv-set!
             ;; debug
@@ -72,7 +74,8 @@
             cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-signed?
             cpointer-type cpointer-mtype
             carray-type carray-length
-            cfunction-ptr->proc cfunction-proc->ptr
+            cenum-vald cenum-symd
+            cfunction-proc->ptr cfunction-ptr->proc
             pretty-print-ctype)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
@@ -149,10 +152,12 @@
 
 ;; @deftp {Record} <cenum> mtype symd vald
 ;; @table @var
+;; @item mtype
+;; machine type to store
 ;; @item symd
-;; value to symbol dict
+;; value to symbol dict (or call it nambynum?)
 ;; @item vald
-;; symbol to value
+;; symbol to value (or call it numbynam?)
 ;; @end deftp
 (define-record-type <cenum>
   (%make-cenum mtype symd vald)
@@ -175,17 +180,17 @@
   (let ((type (%cpointer-type info)))
     (if (promise? type) (force type) type)))
 
-;; @deftp {Record} <cfunction> ptr->proc proc->ptr variadic?
-;; The @var{ptr->proc} argument is a procedure to convert from pointer to
-;; procedure (typically calling Guile's @code{pointer->procedure}).  The
-;; @var{proc->ptr} converts a Guile procedure to a Guile pointer (typically
-;; using Guile's @code{procedure->pointer}).
+;; @deftp {Record} <cfunction> proc->ptr ptr->proc variadic?
+;; The argument @var{proc->ptr} is a procedure converts a Guile procedure
+;; to a Guile pointer (typically using Guile's @code{procedure->pointer}).
+;; The argument @var{ptr->proc} is a procedure to convert from pointer to
+;; procedure (typically calling Guile's @code{pointer->procedure}).
 ;; @end deftp
 (define-record-type <cfunction>
-  (%make-cfunction mtype ptr->proc proc->ptr)
+  (%make-cfunction proc->ptr ptr->proc variadic?)
   cfunction?
-  (ptr->proc cfunction-ptr->proc)
   (proc->ptr cfunction-proc->ptr)
+  (ptr->proc cfunction-ptr->proc)
   (variadic? cfunction-variadic?))
 
 (set-record-type-printer! <ctype>
@@ -209,7 +214,7 @@
 ;; map of arch (from @code{(*arch*)}) -> cbase-info
 (define *cbase-map* (make-parameter '()))
 
-(display "cdata: need something like global address decoder in (\n")
+(display "cdata: need global address offset for cross-targets\n")
 ;;(define *cdata-adm* (make-parameter '()))
 ;; native => identity
 ;; or base-address
@@ -586,7 +591,7 @@
 ;; @end example
 ;; If @var{packed} is @code{#t} the size wil be smallest that can hold it.
 ;; @end deffn
-(define* (cenum enum-list basetype)
+(define* (cenum enum-list #:optional basetype)
   "- Procedure: cenum enum-list [basetype]
      ENUM-LIST is a list of name or name-value pairs
           (cenum '((a 1) b (c 4))
@@ -617,17 +622,17 @@
           (((? symbol? n)) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
           (_ (error "cenum: bad enum def'n"))))))
 
-;; @deffn {Procedure} cfunction ptr->proc proc->ptr [variadic?]
+;; @deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?]
 ;; Generate a C function pointer type.  You must pass the @var{wrapper}
 ;; and @var{unwrapper} procedures that convert a pointer to a procedure,
-;; and procedure to pointer, respectively.  Pass @code{#t} for
-;; @var{#:variadic} if the function uses variadic arguments.  For this
-;; case, (to be documented).
+;; and procedure to pointer, respectively.  The optional argument
+;; @var{#:variadic}, if @code{#t},  indicates the function uses variadic
+;; arguments.  For this case, (to be documented).
 ;; @end deffn
-(define* (cfunction unwrapper wrapper #:optional variadic?)
-  (let* ((type (cbase 'int)) (mtype (ctype-info type)))
-    (%make-ctype (ctype-size type) (ctype-align (type)) 'function
-                 (%make-cfunction mtype unwrapper wrapper))))
+(define* (cfunction proc->ptr ptr->proc #:optional variadic?)
+  (let ((type (cbase 'intptr_t)))
+    (%make-ctype (ctype-size type) (ctype-align type) 'function
+                 (%make-cfunction proc->ptr ptr->proc variadic?))))
 
 ;; @deffn {Procedure} make-cdata type [value [name]]
 ;; Generate a @emph{cdata} object of type @var{type} with optional
@@ -650,7 +655,7 @@
            (%make-cdata bv 0 (carray et ln) name)))
         (else
          (when value (error "can't initialize arrays yet"))
-         (%make-cdata (make-bytevector (ctype-size type)) name)))))
+         (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))))
     (else
      (let* ((size (ctype-size type))
             (bvec (make-bytevector size))
@@ -703,14 +708,8 @@
                   (mtype (cenum-mtype info))
                   (vnl (cenum-symd info)))
              (assq-ref vnl (mtype-bv-ref mtype bv ix))))
-          ((function)
-           (let* ((info (ctype-info ct))
-                  (mtype (cfunction*-mtype info))
-                  (ptr (make-pointer (mtype-bv-ref mtype bv ix))))
-             ((cfunction*-unwrapper info) ptr)))
-          ((array) #f)
-          ((struct) #f)
-          ((union) #f)
+          ((array struct union) (make-cdata bv ix ct))
+          ((function) #f)
           (else (error "bad stuff")))))))
 
 ;; @deffn {Procedure} cdata-set! data value [tag ...]
@@ -740,7 +739,11 @@
               ((base)
                (mtype-bv-set! (ctype-info ct) bv ix value))
               ((pointer)
-               (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
+               (let ((addr (cond
+                            ((pointer? value) (pointer-address value))
+                            ((integer? value) value)
+                            (else (error "cdata-set!: bad value" value)))))
+                 (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix addr)))
               ((bitfield)
                (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
                       (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
@@ -759,10 +762,7 @@
                                   (assq-ref (cenum-vald info) value)))
                   (else
                    (error "cdata-set! bad value arg: ~s" value)))))
-              ((function*)
-               (let* ((mtype (cfunction*-mtype (ctype-info ct)))
-                      (ptr ((cfunction*-wrapper (ctype-info ct)) value)))
-                 (mtype-bv-set! mtype bv ix ptr)))
+              ((function) (error "cdata-set!: can't set! function value"))
               ((struct) (error "cdata-set!: can't set! struct value"))
               ((union) (error "cdata-set!: can't set! union value"))
               ((array) (error "cdata-set!: can't set! array value"))
@@ -799,9 +799,8 @@
 (define* (make-cdata/* type pointer #:optional name)
    (assert-ctype 'make-cdata/ type)
    (let* ((size (ctype-size type))
-          (bvec (pointer->bytevector from-pointer size))
+          (bvec (pointer->bytevector pointer size))
           (data (%make-cdata bvec 0 type name)))
-     (if value (cdata-set! data value))
      data))
 
 ;; @deffn {Procedure} cdata& data => cdata
@@ -842,16 +841,39 @@
         0 type #f)))))
 ;; TODO: check for (cdata-tn data)
 
+;; @deffn {Procedure} cdata-kind data
+;; Return the kind of @var{data}: pointer, base, struct, ...
+;; @end deffn
+(define (cdata-kind data)
+  (assert-cdata 'cdata-cast data)
+  (ctype-kind (cdata-ct data)))
+
+;; @deffn {Procedure} cdata&-ref data
+;; Does not work work (yet) for offset addresses.
+;; @end deffn
+(define (cdata&-ref data)
+  (assert-cdata 'cdata&-ref data)
+  (call-with-values (lambda () (cdata-sel data))
+    (lambda (bv ix ct)
+      (if (zero? ix)
+          (bytevector->pointer bv)
+          (make-pointer (+ (pointer-address (bytevector->pointer bv))
+                           (* (sizeof '*) ix)))))))
 
 ;; @deffn {Procedure} cdata-cast data type [do-check] => <cdata>
 ;; need to be able to cast array to pointer
+;; @* maybe call this ccast ?
+;; @example
+;; (cdata-cast val Target*) (ccast Target* val)
+;; @end example
+;; @end deffn
 (define* (cdata-cast data type #:key do-check)
   (assert-cdata 'cdata-cast data)
   (assert-ctype 'cdata-cast type)
   (define (type-miss)
-    (error "cdata-cast: type-mismatch:" (list (cdata-ct data) type)))
+    (error "cdata-cast: incompatible type:" (list (cdata-ct data) type)))
   (define (type-check ft tt)
-    (when (and skip-check (ctype-equal? ft tt)) (type-miss)))
+    (when (and do-check (ctype-equal? ft tt)) (type-miss)))
   (error "cdata-cast not done")
   (let ((bv (cdata-bv data))
         (ix (cdata-ix data))
@@ -921,6 +943,35 @@
          `(carray ,(cnvt (carray-type info)) (carray-length info)))
         (else (error "pretty-print-ctype: needs work" (ctype-kind type))))))
   (pretty-print (cnvt type) port))
+
+;; --- not sure about this ===--------------------------------------------------
+
+(define (unwrap-number arg)
+  (cond ((number? arg) arg)
+        ((cdata? arg) (cdata-ref arg))
+        (else (error "unwrap-number: bad arg: ~s" arg))))
+
+(define* (unwrap-pointer arg #:optional hint)
+  (cond ((pointer? arg) arg)
+        ((string? arg) (string->pointer arg))
+        ((cdata? arg) (cdata-ref arg))
+        ((and (procedure? arg) (ctype? hint))
+         (let* ((info (ctype-info hint))
+                (func (case (ctype-kind hint)
+                        ((function) info)
+                        ((pointer) (ctype-info (cpointer-type info)))
+                        (else (error "not ok")))))
+           ((cfunction-proc->ptr func) arg)))
+        (else (error "unwrap-pointer: bad arg: ~s" arg))))
+
+(define (unwrap-array arg)
+  (unless
+    (cdata? arg)
+    (error "unwrap-array: bad arg: " arg))
+  (case (cdata-kind arg)
+    ((pointer) (cdata-ref arg))
+    ((array) (cdata&-ref arg))
+    (else (error "unwrap-array: bad arg: " arg))))
 
 
 ;; --- guile ffi api support ---------------------------------------------------
