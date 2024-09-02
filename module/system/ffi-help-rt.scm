@@ -518,10 +518,13 @@
     (define make
       (case-lambda
         ((arg)
-         (cond
-          ((fh-object? arg) (make-struct/no-tail type (fh-object-ref arg)))
-          ((fhval? arg) (make-struct/no-tail type arg))
-          (else (make-struct/no-tail type (make-fhval desc arg)))))
+         (cond ;; need to boil down to the raw pointer
+          ((fh-object? arg)
+           (make-struct/no-tail type (make-fhval desc (fh-object-ref arg))))
+          ((fhval? arg)
+           (make-struct/no-tail type (make-fhval desc (fhval-ref arg))))
+          (else
+           (make-struct/no-tail type (make-fhval desc arg)))))
         (() (make-struct/no-tail type (make-fhval desc ffi:%null-pointer)))))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
@@ -709,13 +712,14 @@
 
 
 ;; @deffn {Syntax} fh-cast type value
-;; Cast to new type.  Always a pointer, unless I missed something.
+;; Cast to new type.
 ;; Example: Given @code{bar} of type @code{Bar*}:
 ;; @example
 ;; (fh-cast Foo* bar) => <Foo* 0xabcd1234>
 ;; @end example
 ;; @end deffn
 ;; C allows cast of base types and pointer types
+;; look at define-fh-pointer-type make
 (define-syntax fh-cast
   (lambda (x)
     "- Syntax: fh-cast type value
@@ -724,7 +728,7 @@
           (fh-cast Foo* bar) => <Foo* 0xabcd1234>"
     (syntax-case x ()
       ((_ type expr)
-       #`(#,(gen-id x "make-" #'type) (fh-object-val expr))))))
+       #`(#,(gen-id x "make-" #'type) (fh-object-ref expr))))))
 (export fh-cast)
 
 ;; @deffn {Procedure} fh-varg type value
