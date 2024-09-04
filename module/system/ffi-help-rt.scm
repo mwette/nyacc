@@ -1,4 +1,4 @@
-;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
+;;; system
 
 ;; Copyright (C) 2016-2019,2022-2024 Matthew Wette
 ;;
@@ -125,9 +125,9 @@
 ;; @deffn {Procedure} make-fhval desc [arg] [#:name name])
 ;; FIXME
 ;; @end deffn
-(define-syntax make-fhval
-  (syntax-rules ()
-    ((_ desc arg)
+(define make-fhval
+  (case-lambda 
+    ((desc arg)
      (let ((meta (bytestructure-descriptor-metadata desc)))
        (cond
         ((bytestructure? arg) arg)
@@ -166,9 +166,9 @@
                      bv)))))
            (make-bytestructure bvec 0 desc)))
         (else (bytestructure desc arg)))))
-     ((_ desc) (bytestructure desc))))
+    ((desc) (bytestructure desc))))
 
-(define-syntax-rule (fhval? val)
+(define (fhval? val)
   (bytestructure? val))
 
 ;; @deffn {Syntax} fhval-ref obj tag ...
@@ -201,13 +201,13 @@
         (let ((setter (bytestructure-descriptor-setter desc)))
           (setter #f bvec oset rarg))))))
 
-;; @deffn {Syntax} fhval* obj
+;; @deffn {Procedure} fhval* obj
 ;; dereference a pointer
 ;; @end deffn
-(define-syntax-rule (fhval* val)
+(define (fhval* val)
   (fhval-sel val '*))
 
-(define-syntax-rule (NEWfhval* val)
+(define (NEWfhval* val)
   (let* ((desc (bytestructure-descriptor val))
          (meta (bytestructure-descriptor-metadata desc)))
     (cond
@@ -218,10 +218,10 @@
      (else
       (fhval-sel val)))))
 
-;; @deffn {Syntax} fhval& obj
+;; @deffn {Procedure} fhval& obj
 ;; generate pointer to value
 ;; @end deffn
-(define-syntax-rule (fhval& val)
+(define (fhval& val)
   (let* ((desc (bytestructure-descriptor val))
          (meta (bytestructure-descriptor-metadata desc))
          (desc* (bs:pointer desc))
@@ -240,10 +240,10 @@
     (lambda (bvec oset desc)
       (make-bytestructure bvec oset desc))))
 
-;; @deffn {Syntax} fhval-addr val)
+;; @deffn {Procedure} fhval-addr val)
 ;; Return the underlying numeric address of the data.
 ;; @end deffn
-(define-syntax-rule (fhval-addr val)
+(define (fhval-addr val)
   (call-with-values
       (lambda () (bytestructure-unwrap val))
     (lambda (bv offs desc)
