@@ -70,7 +70,7 @@
   (align-map arch-align-map))            ; f32, u8 => alignment
 
 (define (make-arch-info name endianness mtype-map align-map)
-  (unless (eq? 'void* (car mtype-map)) (error "expecting void*"))
+  (unless (eq? 'void* (caar mtype-map)) (error "expecting void*"))
   (%make-arch-info name endianness mtype-map align-map))
 
 (define sizeof-mtype-map
