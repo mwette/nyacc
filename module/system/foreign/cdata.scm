@@ -207,9 +207,9 @@
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
-    (let ((cl (ctype-kind type)) (nf (ctype-info type))
-          (addr (pointer-address (scm->pointer type))))
-      (format port "#<ctype ~s 0x~x>" (if (eq? 'base cl) nf cl) addr))))
+    (let ((kd (ctype-kind type)) (nf (ctype-info type))
+          (ad (pointer-address (scm->pointer type))))
+      (format port "#<ctype ~s 0x~x>" (if (eq? 'base kd) nf kd) ad))))
 
 (define make-ctype %make-ctype)
 
@@ -254,11 +254,9 @@
            (name (cdata-tn data))
            (kind (ctype-kind type))
            (bv-addr (pointer-address (bytevector->pointer bv))))
-      (format port "#<cdata 0x~x" (+ bv-addr ix))
-      (if name
-          (format port " ~a>" name)
-          (format port " ~a>" kind)))))
-
+      (format port "#<cdata")
+      (if name (format port " ~a>" name) (format port " ~a>" kind))
+      (format port " 0x~x>" (+ bv-addr ix)))))
 
 (define-inlinable (assert-ctype p v)
   (unless (ctype? v)
@@ -315,7 +313,6 @@
     ((f32be) (bytevector-ieee-single-set! bv ix value be))
     ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
-
 ;;.@deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
 ;;.@end deffn
@@ -370,120 +367,6 @@
                (else (error "cpointer: bad arg" type)))))
     (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
                  'pointer (%make-cpointer type (mtypeof-basetype 'void*)))))
-
-;; @deffn {Procedure} ctype-detag type ix tag
-;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
-;; field name.  For arrays and pointers, the tag is a non-negative integer.
-;; An integer tag applied to the pointer increments the pointer by the
-;; associated number of elements referenced.
-;; @end deffn
-;; MAYBE JUST MAYBE make this return a list of (ix ct) (ix ct) ...
-;; 
-(define (ctype-detag ct ix tag)
-  (assert-ctype 'ctype-detag ct) ;; not needed assuming stable mod
-  (let ((ti (ctype-info ct)))
-    (case (ctype-kind ct)
-      ((struct)
-       (let ((fld (assq-ref (cstruct-dict ti) tag)))
-         (unless fld (error "ctype: bad field " tag))
-         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
-      ((union)
-       (let ((fld (assq-ref (cunion-dict ti) tag)))
-         (unless fld (error "ctype: bad field " tag))
-         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
-      ((array)
-       (unless (integer? tag) (error "bad array ref"))
-       (let ((type (carray-type ti)))
-         (values (+ ix (* tag (ctype-size type))) type)))
-      #;((pointer)
-       (let ((eltsz (ctype-size (cpointer-type ti))))
-         (cond
-          ((eq? tag '*)
-           ;;(error "ctype-sel cannot dereference")
-           (values 0 (cpointer-type ti))
-           )
-          ((integer? tag) (values (+ ix (* tag eltsz)) ct))
-          (else (error "bad array ref")))))
-      (else (error "bad tag" tag)))))
-
-;; @deffn {Procedure} ctype-sel type ix tags => ix ct
-;; @deffnx {Procedure} ctype-sel* type ix tags => ((ix . ct) (ix . ct) ...)
-;; offset from zero
-;; @end deffn
-(define (ctype-sel type ix tags)
-  (assert-ctype 'ctype-sel type)
-  (let loop ((ct type) (ix ix) (tags tags))
-    (cond
-     ((null? tags)
-      (values ix ct))
-     ((eq? 'pointer (ctype-kind ct))
-      (error "ctype-sel: pointer dereference; try ctype-sel*"))
-     (else
-      (call-with-values (lambda () (ctype-detag ct ix (car tags)))
-        (lambda (ix ct) (loop ct ix (cdr tags))))))))
-
-(define (ctype-sel* type ix tags)
-  (assert-ctype 'ctype-sel type)
-  (let loop ((res '()) (ct type) (ix 0) (tags tags))
-    (cond
-     ((null? tags)
-      (reverse res))
-     ((eq? 'pointer (ctype-kind ct))
-      (loop
-       (cons (cons ix ct) res) (cpointer-type (ctype-info ct)) 0 (cdr tags)))
-     (else
-      (call-with-values (lambda () (ctype-detag ct ix (car tags)))
-        (lambda (ix ct) (loop res ct ix (cdr tags))))))))
-
-
-;; @deffn {Procedure} ctype-equal? a b
-;; This predicate assesses equality of it's arguments.
-;; Two types are considered equal if they have the same size,
-;; alignment, kind, and eqivalent kind-specific properties.
-;; For base types, the symbolic mtype must be equal; this includes
-;; size, integer versus float, and signed versus unsigned.
-;; For struct and union kinds, the names and types of all fields
-;; must be equal.
-;; @*TODO: algorithm to prevent infinite search for recursive structs
-;; @end deffn
-(define (ctype-equal? a b)
-  "- Procedure: ctype-equal? a b
-     This predicate assesses equality of it’s arguments.  Two types are
-     considered equal if they have the same size, alignment, kind, and
-     eqivalent kind-specific properties.  For base types, the symbolic
-     mtype must be equal; this includes size, integer versus float, and
-     signed versus unsigned.  For struct and union kinds, the names and
-     types of all fields must be equal."
-  (letrec*
-      ((fields-equal?
-        (lambda (fl gl)
-          (fold (lambda (a b seed)
-                  (and seed
-                       (eq? (cfield-name a) (cfield-name b))
-                       (eqv? (cfield-offset a) (cfield-offset b))
-                       (ctype-equal? (cfield-type a) (cfield-type b))))
-                #t fl gl)))
-       (cinfo-equal?
-        (lambda (kind a b)
-          (case kind
-            ((base) (eq? a b))
-            ((struct) (fields-equal? (cstruct-fields a) (cstruct-fields b)))
-            ((union) (fields-equal? (cunion-fields a) (cunion-fields b)))
-            ((pointer)
-             (let* ((at (%cpointer-type a))
-                    (bt (%cpointer-type b)))
-               (cond
-                ((and (promise? at) (promise? bt)) (eq? (force at) (force bt)))
-                ((promise? at) (eq? (force at) bt))
-                ((promise? bt) (eq? at (force bt)))
-                ((eq? at bt)))))
-                (else #f)))))
-    (cond
-     ((or (not (ctype? a)) (not (ctype? b))) #f)
-     ((not (eq? (ctype-kind a) (ctype-kind b))) #f)
-     ((not (eqv? (ctype-size a) (ctype-size b))) #f)
-     ((not (eqv? (ctype-align a) (ctype-align b))) #f)
-     (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b))))))
 
 ;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
@@ -678,6 +561,122 @@
   (let ((type (cbase 'intptr_t)))
     (%make-ctype (ctype-size type) (ctype-align type) 'function
                  (%make-cfunction proc->ptr ptr->proc variadic?))))
+
+;; @deffn {Procedure} ctype-detag type ix tag
+;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
+;; field name.  For arrays and pointers, the tag is a non-negative integer.
+;; An integer tag applied to the pointer increments the pointer by the
+;; associated number of elements referenced.
+;; @end deffn
+;; MAYBE JUST MAYBE make this return a list of (ix ct) (ix ct) ...
+;; 
+(define (ctype-detag ct ix tag)
+  (assert-ctype 'ctype-detag ct) ;; not needed assuming stable mod
+  (let ((ti (ctype-info ct)))
+    (case (ctype-kind ct)
+      ((struct)
+       (let ((fld (assq-ref (cstruct-dict ti) tag)))
+         (unless fld (error "ctype: bad field " tag))
+         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
+      ((union)
+       (let ((fld (assq-ref (cunion-dict ti) tag)))
+         (unless fld (error "ctype: bad field " tag))
+         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
+      ((array)
+       (unless (integer? tag) (error "bad array ref"))
+       (let ((type (carray-type ti)))
+         (values (+ ix (* tag (ctype-size type))) type)))
+      ((pointer)
+       (error "ctype-detag: don't call on me for a pointer dereference"))
+      (else (error "bad tag" tag)))))
+
+;; @deffn {Procedure} ctype-sel type ix tags => ix ct
+;; @deffnx {Procedure} ctype-sel* type ix tags => ((ix . ct) (ix . ct) ...)
+;; offset from zero
+;; @end deffn
+(define (ctype-sel type ix tags)
+  (assert-ctype 'ctype-sel type)
+  (let loop ((ct type) (ix ix) (tags tags))
+    (cond
+     ((null? tags)
+      (values ix ct))
+     ((eq? 'pointer (ctype-kind ct))
+      (error "ctype-sel: pointer dereference; try ctype-sel*"))
+     (else
+      (call-with-values (lambda () (ctype-detag ct ix (car tags)))
+        (lambda (ix ct) (loop ct ix (cdr tags))))))))
+
+(define (ctype-sel* type ix tags)
+  (assert-ctype 'ctype-sel type)
+  (let loop ((res '()) (ct type) (ix 0) (tags tags))
+    (sferr "tags=~s  res=~s\n  ct=~s  ix=~s\n" tags res ct ix)
+    (cond
+     ((null? tags)
+      (reverse (cons (cons ix ct) res)))
+     ((eq? 'pointer (ctype-kind ct))
+      (let* ((info (ctype-info ct))
+             (type (cpointer-type info)))
+        (cond
+         ((eq? '* (car tags))
+          (loop (cons (cons ix ct) res) type 0 (cdr tags)))
+         ((integer? (car tags))
+          (let ((ix (+ ix (* (car tags) (ctype-size type)))))
+            (loop (cons (cons ix ct) res) type 0 (cdr tags))))
+         (else
+          (error "bad tag for pointer")))))
+     (else
+      (call-with-values (lambda () (ctype-detag ct ix (car tags)))
+        (lambda (ix ct) (loop res ct ix (cdr tags))))))))
+
+
+;; @deffn {Procedure} ctype-equal? a b
+;; This predicate assesses equality of it's arguments.
+;; Two types are considered equal if they have the same size,
+;; alignment, kind, and eqivalent kind-specific properties.
+;; For base types, the symbolic mtype must be equal; this includes
+;; size, integer versus float, and signed versus unsigned.
+;; For struct and union kinds, the names and types of all fields
+;; must be equal.
+;; @*TODO: algorithm to prevent infinite search for recursive structs
+;; @end deffn
+(define (ctype-equal? a b)
+  "- Procedure: ctype-equal? a b
+     This predicate assesses equality of it’s arguments.  Two types are
+     considered equal if they have the same size, alignment, kind, and
+     eqivalent kind-specific properties.  For base types, the symbolic
+     mtype must be equal; this includes size, integer versus float, and
+     signed versus unsigned.  For struct and union kinds, the names and
+     types of all fields must be equal."
+  (letrec*
+      ((fields-equal?
+        (lambda (fl gl)
+          (fold (lambda (a b seed)
+                  (and seed
+                       (eq? (cfield-name a) (cfield-name b))
+                       (eqv? (cfield-offset a) (cfield-offset b))
+                       (ctype-equal? (cfield-type a) (cfield-type b))))
+                #t fl gl)))
+       (cinfo-equal?
+        (lambda (kind a b)
+          (case kind
+            ((base) (eq? a b))
+            ((struct) (fields-equal? (cstruct-fields a) (cstruct-fields b)))
+            ((union) (fields-equal? (cunion-fields a) (cunion-fields b)))
+            ((pointer)
+             (let* ((at (%cpointer-type a))
+                    (bt (%cpointer-type b)))
+               (cond
+                ((and (promise? at) (promise? bt)) (eq? (force at) (force bt)))
+                ((promise? at) (eq? (force at) bt))
+                ((promise? bt) (eq? at (force bt)))
+                ((eq? at bt)))))
+                (else #f)))))
+    (cond
+     ((or (not (ctype? a)) (not (ctype? b))) #f)
+     ((not (eq? (ctype-kind a) (ctype-kind b))) #f)
+     ((not (eqv? (ctype-size a) (ctype-size b))) #f)
+     ((not (eqv? (ctype-align a) (ctype-align b))) #f)
+     (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b))))))
 
 ;; @deffn {Procedure} make-cdata type [value [name]]
 ;; Generate a @emph{cdata} object of type @var{type} with optional
