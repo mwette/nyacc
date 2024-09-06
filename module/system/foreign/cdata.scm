@@ -746,20 +746,11 @@
                  (addr (let ((addr (mtype-bv-ref (cpointer-mtype cptr) bv ix)))
                          (cond ((eq? '* tag) addr)
                                ((integer? tag) (+ addr (* elsz tag)))
-                               (else (error "bad tag"))))))
-            (case (ctype-kind elty)
-              ((function)
-               (let ((bv (make-bytevector (cfunction-psize (ctype-info elty)))))
-                 #f
-               ))
-              (else
-               (let ((eptr (make-pointer addr)))
-                 (loop (pointer->bytevector eptr elsz) 0 elty (cdr tags))))
-             ((integer? (car tags))
-              (let ((eptr (make-pointer (+ addr (* elsz (car tags)) elsz))))
-                (loop (pointer->bytevector eptr elsz) 0 elty (cdr tags))))
-             (else
-              (error "cdata-sel: bad tag for pointer:" (car tags))))))
+                               (else (error "cdata-sel: bad tag" tag)))))
+                 (eptr (make-pointer addr)))
+            (if (eq? 'function (ctype-kind elty))
+                (loop bv ix elty (cdr tags))
+                (loop (pointer->bytevector eptr elsz) 0 elty (cdr tags)))))
          (else
           (call-with-values (lambda () (ctype-detag ct ix (car tags)))
             (lambda (ix ct) (loop bv ix ct (cdr tags)))))))))
@@ -791,16 +782,17 @@
   (let* ((data (apply cdata-sel data tags))
          (bv (cdata-bv data))
          (ix (cdata-ix data))
-         (ct (cdata-ct data)))
+         (ct (cdata-ct data))
+         (ti (ctype-info ct)))
     (case (ctype-kind ct)
       ((base)
-       (mtype-bv-ref (ctype-info ct) bv ix))
+       (mtype-bv-ref ti bv ix))
       ((pointer)
-       (make-pointer (mtype-bv-ref (cpointer-mtype (ctype-info ct)) bv ix)))
+       (make-pointer (mtype-bv-ref (cpointer-mtype ti) bv ix)))
       ((bitfield)
-       (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
-              (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-              (sx (cbitfield-signed? bi)) (sm (expt 2 (1- wd)))
+       (let* ((mt (cbitfield-mtype ti)) (sh (cbitfield-shift ti))
+              (wd (cbitfield-width ti)) (sx (cbitfield-signed? ti))
+              (sm (expt 2 (1- wd)))
               (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
          (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
       ((enum)
@@ -809,8 +801,14 @@
               (vnl (cenum-symd info)))
          (assq-ref vnl (mtype-bv-ref mtype bv ix))))
       ((array struct union) (make-cdata bv ix ct))
-      ((function) #f) ;; FIXME
-      (else (error "bad stuff")))))
+      ((function)
+       (let* ((ti (ctype-info ct))
+              (mtype (cfunction-ptr-mtype ct))
+              (addr (mtype-bv-ref mtype bv ix))
+              (ptr->proc (cfunction-ptr->proc ct)))
+         (if (zero? addr) (error "cdata-ref: bad function address"))
+         (ptr->proc (make-pointer addr))))
+      (else (error "cdata-ref: giving up")))))
 
 ;; @deffn {Procedure} cdata-set! data value [tag ...]
 ;; Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
@@ -819,6 +817,8 @@
 ;; (cdata-set! my-struct-data 42 'a 'b 'c))
 ;; @end example
 ;; If @var{value} is a @code{<cdata>} object copy that, if types match.
+;; @*If @var{value} can be a procedure used to set a cfunction pointer
+;; value.
 ;; @end deffn
 (define (cdata-set! data value . tags)
   "- Procedure: cdata-set! data value [tag ...]
@@ -839,20 +839,17 @@
           ((base)
            (mtype-bv-set! (ctype-info ct) bv ix value))
           ((pointer)
-           ;; need to handle procedure, if type is cfunction
-           (let* ((info (ctype-info ct))
-                  (type (cpointer-type info))
-                  (mtype (cpointer-mtype info))
-                  (kind (ctype-kind type)))
+           (let* ((pi (ctype-info ct)) (pt (cpointer-type pi))
+                  (mtype (cpointer-mtype pi)) (kind (ctype-kind pt)))
              (cond
               ((pointer? value)
                (mtype-bv-set! mtype bv ix (pointer-address value)))
               ((integer? value)
                (mtype-bv-set! mtype bv ix value))
-              ((procedure value) ;; if pointer does set also set function?
+              ((procedure? value)
                (unless (eq? kind 'function) (error "yuckus"))
                (mtype-bv-set! mtype bv ix
-                              (pointer->addr (cfunction-proc->ptr value))))
+                              (pointer-address (cfunction-proc->ptr value))))
               (else (error "cdata-set!: bad arg" value)))))
           ((bitfield)
            (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
