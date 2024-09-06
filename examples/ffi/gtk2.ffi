@@ -24,12 +24,9 @@
   #:use-ffi-module (ffi gobject)
   #:use-ffi-module (ffi glib))
 
-(define-fh-pointer-type GtkEnumValue* int*-desc
-  GtkEnumValue*? make-GtkEnumValue*)
-(export GtkEnumValue* GtkEnumValue*? make-GtkEnumValue*)
-
 (define-public gtk-symval ffi-gtk2-symbol-val)
 
+#|
 ;; OK, some gtk programs use (lambda (widget event arg) ...) and Gtk etc does
 ;; not provide it so I hack it here:
 (define-public wrap-GtkEventCallback
@@ -43,7 +40,7 @@
 (define-public unwrap-GCallback
   (lambda (~proc)
     (ffi:procedure->pointer ffi:void ~proc (list '* '* '*))))
-#|
+
 (define-public GtkEventCallback-desc
   (fh:function*
     'void (list (bs:pointer 'void) (bs:pointer 'void) (bs:pointer 'void)))))
