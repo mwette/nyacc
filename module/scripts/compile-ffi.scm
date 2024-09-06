@@ -25,6 +25,7 @@
 
 (define-module (scripts compile-ffi)
   #:use-module (nyacc lang c99 ffi-help)
+  #:use-module ((nyacc lang c99 ffi-help-cd) #:prefix cd:)
   #:use-module (system base language)
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
@@ -242,7 +243,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
         (catch 'c99-error
           (lambda ()
             (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
-            (compile-ffi-file ffi-file options)
+            (cd:compile-ffi-file ffi-file options)
             (sfmt "... wrote `~A'\n" (fix-path scm-file)))
           (lambda (key fmt . args)
             (apply throw 'ffi-help-error fmt args))))

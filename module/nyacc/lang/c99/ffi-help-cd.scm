@@ -1,4 +1,4 @@
-;;; examples/nyacc/lang/c99/ffi-help-ct.scm
+;;; examples/nyacc/lang/c99/ffi-help-cd.scm
 
 ;; Copyright (C) 2016-2024 Matthew Wette
 ;;
@@ -56,7 +56,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang c99 ffi-help-ct)
+(define-module (nyacc lang c99 ffi-help-cd)
   #:export (*ffi-help-version*
 	    define-ffi-module
 	    compile-ffi-file
@@ -784,7 +784,7 @@
        (cond
 	((member (w/enum name) wrapped)
          (list (strings->symbol "unwrap-enum-" name) mname))
-	(else `(unwrap~enum mname))))
+	(else `(unwrap~enum ,mname))))
       (`(enum-def ,_) `(unwrap~enum ,mname))
       (`(enum-ref (ident ,name))
        (cond
@@ -798,7 +798,7 @@
       (`(array-of) `(unwrap-array ,mname))
       ;; not expected
       (`(struct-def . ,_) `(cdata&-ref ,mname))
-      (`(union-def . ,_) `(cdata&ref ,mname))
+      (`(union-def . ,_) `(cdata&-ref ,mname))
       (otherwise
        (fherr "unwrap-mdecl: missed:\n~A" (ppstr mtail))))))
 
@@ -813,7 +813,7 @@
       (`((typename ,name))
        (cond
         ((member name def-defined) #f)
-	((member name defined) `(make-cdata ,name ,mname))
+	((member name defined) `(make-cdata ,name ,mname ',name))
 	((member name wrapped) (list (sfsym "wrap-~A" name) mname))
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
@@ -827,18 +827,22 @@
       (`((pointer-to) (typename ,tname))
        (cond
         ((member tname ffi-defined) #f)
-	((member (w/* tname) defined) `(make-cdata ,(sfsym "~A*" tname) ,mname)) 
+	((member (w/* tname) defined)
+         (let ((sname (sfsym "~A*" tname)))
+           `(make-cdata ,sname ,mname ',sname)))
 	((member (w/* tname) wrapped) (list (sfsym "wrap-~A*" tname) mname))
 	(else #f)))
       (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
        (cond
         ((member (w/struct aggr-name) wrapped)
-         `(make-cdata ,(sfsym "struct-~A*" aggr-name) ,mname))
+         (let ((sname (sfsym "struct-~A*" aggr-name)))
+         `(make-cdata ,sname ,mname ',sname)))
 	(else #f)))
       (`((pointer-to) (union-ref (ident ,aggr-name) . ,rest))
        (cond
 	((member (w/union aggr-name) wrapped)
-         `(make-cdata ,(sfsym "union-~A*" aggr-name) ,mname))
+         (let ((sname (sfsym "union-~A*" aggr-name)))
+         `(make-cdata ,sname ,mname ',sname)))
 	(else #f)))
       (`((pointer-to) . ,otherwise) #f)
       (`((array-of) . ,rest)
@@ -1785,7 +1789,7 @@
 	    (lambda (oport)
 	      (*mport* oport)
 	      (let ((env (make-fresh-user-module)))
-		(eval '(use-modules (nyacc lang c99 ffi-help-ct)) env)
+		(eval '(use-modules (nyacc lang c99 ffi-help-cd)) env)
 		(let loop ((exp (read iport)))
 		  (cond
 		   ((eof-object? exp)
