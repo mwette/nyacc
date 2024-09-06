@@ -1,4 +1,4 @@
-;;; examples/nyacc/lang/c99/ffi-help.scm
+;;; examples/nyacc/lang/c99/ffi-help-bs.scm
 
 ;; Copyright (C) 2016-2024 Matthew Wette
 ;;
@@ -56,7 +56,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang c99 ffi-help)
+(define-module (nyacc lang c99 ffi-help-bs)
   #:export (*ffi-help-version*
 	    define-ffi-module
 	    compile-ffi-file
