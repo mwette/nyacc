@@ -39,8 +39,6 @@
 
 (define *ffi-help-version* "1.09.4")
 
-(define *target* (make-parameter 'cdata))
-
 (define %summary
   "Compile a ffi-file to .scm and maybe .go.")
 
@@ -77,7 +75,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -h, --help           print this help message
   --version            print version number
 
-  -t, --target=TARGET  back end target: bytestructures or cdata         
+  -t, --target=TARGET  back end target: bytestructures or cdata
   -L, --load-path=DIR  add DIR to the front of the module load path
   -I, --inc-dir=DIR    add DIR to list of dir's to search for C headers
   -o, --output=OFILE   write output to OFILE
@@ -249,13 +247,13 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
         (catch 'c99-error
           (lambda ()
             (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
-            (case (*target*)
+            (case (assq-ref options 'target)
               ((bytestructure)
                (bs:compile-ffi-file ffi-file options))
               ((cdata)
                (cd:compile-ffi-file ffi-file options))
               (else
-               (error "bad target:" target)))
+               (error "bad target")))
             (sfmt "... wrote `~A'\n" (fix-path scm-file)))
           (lambda (key fmt . args)
             (apply throw 'ffi-help-error fmt args))))

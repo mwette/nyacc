@@ -66,11 +66,18 @@
 ;; ffi:
 ;; (cpointer->procedure ret-arg args [va-args])
 
+(display "cdata: need global address offset for cross-targets\n")
+(display "cdata: need cdata-sel* needs testing and doc\n")
+;;(define *cdata-adm* (make-parameter '()))
+;; native => identity
+;; or base-address
+;; (with-address-offset #x10000 ....
+
 ;;; Code:
 
 (define-module (system foreign cdata)
-  #:export (NULL
-            cbase cstruct cunion cpointer carray cenum cfunction
+  #:export (cbase
+            cstruct cunion cpointer carray cenum cfunction
             make-cdata cdata-ref cdata-set! cdata&-ref cdata-cast
             pretty-print-ctype
             
@@ -237,12 +244,6 @@
 ;; map of arch (from @code{(*arch*)}) -> cbase-info
 (define *cbase-map* (make-parameter '()))
 
-(display "cdata: need global address offset for cross-targets\n")
-;;(define *cdata-adm* (make-parameter '()))
-;; native => identity
-;; or base-address
-;; (with-address-offset #x10000 ....
-
 ;; @deftp {Record} <cdata> bv ix ct [tn]
 ;; Record to hold C data.  Underneath it's a bytevector, index and type.
 ;; There is an optional type-name symbol that can be used to indicate
@@ -266,7 +267,7 @@
            (kind (ctype-kind type))
            (bv-addr (pointer-address (bytevector->pointer bv))))
       (format port "#<cdata")
-      (if name (format port " ~a>" name) (format port " ~a>" kind))
+      (if name (format port " ~a" name) (format port " ~a" kind))
       (format port " 0x~x>" (+ bv-addr ix)))))
 
 (define-inlinable (assert-ctype p v)
@@ -618,9 +619,8 @@
         (lambda (ix ct) (loop ct ix (cdr tags))))))))
 
 (define (ctype-sel* type ix tags)
-  (assert-ctype 'ctype-sel type)
+  (assert-ctype 'ctype-sel* type)
   (let loop ((res '()) (ct type) (ix 0) (tags tags))
-    (sferr "tags=~s  res=~s\n  ct=~s  ix=~s\n" tags res ct ix)
     (cond
      ((null? tags)
       (reverse (cons (cons ix ct) res)))
@@ -696,6 +696,8 @@
 ;; @example
 ;; (make-cdata mytype #f "foo")
 ;; @end example
+;; As a special case, an integer arg to an a zero-sized array type will
+;; allocate storage for that many items.
 ;; @end deffn
 (define* (make-cdata type #:optional value name)
   (assert-ctype 'make-cdata type)
@@ -737,8 +739,11 @@
       (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
                  (tags tags))
         (cond
-         ((null? tags) (%make-cdata bv ix ct #f))
+         ((null? tags)
+          (%make-cdata bv ix ct #f))
          ((eq? 'pointer (ctype-kind ct))
+          (if (eq? 'void (cpointer-type (ctype-info ct)))
+              (error "cdata-sel: attempt to deference void*"))
           (let* ((tag (car tags))
                  (cptr (ctype-info ct))
                  (elty (cpointer-type cptr))
@@ -748,9 +753,13 @@
                                ((integer? tag) (+ addr (* elsz tag)))
                                (else (error "cdata-sel: bad tag" tag)))))
                  (eptr (make-pointer addr)))
-            (if (eq? 'function (ctype-kind elty))
-                (loop bv ix elty (cdr tags))
-                (loop (pointer->bytevector eptr elsz) 0 elty (cdr tags)))))
+            (cond
+             ((zero? addr)
+              (error "cdata-sel: attempt to dereference null pointer"))
+             ((eq? 'function (ctype-kind elty))
+              (loop bv ix elty (cdr tags)))
+             (else
+              (loop (pointer->bytevector eptr elsz) 0 elty (cdr tags))))))
          (else
           (call-with-values (lambda () (ctype-detag ct ix (car tags)))
             (lambda (ix ct) (loop bv ix ct (cdr tags)))))))))
@@ -761,9 +770,9 @@
 ;; @example
 ;; (cdata-ref my-struct-value 'a 'b 'c))
 ;; @end example
-;; This procedure returns XXX for cdata kinds @emph{base}, @emph{pointer} and (in
-;; the future) @emph{function}.  Attempting to obtain values for C-type kinds
-;; @emph{struct}, @emph{union}, @emph{array} will result in @code{#f}.
+;; This procedure returns XXX for cdata kinds @emph{base}, @emph{pointer} and
+;; (in the future) @emph{function}.  Attempting to obtain values for C-type
+;; kinds @emph{struct}, @emph{union}, @emph{array} will result in @code{#f}.
 ;; If, in those cases, you would like a cdata then use this:
 ;; @example
 ;; (or (cdata-ref data tag ...) (cdata-sel data tag ...))
@@ -773,11 +782,14 @@
 (define (cdata-ref data . tags)
   "- Procedure: cdata-ref data [tag ...]
      Return the Scheme (scalar) slot value for selected TAG ... with
-     respect to the cdata object DATA.  This works for cdata kinds
-     _base_, _pointer_ and (in the future) _function_.  Attempting to
-     obtain values for C-type kinds _struct_, _union_, or _array_ will
-     result in ‘#f’.
-          (cdata-ref my-struct-value 'a 'b 'c))"
+     respect to the cdata object DATA.
+          (cdata-ref my-struct-value 'a 'b 'c))
+     This procedure returns XXX for cdata kinds _base_, _pointer_ and
+     (in the future) _function_.  Attempting to obtain values for C-type
+     kinds _struct_, _union_, _array_ will result in ‘#f’.  If, in those
+     cases, you would like a cdata then use this:
+          (or (cdata-ref data tag ...) (cdata-sel data tag ...))
+     (Or should we just make this the default behavior?)"
   (assert-cdata 'cdata-ref data)
   (let* ((data (apply cdata-sel data tags))
          (bv (cdata-bv data))
@@ -800,7 +812,7 @@
               (mtype (cenum-mtype info))
               (vnl (cenum-symd info)))
          (assq-ref vnl (mtype-bv-ref mtype bv ix))))
-      ((array struct union) (make-cdata bv ix ct))
+      ((array struct union) (%make-cdata bv ix ct #f))
       ((function)
        (let* ((ti (ctype-info ct))
               (mtype (cfunction-ptr-mtype ct))
@@ -839,15 +851,16 @@
           ((base)
            (mtype-bv-set! (ctype-info ct) bv ix value))
           ((pointer)
-           (let* ((pi (ctype-info ct)) (pt (cpointer-type pi))
-                  (mtype (cpointer-mtype pi)) (kind (ctype-kind pt)))
+           (let* ((pi (ctype-info ct))
+                  (pt (cpointer-type pi))
+                  (mtype (cpointer-mtype pi)))
              (cond
               ((pointer? value)
                (mtype-bv-set! mtype bv ix (pointer-address value)))
               ((integer? value)
                (mtype-bv-set! mtype bv ix value))
               ((procedure? value)
-               (unless (eq? kind 'function) (error "yuckus"))
+               (unless (eq? (ctype-kind pt) 'function) (error "yuckus"))
                (mtype-bv-set! mtype bv ix
                               (pointer-address (cfunction-proc->ptr value))))
               (else (error "cdata-set!: bad arg" value)))))
@@ -882,7 +895,7 @@
 ;; @* Maybe cdata-cast can do this?
 ;; @end deffn
 (define* (make-cdata/* type pointer #:optional name)
-(assert-ctype 'make-cdata/ type)
+(assert-ctype 'make-cdata/* type)
    (let* ((size (ctype-size type))
           (bvec (pointer->bytevector pointer size))
           (data (%make-cdata bvec 0 type name)))
@@ -933,17 +946,15 @@
   (assert-cdata 'cdata-kind data)
   (ctype-kind (cdata-ct data)))
 
-;; @deffn {Procedure} cdata&-ref data
-;; Does not work work (yet) for offset addresses.
+;; @deffn {Procedure} cdata&-ref data [tag ...]
+;; Does not work work (yet) for march offset addresses.
 ;; @end deffn
-(define (cdata&-ref data)
+(define (cdata&-ref data . tags)
   (assert-cdata 'cdata&-ref data)
-  (call-with-values (lambda () (cdata-sel data))
-    (lambda (bv ix ct)
-      (if (zero? ix)
-          (bytevector->pointer bv)
-          (make-pointer (+ (pointer-address (bytevector->pointer bv))
-                           (* (sizeof '*) ix)))))))
+  (let* ((data (apply cdata-sel data tags))
+         (bptr (bytevector->pointer (cdata-bv data)))
+         (addr (+ (pointer-address bptr) (cdata-ix data))))
+    (make-pointer addr)))
 
 ;; @deffn {Procedure} cdata-cast data type [do-check] => <cdata>
 ;; need to be able to cast array to pointer
@@ -952,6 +963,8 @@
 ;; (cdata-cast val Target*) (ccast Target* val)
 ;; @end example
 ;; @end deffn
+;; or (ccast type data)
+;; or (cdata-typecast data type)
 (define* (cdata-cast data type #:key do-check)
   (assert-cdata 'cdata-cast data)
   (assert-ctype 'cdata-cast type)
@@ -977,11 +990,7 @@
          ((pointer)
           (let* ((array (ctype-info ct))
                  (atype (carray-type array))
-                 (ptype (cpointer-type (ctype-info type)))
-                 )
-            ;;(sferr "array of ~s\n" atype)
-            ;;(sferr "point to ~s\n" ptype)
-            ;;(quit)
+                 (ptype (cpointer-type (ctype-info type))))
             (type-check (carray-type (ctype-info ct))
                         (cpointer-type (ctype-info type)))
             (%make-cdata bv ix type #f)))
