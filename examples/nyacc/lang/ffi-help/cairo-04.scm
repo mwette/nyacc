@@ -1,7 +1,7 @@
 ;; cairo-04.scm - text demo from cairographics.org:
 ;;   https://www.cairographics.org/samples/text_align_center/
 
-;; Copyright (C) 2017 Matthew R. Wette
+;; Copyright (C) 2017,2024 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -9,12 +9,12 @@
 ;; without any warranty.
 
 (use-modules (ffi cairo))
-(use-modules (ffi ffi-help-rt))
+(use-modules (system foreign cdata))
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 256 256))
 (define cr (cairo_create srf))
 
-(define extents (make-cairo_text_extents_t))
+(define extents (make-cdata cairo_text_extents_t))
 
 (define text "cairo")
 
@@ -23,11 +23,11 @@
                         'CAIRO_FONT_WEIGHT_NORMAL)
 
 (cairo_set_font_size cr 52.0)
-(cairo_text_extents cr text (pointer-to extents))
-(define x (- 128.0 (+ (/ (fh-object-ref extents 'width) 2.0)
-                      (fh-object-ref extents 'x_bearing))))
-(define y (- 128.0 (+ (/ (fh-object-ref extents 'height) 2.0)
-                      (fh-object-ref extents 'y_bearing))))
+(cairo_text_extents cr text (cdata& extents))
+(define x (- 128.0 (+ (/ (cdata-ref extents 'width) 2.0)
+                      (cdata-ref extents 'x_bearing))))
+(define y (- 128.0 (+ (/ (cdata-ref extents 'height) 2.0)
+                      (cdata-ref extents 'y_bearing))))
 
 (cairo_move_to cr x y)
 (cairo_show_text cr text)

@@ -1,6 +1,6 @@
 ;; cairo-03.scm -- cairo matrix
 
-;; Copyright (C) 2017 Matthew R. Wette
+;; Copyright (C) 2017,2024 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -8,14 +8,15 @@
 ;; without any warranty.
 
 (use-modules (ffi cairo))               ; auto-generated from cairo.h etc
-(use-modules (ffi ffi-help-rt))      ; pointer-to
+(use-modules (system foreign cdata))
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 120 120))
 (define cr (cairo_create srf))
 
-(define mx (make-cairo_matrix_t))
-(cairo_matrix_init (pointer-to mx) 100 0 0 100 10 10)
-(cairo_set_matrix cr (pointer-to mx))
+(define mx (make-cdata cairo_matrix_t))
+(define &mx (cdata& mx))
+(cairo_matrix_init &mx 100 0 0 100 10 10)
+(cairo_set_matrix cr &mx)
 (cairo_set_line_width cr 0.02)
 
 (cairo_move_to cr 0.0 0.0)

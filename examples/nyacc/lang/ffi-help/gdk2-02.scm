@@ -1,6 +1,6 @@
 ;; gdk2-ex02.scm
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -16,9 +16,9 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 (use-modules (ffi gdk2))
-(use-modules (ffi ffi-help-rt))
-(use-modules ((system foreign) #:prefix ffi:))
-(use-modules (bytestructures guile))
+;;(use-modules ((system foreign) #:prefix ffi:))
+;;(use-modules (bytestructures guile))
+(use-modules (system foreign cdata))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
@@ -26,19 +26,18 @@
 
 (define win
   (let ((attr (make-GdkWindowAttr)))
-    (fh-object-set! attr 'event_mask
-                    (apply logior (map gdk-symval '(GDK_EXPOSE))))
-    (fh-object-set! attr 'width 400)
-    (fh-object-set! attr 'height 300)
-    (fh-object-set! attr 'wclass (gdk-symval 'GDK_INPUT_OUTPUT))
-    (fh-object-set! attr 'window_type (gdk-symval 'GDK_WINDOW_TOPLEVEL))
-    (gdk_window_new NULL (pointer-to attr) 0)))
+    (cdata-set! attr (apply logior (map gdk-symval '(GDK_EXPOSE))) 'event_mask)
+    (cdata-set! attr 400 'width)
+    (cdata-set! attr 300 'height)
+    (cdata-set! attr (gdk-symval 'GDK_INPUT_OUTPUT) 'wclass)
+    (cdata-set! attr (gdk-symval 'GDK_WINDOW_TOPLEVEL) 'window_type)
+    (gdk_window_new NULL (cdata& attr) 0)))
 
 (gdk_window_show win)
 
 (define (gdk-event-type evt)
-  (if (zero? (fh-object-ref evt)) 'GDK_NOTHING
-      (case (fh-object-ref evt '* 'type)
+  (if (zero? (cdata-ref evt)) 'GDK_NOTHING
+      (case (cdata-ref evt '* 'type)
         ((0) 'GDK_DELETE)
         ((1) 'GDK_DESTROY)
         ((2) 'GDK_EXPOSE)
@@ -77,7 +76,7 @@
         ((35) 'GDK_GRAB_BROKEN)
         ((36) 'GDK_DAMAGE)
         (else
-         (sf "unknown event: ~S\n" (fh-object-ref evt '* 'type))
+         (sf "unknown event: ~S\n" (cdata-ref evt '* 'type))
          'UNKNOWN))))
 
 (define (check1)
@@ -85,7 +84,7 @@
          (p (pointer-to evt)))
     (let loop ((n 36))
       (unless (negative? n)
-        (fh-object-set! evt type n)
+        (cdata-set! evt n 'type)
         (unless (= n (gdk-symval (gdk-event-type p) ))
           (simple-formt (current-error-port) "mismatch ~S\n" n)
           (loop (1- n)))))))
@@ -94,32 +93,34 @@
 ;; Configure Property Selection OwnerChange Promimity Client DND WindowState
 ;; Setting GrabBroken 
 (define (fork-event evt)
-  (if (zero? (fh-object-ref evt)) #f
-      (case (fh-object-ref evt '* 'type)
-        ;;((0) (make-GdkEventDelete* (fh-object-ref evt)))
-        ;;((1) (make-GdkEventDestroy* (fh-object-ref evt)))
-        ((2) (make-GdkEventExpose* (fh-object-ref evt)))
-        ((3) (make-GdkEventMotion* (fh-object-ref evt)))
-        ((4 5 6 7) (make-GdkEventButton* (fh-object-ref evt)))
-        ((8 9) (make-GdkEventKey* (fh-object-ref evt)))
-        ((10 11) (make-GdkEventMotion* (fh-object-ref evt)))
-        ((12) (make-GdkEventFocus* (fh-object-ref evt)))
-        ((13) (make-GdkEventConfigure* (fh-object-ref evt)))
-        ;;((14) (make-GdkEventMap* (fh-object-ref evt)))
-        ;;((15) (make-GdkEventUnmap* (fh-object-ref evt)))
-        ((16) (make-GdkEventProperty* (fh-object-ref evt)))
-        ((17 18 19) (make-GdkEventSelectionClear* (fh-object-ref evt)))
-        ((20 21) (make-GdkEventProximity* (fh-object-ref evt)))
-        ((22 23 24 25 26 27) (make-GdkEventDND* (fh-object-ref evt)))
-        ((28) (make-GdkEventClient* (fh-object-ref evt)))
-        ((29) (make-GdkEventVisibility* (fh-object-ref evt)))
-        ((30) (make-GdkEventNoExpose* (fh-object-ref evt)))
-        ((31) (make-GdkEventScroll* (fh-object-ref evt)))
-        ((32) (make-GdkEventWindowState* (fh-object-ref evt)))
-        ((33) (make-GdkEventSetting* (fh-object-ref evt)))
-        ((34) (make-GdkEventOwnerChange* (fh-object-ref evt)))
-        ((35) (make-GdkEventGrabBroken* (fh-object-ref evt)))
-        ;;((36) (make-GdkEventDamage* (fh-object-ref evt)))
+  (if (zero? (cdata-ref evt)) #f
+      (case (cdata-ref evt '* 'type)
+        ;;((0) (make-GdkEventDelete* (cdata-ref evt)))
+        ;;((1) (make-GdkEventDestroy* (cdata-ref evt)))
+        ((2) (cdata&-ref evt '* 'expose)))
+        ((3) (cdata&-ref evt '* 'motion)))
+        ((4 5 6 7) (cdata&-ref evt '* 'button))
+        ((8 9) (cdata&-ref evt '* 'key))
+        ((10 11) (cdata&-ref evt '* 'motion))
+        ((12) (cdata&-ref evt '* 'focus_change))
+        ((13) (cdata&-ref evt '* 'configure))
+        #|
+        ((14) (make-GdkEventMap* (cdata-ref evt)))
+        ((15) (make-GdkEventUnmap* (cdata-ref evt)))
+        ((16) (make-GdkEventProperty* (cdata-ref evt)))
+        ;((17 18 19) (make-GdkEventSelectionClear* (cdata-ref evt)))
+        ((20 21) (make-GdkEventProximity* (cdata-ref evt)))
+        ((22 23 24 25 26 27) (make-GdkEventDND* (cdata-ref evt)))
+        ((28) (make-GdkEventClient* (cdata-ref evt)))
+        ((29) (make-GdkEventVisibility* (cdata-ref evt)))
+        ((30) (make-GdkEventNoExpose* (cdata-ref evt)))
+        ((31) (make-GdkEventScroll* (cdata-ref evt)))
+        ((32) (make-GdkEventWindowState* (cdata-ref evt)))
+        ((33) (make-GdkEventSetting* (cdata-ref evt)))
+        ((34) (make-GdkEventOwnerChange* (cdata-ref evt)))
+        ((35) (make-GdkEventGrabBroken* (cdata-ref evt)))
+        ;;((36) (make-GdkEventDamage* (cdata-ref evt)))
+        |#
         (else
          (sf "missed it\n")
          evt))))
