@@ -37,6 +37,7 @@
   #:export (M_PI M_2PI make-cairo-unit-matrix)
   )
 
+#|
 (define-public cairo_raster_source_acquire_func_t*-desc
   (fh:pointer  cairo_raster_source_acquire_func_t-desc))
 (define-fh-pointer-type cairo_raster_source_acquire_func_t*
@@ -65,10 +66,11 @@
 		 cairo_raster_source_release_func_t
 		 make-cairo_raster_source_release_func_t)
 
-(define M_PI 3.14159265358979323846)
-(define M_2PI 6.283185307179586)
-
 (define (make-cairo-unit-matrix)
   (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
+|#
+
+(define M_PI 3.14159265358979323846)
+(define M_2PI 6.28318530717958647692)
 
 ;; --- last line ---

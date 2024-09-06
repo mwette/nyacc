@@ -25,9 +25,7 @@
   #:use-ffi-module (ffi glib)
   #:use-ffi-module (ffi pango))
 
-(define-public GdkAtom*-desc (bs:pointer GdkAtom))
-(define-fh-pointer-type GdkAtom* GdkAtom*-desc GdkAtom*? make-GdkAtom*)
-(export GdkAtom* GdkAtom*? make-GdkAtom*)
+(define-public GdkAtom*-desc (cpointer GdkAtom))
 
 (define-public gdk-symval ffi-gdk2-symbol-val)
 

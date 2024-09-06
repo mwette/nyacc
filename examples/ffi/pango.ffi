@@ -23,6 +23,7 @@
   #:use-ffi-module (ffi gobject))
 
 ;; PangoScript is an enum.  Some routines return pointer to int for this.
-(define-public wrap-PangoScript* make-int*)
+(define-public (wrap-PangoScript* arg)
+  (make-cdata (cpointer 'int) arg 'PangoScript*))
 
 ;; --- last line ---
