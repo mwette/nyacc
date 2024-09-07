@@ -31,7 +31,7 @@
 ;; (cenum ((name . val) ...)) -> <ctype>
 ;; (cfunction proc->ptr ptr->proc) -> <ctype>
 
-;; (make-cdata ct [val [name]]) -> <cdata>
+;; (make-cdata ct [val]) -> <cdata>
 ;; (cdata-ref data tag ...) -> number | pointer | <cdata>
 ;; (cdata-set! data val tag ...) -> undefined
 ;; (cdata* data) -> <cdata>
@@ -83,6 +83,7 @@
             
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
             cdata? cdata-bv cdata-ix cdata-ct cdata-tn
+            cdata-copy
             
             cdata-kind cdata& cdata* cdata-sel
             ctype-sel ctype-sel*
@@ -121,12 +122,13 @@
 ;; maybe @var{ptype} should only be for @code{cbase} kind types
 ;; @end deftp
 (define-record-type <ctype>
-  (%make-ctype size align kind info)
+  (%make-ctype size align kind info name)
   ctype?
   (size ctype-size)                ; size in bytes
   (align ctype-align)              ; alignment in bytes
   (kind ctype-kind)                ; type kind (base aggr array bits)
-  (info ctype-info))               ; kind-specific info
+  (info ctype-info)                ; kind-specific info
+  (name ctype-name))               ; name or #f
 
 ;; @deftp {Record} <cbitfield> type shift width signed?
 ;; signed? is true if type is signed, means we need to sign-extend
@@ -250,12 +252,11 @@
 ;; a source-language type (e.g., struct-Foo).
 ;; @end deftp
 (define-record-type <cdata>
-  (%make-cdata bv ix ct tn)
+  (%make-cdata bv ix ct)
   cdata?
   (bv cdata-bv)                         ; bvec
   (ix cdata-ix)                         ; index
-  (ct cdata-ct)                         ; type
-  (tn cdata-tn))                        ; optional (interned) type name
+  (ct cdata-ct))                        ; type
 (export %make-cdata) ;; needed?
 
 (set-record-type-printer! <cdata>
@@ -333,7 +334,7 @@
     (let* ((mtype (mtypeof-basetype name))
            (size (sizeof-basetype name))
            (align (alignof-basetype name)))
-      (%make-ctype size align 'base mtype)))
+      (%make-ctype size align 'base mtype #f)))
   (with-arch arch
     (map (lambda (name) (cons name (make-cbase name)))
          base-type-symbol-list)))
@@ -378,7 +379,7 @@
                ((promise? type) type)
                (else (error "cpointer: bad arg" type)))))
     (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
-                 'pointer (%make-cpointer type (mtypeof-basetype 'void*)))))
+                 'pointer (%make-cpointer type (mtypeof-basetype 'void*)) #f)))
 
 ;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
@@ -431,7 +432,7 @@
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl)
         (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
-                     (%make-cstruct (reverse cfl) (reverse ral)))
+                     (%make-cstruct (reverse cfl) (reverse ral)) #f)
         (match (car sfl)
           ((name type)                  ; non-bitfield
            (let* ((type (cond ((symbol? type) (cbase type))
@@ -467,7 +468,7 @@
                   (bfo (- (* 8 ssz) width (* 8 cio)))) ; offset wrt ci
              (if name
                  (let* ((bf (%make-cbitfield mty bfo width sx?))
-                        (ty (%make-ctype fsz fal 'bitfield bf))
+                        (ty (%make-ctype fsz fal 'bitfield bf #f))
                         (cf (%make-cfield name ty cio)))
                    (loop (cons cf cfl) (acons name cf ral)
                          ssz (max fal sal) (cdr sfl)))
@@ -488,7 +489,7 @@
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     (if (null? sfl)
         (%make-ctype (incr-size 0 sal ssz) sal 'union
-                     (%make-cunion (reverse cfl) (reverse ral)))
+                     (%make-cunion (reverse cfl) (reverse ral)) #f)
         (let* ((name (caar sfl))
                (type (cadar sfl))
                (type (cond ((symbol? type)
@@ -521,7 +522,7 @@
      length is unbounded (so be careful)."
   (assert-ctype 'carray type)
   (%make-ctype (* n (ctype-size type)) (ctype-align type)
-               'array (%make-carray type n)))
+               'array (%make-carray type n) #f))
 
 
 ;; @deffn {Procedure} cenum enum-list [packed]
@@ -555,7 +556,7 @@
                (vnl (map (lambda (p) (cons (cdr p) (car p))) nvl))
                (mtype (if short (short-mtype mn mx) (mtypeof-basetype 'int))))
           (%make-ctype (sizeof-mtype mtype) (alignof-mtype mtype)
-                       'enum (%make-cenum mtype vnl nvl)))
+                       'enum (%make-cenum mtype vnl nvl) #f))
         (match (car enl)
           (`(,n ,v) (loop (acons n v nvl) (1+ v) (cdr enl)))
           ((? symbol? n) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
@@ -572,7 +573,7 @@
 (define* (cfunction proc->ptr ptr->proc #:optional variadic?)
   (let ((type (cbase 'void*)) (mtype (mtypeof-basetype 'void*)))
     (%make-ctype (ctype-size type) (ctype-align type) 'function
-                 (%make-cfunction proc->ptr ptr->proc variadic? mtype))))
+                 (%make-cfunction proc->ptr ptr->proc variadic? mtype) #f)))
 
 ;; @deffn {Procedure} ctype-detag type ix tag
 ;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
@@ -689,6 +690,15 @@
      ((not (eqv? (ctype-align a) (ctype-align b))) #f)
      (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b))))))
 
+;; @deffn {Procedure} name-ctype type name -> <ctype>
+;; Add a name to the type.  The name is useful when the type is printed.
+;; @end dedffn
+(define (name-ctype type name)
+  (%make-ctype (ctype-size type) (ctype-align type)
+               (ctype-kind type) (ctype-info type)
+               name))
+
+
 ;; @deffn {Procedure} make-cdata type [value [name]]
 ;; Generate a @emph{cdata} object of type @var{type} with optional
 ;; @var{value} and @var{name}.  To specify name but no value use
@@ -699,7 +709,7 @@
 ;; As a special case, an integer arg to an a zero-sized array type will
 ;; allocate storage for that many items.
 ;; @end deffn
-(define* (make-cdata type #:optional value name)
+(define* (make-cdata type #:optional value)
   (assert-ctype 'make-cdata type)
   (case (ctype-kind type)
     ((array)
@@ -709,14 +719,14 @@
          (unless (integer? value) (error "make-cdata: zero sized array type"))
          (let* ((et (carray-type ca)) (sz (ctype-size et))
                 (bv (make-bytevector (* ln sz))))
-           (%make-cdata bv 0 (carray et ln) name)))
+           (%make-cdata bv 0 (carray et ln))))
         (else
          (when value (error "can't initialize arrays yet"))
-         (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))))
+         (%make-cdata (make-bytevector (ctype-size type)) 0 type)))))
     (else
      (let* ((size (ctype-size type))
             (bvec (make-bytevector size))
-            (data (%make-cdata bvec 0 type name)))
+            (data (%make-cdata bvec 0 type)))
        (if value (cdata-set! data value))
        data))))
 
@@ -888,19 +898,32 @@
           ((array) (error "cdata-set!: can't set! array value"))
           (else (error "cdata-set!: bad arg 2" value))))))
 
-;; @deffn {Procedure} make-cdata/* type pointer [name]
+;; @deffn {Procedure} make-cdata/* type pointer
 ;; Make a cdata object from a pointer.   That is, instead of creating a
 ;; bytevector to hold the data use the memory at the pointer using
 ;; @code{pointer->bytevector}.
 ;; @* Maybe cdata-cast can do this?
 ;; @end deffn
-(define* (make-cdata/* type pointer #:optional name)
-(assert-ctype 'make-cdata/* type)
-   (let* ((size (ctype-size type))
-          (bvec (pointer->bytevector pointer size))
-          (data (%make-cdata bvec 0 type name)))
-     data))
+(define (make-cdata/* type pointer)
+  (assert-ctype 'make-cdata/* type)
+  (let* ((size (ctype-size type))
+         (bvec (pointer->bytevector pointer size))
+         (data (%make-cdata bvec 0 type)))
+    data))
 
+;; @deffn {Procedure} cdata-copy src) => <cdata>
+;; Copy a data object (which might be a reference from another data object).
+;; @end deffn
+(define (cdata-copy data)
+  (assert-cdata 'cdata-copy data)
+  (let* ((bv (cdata-bv data))
+         (ix (cdata-ix data))
+         (ct (cdata-ct data))
+         (sz (ctype-size ct))
+         (bvdst (make-bytevector sz)))
+    (bytevector-copy! bv ix bvdst 0 (ctype-size ct))
+    (%make-cdata bvdst 0 ct #f)))
+    
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
 ;; bytevector.
