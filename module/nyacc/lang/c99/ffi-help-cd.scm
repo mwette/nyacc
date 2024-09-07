@@ -813,7 +813,7 @@
       (`((typename ,name))
        (cond
         ((member name def-defined) #f)
-	((member name defined) `(make-cdata ,name ,mname ',name))
+	((member name defined) `(make-cdata ,name ,mname))
 	((member name wrapped) (list (sfsym "wrap-~A" name) mname))
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
@@ -829,20 +829,20 @@
         ((member tname ffi-defined) #f)
 	((member (w/* tname) defined)
          (let ((sname (sfsym "~A*" tname)))
-           `(make-cdata ,sname ,mname ',sname)))
+           `(make-cdata ,sname ,mname)))
 	((member (w/* tname) wrapped) (list (sfsym "wrap-~A*" tname) mname))
 	(else #f)))
       (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
        (cond
         ((member (w/struct aggr-name) wrapped)
          (let ((sname (sfsym "struct-~A*" aggr-name)))
-         `(make-cdata ,sname ,mname ',sname)))
+         `(make-cdata ,sname ,mname)))
 	(else #f)))
       (`((pointer-to) (union-ref (ident ,aggr-name) . ,rest))
        (cond
 	((member (w/union aggr-name) wrapped)
          (let ((sname (sfsym "union-~A*" aggr-name)))
-         `(make-cdata ,sname ,mname ',sname)))
+         `(make-cdata ,sname ,mname)))
 	(else #f)))
       (`((pointer-to) . ,otherwise) #f)
       (`((array-of) . ,rest)
@@ -979,7 +979,7 @@
 ;; Returns (values wrapped, defined), where defined is a fh-def for a type
 ;; and wrapped means there is are converters to/from fh to scheme.
 ;; @end deffn
-(define (cnvt-udecl/ct udecl udict wrapped defined)
+(define (cnvt-udecl udecl udict wrapped defined)
 
   (define (specl-props specl)
     (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
@@ -1009,6 +1009,9 @@
   (*wrapped* wrapped)
   (*defined* defined)
 
+  (define-syntax-rule (deftype name type)
+    `(define-public ,name (name-ctype ,type ',name)))
+
   (let* ((tag attr specl declr (split-udecl udecl))
          (sspec tqual tspec (specl-props specl)))
 
@@ -1025,17 +1028,16 @@
         (match mtail
 
           (`((array-of ,dim) . ,rest)
-           (ppscm `(define-public ,type ,(mtail->ttype mtail)))
-           (ppscm `(define-public ,type* (cpointer ,type)))
+           (ppscm (deftype type (mtail->ttype mtail)))
+           (ppscm (deftype type* `(cpointer ,type)))
            (values (cons name wrapped) (cons name defined)))
 
           (`((function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
              (call-with-values (lambda () (function*-wraps return params))
                (lambda (ptr->proc proc->ptr)
-                 (ppscm `(define-public ,type
-                           (cfunction ,ptr->proc ,proc->ptr)))
-                 (ppscm `(define-public ,type* (cpointer ,type))))))
+                 (ppscm (deftype type `(cfunction ,ptr->proc ,proc->ptr)))
+                 (ppscm (deftype type* `(cpointer ,type))))))
            (values (cons* name (w/* name) wrapped)
                    (cons* name (w/* name) defined)))
 
@@ -1043,14 +1045,13 @@
            (let ((return (mdecl->udecl (cons "~ret" rest))))
              (call-with-values (lambda () (function*-wraps return params))
                (let ((*type (strings->symbol "*" name (*ttag*))))
-                 (lambda (ptr->proc proc->ptr)
-                   (ppscm `(define-public ,*type
-                             (cfunction ,ptr->proc ,proc->ptr)))
-                   (ppscm `(define-public ,type (cpointer ,*type)))))))
+                 (lambda (pr->pc pc->pr)
+                   (ppscm `(define-public ,*type (cfunction ,pr->pc ,pc->pr)))
+                   (ppscm (deftype type `(cpointer ,*type)))))))
            (values (cons name wrapped) (cons name defined)))
 
           (`((pointer-to) . ,rest)
-           (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+           (ppscm (deftype type (mtail->ttype mtail)))
            (case (caar rest)
              ((fixed-type float-type) (values wrapped defined))
              (else (values (cons name wrapped) (cons name defined)))))
@@ -1059,66 +1060,63 @@
            (sx-match (car mtail)
              
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
-              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
-              (ppscm `(define-public ,type* (cpointer ,type)))
-              (ppscm `(define-public
-                        ,(strings->symbol "struct-" agname (*ttag*)) ,type))
-              (ppscm `(define-public
-                        ,(strings->symbol "struct-" agname "*" (*ttag*)) ,type*))
+              (let ((aname (strings->symbol "struct-" agname))
+                    (aname* (strings->symbol "struct-" agname "*")))
+                (ppscm (deftype type (mtail->ttype mtail)))
+                (ppscm (deftype type* `(cpointer ,type)))
+                (ppscm (deftype aname type))
+                (ppscm (deftype aname* type*)))
               (values (cons* name (w/* name) (w/struct agname)
                              (w/struct* agname) wrapped)
                       (cons* name (w/* name) (w/struct agname)
                              (w/struct* agname) defined)))
 
              ((struct-def ,field-list)
-              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
-              (ppscm `(define-public ,type* (cpointer ,type)))
+              (ppscm (deftype type (mtail->ttype mtail)))
+              (ppscm (deftype type* `(cpointer ,type)))
               (values  (cons* name (w/* name) wrapped)
                        (cons* name (w/* name) defined)))
 
              ((union-def (ident ,agname) ,field-list)
-              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
-              (ppscm `(define-public ,type* (cpointer ,type)))
-              (ppscm `(define-public
-                        ,(strings->symbol "union-" agname (*ttag*)) ,type))
-              (ppscm `(define-public
-                        ,(strings->symbol "union-" agname "*" (*ttag*)) ,type*))
+              (let ((aname (strings->symbol "union-" agname))
+                    (aname* (strings->symbol "union-" agname "*")))
+                (ppscm (deftype type (mtail->ttype mtail)))
+                (ppscm (deftype type* `(cpointer ,type)))
+                (ppscm (deftype aname type))
+                (ppscm (deftype aname* type*)))
               (values (cons* name (w/* name) (w/union agname)
                              (w/union* agname) wrapped)
                       (cons* name (w/* name) (w/union agname)
                              (w/union* agname) defined)))
 
              ((union-def ,field-list)
-              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
-              (ppscm `(define-public ,type* (cpointer ,type)))
+              (ppscm (deftype type (mtail->ttype mtail)))
+              (ppscm (deftype type* `(cpointer ,type)))
               (values (cons* name (w/* name) wrapped)
                       (cons* name (w/* name) defined)))
 
              ((struct-ref (ident ,agname))
               (cond
                ((member (w/struct agname) defined) ;; defined previously
-                (ppscm `(define-public ,type ,(mtail->ttype mtail)))
-	        (ppscm `(define-public ,type*
-                          ,(sfsym "struct-~A*-type" agname))))
+                (ppscm (deftype type (mtail->ttype mtail)))
+	        (ppscm (deftype type* (sfsym "struct-~A*-type" agname))))
                ((udict-struct-ref udict agname) ;; defined later
                 =>
                 (lambda (decl)
                   (bkref-extend! decl name)
                   (ppscm `(define-public ,type 'void))
-                  (ppscm `(define-public ,type* (cpointer (delay ,type))))))
+                  (ppscm `(deftype type* `(cpointer (delay ,type))))))
                (else ;; not defined
                 (ppscm `(define-public ,type 'void))
-                (ppscm `(define-public ,type* (cpointer ,type)))))
-              #;(ppscm `(define-public (,(sfsym "make-~A" type*) arg)
-                        (make-cdata ,type* arg ',type*)))
+                (ppscm (deftype type* `(cpointer ,type)))))
               (values (cons* name (w/* name) wrapped)
                       (cons* name (w/* name) defined)))
 
              ((union-ref (ident ,agname))
               (cond
                ((member (w/union agname) defined) ;; defined previously
-                (ppscm `(define-public ,type ,(mtail->ttype mtail)))
-	        (ppscm `(define-public ,type* ,(sfsym "union-~A*-type" agname))))
+                (ppscm (deftype type (mtail->ttype mtail)))
+	        (ppscm (deftype type* (sfsym "union-~A*-type" agname))))
                ((udict-union-ref udict agname) ;; defined later
                 =>
                 (lambda (decl)
@@ -1127,33 +1125,34 @@
                   (ppscm `(define-public ,type* (cpointer (delay ,type))))))
                (else ;; not defined
                 (ppscm `(define-public ,type 'void))
-                (ppscm `(define-public ,type* (cpointer ,type)))))
+                (ppscm (deftype type* `(cpointer ,type)))))
               (values (cons* name (w/* name) wrapped)
                       (cons* name (w/* name) defined)))
 
              (((fixed-type float-type) ,basename)
-              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ttype mtail)))
               (values wrapped defined))
 
              ((enum-def ,enum-def-list)
-              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ttype mtail)))
               (ppscm `(define ,(sfsym "unwrap-~A" name)
                         (let ((vald (cenum-vald (ctype-info ,type))))
                           (lambda (arg) (or (assq-ref vald arg) arg)))))
               (ppscm `(define ,(sfsym "wrap-~A" name)
                         (let ((symd (cenum-symd (ctype-info ,type))))
                           (lambda (arg) (or (assq-ref symd arg) arg)))))
-              (values (cons name wrapped) defined))
+              (values (cons name wrapped) (cons name defined)))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
-              (ppscm `(define-public ,type ,(mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ttype mtail)))
               (ppscm `(define ,(sfsym "unwrap-~A" name)
                         (let ((vald (cenum-vald (ctype-info ,type))))
                           (lambda (arg) (or (assq-ref vald arg) arg)))))
               (ppscm `(define ,(sfsym "wrap-~A" name)
                         (let ((symd (cenum-symd (ctype-info ,type))))
                           (lambda (arg) (or (assq-ref symd arg) arg)))))
-              (values (cons* name (w/enum enum-name) wrapped) defined))
+              (values (cons* name (w/enum enum-name) wrapped)
+                      (cons* name (w/enum enum-name) defined)))
 
              ((enum-ref (ident ,enum-name))
               (ppscm `(define-public ,(sfsym "wrap-~A" name)
@@ -1164,7 +1163,7 @@
 
              ((void)
               (ppscm `(define-public ,type 'void))
-              (ppscm `(define-public ,type* (cpointer ,type)))
+              (ppscm (deftype type* `(cpointer ,type)))
               (values (cons* name (w/* name) wrapped)
                       (cons* name (w/* name) defined)))
 
@@ -1174,21 +1173,21 @@
 	        (values wrapped defined))
 	       ((member typename defined)
                 (let ((aka (string->symbol typename))
-                      (atype (strings->symbol typename (*ttag*))))
-	          (ppscm `(define-public ,type ,atype))
+                      (atype (strings->symbol typename)))
+	          (ppscm (deftype type atype))
 	          (if (member (w/* typename) defined)
                       (let* ((name* (strings->symbol name "*"))
                              (aka* (strings->symbol typename "*"))
                              (atype* (strings->symbol typename "*" (*ttag*))))
-	                (ppscm `(define-public ,type* ,atype*))
+	                (ppscm (deftype type* atype*))
 	                (values (cons* name (w/* name) wrapped)
                                 (cons* name (w/* name) defined)))
 	              (values (cons name wrapped) (cons name defined)))))
 	       (else
 	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
-	          (cnvt-udecl/ct xdecl udict wrapped defined)))))
+	          (cnvt-udecl xdecl udict wrapped defined)))))
              (,__
-              (sferr "cnvt-udecl/ct missed typedef:\n") (pperr mdecl)
+              (sferr "cnvt-udecl missed typedef:\n") (pperr mdecl)
               (values wrapped defined)))))))
 
      ((ftn-declr? declr)
@@ -1213,8 +1212,8 @@
            (cond
             ((bkref-getall attr) =>
              (lambda (name-list)
-               (ppscm `(define-public ,atype ,agdef))
-               (ppscm `(define-public ,atype* (cpointer ,atype)))
+               (ppscm (deftype atype agdef))
+               (ppscm (deftype atype* `(cpointer ,atype)))
                (fold-values
 	        (lambda (name wrapped defined)
                   (let ((type (strings->symbol name (*ttag*))))
@@ -1224,8 +1223,8 @@
                 (cons (w/struct agname) wrapped)
                 (cons (w/struct agname) defined))))
 	    ((not (member (w/struct agname) defined))
-             (ppscm `(define-public ,atype ,agdef))
-             (ppscm `(define-public ,atype* (cpointer ,atype)))
+             (ppscm (deftype atype agdef))
+             (ppscm (deftype atype* `(cpointer ,atype)))
 	     (values (cons (w/struct agname) wrapped)
                      (cons (w/struct agname) defined)))
 	    (else
@@ -1240,8 +1239,8 @@
                     (field-list (expand-field-list-typerefs field-list))
                     (sflds (cnvt-fields (sx-tail field-list) mtail->ttype))
                     (agdef `(cunion (list ,@sflds))))
-               (ppscm `(define-public ,atype ,agdef))
-               (ppscm `(define-public ,atype* (cpointer ,atype)))
+               (ppscm (deftype atype agdef))
+               (ppscm (deftype atype* `(cpointer ,atype)))
 	       (fold-values
 	        (lambda (name wrapped defined)
                   (let ((type (strings->symbol name (*ttag*)))
@@ -1295,9 +1294,8 @@
       (values wrapped defined))
 
      (else
-      (sferr "cnvt-udecl/ct: total miss\n") (pperr udecl)
+      (sferr "cnvt-udecl: total miss\n") (pperr udecl)
       (values wrapped defined)))))
-(define cnvt-udecl cnvt-udecl/ct)
 
 ;; === enums and #defined => lookup
 
@@ -1448,7 +1446,6 @@
 (define* (process-decls decls udict
 			#:optional (wrapped '()) (defined '())
 			#:key (declf (lambda (k) #t)))
-  (define cnvt-udecl cnvt-udecl/ct)
   (fold-values			  ; from (sxml fold)
    (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
      (catch 'ffi-help-error
@@ -1596,7 +1593,7 @@
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
 		 (*renamer* identity) (*errmsgs* '()) (*prefix* prefix)
 		 (*mport* (open-output-string)) (*udict* udict))
-    (cnvt-udecl/ct udecl udict '() '())
+    (cnvt-udecl udecl udict '() '())
     (let ((res (get-output-string (*mport*))))
       (close (*mport*))
       res)))
