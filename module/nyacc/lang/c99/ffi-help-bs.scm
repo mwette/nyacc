@@ -1,4 +1,4 @@
-;;; examples/nyacc/lang/c99/ffi-help.scm
+;;; examples/nyacc/lang/c99/ffi-help-bs.scm
 
 ;; Copyright (C) 2016-2024 Matthew Wette
 ;;
@@ -56,7 +56,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang c99 ffi-help)
+(define-module (nyacc lang c99 ffi-help-bs)
   #:export (*ffi-help-version*
 	    define-ffi-module
 	    compile-ffi-file
@@ -1681,7 +1681,7 @@
 ;; This is the functionality that Ludo was asking for: to be at guile
 ;; prompt and be able to issue
 ;; @example
-;; (use-modules (nyacc lang c99 ffi-help))
+;; (use-modules (nyacc lang c99 ffi-help-bs))
 ;; (load-include-file "cairo.h" #:pkg-config "cairo")
 ;; @end example
 ;; @end deffn
@@ -1698,7 +1698,7 @@
   "- Procedure: load-include-file filename [#:pkg-config pkg]
      This is the functionality that Ludo was asking for: to be at guile
      prompt and be able to issue
-          (use-modules (nyacc lang c99 ffi-help))
+          (use-modules (nyacc lang c99 ffi-help-bs))
           (load-include-file \"cairo.h\" #:pkg-config \"cairo\")"
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
 		 (*renamer* identity) (*errmsgs* '())
@@ -1835,7 +1835,7 @@
 	    (lambda (oport)
 	      (*mport* oport)
 	      (let ((env (make-fresh-user-module)))
-		(eval '(use-modules (nyacc lang c99 ffi-help)) env)
+		(eval '(use-modules (nyacc lang c99 ffi-help-bs)) env)
 		(let loop ((exp (read iport)))
 		  (cond
 		   ((eof-object? exp)
