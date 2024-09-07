@@ -97,9 +97,6 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
    (option '("version") #f #f
            (lambda (opt name arg opts files)
              (show-version) (exit 0)))
-   (option '(#\t "target") #t #f
-           (lambda (opt name arg opts files)
-             (values (acons 'target (string->symbol arg) opts) files)))
    (option '(#\d "debug") #t #f
            (lambda (opt name arg opts files)
              (values (acons 'debug arg opts) files)))
@@ -108,6 +105,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
              (if (assoc-ref opts 'output-file)
                  (fail "`-o' option cannot be specified more than once"))
              (values (acons 'output arg opts) files)))
+   (option '(#\t "target") #t #f
+           (lambda (opt name arg opts files)
+             (values (acons 'target (string->symbol arg) opts) files)))
    (option '(#\s "show-incs") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'show-incs #t opts) files)))
@@ -248,9 +248,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
           (lambda ()
             (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
             (case (assq-ref options 'target)
-              ((bytestructure)
+              ((bs bytestructures)
                (bs:compile-ffi-file ffi-file options))
-              ((cdata)
+              ((cd cdata)
                (cd:compile-ffi-file ffi-file options))
               (else
                (error "bad target")))
