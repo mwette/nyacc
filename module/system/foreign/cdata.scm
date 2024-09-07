@@ -40,6 +40,9 @@
 ;; (cdata*-ref data) -> number | procedure | ???
 
 ;; lesser used:
+;; (dc-cdata-ref bv ix ct) -> value
+;;    OR (x-cdata-ref ...) OR (Xcdata-ref ...) OR (cdataX-ref ...)
+;; (dc-cdata-set! bv ix ct) -> #undefined#
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (ctype-equal? a b)
 ;; (ctype-kind type) -> in '(base pointer struct union array function)
@@ -82,8 +85,10 @@
             pretty-print-ctype
             
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
-            cdata? cdata-bv cdata-ix cdata-ct cdata-tn
-            cdata-copy
+            cdata? cdata-bv cdata-ix cdata-ct
+            cdata-copy name-ctype
+
+            Xcdata-ref Xcdata-set!
             
             cdata-kind cdata& cdata* cdata-sel
             ctype-sel ctype-sel*
@@ -264,8 +269,8 @@
     (let* ((bv (cdata-bv data))
            (ix (cdata-ix data))
            (type (cdata-ct data))
-           (name (cdata-tn data))
            (kind (ctype-kind type))
+           (name (ctype-name type))
            (bv-addr (pointer-address (bytevector->pointer bv))))
       (format port "#<cdata")
       (if name (format port " ~a" name) (format port " ~a" kind))
@@ -750,7 +755,7 @@
                  (tags tags))
         (cond
          ((null? tags)
-          (%make-cdata bv ix ct #f))
+          (%make-cdata bv ix ct))
          ((eq? 'pointer (ctype-kind ct))
           (if (eq? 'void (cpointer-type (ctype-info ct)))
               (error "cdata-sel: attempt to deference void*"))
@@ -773,6 +778,37 @@
          (else
           (call-with-values (lambda () (ctype-detag ct ix (car tags)))
             (lambda (ix ct) (loop bv ix ct (cdr tags)))))))))
+
+;; @deffn {Procedure} Xcdata-ref bv ix ct -> value
+;; Reference a deconstructed cdata object. See @emph{cdata-ref}.
+;; @end deffn
+(define (Xcdata-ref bv ix ct)
+  (let* ((ti (ctype-info ct)))
+    (case (ctype-kind ct)
+      ((base)
+       (mtype-bv-ref ti bv ix))
+      ((pointer)
+       (make-pointer (mtype-bv-ref (cpointer-mtype ti) bv ix)))
+      ((bitfield)
+       (let* ((mt (cbitfield-mtype ti)) (sh (cbitfield-shift ti))
+              (wd (cbitfield-width ti)) (sx (cbitfield-signed? ti))
+              (sm (expt 2 (1- wd)))
+              (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
+         (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
+      ((enum)
+       (let* ((info (ctype-info ct))
+              (mtype (cenum-mtype info))
+              (vnl (cenum-symd info)))
+         (assq-ref vnl (mtype-bv-ref mtype bv ix))))
+      ((array struct union) (%make-cdata bv ix ct))
+      ((function)
+       (let* ((ti (ctype-info ct))
+              (mtype (cfunction-ptr-mtype ct))
+              (addr (mtype-bv-ref mtype bv ix))
+              (ptr->proc (cfunction-ptr->proc ct)))
+         (if (zero? addr) (error "cdata-ref: bad function address"))
+         (ptr->proc (make-pointer addr))))
+      (else (error "cdata-ref: giving up")))))
 
 ;; @deffn {Procedure} cdata-ref data [tag ...]
 ;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
@@ -801,57 +837,14 @@
           (or (cdata-ref data tag ...) (cdata-sel data tag ...))
      (Or should we just make this the default behavior?)"
   (assert-cdata 'cdata-ref data)
-  (let* ((data (apply cdata-sel data tags))
-         (bv (cdata-bv data))
-         (ix (cdata-ix data))
-         (ct (cdata-ct data))
-         (ti (ctype-info ct)))
-    (case (ctype-kind ct)
-      ((base)
-       (mtype-bv-ref ti bv ix))
-      ((pointer)
-       (make-pointer (mtype-bv-ref (cpointer-mtype ti) bv ix)))
-      ((bitfield)
-       (let* ((mt (cbitfield-mtype ti)) (sh (cbitfield-shift ti))
-              (wd (cbitfield-width ti)) (sx (cbitfield-signed? ti))
-              (sm (expt 2 (1- wd)))
-              (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
-         (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
-      ((enum)
-       (let* ((info (ctype-info ct))
-              (mtype (cenum-mtype info))
-              (vnl (cenum-symd info)))
-         (assq-ref vnl (mtype-bv-ref mtype bv ix))))
-      ((array struct union) (%make-cdata bv ix ct #f))
-      ((function)
-       (let* ((ti (ctype-info ct))
-              (mtype (cfunction-ptr-mtype ct))
-              (addr (mtype-bv-ref mtype bv ix))
-              (ptr->proc (cfunction-ptr->proc ct)))
-         (if (zero? addr) (error "cdata-ref: bad function address"))
-         (ptr->proc (make-pointer addr))))
-      (else (error "cdata-ref: giving up")))))
+  (let ((data (apply cdata-sel data tags)))
+    (Xcdata-ref (cdata-bv data) (cdata-ix data) (cdata-ct data))))
 
-;; @deffn {Procedure} cdata-set! data value [tag ...]
-;; Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
-;; @var{value}.  Example:
-;; @example
-;; (cdata-set! my-struct-data 42 'a 'b 'c))
-;; @end example
-;; If @var{value} is a @code{<cdata>} object copy that, if types match.
-;; @*If @var{value} can be a procedure used to set a cfunction pointer
-;; value.
+;; @deffn {Procedure} Xcdata-set! bv ix ct value
+;; Reference a deconstructed cdata object. See @emph{cdata-set!}.
 ;; @end deffn
-(define (cdata-set! data value . tags)
-  "- Procedure: cdata-set! data value [tag ...]
-     Set slot for selcted TAG ... with respect to cdata DATA to VALUE.
-     Example:
-          (cdata-set! my-struct-data 42 'a 'b 'c))"
-  (assert-cdata 'cdata-set! data)
-  (let* ((data (apply cdata-sel data tags))
-         (bv (cdata-bv data))
-         (ix (cdata-ix data))
-         (ct (cdata-ct data)))
+(define (Xcdata-set! bv ix ct value)
+  (let* ()
     (if (cdata? value)
         (let ((sz (ctype-size ct)))
           (unless (ctype-equal? (cdata-ct value) ct)
@@ -898,6 +891,25 @@
           ((array) (error "cdata-set!: can't set! array value"))
           (else (error "cdata-set!: bad arg 2" value))))))
 
+;; @deffn {Procedure} cdata-set! data value [tag ...]
+;; Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
+;; @var{value}.  Example:
+;; @example
+;; (cdata-set! my-struct-data 42 'a 'b 'c))
+;; @end example
+;; If @var{value} is a @code{<cdata>} object copy that, if types match.
+;; @*If @var{value} can be a procedure used to set a cfunction pointer
+;; value.
+;; @end deffn
+(define (cdata-set! data value . tags)
+  "- Procedure: cdata-set! data value [tag ...]
+     Set slot for selcted TAG ... with respect to cdata DATA to VALUE.
+     Example:
+          (cdata-set! my-struct-data 42 'a 'b 'c))"
+  (assert-cdata 'cdata-set! data)
+  (let ((data (apply cdata-sel data tags)))
+    (Xcdata-set! (cdata-bv data) (cdata-ix data) (cdata-ct data) value)))
+
 ;; @deffn {Procedure} make-cdata/* type pointer
 ;; Make a cdata object from a pointer.   That is, instead of creating a
 ;; bytevector to hold the data use the memory at the pointer using
@@ -922,7 +934,7 @@
          (sz (ctype-size ct))
          (bvdst (make-bytevector sz)))
     (bytevector-copy! bv ix bvdst 0 (ctype-size ct))
-    (%make-cdata bvdst 0 ct #f)))
+    (%make-cdata bvdst 0 ct)))
     
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
@@ -957,10 +969,7 @@
     (case kind
       ((function) #f)
       (else
-       (%make-cdata
-        (pointer->bytevector pntr (ctype-size type))
-        0 type #f)))))
-;; TODO: check for (cdata-tn data)
+       (%make-cdata (pointer->bytevector pntr (ctype-size type)) 0 type)))))
 
 ;; @deffn {Procedure} cdata-kind data
 ;; Return the kind of @var{data}: pointer, base, struct, ...
@@ -1007,7 +1016,7 @@
           #f)
          (else (type-miss))))
       ((pointer)
-       (make-cdata ct bv ix))
+       (%make-cdata bv ix ct))
       ((array)
        (case tokind
          ((pointer)
@@ -1016,7 +1025,7 @@
                  (ptype (cpointer-type (ctype-info type))))
             (type-check (carray-type (ctype-info ct))
                         (cpointer-type (ctype-info type)))
-            (%make-cdata bv ix type #f)))
+            (%make-cdata bv ix type)))
          (else (type-miss))))
       (else (type-miss)))))
 

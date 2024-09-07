@@ -1105,7 +1105,7 @@
                 (lambda (decl)
                   (bkref-extend! decl name)
                   (ppscm `(define-public ,type 'void))
-                  (ppscm `(deftype type* `(cpointer (delay ,type))))))
+                  (ppscm (deftype type* `(cpointer (delay ,type))))))
                (else ;; not defined
                 (ppscm `(define-public ,type 'void))
                 (ppscm (deftype type* `(cpointer ,type)))))
