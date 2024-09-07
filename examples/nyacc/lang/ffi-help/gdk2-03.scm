@@ -2,7 +2,7 @@
 
 ;; https://www.manpagez.com/html/gdk2/gdk2-2.24.28/
 
-;; Copyright (C) 2022 Matthew R. Wette
+;; Copyright (C) 2022,2024 Matthew Wette
 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -12,7 +12,10 @@
 (use-modules (ffi gdk2))
 (use-modules (ffi cairo))
 (use-modules (system ffi-help-rt))
+(use-modules ((system foreign) #:prefix ffi:))
 (define GDK gdk-symval)
+
+(define (NULL? ptr) (equal? ptr ffi:%null-pointer))
 
 ;; Initialize.
 (gdk_init NULL NULL)
@@ -71,18 +74,13 @@
 (let loop ((n 0) (evt (gdk_event_get)))
   (when (< n 100)
 
-    (unless (zero? (fh-object-ref evt))
-      ;;(simple-format #t "evt=~S\n" evt)
-      (let* ((type (wrap-GdkEventType (fh-object-ref evt '* 'type)))
-             )
+    (unless (NULL? (fh-object-ref evt))
+      (let* ((type (wrap-GdkEventType (fh-object-ref evt '* 'type))))
         (simple-format #t "type=~S\n" type)
         (case type
-          ((GDK_MAP) (paint-it cr))
-          )
-        (paint-it cr)
+          ((GDK_MAP) (paint-it cr)))
         (gdk_event_free evt)))
-
-    ;;(sleep 1)
+    
     (usleep 250000)
     (loop (1+ n) (gdk_event_get))))
 
