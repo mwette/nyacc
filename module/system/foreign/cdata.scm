@@ -40,28 +40,27 @@
 ;; (cdata*-ref data) -> number | procedure | ???
 
 ;; lesser used:
-;; (dc-cdata-ref bv ix ct) -> value
-;;    OR (x-cdata-ref ...) OR (Xcdata-ref ...) OR (cdataX-ref ...)
-;; (dc-cdata-set! bv ix ct) -> #undefined#
+;; (Xcdata-ref bv ix ct) -> value
+;; (Xcdata-set! bv ix ct) -> #undefined#
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (ctype-equal? a b)
 ;; (ctype-kind type) -> in '(base pointer struct union array function)
 ;; (cdata-kind data) -> in '(base pointer struct union array function)
-;; (ctype-sel type ix tag ...) -> ix ct
-;; (ctype-sel* type ix tag ...) -> ((ix . ct) (ix . ct) ...)
+;; (ctype-sel type ix tag ...) -> ((ix . ct) (ix . ct) ...)
+;; (make-cdata-getter sel [offset]) => (proc data) -> value
+;; (make-cdata-setter sel [offset]) => (proc data value) -> undefined
+;;   Note: should procs allow tags (but no '*) ?
 ;; (cdata-cast cdata type) -> <cdata>
 ;; (cdata-arg ffi-type guile-value) -> (tpye . value)
 
 ;; thinking about this this:
-;; (ctype-sel type ix tags) -> (values ix ct)
 ;; (make-cdata ct)
 ;; (make-cdata bv ix ct)
 ;; (make-cdata bv ix ct val)
 ;; (make-cdata ct #:from-pointer ptr)
 ;; (make-cdata* ct #:from-pointer pointer #:offset 0)
 
-;; use existing bytevector
-;; (%make-cdata bv ix ct tn)
+;; redef cKIND? procedures to accept types? (cpointer? type) => pointer
 
 ;; (cbase symb) and cstruct cunion carray cpointer cfunction
 ;; (list->vector (map (lambda (ix) (cdata-ref data ix)) (iota 10)))
@@ -69,8 +68,6 @@
 ;; ffi:
 ;; (cpointer->procedure ret-arg args [va-args])
 
-(display "cdata: need global address offset for cross-targets\n")
-(display "cdata: need cdata-sel* needs testing and doc\n")
 ;;(define *cdata-adm* (make-parameter '()))
 ;; native => identity
 ;; or base-address
@@ -91,7 +88,7 @@
             Xcdata-ref Xcdata-set!
             
             cdata-kind cdata& cdata* cdata-sel
-            ctype-sel ctype-sel*
+            ctype-sel make-cdata-getter make-cdata-setter
             ;;ctype->ffi
             ;;
             NULL
@@ -232,9 +229,13 @@
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
-    (let ((kd (ctype-kind type)) (nf (ctype-info type))
-          (ad (pointer-address (scm->pointer type))))
-      (format port "#<ctype ~s 0x~x>" (if (eq? 'base kd) nf kd) ad))))
+    (let ((kd (ctype-kind type))
+          (nf (ctype-info type))
+          (ad (pointer-address (scm->pointer type)))
+          (nm (ctype-name type)))
+      (format port "#<ctype ~s" (if (eq? 'base kd) nf kd))
+      (if nm (format port " ~s" nm))
+      (format port " 0x~x>" ad))))
 
 (define make-ctype %make-ctype)
 
@@ -590,42 +591,31 @@
 ;; 
 (define (ctype-detag ct ix tag)
   (assert-ctype 'ctype-detag ct) ;; not needed assuming stable mod
+  (unless (integer? ix) (error "ctype-detag: expecting integer, got" ix))
   (let ((ti (ctype-info ct)))
     (case (ctype-kind ct)
       ((struct)
        (let ((fld (assq-ref (cstruct-dict ti) tag)))
          (unless fld (error "ctype: bad field " tag))
-         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
+         (values (cfield-type fld) (+ ix (cfield-offset fld)))))
       ((union)
        (let ((fld (assq-ref (cunion-dict ti) tag)))
          (unless fld (error "ctype: bad field " tag))
-         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
+         (values (cfield-type fld) (+ ix (cfield-offset fld)))))
       ((array)
        (unless (integer? tag) (error "bad array ref"))
        (let ((type (carray-type ti)))
-         (values (+ ix (* tag (ctype-size type))) type)))
+         (values type (+ ix (* tag (ctype-size type))))))
       ((pointer)
        (error "ctype-detag: don't call on me for a pointer dereference"))
       (else (error "bad tag" tag)))))
 
-;; @deffn {Procedure} ctype-sel type ix tags => ix ct
-;; @deffnx {Procedure} ctype-sel* type ix tags => ((ix . ct) (ix . ct) ...)
+;; @deffn {Procedure} ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
 ;; offset from zero
+;; see make-getter and make-setter
 ;; @end deffn
-(define (ctype-sel type ix tags)
+(define (ctype-sel type ix . tags)
   (assert-ctype 'ctype-sel type)
-  (let loop ((ct type) (ix ix) (tags tags))
-    (cond
-     ((null? tags)
-      (values ix ct))
-     ((eq? 'pointer (ctype-kind ct))
-      (error "ctype-sel: pointer dereference; try ctype-sel*"))
-     (else
-      (call-with-values (lambda () (ctype-detag ct ix (car tags)))
-        (lambda (ix ct) (loop ct ix (cdr tags))))))))
-
-(define (ctype-sel* type ix tags)
-  (assert-ctype 'ctype-sel* type)
   (let loop ((res '()) (ct type) (ix 0) (tags tags))
     (cond
      ((null? tags)
@@ -639,11 +629,11 @@
          ((integer? (car tags))
           (let ((ix (+ ix (* (car tags) (ctype-size type)))))
             (loop (cons (cons ix ct) res) type 0 (cdr tags))))
-         (else
-          (error "bad tag for pointer")))))
+         (else (error "bad tag for pointer")))))
      (else
       (call-with-values (lambda () (ctype-detag ct ix (car tags)))
-        (lambda (ix ct) (loop res ct ix (cdr tags))))))))
+        (lambda (ct ix)
+          (loop res ct ix (cdr tags))))))))
 
 
 ;; @deffn {Procedure} ctype-equal? a b
@@ -777,7 +767,7 @@
               (loop (pointer->bytevector eptr elsz) 0 elty (cdr tags))))))
          (else
           (call-with-values (lambda () (ctype-detag ct ix (car tags)))
-            (lambda (ix ct) (loop bv ix ct (cdr tags)))))))))
+            (lambda (ct ix) (loop bv ix ct (cdr tags)))))))))
 
 ;; @deffn {Procedure} Xcdata-ref bv ix ct -> value
 ;; Reference a deconstructed cdata object. See @emph{cdata-ref}.
@@ -1029,6 +1019,57 @@
          (else (type-miss))))
       (else (type-miss)))))
 
+;;.@deffn {Procedure} Xloop data offset
+;; Defined internally for @code{make-cdata-getter} and @code{make-cdata-setter}.
+;;.@end deffn 
+(define (Xloop sel data offset) ;; => bv ix ct
+  (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
+             (head (car sel)) (tail (cdr sel)))
+    (cond
+     ((null? tail) (values bv (car head) (cdr head)))
+     ((cpointer? (ctype-kind (cdr head)))
+      (let* ((px (car head)) (pt (cdr head))
+             (dty (cpointer-type (ctype-info pt)))
+             (mtype (cpointer-mtype (ctype-info pt)))
+             (addr (mtype-bv-ref mtype bv (+ ix px)))
+             (dptr (make-pointer (+ addr offset)))
+             (bvec (pointer->bytevector dptr (ctype-size dty))))
+        (loop bvec 0 dty (car tail) (cdr tail))))
+     (else (error "cdata-getter/setter: expecting pointer, bad tag?")))))
+
+;; @deffn {Procedure} make-cdata-getter sel [offset] => lambda
+;; Genererate a procedure that given a cdata object will fetch the value
+;; at indicated by the @var{sel}, generated by @code{ctype-sel}.
+;; The procedure takes one argument: @code{(proc data)}.
+;; The optional @var{offset} argument (default 0), is used for cross
+;; target use: it is the offset of the address in the host context.
+;; @end deffn 
+(define* (make-cdata-getter sel #:optional (offset 0))
+  (unless (and (pair? sel) (pair? (cdr sel)))
+    (error "make-cdata-getter: bad SEL arg"))
+  (unless (integer? offset)
+    (error "make-cdata-setter: bad OFFSET arg"))
+  (lambda (data)
+    (unless (cdata? data) (error "cdata-getter: bad DATA arg"))
+    (call-with-values (lambda () (Xloop sel data offset)) Xcdata-ref)))
+
+;; @deffn {Procedure} make-cdata-setter sel [offset] => lambda
+;; Genererate a procedure that given a cdata object will set the value
+;; at the offset given the selector, generated by @code{ctype-sel}.
+;; The procedure takes two arguments: @code{(proc data value)}.
+;; The optional @var{offset} argument (default 0), is used for cross
+;; target use: it is the offset of the address in the host context.
+;; @end deffn 
+(define* (make-cdata-setter sel #:optional (offset 0))
+  (unless (and (pair? sel) (pair? (cdr sel)))
+    (error "make-cdata-setter: bad SEL arg"))
+  (unless (integer? offset)
+    (error "make-cdata-setter: bad OFFSET arg"))
+  (lambda (data value)
+    (unless (cdata? data) (error "cdata-getter: bad DATA arg"))
+    (call-with-values (lambda () (Xloop sel data offset))
+      (lambda (bv ix ct) (Xcdata-set! bv ix ct value)))))
+
 ;; @deffn {Procedure} pretty-print-ctype type [port]
 ;; Converts type to a literal tree and uses Guile's pretty-print function
 ;; to display it.  The default port is the current output port.
@@ -1062,9 +1103,10 @@
              (lambda (fld) (list (cfield-name fld) (cnvt (cfield-type fld))))
              (cunion-fields info))))
         ((pointer)
-         (if (promise? (%cpointer-type info))
-             `(cpointer (delay ...))
-             `(cpointer ,(cnvt (cpointer-type info)))))
+         (cond
+          ((promise? (%cpointer-type info)) `(cpointer (delay ...)))
+          ((ctype-name (%cpointer-type info)) => (lambda (n) `(cpointer ,n)))
+          (else `(cpointer ,(cnvt (cpointer-type info))))))
         ((array)
          `(carray ,(cnvt (carray-type info)) (carray-length info)))
         (else (error "pretty-print-ctype: needs work" (ctype-kind type))))))
