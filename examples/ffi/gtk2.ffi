@@ -27,21 +27,22 @@
 (define-public gtk-symval ffi-gtk2-symbol-val)
 
 ;; Create GtkEventCallback: missing somehow 
-;; typedef void (*GtkEventCallback)(GtkWidget *, GdkEvent*, gpointer data);
+;; typedef gboolean (*GtkEventCallback)(GtkWidget *, GdkEvent*, gpointer data);
 (define-public *GtkEventCallback
   (cfunction
     (lambda (~proc)
       (ffi:procedure->pointer
-        ffi:void
+        ffi:int
         (lambda (widget event data)
           (let ((widget (make-cdata GtkWidget* widget))
                 (event (make-cdata GdkEvent* event))
                 (data (make-cdata gpointer data)))
-            (~proc widget event data)))
+            ((lambda (~ret) (unwrap-number ~ret))
+             (~proc widget event data))))
         (list '* '* '*)))
     (lambda (~fptr)
       (let ((~proc (ffi:pointer->procedure
-                     ffi:void
+                     ffi:int
                      ~fptr
                      (list '* '* '*))))
         (lambda (widget event data)
