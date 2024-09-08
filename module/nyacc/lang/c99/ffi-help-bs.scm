@@ -25,34 +25,8 @@
 ;; 3. On top of the underlying types, FH types add
 ;;    a. source type name tracing (e.g., printer shows <foo_t* ...>)
 ;;    b. (pointer-to xxx) and (value-at xxx) converters
-;; Functions calls include wrapper and unwrapping to the underlying libffi
-;; support in Guile.
-
-;; @table code
-;; @item mtail->fh-wrapper
-;; generates code to apply wrapper to objects returned from foreign call
-;; @item mtail->fh-unwrapper
-;; generated code to apply un-wrapper to arguments for foreign call
-;; @end table
-
-;; TODOs
-;; 2) think about cnvt-fctn that generates C code
-;; 3) add code for bytestructures' bounding-struct-descriptor
-;; 4) cnvt-udecl needs complete rewrite using udecl->mdecl from c99/munge
-
-;; Issue:
-;; So issue is when 'typedef struct ref foo_t' has no 'struct def'
-;; we never define a type.  Then later we may see 'typedef foo_t bar_t'
-;; We are using define-ffi-type-alias but that then generates a reference
-;; to an undefined type.  Maybe for the above we should have a void
-;; pseudo-type with
-;; name: void
-;; (unwrap-void obj) => 'void
-;; (wrap 'void) (make-xxx)
-;; (pointer-to obj) => <void* obj>
-;; (value-at void*-object) =. void
-
-;; For enum typedefs we are not creating types but just using wrappers.
+;; 4. Functions calls include wrapper and unwrapping to the underlying libffi
+;;    support in Guile.
 
 ;;; Code:
 
