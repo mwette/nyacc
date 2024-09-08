@@ -71,18 +71,19 @@
   (simple-format #t "Usage: compile [OPTION] FILE
 Generate a Guile Scheme file from the source FFI file FILE.
 
-  -h, --help           print this help message
-  --version            print version number
+  -h, --help            print this help message
+  --version             print version number
 
-  -t, --target=TARGET  back end target: bytestructures or cdata
-  -L, --load-path=DIR  add DIR to the front of the module load path
-  -I, --inc-dir=DIR    add DIR to list of dir's to search for C headers
-  -o, --output=OFILE   write output to OFILE
-  -d, --debug=x,y      set debug flags: echo-decl, parse
-  -s, --show-incs      show includes during parsing
-  -D, --list-deps      list dependencies and quit
-  -X, --no-exec        don't generate .go file(s)
-  -R, --no-recurse     don't do recursive compile on dep's
+  -b, --backend=BACKEND back end target: bytestructures or cdata
+  -L, --load-path=DIR   add DIR to the front of the module load path
+  -I, --inc-dir=DIR     add DIR to list of dir's to search for C headers
+  -o, --output=OFILE    write output to OFILE
+  -d, --debug=x,y       set debug flags: echo-decl, parse
+  -s, --show-incs       show includes during parsing
+  -m, --machine=MACHINE target machine, if non-native (e.g., i686)
+  -D, --list-deps       list dependencies and quit
+  -X, --no-exec         don't generate .go file(s)
+  -R, --no-recurse      don't do recursive compile on dep's
 
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
@@ -104,9 +105,12 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
              (if (assoc-ref opts 'output-file)
                  (fail "`-o' option cannot be specified more than once"))
              (values (acons 'output arg opts) files)))
-   (option '(#\t "target") #t #f
+   (option '(#\b "backend") #t #f
            (lambda (opt name arg opts files)
-             (values (acons 'target (string->symbol arg) opts) files)))
+             (values (acons 'backend (string->symbol arg) opts) files)))
+   (option '(#\m "machine") #t #f
+           (lambda (opt name arg opts files)
+             (values (acons 'machine arg opts) files)))
    (option '(#\s "show-incs") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'show-incs #t opts) files)))
