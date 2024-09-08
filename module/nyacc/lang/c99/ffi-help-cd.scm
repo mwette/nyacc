@@ -19,40 +19,9 @@
 
 ;; This module converts C headers to scheme.  It includes conversion of
 ;; 1. typedefs, struct defs, union defs, enum defs, function decls, externs
-;; 2. FH types are wrappers for an underlying C type system.  This may be
-;;    a. scheme bytestructures
-;;    b. cdata type (new module coming from this author)
-;; 3. On top of the underlying types, FH types add
-;;    a. source type name tracing (e.g., printer shows <foo_t* ...>)
-;;    b. (pointer-to xxx) and (value-at xxx) converters
-;; Functions calls include wrapper and unwrapping to the underlying libffi
-;; support in Guile.
-
-;; @table code
-;; @item mtail->fh-wrapper
-;; generates code to apply wrapper to objects returned from foreign call
-;; @item mtail->fh-unwrapper
-;; generated code to apply un-wrapper to arguments for foreign call
-;; @end table
-
-;; TODOs
-;; 2) think about cnvt-fctn that generates C code
-;; 3) add code for bytestructures' bounding-struct-descriptor
-;; 4) cnvt-udecl needs complete rewrite using udecl->mdecl from c99/munge
-
-;; Issue:
-;; So issue is when 'typedef struct ref foo_t' has no 'struct def'
-;; we never define a type.  Then later we may see 'typedef foo_t bar_t'
-;; We are using define-ffi-type-alias but that then generates a reference
-;; to an undefined type.  Maybe for the above we should have a void
-;; pseudo-type with
-;; name: void
-;; (unwrap-void obj) => 'void
-;; (wrap 'void) (make-xxx)
-;; (pointer-to obj) => <void* obj>
-;; (value-at void*-object) =. void
-
-;; For enum typedefs we are not creating types but just using wrappers.
+;; 2. The previous bytestructure backend is replaced by cdata.
+;; 3. Functions calls include wrapper and unwrapping to the underlying libffi
+;;    support in Guile.
 
 ;;; Code:
 
@@ -410,7 +379,6 @@
 ;; === cdata/ctype support =====================================================
 
 (use-modules (system foreign arch-info))
-;;(use-modules (system foreign cdata))
 
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)) (ttag (*ttag*)))
@@ -569,8 +537,6 @@
 
 
 ;; === ffi-helper code gen =====================================================
-
-;; === FFI api support =========================================================
 
 ;; Dealing with functions requires for each parameter and the return:
 ;; 1. Convering C type decl's to associated Guile ffi type decl's.
@@ -833,14 +799,18 @@
                               ,decl-ret (foreign-pointer-search ,name)
                               (cons* ,@decl-par (map car ~rest))))
 	              ,@urap-par)
-		  ,(if exec-ret `((lambda (~ret) ,exec-ret) ,va-call) va-call)))
+		  ,(if exec-ret
+                       `((lambda (~ret) ,exec-ret) ,va-call)
+                       va-call)))
 	     `(let ((~proc
                      (delay (ffi:pointer->procedure
                              ,decl-ret (foreign-pointer-search ,name)
                              (list ,@decl-par)))))
                 (lambda ,names
 	          (let ,urap-par
-                    ,(if exec-ret `((lambda (~ret) ,exec-ret) ,call) call)))))))))
+                    ,(if exec-ret
+                         `((lambda (~ret) ,exec-ret) ,call)
+                         call)))))))))
 
 
 ;; === the main conversion driver ==============================================
