@@ -1116,7 +1116,17 @@
 	  ((member (w/enum enum-name) wrapped)
 	   (values wrapped defined))
 	  (else
-	   (values (cons (w/enum enum-name) wrapped) defined))))
+           (let* ((type (sfsym "enum-~a" enum-name))
+                  (defs (canize-enum-def-list enum-def-list (*udict*) (*ddict*)))
+                  (enums (enum-def-list->alist defs)))
+             (ppscm (deftype type `(cenum ',enums)))
+             (ppscm `(define ,(sfsym "unwrap-~A" type)
+                       (let ((vald (cenum-vald (ctype-info ,type))))
+                         (lambda (arg) (or (assq-ref vald arg) arg)))))
+             (ppscm `(define ,(sfsym "wrap-~A" type)
+                       (let ((symd (cenum-symd (ctype-info ,type))))
+                         (lambda (arg) (or (assq-ref symd arg) arg)))))
+	     (values (cons (w/enum enum-name) wrapped) defined)))))
 
         ((enum-def ,enum-def-list)
 	 (values wrapped defined))
