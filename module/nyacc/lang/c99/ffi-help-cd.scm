@@ -410,7 +410,7 @@
 ;; === cdata/ctype support =====================================================
 
 (use-modules (system foreign arch-info))
-(use-modules (system foreign cdata))
+;;(use-modules (system foreign cdata))
 
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)) (ttag (*ttag*)))
@@ -568,133 +568,7 @@
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
 
-;; === fh type generation ======================================================
-
-#|
-(define (fhscm-ref-deref typename)
-  (let* ((typename (rename typename))
-	 (type* (strings->symbol typename "*"))
-	 (make* (strings->symbol "make-" typename "*"))
-	 (type (strings->symbol typename))
-	 (make (strings->symbol "make-" typename)))
-    (ppscm `(fh-ref<=>deref! ,type* ,make* ,type ,make))))
-
-(define (fhscm-gen-def kind name)
-  (let* ((name (rename name))
-	 (strname (if (string? name) name (symbol->string name)))
-	 (symname (if (string? name) (string->symbol name) name))
-         (desc (strings->symbol strname (*ttag*)))
-	 (pred (strings->symbol strname "?"))
-	 (make (strings->symbol "make-" strname)))
-    (upscm (list kind symname desc pred make))
-    (upscm `(export ,symname ,pred ,make))))
-
-(define (fhscm-def-pointer name)
-  (fhscm-gen-def 'define-fh-pointer-type name))
-
-(define (fhscm-def-compound name)
-  (fhscm-gen-def 'define-fh-compound-type name))
-
-(define (fhscm-def-vector name)
-  (fhscm-gen-def 'define-fh-vector-type name))
-
-(define* (cnvt-param/fh-decl udecl #:optional namer)
-  (mtail->ttype
-   (md-tail (udecl->mdecl
-             (udecl-rem-type-qual
-              (expand-typerefs udecl (*udict*) ffi-defined))
-             #:namer namer))))
-
-;; fhscm-def-function* moved below
-|#
-
 ;; === ffi-helper code gen =====================================================
-
-;; This routine will munge the fields and then perform typeref expansion.
-;; `defined' here means has -desc (what?)
-(define (expand-field-list-typerefs field-list)
-  (let ((udict (*udict*)) (defined (*defined*)))
-    (cons 'field-list
-	  (fold-right
-	   (lambda (udecl seed)
-	     (cons (expand-typerefs udecl udict defined) seed))
-	   '() (clean-and-unitize-fields (sx-tail field-list))))))
-
-#|
-;; @deffn {Procedure} cnvt-aggr-def kind typename aggr-name field-list
-;; Output an aggregate definition, where
-;; @var{kind} is a string of @code{"struct"} or @code{"union"},
-;; @var{typename} is a string for the typename, or @code{#f},
-;; @var{aggr-name} is a string for the struct or union name, or @code{#f},
-;; and @var{field-list} is the field-list from the C syntax tree.
-;; @end deffn
-(define (cnvt-aggr-def kind typename aggr-name)
-  (let* ((kind-s (symbol->string kind))
-	 (aggrname (and aggr-name (string-append kind-s "-" aggr-name))))
-    (cond
-     ((and typename aggr-name)
-      (fhscm-def-compound typename)
-      (fhscm-def-pointer (sw/* typename))
-      (fhscm-ref-deref typename)
-      (fhscm-def-compound aggrname)
-      (fhscm-def-pointer (sw/* aggrname))
-      (fhscm-ref-deref aggrname))
-     (typename
-      (fhscm-def-compound typename)
-      (fhscm-def-pointer (sw/* typename))
-      (fhscm-ref-deref typename))
-     (aggr-name
-      (fhscm-def-compound aggrname)
-      (fhscm-def-pointer (sw/* aggrname))
-      (fhscm-ref-deref aggrname)))))
-
-(define (cnvt-struct-def typename struct-name)
-  (cnvt-aggr-def 'struct typename struct-name))
-
-(define (cnvt-union-def typename union-name)
-  (cnvt-aggr-def 'union typename union-name))
-
-
-(define (fhscm-def-enum name name-val-list)
-  (let ((nvl (sfsym "~A-enum-nvl" name))
-        (vnl (sfsym "~A-enum-vnl" name)))
-    (ppscm `(define ,nvl '(,@name-val-list)))
-    (ppscm `(define ,vnl
-              (map (lambda (pair) (cons (cdr pair) (car pair))) ,nvl)))
-    (ppscm `(define-public (,(sfsym "unwrap-~A" name) n)
-              (cond
-               ((symbol? n)
-                (or (assq-ref ,(sfsym "~A-enum-nvl" name) n)
-                    (fherr "bad arg: ~A" n)))
-               ((integer? n) n)
-               (else (error "bad arg")))))
-    (ppscm `(define-public (,(sfsym "wrap-~A" name) v)
-              (assq-ref ,(sfsym "~A-enum-vnl" name) v)))))
-
-(define (cnvt-enum-def typename enum-name enum-def-list)
-  (let* ((udict (*udict*))
-	 (ddict (*ddict*))
-	 (name-val-l
-	  (map
-	   (lambda (def)
-	     (let* ((n (sx-ref (sx-ref def 1) 1))
-		    (x (sx-ref def 2))
-		    (v (eval-c99-cx x udict ddict)))
-	       (unless v
-		 (throw 'ffi-help-error "unable to generate constant for ~S" n))
-	       (cons (string->symbol n) v)))
-	   (cdr (canize-enum-def-list enum-def-list udict ddict)))))
-    (cond
-     ((and typename enum-name)
-      (fhscm-def-enum typename name-val-l)
-      (sfscm "(define-public unwrap-enum-~A unwrap-~A)\n" enum-name typename)
-      (sfscm "(define-public wrap-enum-~A wrap-~A)\n" enum-name typename))
-     (typename
-      (fhscm-def-enum typename name-val-l))
-     (enum-name
-      (fhscm-def-enum (string-append "enum-" enum-name) name-val-l)))))
-|#
-
 
 ;; === FFI api support =========================================================
 
@@ -764,6 +638,7 @@
       (`((pointer-to) . ,_0) `(unwrap-pointer ,mname ,(string->symbol name)))
       (`((fixed ,name)) `(unwrap-number ,mname))
       (`((float ,name)) `(unwrap-number ,mname))
+      (`((enum-def . ,_)) `(unwrap~enum  ,mname))
       (__ #f))))
 
 (define (unwrap-mdecl mdecl)
@@ -776,8 +651,7 @@
       (`(typename ,name)
        (cond
 	((member name def-defined) `(unwrap-number ,name))
-	((member name defined)
-         (defined-type-unwrapper name mname))
+	((member name defined) (defined-type-unwrapper name mname))
 	((member name wrapped) (list (strings->symbol "unwrap-" name) mname))
 	(else #f)))
       (`(enum-def (ident ,name) ,_)
@@ -813,7 +687,7 @@
       (`((typename ,name))
        (cond
         ((member name def-defined) #f)
-	((member name defined) `(make-cdata ,name ,mname))
+	((member name defined) `(make-cdata ,(string->symbol name) ,mname))
 	((member name wrapped) (list (sfsym "wrap-~A" name) mname))
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
@@ -970,6 +844,17 @@
 
 
 ;; === the main conversion driver ==============================================
+
+;; This routine will munge the fields and then perform typeref expansion.
+;; `defined' here means has -desc (what?)
+(define (expand-field-list-typerefs field-list)
+  (let ((udict (*udict*)) (defined (*defined*)))
+    (cons 'field-list
+	  (fold-right
+	   (lambda (udecl seed)
+	     (cons (expand-typerefs udecl udict defined) seed))
+	   '() (clean-and-unitize-fields (sx-tail field-list))))))
+
 
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
