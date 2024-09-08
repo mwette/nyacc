@@ -421,7 +421,7 @@
 	     (strings->symbol name "*" ttag)
              `(cpointer ,(mtail->ctype (cdr mtail))))))
       (`((pointer-to) (void))
-       `(cbase 'void*))
+       `(cpointer 'void))
       (`((pointer-to) (fixed-type "char"))
        `(cpointer (cbase 'char)))
       (`((pointer-to) (fixed-type ,name))
