@@ -11,20 +11,23 @@
 
 (use-modules (ffi gdk2))
 (use-modules (ffi cairo))
-(use-modules (system ffi-help-rt))
+(use-modules (system foreign cdata))
+(use-modules (system foreign))
 (define GDK gdk-symval)
+
+(define (NULL? arg) (equal? arg %null-pointer))
 
 ;; Initialize.
 (gdk_init NULL NULL)
 
 (define win
-  (let* ((attr (make-GdkWindowAttr)))
-    (fh-object-set! attr 'event_mask (GDK 'GDK_EXPOSE))
-    (fh-object-set! attr 'width 400)
-    (fh-object-set! attr 'height 300)
-    (fh-object-set! attr 'wclass (GDK 'GDK_INPUT_OUTPUT))
-    (fh-object-set! attr 'window_type (GDK 'GDK_WINDOW_TOPLEVEL))
-    (gdk_window_new NULL (pointer-to attr) 0)))
+  (let ((attr (make-cdata GdkWindowAttr)))
+    (cdata-set! attr (apply logior (map gdk-symval '(GDK_EXPOSE))) 'event_mask)
+    (cdata-set! attr 400 'width)
+    (cdata-set! attr 300 'height)
+    (cdata-set! attr (gdk-symval 'GDK_INPUT_OUTPUT) 'wclass)
+    (cdata-set! attr (gdk-symval 'GDK_WINDOW_TOPLEVEL) 'window_type)
+    (gdk_window_new NULL (cdata& attr) 0)))
 
 (define cr (gdk_cairo_create win))
 ;;(define srf (gdk_window_create_similar_surface win))
@@ -32,15 +35,15 @@
 
 (define (paint-1 cro)
   (let* ((text "Hi")
-         (extents (make-cairo_text_extents_t)))
+         (extents (make-cdata cairo_text_extents_t)))
     (cairo_select_font_face
      cro "Sans" 'CAIRO_FONT_SLANT_NORMAL 'CAIRO_FONT_WEIGHT_NORMAL)
     (cairo_set_font_size cro 52.0)
-    (cairo_text_extents cro text (pointer-to extents))
-    (let ((x (- 250.0 (+ (/ (fh-object-ref extents 'width) 2.0)
-                         (fh-object-ref extents 'x_bearing))))
-          (y (- 250.0 (+ (/ (fh-object-ref extents 'height) 2.0)
-                         (fh-object-ref extents 'y_bearing)))))
+    (cairo_text_extents cro text (cdata& extents))
+    (let ((x (- 250.0 (+ (/ (cdata-ref extents 'width) 2.0)
+                         (cdata-ref extents 'x_bearing))))
+          (y (- 250.0 (+ (/ (cdata-ref extents 'height) 2.0)
+                         (cdata-ref extents 'y_bearing)))))
       (cairo_move_to cro x y)
       (cairo_show_text cro text)
       (cairo_set_source_rgba cro 1 0.2 0.2 0.6)
@@ -62,18 +65,18 @@
   (cairo_move_to cr 10 10)
   (cairo_rel_line_to cr 80 80)
   (cairo_stroke cr)
-  (cairo_paint cr)
-  )
+  (cairo_paint cr))
 
 (gdk_window_show win)
-;;(gdk_keyboard_ungrab)
 
 (let loop ((n 0) (evt (gdk_event_get)))
   (when (< n 100)
 
-    (unless (zero? (fh-object-ref evt))
+    (unless (NULL? (cdata-ref evt))
       ;;(simple-format #t "evt=~S\n" evt)
-      (let* ((type (wrap-GdkEventType (fh-object-ref evt '* 'type)))
+      (let* (
+             ;;(type (wrap-GdkEventType (cdata-ref evt '* 'type)))
+             (type (cdata-ref evt '* 'type))
              )
         (simple-format #t "type=~S\n" type)
         (case type
