@@ -39,7 +39,7 @@
 ;; (cdata&-ref data) -> pointer
 ;; (cdata*-ref data) -> number | procedure | ???
 
-;; lesser used:
+;; lesser used: (Xcdata == "deconstructed-cdata")
 ;; (Xcdata-ref bv ix ct) -> value
 ;; (Xcdata-set! bv ix ct) -> #undefined#
 ;; (cdata-sel data tag ...) -> <cdata>
@@ -50,7 +50,7 @@
 ;; (make-cdata-getter sel [offset]) => (proc data) -> value
 ;; (make-cdata-setter sel [offset]) => (proc data value) -> undefined
 ;;   Note: should procs allow tags (but no '*) ?
-;; (cdata-cast cdata type) -> <cdata>
+;; (ccast type data) -> <cdata>
 ;; (cdata-arg ffi-type guile-value) -> (tpye . value)
 
 ;; thinking about this this:
@@ -78,7 +78,7 @@
 (define-module (system foreign cdata)
   #:export (cbase
             cstruct cunion cpointer carray cenum cfunction
-            make-cdata cdata-ref cdata-set! cdata&-ref cdata-cast
+            make-cdata cdata-ref cdata-set! cdata&-ref ccast
             pretty-print-ctype
             
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
@@ -91,7 +91,7 @@
             ctype-sel make-cdata-getter make-cdata-setter
             ;;ctype->ffi
             ;;
-            NULL
+            NULL NULL?
             unwrap-number unwrap-pointer unwrap-array
             ;;
             mtype-bv-ref mtype-bv-set!
@@ -800,6 +800,60 @@
          (ptr->proc (make-pointer addr))))
       (else (error "cdata-ref: giving up")))))
 
+;; @deffn {Procedure} Xcdata-set! bv ix ct value
+;; Reference a deconstructed cdata object. See @emph{cdata-set!}.
+;; @end deffn
+(define (Xcdata-set! bv ix ct value)
+  (let* ()
+    (if (cdata? value)
+        (let ((sz (ctype-size ct)))
+          (unless (ctype-equal? (cdata-ct value) ct)
+            (error "cdata-set!: bad arg"))
+          (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
+        (case (ctype-kind ct)
+          ((base)
+           (mtype-bv-set! (ctype-info ct) bv ix value))
+          ((pointer)
+           (let* ((pi (ctype-info ct))
+                  (pt (cpointer-type pi))
+                  (mtype (cpointer-mtype pi)))
+             (cond
+              ((pointer? value)
+               (mtype-bv-set! mtype bv ix (pointer-address value)))
+              ((integer? value)
+               (mtype-bv-set! mtype bv ix value))
+              ((procedure? value)
+               (unless (eq? (ctype-kind pt) 'function)
+                 (error "cdata: expecting pointer to function, got" pt))
+               ;;(sferr "Xcdata-set! procedure\n")
+               (mtype-bv-set! mtype bv ix
+                              (pointer-address
+                               ((cfunction-proc->ptr (ctype-info pt)) value))))
+              (else (error "cdata-set!: bad arg" value)))))
+          ((bitfield)
+           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+                  (sx (cbitfield-signed? bi)) (am (1- (expt 2 wd)))
+                  (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
+                  (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
+             (mtype-bv-set! mt bv ix (logior (logand mx dmi)
+                                             (ash value sh)))))
+          ((enum)
+           (let* ((info (ctype-info ct)) (mtype (cenum-mtype info)))
+             (cond
+              ((integer? value)
+               (mtype-bv-set! mtype bv ix value))
+              ((symbol? value)
+               (mtype-bv-set! mtype bv ix
+                              (assq-ref (cenum-vald info) value)))
+              (else
+               (error "cdata-set! bad value arg: ~s" value)))))
+          ((function) (error "cdata-set!: can't set! function value"))
+          ((struct) (error "cdata-set!: can't set! struct value"))
+          ((union) (error "cdata-set!: can't set! union value"))
+          ((array) (error "cdata-set!: can't set! array value"))
+          (else (error "cdata-set!: bad arg 2" value))))))
+
 ;; @deffn {Procedure} cdata-ref data [tag ...]
 ;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
 ;; respect to the cdata object @var{data}.
@@ -830,57 +884,6 @@
   (let ((data (apply cdata-sel data tags)))
     (Xcdata-ref (cdata-bv data) (cdata-ix data) (cdata-ct data))))
 
-;; @deffn {Procedure} Xcdata-set! bv ix ct value
-;; Reference a deconstructed cdata object. See @emph{cdata-set!}.
-;; @end deffn
-(define (Xcdata-set! bv ix ct value)
-  (let* ()
-    (if (cdata? value)
-        (let ((sz (ctype-size ct)))
-          (unless (ctype-equal? (cdata-ct value) ct)
-            (error "cdata-set!: bad arg"))
-          (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
-        (case (ctype-kind ct)
-          ((base)
-           (mtype-bv-set! (ctype-info ct) bv ix value))
-          ((pointer)
-           (let* ((pi (ctype-info ct))
-                  (pt (cpointer-type pi))
-                  (mtype (cpointer-mtype pi)))
-             (cond
-              ((pointer? value)
-               (mtype-bv-set! mtype bv ix (pointer-address value)))
-              ((integer? value)
-               (mtype-bv-set! mtype bv ix value))
-              ((procedure? value)
-               (unless (eq? (ctype-kind pt) 'function) (error "yuckus"))
-               (mtype-bv-set! mtype bv ix
-                              (pointer-address (cfunction-proc->ptr value))))
-              (else (error "cdata-set!: bad arg" value)))))
-          ((bitfield)
-           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
-                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                  (sx (cbitfield-signed? bi)) (am (1- (expt 2 wd)))
-                  (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
-                  (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
-             (mtype-bv-set! mt bv ix (logior (logand mx dmi)
-                                             (ash value sh)))))
-          ((enum)
-           (let* ((info (ctype-info ct)) (mtype (cenum-mtype info)))
-             (cond
-              ((integer? value)
-               (mtype-bv-set! mtype bv ix value))
-              ((symbol? value)
-               (mtype-bv-set! mtype bv ix
-                              (assq-ref (cenum-vald info) value)))
-              (else
-               (error "cdata-set! bad value arg: ~s" value)))))
-          ((function) (error "cdata-set!: can't set! function value"))
-          ((struct) (error "cdata-set!: can't set! struct value"))
-          ((union) (error "cdata-set!: can't set! union value"))
-          ((array) (error "cdata-set!: can't set! array value"))
-          (else (error "cdata-set!: bad arg 2" value))))))
-
 ;; @deffn {Procedure} cdata-set! data value [tag ...]
 ;; Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
 ;; @var{value}.  Example:
@@ -904,7 +907,7 @@
 ;; Make a cdata object from a pointer.   That is, instead of creating a
 ;; bytevector to hold the data use the memory at the pointer using
 ;; @code{pointer->bytevector}.
-;; @* Maybe cdata-cast can do this?
+;; @* Maybe ccast can do this?
 ;; @end deffn
 (define (make-cdata/* type pointer)
   (assert-ctype 'make-cdata/* type)
@@ -978,37 +981,25 @@
          (addr (+ (pointer-address bptr) (cdata-ix data))))
     (make-pointer addr)))
 
-;; @deffn {Procedure} cdata-cast data type [do-check] => <cdata>
+;; @deffn {Procedure} ccast type data [do-check] => <cdata>
 ;; need to be able to cast array to pointer
-;; @* maybe call this ccast ?
 ;; @example
-;; (cdata-cast val Target*) (ccast Target* val)
+;; (ccast Target* val)
 ;; @end example
 ;; @end deffn
-;; or (ccast type data)
-;; or (cdata-typecast data type)
-(define* (cdata-cast data type #:key do-check)
-  (assert-cdata 'cdata-cast data)
+(define* (ccast type data #:key do-check)
   (assert-ctype 'cdata-cast type)
+  (assert-cdata 'cdata-cast data)
   (define (type-miss)
-    (error "cdata-cast: incompatible type:" (list (cdata-ct data) type)))
+    (error "ccast: incompatible type:" (list (cdata-ct data) type)))
   (define (type-check ft tt)
     (when (and do-check (ctype-equal? ft tt)) (type-miss)))
-  (error "cdata-cast not done")
-  (let ((bv (cdata-bv data))
-        (ix (cdata-ix data))
-        (ct (cdata-ct data))
-        (tokind (ctype-kind type)))
+  (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
     (case (ctype-kind ct)
-      ((base)
-       (case tokind
-         ((base)
-          #f)
-         (else (type-miss))))
-      ((pointer)
-       (%make-cdata bv ix ct))
+      ((base) (make-cdata type (cdata-ref data)))
+      ((pointer) (%make-cdata bv ix type))
       ((array)
-       (case tokind
+       (case (ctype-kind type)
          ((pointer)
           (let* ((array (ctype-info ct))
                  (atype (carray-type array))
@@ -1121,6 +1112,8 @@
 ;; --- not sure about this ===--------------------------------------------------
 
 (define NULL %null-pointer)
+(define (NULL? arg)
+  (equal? (if (cdata? arg) (cdata-ref arg) arg) %null-pointer))
 
 (define (unwrap-number arg)
   (cond ((number? arg) arg)

@@ -451,16 +451,12 @@
     (s64le . s64) (u64le . u64) (f32le . f32) (f64le . f64)
     (s16be . s16) (u16be . u16) (s32be . s32) (u32be . u32)
     (s64be . s64) (u64be . u64) (f32be . f32) (f64be . f64)))
-
-(define (make-native-arch arch)
-  (let ((mtype-map (map (lambda (pair)
-                          (cons (car pair) (assq-ref mxmap (cdr pair))))
-                        (arch-mtype-map arch))))
-    (make-arch-info x y z)))))
 |#
 
 (define native-arch
   (assoc-ref (*arch-map*) host-arch-name))
+
+(add-to-arch-map "native" native-arch)
 
 (*arch* native-arch)
 
