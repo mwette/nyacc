@@ -26,28 +26,31 @@
 
 (define-public gtk-symval ffi-gtk2-symbol-val)
 
-#|
-;; OK, some gtk programs use (lambda (widget event arg) ...) and Gtk etc does
-;; not provide it so I hack it here:
-(define-public wrap-GtkEventCallback
-  (lambda (~fptr)
-    (let ((~proc (ffi:pointer->procedure ffi:void ~fptr (list '* '* '*))))
-      (lambda (widget event arg)
-        (let ((widget (unwrap~pointer widget))
-              (event (unwrap~pointer event))
-              (arg (unwrap~pointer arg)))
-          (~proc widget event arg))))))
-(define-public unwrap-GCallback
-  (lambda (~proc)
-    (ffi:procedure->pointer ffi:void ~proc (list '* '* '*))))
-
-(define-public GtkEventCallback-desc
-  (fh:function*
-    'void (list (bs:pointer 'void) (bs:pointer 'void) (bs:pointer 'void)))))
-(define-fh-function*-type GtkEventCallback
-  GtkEventCallback-desc  GtkEventCallback? make-GtkEventCallback)
-(export GtkEventCallback GtkEventCallback? make-GtkEventCallback)
-|#
+;; Create GtkEventCallback: missing somehow 
+;; typedef void (*GtkEventCallback)(GtkWidget *, GdkEvent*, gpointer data);
+(define-public *GtkEventCallback
+  (cfunction
+    (lambda (~proc)
+      (ffi:procedure->pointer
+        ffi:void
+        (lambda (widget event data)
+          (let ((widget (make-cdata GtkWidget* widget))
+                (event (make-cdata GdkEvent* event))
+                (data (make-cdata gpointer data)))
+            (~proc widget event data)))
+        (list '* '* '*)))
+    (lambda (~fptr)
+      (let ((~proc (ffi:pointer->procedure
+                     ffi:void
+                     ~fptr
+                     (list '* '* '*))))
+        (lambda (widget event data)
+          (let ((widget (unwrap-pointer widget))
+                (event (unwrap-pointer event))
+                (data (unwrap-pointer data gpointer)))
+            (~proc widget event data)))))))
+(define-public GtkEventCallback
+  (name-ctype (cpointer *GtkEventCallback) 'GtkEventCallback))
 
 ;; This is the c function.
 (define-public ~gtk_widget_destroy
