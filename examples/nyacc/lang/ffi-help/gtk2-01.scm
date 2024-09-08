@@ -39,7 +39,7 @@
   (make-cdata
    GtkEventCallback
    (lambda (widget event data)
-     (display "delete event occurred\n")
+     (display "delete event occurred\n"))))
      1)))
 
 (define (main)
