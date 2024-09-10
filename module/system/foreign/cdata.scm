@@ -681,6 +681,7 @@
 
 ;; @deffn {Procedure} name-ctype name type -> <ctype>
 ;; Add a name to the type.  The name is useful when the type is printed.
+;; This procedure does not mutate: a new type object is created.
 ;; @end dedffn
 (define (name-ctype name type)
   (%make-ctype (ctype-size type) (ctype-align type)
@@ -695,8 +696,9 @@
 ;; @example
 ;; (make-cdata mytype #f "foo")
 ;; @end example
-;; As a special case, an integer arg to an a zero-sized array type will
-;; allocate storage for that many items.
+;; As a special case, an integer arg to a zero-sized array type will
+;; allocate storage for that many items, associating it with an array
+;; type of that size.
 ;; @end deffn
 (define* (make-cdata type #:optional value)
   (assert-ctype 'make-cdata type)
@@ -707,8 +709,8 @@
         ((zero? ln)
          (unless (integer? value) (error "make-cdata: zero sized array type"))
          (let* ((et (carray-type ca)) (sz (ctype-size et))
-                (bv (make-bytevector (* ln sz))))
-           (%make-cdata bv 0 (carray et ln))))
+                (bv (make-bytevector (* value sz))))
+           (%make-cdata bv 0 (carray et value))))
         (else
          (when value (error "can't initialize arrays yet"))
          (%make-cdata (make-bytevector (ctype-size type)) 0 type)))))
@@ -1099,7 +1101,7 @@
           ((ctype-name (%cpointer-type info)) => (lambda (n) `(cpointer ,n)))
           (else `(cpointer ,(cnvt (cpointer-type info))))))
         ((array)
-         `(carray ,(cnvt (carray-type info)) (carray-length info)))
+         `(carray ,(cnvt (carray-type info)) ,(carray-length info)))
         (else (error "pretty-print-ctype: needs work" (ctype-kind type))))))
   (pretty-print (cnvt type) port))
 
