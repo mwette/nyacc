@@ -52,19 +52,17 @@
             nonzero?
             TRUE FALSE
             ;;
-            make-DBusMessageIter&
+            ;;make-DBusMessageIter&
             ;;
             dbus-message-type
             dbus-request-name-reply
             make-dbus-string
             make-dbus-pointer
             )
-  #:use-module (ffi ffi-help-rt)
   #:use-module (ffi epoll)
   #:use-module (ffi dbus)
-
-  #:use-module (bytestructures guile)
-  #:use-module ((system foreign) #:prefix ffi:)
+  #:use-module (system foreign cdata)
+  #:use-module (system foreign)
 
   #:use-module (ice-9 threads)
   #:use-module ((srfi srfi-1) #:select (fold))
@@ -77,42 +75,46 @@
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
 (define (ensure-pointer maybe-ptr)
-  (if (ffi:pointer? maybe-ptr) maybe-ptr (ffi:make-pointer maybe-ptr)))
+  (if (pointer? maybe-ptr) maybe-ptr (make-pointer maybe-ptr)))
 
 (define (ensure-address maybe-ptr)
-  (if (ffi:pointer? maybe-ptr) (ffi:pointer-address maybe-ptr) maybe-ptr))
+  (if (pointer? maybe-ptr) (pointer-address maybe-ptr) maybe-ptr))
+
+(define (!0 arg) (not (eqv? 0 arg)))
 
 ;; ====================================
 
 (define TRUE 1)
 (define FALSE 0)
 
+(define int* (cpointer (cbase 'int)))
+
 (define (dbus-version)
-  (let ((maj (make-int)) (min (make-int)) (mic (make-int)))
-    (dbus_get_version (pointer-to maj) (pointer-to min) (pointer-to mic))
+  (let ((maj (make-cdata int*)) (min (make-cdata int*)) (mic (make-cdata int*)))
+    (dbus_get_version (cdata& maj) (cdata& min) (cdata& mic))
     (simple-format #f "~A.~A.~A"
-                   (fh-object-ref maj)
-                   (fh-object-ref min)
-                   (fh-object-ref mic))))
+                   (cdata-ref maj)
+                   (cdata-ref min)
+                   (cdata-ref mic))))
 
 (define (dbus-bus-get-unique-name conn)
-  (ffi:pointer->string (dbus_bus_get_unique_name conn)))
+  (pointer->string (dbus_bus_get_unique_name conn)))
 
 (define (dbus-message-get-sender conn)
-  (ffi:pointer->string (dbus_message_get_sender conn)))
+  (pointer->string (dbus_message_get_sender conn)))
 
 ;; @deffn {Procedure} dbus-error error => #f|string
 ;; If @var{error} (a @code{DBusError} value) represents an error return
 ;; the error string.  Otherwise return @code{#f}.
 ;; @end deffn
 (define (dbus-error error)
-  (and (!0 (dbus_error_is_set (pointer-to error)))
-       (ffi:pointer->string (ensure-pointer (fh-object-ref error 'message)))))
+  (and (!0 (dbus_error_is_set (cdata& error)))
+       (pointer->string (ensure-pointer (cdata-ref error 'message)))))
 
 (define (get-bval &iter key)
-  (let* ((bval (make-DBusBasicValue)))
-    (dbus_message_iter_get_basic &iter (pointer-to bval))
-    (fh-object-ref bval key)))
+  (let* ((bval (make-cdata DBusBasicValue)))
+    (dbus_message_iter_get_basic &iter (cdata& bval))
+    (cdata-ref bval key)))
 
 (define (read-dbus-val &iter)
   (case (dbus_message_iter_get_arg_type &iter)
@@ -128,24 +130,24 @@
     ((116) (get-bval &iter 'u32))                   ; t - uint64
     ((100) (get-bval &iter 'dbl))                   ; d - double
     ((115 111 103)                                  ; s, o, g
-     (ffi:pointer->string (ensure-pointer (get-bval &iter 'str))))
+     (pointer->string (ensure-pointer (get-bval &iter 'str))))
     ((104) (get-bval &iter 'fd))        ; h - unix fd
     ((97)                               ; a - array
-     (let* ((sub-iter (make-DBusMessageIter))
-            (&sub-iter (pointer-to sub-iter)))
+     (let* ((sub-iter (make-cdata DBusMessageIter))
+            (&sub-iter (cdata& sub-iter)))
        (dbus_message_iter_recurse &iter &sub-iter)
        (let loop ()
          (cons (read-dbus-val &sub-iter)
                (if (zero? (dbus_message_iter_next &sub-iter)) '() (loop))))))
     ((118)                              ; v - variant (boxed value)
-     (let* ((sub-iter (make-DBusMessageIter))
-            (&sub-iter (pointer-to sub-iter)))
+     (let* ((sub-iter (make-cdata DBusMessageIter))
+            (&sub-iter (cdata& sub-iter)))
        (dbus_message_iter_recurse &iter &sub-iter)
        (read-dbus-val &sub-iter)))
     ((114) (error "not defined: r"))    ; r - struct
     ((101)                              ; e - dict entry
-     (let* ((sub-iter (make-DBusMessageIter))
-            (&sub-iter (pointer-to sub-iter)))
+     (let* ((sub-iter (make-cdata DBusMessageIter))
+            (&sub-iter (cdata& sub-iter)))
        (dbus_message_iter_recurse &iter &sub-iter)
        (cons
         (read-dbus-val &sub-iter)
@@ -157,8 +159,8 @@
 
 ;; Given a message (or message) reply return the list of args.
 (define (get-dbus-message-args msg)
-  (let* ((iter (make-DBusMessageIter))
-         (&iter (pointer-to iter)))
+  (let* ((iter (make-cdata DBusMessageIter))
+         (&iter (cdata& iter)))
     (dbus_message_iter_init msg &iter)
     (let loop ((arg (read-dbus-val &iter)))
       (cond ((null? arg) '())
@@ -197,8 +199,7 @@
           (else #f)))
       (lambda (ival) ival)))
 
-(define (make-DBusMessageIter&)
-  (pointer-to (make-DBusMessageIter)))
+(define DBusMessageIter& (cpointer DBusMessageIter))
 
 ;; === scheduler ======================
 
@@ -427,9 +428,9 @@
    0 '(1 4 8 16)))
 
 (define (scm->addr scm)
-  (ffi:pointer-address (ffi:scm->pointer scm)))
+  (pointer-address (scm->pointer scm)))
 (define (addr->scm addr)
-  (ffi:pointer->scm (ffi:make-pointer addr)))
+  (pointer->scm (make-pointer addr)))
 
 ;; This is the user-data associated with a watch, i.e., an FD to be monitored.
 ;; Guile needs something equivalent to epoll-OR-kevent.
@@ -446,10 +447,11 @@
 ;; Lookup the fd in the dbus-data dictionary.  If not found add a blank entry.
 (define (dbus-lookup-fd fd)
   (or (hashv-ref *dbus-fd-dict* fd)
-      (let* ((event (make-struct-epoll_event))
-             (ddent (make-dbus-data fd event (make-vector *dbus-maxw* #f))))
+      (let* ((event (make-cdata struct-epoll_event))
+             (ddent (make-dbus-data fd event
+                                    (make-vector *dbus-maxw* #f))))
         (hashv-set! *dbus-fd-dict* fd ddent)
-        (fh-object-set! event 'data 'ptr (scm->addr ddent))
+        (cdata-set! event (scm->addr ddent) (scm->addr ddent)'data 'ptr)
         ddent)))
 
 ;; Find an available slot in the watch-vector.
@@ -483,24 +485,25 @@
 ;; @deffn {Procedure} add-watch watch data
 ;; @end deffn
 (define (add-watch ~watch data)
-  (let* ((watch (make-DBusWatch* ~watch))
-         (muxfd (ffi:pointer-address data))
+  (let* ((watch (make-cdata DBusWatch* ~watch))
+         (muxfd (pointer-address data))
          (addfd (dbus_watch_get_unix_fd watch))
          (flags (dbus_watch_get_flags watch))
          (ddent (dbus-lookup-fd muxfd))
          (event (dbus-data-ev ddent)))
 
-    (dbus_watch_set_data watch (ffi:scm->pointer ddent) dbus-data-free)
+    (dbus_watch_set_data watch (scm->pointer ddent) dbus-data-free)
 
     ;; Set up the indended set of epoll events.
     (if (!0 (dbus_watch_get_enabled watch))
-        (fh-object-set! event 'events
-                        (logior (fh-object-ref event 'events)
-                                (dbus-watch-flags->epoll-events flags))))
+        (cdata-set! event
+                    (logior (cdata-ref event 'events)
+                            (dbus-watch-flags->epoll-events flags))
+                     'events))
 
     ;; If this is the use of this fd, then initialize the ev and add to epoll.
     (if (dbus-data-watchless? ddent)
-        (epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (pointer-to event)))
+        (epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (cdata& event)))
 
     ;; Set watches based on flags.
     (let* ((wv (dbus-data-wv ddent)) (wx (find-wv-slot wv)))
@@ -512,13 +515,13 @@
 ;; @deffn {Procedure} remove-watch watch data
 ;; @end deffn
 (define (remove-watch ~watch data)
-  (let* ((watch (make-DBusWatch* ~watch))
-         (muxfd (ffi:pointer-address data))
+  (let* ((watch (make-cdata DBusWatch* ~watch))
+         (muxfd (pointer-address data))
          (delfd (dbus_watch_get_unix_fd watch))
          ;;(ddent (dbus_watch_get_data watch))
          (ddent (hashv *dbus-fd-dict* delfd))
          (event (dbus-data-ev ddent))
-         (events (fh-object-ref event 'events))
+         (events (cdata-ref event 'events))
          )
     (when #f
       (sf "\nrem-watch  ~S  ~S\n" watch data)
@@ -526,14 +529,14 @@
     ;; remove watch from ddent and fix events mask.
     ;; if no watches left then remove fd from epoll
     ;;(if (no more watches on this fd)
-    ;;    (epoll_ctl muxfd (EPOLL '_CTL_DEL) delfd (ffi:scm->pointer ddent)))
+    ;;    (epoll_ctl muxfd (EPOLL '_CTL_DEL) delfd (scm->pointer ddent)))
     (if #f #f)))
 
 ;; @deffn {Procedure} watch-toggled watch data
 ;; @end deffn
 (define (watch-toggled ~watch data)
-  (let* ((watch (make-DBusWatch* ~watch))
-         (muxfd (ffi:pointer-address data))
+  (let* ((watch (make-cdata DBusWatch* ~watch))
+         (muxfd (pointer-address data))
          (flags (dbus_watch_get_flags watch))
          )
     (when #f
@@ -551,15 +554,15 @@
 ;; timeout is DBusTimeout
 (define (add-timeout ~timeout data)
   (let* ((tod (gettimeofday))
-         (timeout (make-DBusWatch* ~timeout))
+         (timeout (make-cdata DBusWatch* ~timeout))
          (interval (dbus_timeout_get_interval timeout))
          (exp (t+us tod interval)))
     (schedule-event *dbus-sched* exp dbus-timeout-handler timeout)
-    (write #\x (ffi:pointer->scm data)) ; wake up mainloop
+    (write #\x (pointer->scm data)) ; wake up mainloop
     TRUE))
 
 (define (remove-timeout ~timeout data)
-  (let* ((timeout (make-DBusWatch* ~timeout)))
+  (let* ((timeout (make-cdata DBusWatch* ~timeout)))
     (cancel-events/data *dbus-sched* timeout)
     (if #f #f)))
 
@@ -569,19 +572,16 @@
     (if #f #f)))
 
 ;; This sets up capability to make runtime-sized vectors and use
-;; @code{pointer-to} cast for function args.  See @code{epoll_wait} below.
-(define-fh-vector-type struct-epoll_event-vec struct-epoll_event-desc
-  struct-epoll_event-vec? make-struct-epoll_event-vec)
-(fh-ref<=>deref! struct-epoll_event* make-struct-epoll_event*
-                 struct-epoll_event-vec make-struct-epoll_event-vec)
-(export make-struct-epoll_event-vec)
+;; @code{cdata&} cast for function args.  See @code{epoll_wait} below.
+(define-public struct-epoll_event-vec
+  (name-ctype (carray struct-epoll_event 0) 'struct-epoll_event-vec))
 
 (define (filter-func c m data)
   (when #f
     (sf "filter-func called ...\n  iface : ~S\n  member: ~S\n  path  : ~S\n"
-        (ffi:pointer->string (dbus_message_get_interface m))
-        (ffi:pointer->string (dbus_message_get_member m))
-        (ffi:pointer->string (dbus_message_get_path m))))
+        (pointer->string (dbus_message_get_interface m))
+        (pointer->string (dbus_message_get_member m))
+        (pointer->string (dbus_message_get_path m))))
   (DBUS 'HANDLER_RESULT_NOT_YET_HANDLED)
   ;;(DBUS 'HANDLER_RESULT_HANDLED)
   )
@@ -603,19 +603,19 @@
         (sleep 1))))
 
   (let* ((muxfd (epoll_create 1))
-         (muxpt (ffi:make-pointer muxfd))
+         (muxpt (make-pointer muxfd))
          (wpipe (pipe)) (wiport (car wpipe)) (woport (cdr wpipe))
-         (~woport (ffi:scm->pointer woport))
-         (eventv (make-struct-epoll_event-vec max-events))
-         (eventp (pointer-to eventv)))
+         (~woport (scm->pointer woport))
+         (eventv (make-cdata struct-epoll_event-vec max-events))
+         (eventp (cdata& eventv)))
 
     ;; Set up wakeup, initiated from handlers.
     (setvbuf woport 'none)
     (set-nonblocking! woport)
     (set-nonblocking! wiport) ;; needed?
-    (let ((event (make-struct-epoll_event)))
-      (fh-object-set! event 'events (EPOLL 'IN))
-      (epoll_ctl muxfd (EPOLL '_CTL_ADD) (port->fdes wiport) (pointer-to event)))
+    (let ((event (make-cdata struct-epoll_event)))
+      (cdata-set! event (EPOLL 'IN) 'events)
+      (epoll_ctl muxfd (EPOLL '_CTL_ADD) (port->fdes wiport) (cdata& event)))
 
     ;; Set up DBus MT locks, and mainloop hook functions.
     (dbus_threads_init_default)
@@ -643,9 +643,9 @@
 
         ;; events: wake-up or watches
         (unless (= i n)
-          (let* ((event (fh-object-ref eventv i))
-                 (events (bytestructure-ref event 'events))
-                 (data-ptr (bytestructure-ref event 'data 'ptr)))
+          (let* ((event (cdata-ref eventv i))
+                 (events (cdata-ref event 'events))
+                 (data-ptr (cdata-ref event 'data 'ptr)))
             (cond
              ((zero? data-ptr)
               (read-char wiport))
@@ -672,11 +672,11 @@
             ((system) 'DBUS_BUS_SYSTEM)
             (else (error "bad bus id"))))
          (error
-          (let ((error (make-DBusError)))
-            (dbus_error_init (pointer-to error))
+          (let ((error (make-cdata DBusError)))
+            (dbus_error_init (cdata& error))
             error))
          (conn
-          (let ((conn (dbus_bus_get bus-id (pointer-to error))))
+          (let ((conn (dbus_bus_get bus-id (cdata& error))))
             (dbus-error error)
             conn)))
     (call-with-new-thread (lambda () (my-main-loop conn)))

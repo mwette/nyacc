@@ -51,7 +51,7 @@
                 (data (unwrap-pointer data gpointer)))
             (~proc widget event data)))))))
 (define-public GtkEventCallback
-  (name-ctype (cpointer *GtkEventCallback) 'GtkEventCallback))
+  (name-ctype 'GtkEventCallback (cpointer *GtkEventCallback))
 
 ;; This is the c function.
 (define-public ~gtk_widget_destroy

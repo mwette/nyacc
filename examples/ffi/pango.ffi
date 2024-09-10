@@ -24,6 +24,6 @@
 
 ;; PangoScript is an enum.  Some routines return pointer to int for this.
 (define-public (wrap-PangoScript* arg)
-  (make-cdata (name-ctype (cpointer 'int) 'PangoScript*) arg))
+  (make-cdata (name-ctype 'PangoScript* (cpointer 'int)) arg))
 
 ;; --- last line ---

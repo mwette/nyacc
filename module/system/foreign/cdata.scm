@@ -17,12 +17,6 @@
 
 ;;; Notes:
 
-;; Maybe name should be on type
-;; But then we'd have to do this:
-;; (make-ctype (cpointer (cstruct ...)))
-;; or
-;; (name-ctype type) => named type  { copy type guts to new type }
-
 ;; (cbase sym-name) -> <ctype>
 ;; (cstruct ((name type) ...) [#t])-> <ctype>
 ;; (cunion ((name type) ...)) -> <ctype>
@@ -685,10 +679,10 @@
      ((not (eqv? (ctype-align a) (ctype-align b))) #f)
      (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b))))))
 
-;; @deffn {Procedure} name-ctype type name -> <ctype>
+;; @deffn {Procedure} name-ctype name type -> <ctype>
 ;; Add a name to the type.  The name is useful when the type is printed.
 ;; @end dedffn
-(define (name-ctype type name)
+(define (name-ctype name type)
   (%make-ctype (ctype-size type) (ctype-align type)
                (ctype-kind type) (ctype-info type)
                name))

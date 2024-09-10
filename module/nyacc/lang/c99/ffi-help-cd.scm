@@ -865,7 +865,7 @@
   (*defined* defined)
 
   (define-syntax-rule (deftype name type)
-    `(define-public ,name (name-ctype ,type ',name)))
+    `(define-public ,name (name-ctype ',name ,type)))
 
   (let* ((tag attr specl declr (split-udecl udecl))
          (sspec tqual tspec (specl-props specl)))
