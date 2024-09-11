@@ -440,7 +440,7 @@
                               ((promise? type) (force type))
                               (else (error "cstruct: bad type" type))))
                   (fsz (ctype-size type))
-                  (fal (ctype-align type))
+                  (fal (if packed? 1 (ctype-align type)))
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
                   (ssz (incr-bit-size 0 fal ssz))
                   (cf (%make-cfield name type ssz)))
@@ -459,7 +459,7 @@
                               ((ctype? type) type)
                               (else (error "bad type:" type))))
                   (fsz (ctype-size type))
-                  (fal (ctype-align type))
+                  (fal (if packed? 1 (ctype-align type)))
                   (mty (ctype-info type))
                   (sx? (mtype-signed? mty))
                   ;; order is critical here:
@@ -682,6 +682,17 @@
 ;; @deffn {Procedure} name-ctype name type -> <ctype>
 ;; Add a name to the type.  The name is useful when the type is printed.
 ;; This procedure does not mutate: a new type object is created.
+;; If a specific type is used by multiple names the names can share
+;; the underlying type guts.  The following generates two named types.
+;; @example
+;; (define raw (cstruct '((a 'int) (b 'double))))
+;; (define foo_t (name-ctype 'foo_t raw))
+;; (define struct-foo (name-ctype 'struct-foo raw))
+;; @end example
+;; These types are equal:
+;; @example
+;; (equal? foo_t struct-foo) => #t
+;; @end example
 ;; @end dedffn
 (define (name-ctype name type)
   (%make-ctype (ctype-size type) (ctype-align type)
@@ -1098,6 +1109,7 @@
         ((pointer)
          (cond
           ((promise? (%cpointer-type info)) `(cpointer (delay ...)))
+          ((eq? 'void (cpointer-type info)) `(cpointer 'void))
           ((ctype-name (%cpointer-type info)) => (lambda (n) `(cpointer ,n)))
           (else `(cpointer ,(cnvt (cpointer-type info))))))
         ((array)
