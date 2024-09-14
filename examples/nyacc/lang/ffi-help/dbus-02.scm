@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/ffi-help/dbus-02.scm - mainloop example
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -27,43 +27,48 @@
 
 (add-to-load-path (getcwd))
 
-(use-modules (system dbus))
+(use-modules (system foreign))
+(use-modules (system foreign cdata))
 (use-modules (ffi dbus))
-(use-modules (ffi ffi-help-rt))
-(use-modules ((system foreign) #:prefix ffi:))
+(use-modules (system dbus))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 
 (define (send-msg conn msg)
-  (let ((pending (make-DBusPendingCall*)))
+  (let* ((pending (make-cdata DBusPendingCall*)))
     (if (eqv? FALSE (dbus_connection_send_with_reply
-                     conn msg (pointer-to pending) -1))
+                     conn msg (cdata& pending) -1))
         (error "*** send_with_reply FAILED\n"))
     (dbus_message_unref msg)
+    (sferr "pending=~s\n" pending)
     pending))
 
 (define (send-sig conn sig)
-  (let ((serial (make-uint32)))
+  (let ((serial (make-cdata (cbase 'uint32_t))))
     (if (eqv? FALSE (dbus_connection_send
-                     conn sig (pointer-to serial)))
+                     conn sig (cdata& serial)))
         (error "*** send FAILED\n"))
     (dbus_message_unref sig)
     serial))
 
 (define (there-yet? pending)
-  (eqv? TRUE (dbus_pending_call_get_completed pending)))
+  ;;(eqv? TRUE (dbus_pending_call_get_completed pending)))
+  (let ((res (dbus_pending_call_get_completed pending)))
+    (sferr "there-yet? res = ~s\n" res)
+    (eqv? TRUE res)))
 
 (define (handle-it pending)
   (let ((msg (dbus_pending_call_steal_reply pending))
-        (msg-iter (make-DBusMessageIter)))
-    (if (zero? (fh-object-ref msg)) (error "*** reply message NULL\n"))
+        (msg-iter (make-cdata DBusMessageIter)))
+    (if (NULL? (cdata-ref msg)) (error "*** reply message NULL\n"))
     (dbus_pending_call_unref pending)
-    (dbus_message_iter_init msg (pointer-to msg-iter))
-    (sf "result:\n")
-    (pretty-print (read-dbus-val (pointer-to msg-iter)) #:per-line-prefix "  ")
+    (dbus_message_iter_init msg (cdata& msg-iter))
+    (sferr "result:\n")
+    (pretty-print (read-dbus-val (cdata& msg-iter)) #:per-line-prefix "  ")
     (dbus_message_unref msg)))
 
 (define (block-and-handle-it pending)
@@ -75,27 +80,34 @@
 ;; https://pythonhosted.org/txdbus/dbus_overview.html
 ;; http://git.0pointer.net/rtkit.git/tree/README
 
-(define msg02/ses                       ; works
+(define msg02                           ; used to work
   (dbus_message_new_method_call
    "org.freedesktop.DBus"               ; bus name
    "/org/freedesktop/DBus"              ; object path
    "org.freedesktop.DBus.Debug.Stats"   ; interface name
    "GetStats"))                         ; method
 
-(define msg03/all                       ; works
+(define msg03                           ; used to work
   (dbus_message_new_method_call
    "org.freedesktop.DBus"               ; bus name
    "/org/freedesktop/DBus"              ; object path
    "org.freedesktop.DBus"               ; interface name
    "GetId"))                            ; method
 
-(define conn (spawn-dbus-mainloop 'session))
+(define (doit)
+  (let* ((conn (spawn-dbus-mainloop 'session))
+         ;;(pending (send-msg conn msg02))
+         (pending (send-msg conn msg03))
+         )
+    (do ((i 0 (1+ i))) ((> i 5) #t)
+      (there-yet? pending) (sleep 1))
+    #;(let loop ((got-it? (there-yet? pending)))
+    (cond (got-it? (handle-it pending))
+    (else (sleep 1) (loop (there-yet? pending)))))
+    ))
 
-(define pending (send-msg conn msg02/ses))
+(doit)
 
-(let loop ((got-it? (there-yet? pending)))
-  (sf "there-yet? => ~S\n" got-it?)
-  (cond (got-it? (handle-it pending))
-        (else (sleep 1) (loop (there-yet? pending)))))
+
 
 ;; --- last line ---

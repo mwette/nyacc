@@ -21,7 +21,19 @@
 (define-ffi-module (ffi epoll)
   #:include '("sys/epoll.h"))
 
-(define-public EPOLL ffi-epoll-symbol-val)
+(define (make-symtab-function symbol-value-table prefix)
+  (let* ((cnvt (lambda (pair seed)
+                 (let* ((k (car pair)) (v (cdr pair))
+                        (n (symbol->string k))
+                        (l (string-length prefix)))
+                   (if (string-prefix? prefix n)
+                       (acons (string->symbol (substring n l)) v seed)
+                       seed))))
+         (symtab (let loop ((o '()) (i symbol-value-table))
+                   (if (null? i) o (loop (cnvt (car i) o) (cdr i))))))
+    (lambda (key) (assq-ref symtab key))))
+
+(define-public EPOLL (make-symtab-function ffi-epoll-symbol-tab "EPOLL"))
 
 (define-public (make-epoll-event . args)
   (apply logand (map unwrap-enum-EPOLL_EVENTS args)))
