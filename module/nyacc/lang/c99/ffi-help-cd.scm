@@ -626,7 +626,7 @@
 	((member (w/enum name) wrapped)
          (list (strings->symbol "unwrap-enum-" name) mname))
 	(else `(unwrap~enum ,mname))))
-      (`(struct-ref (ident ,name)) `(fh-object-pointer mmname)) ;; FIXME
+      (`(struct-ref (ident ,name)) `(fh-object-pointer ,mname)) ;; FIXME
       (`(union-ref (ident ,name)) `(fh-object-pointer ,mname)) ;; FIXME
       (`(pointer-to) `(unwrap-pointer ,mname))
       (`(array-of ,size) `(unwrap-array ,mname))
@@ -1015,11 +1015,13 @@
                       (cons* name (w/enum enum-name) defined)))
 
              ((enum-ref (ident ,enum-name))
+              (ppscm (deftype type (sfsym "enum-~a" enum-name)))
               (ppscm `(define-public ,(sfsym "wrap-~A" name)
                         ,(sfstr "wrap-enum-~A" enum-name)))
               (ppscm `(define-public ,(sfsym "unwrap-~A" name)
                         ,(sfsym "unwrap-enum-~A" enum-name)))
-              (values (cons (w/enum enum-name) wrapped) defined))
+              (values (cons (w/enum enum-name) wrapped)
+                      (cons (w/enum enum-name) wrapped)))
 
              ((void)
               (ppscm `(define-public ,type 'void))
