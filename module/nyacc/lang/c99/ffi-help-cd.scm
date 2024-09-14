@@ -1274,6 +1274,7 @@
 	     (nlscm) (c99scm udecl)
 	     (if (*echo-decls*)
 		 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
+             ;;(for-each ppscm (reverse (cnvt-udecl udecl udict defined)))
 	     (cnvt-udecl udecl udict defined seed)))
 	  (else (values defined seed))))
        ;; exception handler:
