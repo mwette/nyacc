@@ -25,18 +25,13 @@
 
 ;;; Code:
 
-(add-to-load-path (getcwd))
-
+(use-modules (ice-9 pretty-print))
 (use-modules (system foreign))
 (use-modules (system foreign cdata))
 (use-modules (ffi dbus))
 (use-modules (system dbus))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
-
-(use-modules (ice-9 pretty-print))
-(define pp pretty-print)
 
 (define (send-msg conn msg)
   (let* ((pending (make-cdata DBusPendingCall*)))
@@ -44,7 +39,6 @@
                      conn msg (cdata& pending) -1))
         (error "*** send_with_reply FAILED\n"))
     (dbus_message_unref msg)
-    (sferr "pending=~s\n" pending)
     pending))
 
 (define (send-sig conn sig)
@@ -56,10 +50,7 @@
     serial))
 
 (define (there-yet? pending)
-  ;;(eqv? TRUE (dbus_pending_call_get_completed pending)))
-  (let ((res (dbus_pending_call_get_completed pending)))
-    (sferr "there-yet? res = ~s\n" res)
-    (eqv? TRUE res)))
+  (eqv? TRUE (dbus_pending_call_get_completed pending)))
 
 (define (handle-it pending)
   (let ((msg (dbus_pending_call_steal_reply pending))
@@ -67,7 +58,6 @@
     (if (NULL? (cdata-ref msg)) (error "*** reply message NULL\n"))
     (dbus_pending_call_unref pending)
     (dbus_message_iter_init msg (cdata& msg-iter))
-    (sferr "result:\n")
     (pretty-print (read-dbus-val (cdata& msg-iter)) #:per-line-prefix "  ")
     (dbus_message_unref msg)))
 
@@ -96,7 +86,7 @@
 
 (define (doit)
   (let* ((conn (spawn-dbus-mainloop 'session))
-         (msg msg03)
+         (msg msg02)
          (pending (send-msg conn msg)))
     (let loop ((got-it? (there-yet? pending)))
       (cond (got-it? (handle-it pending))
