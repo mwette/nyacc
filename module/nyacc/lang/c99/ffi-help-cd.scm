@@ -503,10 +503,6 @@
            ((false-if-exception (foreign-library-pointer (car libs) name)))
            (else (loop (cdr libs)))))))
     (sfscm "\n")
-    (ppscm
-     `(define (unwrap~enum arg)
-        (or (assq-ref ,(strings->symbol (m-path->name path) "-symbol-tab") arg)
-            arg)))
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
 
