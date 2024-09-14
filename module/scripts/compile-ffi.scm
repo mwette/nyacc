@@ -278,7 +278,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
     (lambda (opts files)
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
       (unless (string=? (assq-ref opts 'machine) "native")
-        (unless (memq (assq-ref ops 'backend) '(cdata))
+        (unless (memq (assq-ref opts 'backend) '(cdata))
           (fail "only cdata supports non-native machine architectures")))
       (for-each
        (lambda (file)
