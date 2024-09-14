@@ -34,24 +34,24 @@ way to work with data and associated types originating from C
 libraries.  It supports non-native machine architectures using a
 global @code{*arch*} parameter.  Size and alignment is tracked for all
 types.  There are type kinds for all C type classes: base, struct,
-union, array, pointer, and function.  TODO: enums.  Beyond size and
-alignment, base
-type objects carry a symbolic tag to determine the appropriate
-bytevector procedures: there is no type aliasing.  Support for C base
-types is handled by the @code{cbase} type object generator which
-converts them to underlying types.  For example, on a 64 bit little
-endian architecture, @code{cbase} would convert @code{uintptr_t} to a
-base class ctype with underlying type info symbol @code{u64le}.
+union, array, pointer, enum and function.  Beyond size and
+alignment, base type objects carry a symbolic tag to determine the
+appropriate low level machine type: there is no type aliasing.
+The low level machine types map directly to bytevector setters
+and getters.  Support for C base types is handled by the @code{cbase}
+procedure which converts them to underlying types.  For example, on a
+64 bit little endian architecture, @code{(cbase 'uintptr_t)} would
+generate a type with underlying type info symbol @code{u64le}.
 
-The module is hopefully easy to use.  One uses the procedures
+The goal for the module is designed to be easy to understand and use.
+The procedures
 @code{cbase}, @code{cstruct}, @code{cunion}, @code{cpointer},
-@code{carray}, and @code{cfunction} to generate c-type objects, and
-then @code{make-cdata} to generate C data objects.  Access to
-component data is provided by the @code{cdata-ref} procedure and
-mutation is accomplished via the @code{cdata-set!} procedure.  With
-respect to Guile's ffi interface, one can use
-@code{ctype->ffi} to convert to FFI type specifiers required
-for use of @code{foreign-library-function}.
+@code{carray}, @code{cenum} and @code{cfunction} generate c-type
+objects, and the procedure @code{make-cdata} will generate data
+objects within bytevectors.  Access to component data is provided by
+the @code{cdata-ref} procedure and mutation is accomplished via the
+@code{cdata-set!} procedure.  The procedure @code{ctype->ffi} is a
+helper for using Guile's @emph{pointer->procedure}.
 
 Example:
 @example
@@ -67,6 +67,89 @@ Example:
 (format #t "time: ~s ~s\n" (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
 time: 1719062561 676365
 @end example
+
+@heading Basic Procedures
+
+This section provides the most-used procedures.
+
+@deffn {Procedure} cbase name
+Given symbolic @var{name} generate a base ctype.   The name can
+be something like @code{unsigned-int}, @code{double}, or can be a
+@emph{cdata} machine type like @code{u64le}.
+@end deffn
+
+@deffn {Procedure} cstruct fields [packed] => ctype
+fields is a list with entries @code{(name type)} where @code{type} is
+a @code{<ctype>} object or a symbol for a base type.
+@end deffn
+
+@deffn {Procedure} cunion fields
+fields is a list with entries @code{(name type)} where @code{type} is
+a @code{<ctype>} object or a symbol for a base type.
+@end deffn
+
+@deffn {Procedure} carray type n
+Create an array of @var{type} with @var{length}.
+If @var{length} is zero, the array length is unbounded (so be careful).
+@end deffn
+
+
+@deffn {Procedure} cenum enum-list [packed]
+@var{enum-list} is a list of name or name-value pairs
+@example
+(cenum '((a 1) b (c 4))
+@end example
+If @var{packed} is @code{#t} the size wil be smallest that can hold it.
+@end deffn
+
+
+@deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?]
+Generate a C function pointer type.  You must pass the @var{wrapper}
+and @var{unwrapper} procedures that convert a pointer to a procedure,
+and procedure to pointer, respectively.  The optional argument
+@var{#:variadic}, if @code{#t},  indicates the function uses variadic
+arguments.  For this case, (to be documented).
+@end deffn
+
+@deffn {Procedure} make-cdata type [value [name]]
+Generate a @emph{cdata} object of type @var{type} with optional
+@var{value} and @var{name}.  To specify name but no value use
+something like
+@example
+(make-cdata mytype #f "foo")
+@end example
+As a special case, an integer arg to a zero-sized array type will
+allocate storage for that many items, associating it with an array
+type of that size.
+@end deffn
+
+@deffn {Procedure} cdata-ref data [tag ...]
+Return the Scheme (scalar) slot value for selected @var{tag ...} with
+respect to the cdata object @var{data}.
+@example
+(cdata-ref my-struct-value 'a 'b 'c))
+@end example
+This procedure returns XXX for cdata kinds @emph{base}, @emph{pointer} and
+(in the future) @emph{function}.  Attempting to obtain values for C-type
+kinds @emph{struct}, @emph{union}, @emph{array} will result in @code{#f}.
+If, in those cases, you would like a cdata then use this:
+@example
+(or (cdata-ref data tag ...) (cdata-sel data tag ...))
+@end example
+(Or should we just make this the default behavior?)
+@end deffn
+
+
+@deffn {Procedure} cdata-set! data value [tag ...]
+Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
+@var{value}.  Example:
+@example
+(cdata-set! my-struct-data 42 'a 'b 'c))
+@end example
+If @var{value} is a @code{<cdata>} object copy that, if types match.
+@*If @var{value} can be a procedure used to set a cfunction pointer
+value.
+@end deffn
 
 
 @heading Handling Machine Architectures
@@ -198,7 +281,24 @@ to be documented
 @end deffn
 
 
-@heading Other Procedures
+@heading Miscellaneous
+
+@subheading Base Types
+
+@example
+void*
+char short int long float double unsigned-short unsigned unsigned-long
+size_t ssize_t ptrdiff_t int8_t uint8_t int16_t uint16_t int32_t
+uint32_t int64_t uint64_t signed-char unsigned-char short-int
+signed-short signed-short-int signed signed-int long-int signed-long
+signed-long-int unsigned-short-int unsigned-int unsigned-long-int
+_Bool bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
+long-long long-long-int signed-long-long signed-long-long-int
+unsigned-long-long unsigned-long-long-int
+@end example
+
+
+@heading} Other Procedures
 
 @deffn {Procedure} ctype-equal?
 to be documented

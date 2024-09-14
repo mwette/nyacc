@@ -26,26 +26,26 @@
 ;; (cfunction proc->ptr ptr->proc) -> <ctype>
 
 ;; (make-cdata ct [val]) -> <cdata>
-;; (cdata-ref data tag ...) -> number | pointer | <cdata>
-;; (cdata-set! data val tag ...) -> undefined
+;; (cdata-ref data tag ...) -> value | <cdata>
+;; (cdata-set! data val tag ...)
 ;; (cdata* data) -> <cdata>
 ;; (cdata& data) -> <cdata>
 ;; (cdata&-ref data) -> pointer
-;; (cdata*-ref data) -> number | procedure | ???
+;; (cdata*-ref data) -> value | <cdata>
 
 ;; lesser used: (Xcdata == "deconstructed-cdata")
 ;; (Xcdata-ref bv ix ct) -> value
-;; (Xcdata-set! bv ix ct) -> #undefined#
+;; (Xcdata-set! bv ix ct value)
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (ctype-equal? a b)
-;; (ctype-kind type) -> in '(base pointer struct union array function)
-;; (cdata-kind data) -> in '(base pointer struct union array function)
+;; (ctype-kind type) -> symbol
+;; (cdata-kind data) -> symbol
 ;; (ctype-sel type ix tag ...) -> ((ix . ct) (ix . ct) ...)
 ;; (make-cdata-getter sel [offset]) => (proc data) -> value
 ;; (make-cdata-setter sel [offset]) => (proc data value) -> undefined
-;;   Note: should procs allow tags (but no '*) ?
 ;; (ccast type data) -> <cdata>
-;; (cdata-arg ffi-type guile-value) -> (tpye . value)
+;; (cdata-arg ffi-type guile-value) -> (ffi-desc . value)
+;; (ctype->ffi type) => ffi-type (e.g., ffi:int)
 
 ;; thinking about this this:
 ;; (make-cdata ct)
@@ -83,7 +83,7 @@
             
             cdata-kind cdata& cdata* cdata-sel
             ctype-sel make-cdata-getter make-cdata-setter
-            ;;ctype->ffi
+            ctype->ffi
             ;;
             NULL NULL?
             unwrap-number unwrap-pointer unwrap-array
@@ -114,8 +114,23 @@
 (define (sferr fmt . args) (apply simple-format #t fmt args))
 (define (ppct ct) (pretty-print-ctype ct (current-error-port)))
 
-;; @deftp {Record} <ctype> size align kind info [ptype]
-;; maybe @var{ptype} should only be for @code{cbase} kind types
+;; @deftp {Record} <ctype> size align kind info name
+;; @table @var
+;; @item size
+;; size in bytes
+;; @item align
+;; alignment in bytes
+;; @item kind
+;; A symbol, one of @code{base}, @code{pointer}, @code{struct}, @code{union},
+;; @code{array}, @code{enum} or @code{function}
+;; @item info
+;; provides kind-specific data.  For @code{base} this is the symbolic
+;; machine type (mtype).  For others, there are specific records,
+;; described below.
+;; @item name
+;; can be @code{#f} or a symbolic name for the type, used when printing
+;; the type.
+;; @end table
 ;; @end deftp
 (define-record-type <ctype>
   (%make-ctype size align kind info name)
@@ -126,8 +141,28 @@
   (info ctype-info)                ; kind-specific info
   (name ctype-name))               ; name or #f
 
-;; @deftp {Record} <cbitfield> type shift width signed?
-;; signed? is true if type is signed, means we need to sign-extend
+#|
+;;.@deftp {Record} <cbase> arch ctyped
+;; This record keeps, for each arch, map of symbolic type names to
+;; @code{<ctype>}.
+;;.@end deftp
+(define-record-type <cbase-info>
+  (%make-cbase-info arch ctyped)
+  cbase-info?
+  (arch cbase-info-arch)
+(ctyped cbase-info-ctyped))
+|#
+
+;; @deftp {Record} <cbitfield> mtype shift width signed?
+;; Bitfields are not direct type kinds, but part of fields within
+;; a struct.
+;; @table var
+;; @item type
+;; the declared type of the bitfield
+;; @item shift
+;; @item signed?
+;; is true if type is signed, means we need to sign-extend
+;; @end table
 ;; @end deftp
 (define-record-type <cbitfield>
   (%make-cbitfield mtype shift width signed?)
@@ -138,6 +173,11 @@
   (signed? cbitfield-signed?))
 
 ;; @deftp {Record} <cfield> name type offset
+;; @table @var
+;; @item name
+;; @item type
+;; @item offset
+;; @end table
 ;; @end deftp
 (define-record-type <cfield>
   (%make-cfield name type offset)
@@ -148,6 +188,9 @@
 
 ;; @deftp {Record} <cstruct> fields dict
 ;; struct
+;; @table @var
+;; @item type
+;; @end table
 ;; @end deftp
 (define-record-type <cstruct>
   (%make-cstruct fields dict)
@@ -157,6 +200,9 @@
 
 ;; @deftp {Record} <cunion> fields dict
 ;; union
+;; @table @var
+;; @item type
+;; @end table
 ;; @end deftp
 (define-record-type <cunion>
   (%make-cunion fields dict)
@@ -166,6 +212,9 @@
 
 ;; @deftp {Record} <carray> type length
 ;; XXX
+;; @table @var
+;; @item type
+;; @end table
 ;; @end deftp
 (define-record-type <carray>
   (%make-carray type length)
@@ -181,6 +230,9 @@
 ;; value to symbol dict (or call it nambynum?)
 ;; @item vald
 ;; symbol to value (or call it numbynam?)
+;; @table @var
+;; @item type
+;; @end table
 ;; @end deftp
 (define-record-type <cenum>
   (%make-cenum mtype symd vald)
@@ -192,6 +244,9 @@
 ;; @deftp {Record} <cpointer> type mtype
 ;; Once we get to this level, we shouldn't need @code{arch} anymore
 ;; so we need to log the pointer type
+;; @table @var
+;; @item type
+;; @end table
 ;; @end deftp
 (define-record-type <cpointer>
   (%make-cpointer type mtype)
@@ -204,8 +259,11 @@
     (if (promise? type) (force type) type)))
 
 ;; @deftp {Record} <cfunction> proc->ptr ptr->proc variadic?
-;; This type represents a C function in memory.   The data value will be
+;; This type represents a C function in memory.  The data value will be
 ;; a proxy: a pointer to the initial location in memory.
+;; @table @var
+;; @item type
+;; @end table
 ;; The argument @var{proc->ptr} is a procedure converts a Guile procedure
 ;; to a Guile pointer (typically using Guile's @code{procedure->pointer}).
 ;; The argument @var{ptr->proc} is a procedure to convert from pointer to
@@ -233,23 +291,11 @@
 
 (define make-ctype %make-ctype)
 
-;; @deftp {Record} <cbase-info> arch ctyped
-;; This record keeps, for each arch, map of symbolic type names to
-;; @code{<ctype>}.
-;; @end deftp
-(define-record-type <cbase-info>
-  (%make-cbase-info arch ctyped)
-  cbase-info?
-  (arch cbase-info-arch)
-  (ctyped cbase-info-ctyped))
-
-;; map of arch (from @code{(*arch*)}) -> cbase-info
+;; map of arch (from @code{(*arch*)}) -> cbase
 (define *cbase-map* (make-parameter '()))
 
 ;; @deftp {Record} <cdata> bv ix ct [tn]
 ;; Record to hold C data.  Underneath it's a bytevector, index and type.
-;; There is an optional type-name symbol that can be used to indicate
-;; a source-language type (e.g., struct-Foo).
 ;; @end deftp
 (define-record-type <cdata>
   (%make-cdata bv ix ct)
@@ -347,6 +393,9 @@
        u16be u32be u64be u128be f16be f32be f64be f128be))
 
 ;; @deffn {Procedure} cbase name
+;; Given symbolic @var{name} generate a base ctype.   The name can
+;; be something like @code{unsigned-int}, @code{double}, or can be a
+;; @emph{cdata} machine type like @code{u64le}.
 ;; @end deffn
 (define (cbase name)
   (let* ((arch (*arch*))
@@ -1119,41 +1168,6 @@
 
 ;; --- not sure about this ===--------------------------------------------------
 
-(define NULL %null-pointer)
-(define (NULL? arg)
-  (equal? (if (cdata? arg) (cdata-ref arg) arg) %null-pointer))
-
-(define (unwrap-number arg)
-  (cond ((number? arg) arg)
-        ((cdata? arg) (cdata-ref arg))
-        (else (error "unwrap-number: bad arg: ~s" arg))))
-
-(define* (unwrap-pointer arg #:optional hint)
-  (cond ((pointer? arg) arg)
-        ((string? arg) (string->pointer arg))
-        ((cdata? arg) (cdata-ref arg))
-        ((and (procedure? arg) (ctype? hint))
-         (let* ((info (ctype-info hint))
-                (func (case (ctype-kind hint)
-                        ((function) info)
-                        ((pointer) (ctype-info (cpointer-type info)))
-                        (else (error "not ok")))))
-           ((cfunction-proc->ptr func) arg)))
-        (else (error "unwrap-pointer: bad arg: ~s" arg))))
-
-(define (unwrap-array arg)
-  (unless
-    (cdata? arg)
-    (error "unwrap-array: bad arg: " arg))
-  (case (cdata-kind arg)
-    ((pointer) (cdata-ref arg))
-    ((array) (cdata&-ref arg))
-    (else (error "unwrap-array: bad arg: " arg))))
-
-
-;; --- guile ffi api support ---------------------------------------------------
-;; maybe this should all be pulled out
-
 (define (mtype->ffi mtype)
   (or
    (assq-ref
@@ -1173,6 +1187,9 @@
     mtype)
    (error "mtype->ffi: bad mtype")))
 
+;; @deffn {Procedure} ctype->ffi
+;; doc to come
+;; @end deffn
 (define (ctype->ffi type)
   (assert-ctype 'ctype->ffi type)
   (let ((info (ctype-info type)))
@@ -1186,7 +1203,47 @@
       ((function) (error "ctype->ffi: functions are work to go"))
       (else (error "ctype->ffi: unsupported:" (ctype-kind type))))))
 
+;; @deffn {Procedure} unwrap-number
+;; doc to come
+;; @end deffn
+(define (unwrap-number arg)
+  (cond ((number? arg) arg)
+        ((cdata? arg) (cdata-ref arg))
+        (else (error "unwrap-number: bad arg: ~s" arg))))
 
+;; @deffn {Procedure} unwrap-number
+;; doc to come
+;; @end deffn
+(define* (unwrap-pointer arg #:optional hint)
+  (cond ((pointer? arg) arg)
+        ((string? arg) (string->pointer arg))
+        ((cdata? arg) (cdata-ref arg))
+        ((and (procedure? arg) (ctype? hint))
+         (let* ((info (ctype-info hint))
+                (func (case (ctype-kind hint)
+                        ((function) info)
+                        ((pointer) (ctype-info (cpointer-type info)))
+                        (else (error "not ok")))))
+           ((cfunction-proc->ptr func) arg)))
+        (else (error "unwrap-pointer: bad arg: ~s" arg))))
+
+;; @deffn {Procedure} unwrap-number
+;; doc to come
+;; @end deffn
+(define (unwrap-array arg)
+  (unless
+    (cdata? arg)
+    (error "unwrap-array: bad arg: " arg))
+  (case (cdata-kind arg)
+    ((pointer) (cdata-ref arg))
+    ((array) (cdata&-ref arg))
+    (else (error "unwrap-array: bad arg: " arg))))
+
+(define NULL %null-pointer)
+(define (NULL? arg)
+  (equal? (if (cdata? arg) (cdata-ref arg) arg) %null-pointer))
+
+#|
 (use-modules (system foreign-library))
 
 (define (foreign-library-pointer/search libs name)
@@ -1195,9 +1252,11 @@
      ((null? libs) (error "not found"))
      ((false-if-exception (foreign-library-pointer (car libs) name)))
      (else (loop (cdr libs))))))
+|#
 
 ;; --- c99 support -------------------------------------------------------------
 
+#|
 (define (mtype->c-name mtype)
   (or
    (assq-ref
@@ -1217,5 +1276,6 @@
     mtype)
    (error "mtype->c-name: bad mtype")))
 (export mtype->c-name)
+|#
 
 ;; --- last line ---
