@@ -634,7 +634,7 @@
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
        (and (member (w/enum name) defined)
-            (list (sfscm "wrap-enum-~A" name) mname)))
+            (list (sfsym "wrap-enum-~A" name) mname)))
       (`((enum-def ,_)) #f)
       (`((enum-ref (ident ,name)))
        (cond
@@ -1380,6 +1380,7 @@
 ;; @end example
 ;; @end deffn
 (define* (ccode->scheme code-string #:key inc-dirs cpp-defs)
+  ;; need gensym on load-foreign-function-search
   #f)
 
 
