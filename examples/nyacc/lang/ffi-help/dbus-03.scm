@@ -28,10 +28,10 @@
 
 (add-to-load-path (getcwd))
 
-(use-modules (system dbus))
+(use-modules (system foreign))
+(use-modules (system foreign cdata))
 (use-modules (ffi dbus))
-(use-modules (ffi ffi-help-rt))
-(use-modules ((system foreign) #:prefix ffi:))
+(use-modules (system dbus))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
@@ -52,41 +52,44 @@
       (set! monitors (cons name monitors))))
    (else (sf "*** unknown role: ~A\n" role))))
 
+(define char* (cpointer (cbase 'char)))
+(define (!0 arg) (not (zero? arg)))
+
 (define (send-ping conn role)
-  (let* ((&role (pointer-to (make-char* role)))
+  (let* ((&role (cdata& (make-cdata char* role)))
          (sig (dbus_message_new_signal "/" iface "Ping"))
          (&iter (make-DBusMessageIter&))
-         (serial (make-uint32)))
+         (serial (make-cdata (cbase 'uint32_t))))
     (sf "\nsending ping with ~S\n" role)
     (dbus_message_iter_init_append sig &iter)
     (dbus_message_iter_append_basic &iter (DBUS 'TYPE_STRING) &role)
-    (dbus_connection_send conn sig (pointer-to serial))
+    (dbus_connection_send conn sig (cdata& serial))
     serial))
 
 (define (send-pong conn rem role)
-  (let ((&role (pointer-to (make-char* role)))
-        (loc (make-char* (dbus_bus_get_unique_name conn)))
+  (let ((&role (cdata& (make-cdata char* role)))
+        (loc (make-cdata char* (dbus_bus_get_unique_name conn)))
         (rpl (dbus_message_new_method_call rem "/" iface "Pong"))
         (&iter (make-DBusMessageIter&))
-        (serial (make-uint32)))
+        (serial (make-cdata (cbase 'uint32_t))))
     (sf "\nsending pong to ~S with ~S\n" rem role)
     (dbus_message_iter_init_append rpl &iter)
     (dbus_message_iter_append_basic &iter (DBUS 'TYPE_STRING) &role)
-    (dbus_connection_send conn rpl (pointer-to serial))
+    (dbus_connection_send conn rpl (cdata& serial))
     serial))
 
 (define (rply-pong conn msg)
   (let ((rpl (dbus_message_new_method_return msg))
         (&iter (make-DBusMessageIter&))
-        (bval (make-uint32 (dbus-symval 'TRUE)))
-        (serial (make-uint32)))
+        (bval (make-cdata (cbase 'uint32_t) (dbus-symval 'TRUE)))
+        (serial (make-cdata (cbase 'uint32_t))))
     (dbus_message_iter_init msg &iter)
     (sf "\nreply OK to pong from ~S, a ~S\n"
         (dbus-message-get-sender msg)
         (car (get-dbus-message-args msg)))
     (dbus_message_iter_init_append rpl &iter)
-    (dbus_message_iter_append_basic &iter (DBUS 'TYPE_BOOLEAN) (pointer-to bval))
-    (dbus_connection_send conn rpl (pointer-to serial))
+    (dbus_message_iter_append_basic &iter (DBUS 'TYPE_BOOLEAN) (cdata& bval))
+    (dbus_connection_send conn rpl (cdata& serial))
     serial))
 
 ;;;
@@ -97,7 +100,7 @@
 (define conn #f)
 
 (define (p2s p)
-  (if (zero? (ffi:pointer-address p)) "" (ffi:pointer->string p)))
+  (if (zero? (pointer-address p)) "" (pointer->string p)))
 
 (define (show msg)
   (sf "\n  got message ~S\n" msg)
@@ -107,14 +110,14 @@
   (sf "    member = ~S\n" (p2s (dbus_message_get_member msg))))
 
 (define (ensure-pointer maybe-ptr)
-  (if (ffi:pointer? maybe-ptr) maybe-ptr (ffi:make-pointer maybe-ptr)))
+  (if (pointer? maybe-ptr) maybe-ptr (make-pointer maybe-ptr)))
 
 (define (ensure-address maybe-ptr)
-  (if (ffi:pointer? maybe-ptr) (ffi:pointer-address maybe-ptr) maybe-ptr))
+  (if (pointer? maybe-ptr) (pointer-address maybe-ptr) maybe-ptr))
 
 ;; worker listens for ping, sends pong
 (define (run-peer role)
-  (let ((error (make-DBusError)))
+  (let ((error (make-cdata DBusError)))
     (set! conn (dbus_bus_get 'DBUS_BUS_SESSION NULL))
     (sf "\nbus=~S\n" (dbus-bus-get-unique-name conn))
     (dbus_bus_add_match conn iface-pat NULL)
@@ -122,15 +125,14 @@
     (let loop ((clk 0))
       (dbus_connection_read_write conn 0)
       (let ((msg (dbus_connection_pop_message conn)))
-        (unless (zero? (ensure-address (fh-object-ref msg)))
+        (unless (zero? (ensure-address (cdata-ref msg)))
           (show msg)
           (cond
 
            ((= (dbus_message_get_type msg) (DBUS 'MESSAGE_TYPE_ERROR))
-            (dbus_set_error_from_message (pointer-to error) msg)
+            (dbus_set_error_from_message (cdata& error) msg)
             (sf "error: ~S\n"
-                (ffi:pointer->string
-                 (ensure-pointer (fh-object-ref error 'message))))
+                (pointer->string (ensure-pointer (cdata-ref error 'message))))
             #f)
 
            ((and (!0 (dbus_message_has_member msg "Ping"))

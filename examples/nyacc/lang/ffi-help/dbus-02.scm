@@ -96,18 +96,12 @@
 
 (define (doit)
   (let* ((conn (spawn-dbus-mainloop 'session))
-         ;;(pending (send-msg conn msg02))
-         (pending (send-msg conn msg03))
-         )
-    (do ((i 0 (1+ i))) ((> i 5) #t)
-      (there-yet? pending) (sleep 1))
-    #;(let loop ((got-it? (there-yet? pending)))
-    (cond (got-it? (handle-it pending))
-    (else (sleep 1) (loop (there-yet? pending)))))
-    ))
+         (msg msg03)
+         (pending (send-msg conn msg)))
+    (let loop ((got-it? (there-yet? pending)))
+      (cond (got-it? (handle-it pending))
+            (else (sleep 1) (loop (there-yet? pending)))))))
 
 (doit)
-
-
 
 ;; --- last line ---
