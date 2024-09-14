@@ -17,6 +17,7 @@
 
 ;;; Notes:
 
+;; basic usage
 ;; (cbase sym-name) -> <ctype>
 ;; (cstruct ((name type) ...) [#t])-> <ctype>
 ;; (cunion ((name type) ...)) -> <ctype>
@@ -24,28 +25,38 @@
 ;; (carray type sz) -> <ctype>
 ;; (cenum ((name . val) ...)) -> <ctype>
 ;; (cfunction proc->ptr ptr->proc) -> <ctype>
-
 ;; (make-cdata ct [val]) -> <cdata>
 ;; (cdata-ref data tag ...) -> value | <cdata>
 ;; (cdata-set! data val tag ...)
-;; (cdata* data) -> <cdata>
 ;; (cdata& data) -> <cdata>
+
+;; going further
+;; (cdata-sel data tag ...) -> <cdata>
+;; (cdata* data) -> <cdata>
 ;; (cdata&-ref data) -> pointer
 ;; (cdata*-ref data) -> value | <cdata>
-
-;; lesser used: (Xcdata == "deconstructed-cdata")
 ;; (Xcdata-ref bv ix ct) -> value
 ;; (Xcdata-set! bv ix ct value)
-;; (cdata-sel data tag ...) -> <cdata>
+
+;; working with types
+;; (name-ctype name type)
 ;; (ctype-equal? a b)
-;; (ctype-kind type) -> symbol
-;; (cdata-kind data) -> symbol
 ;; (ctype-sel type ix tag ...) -> ((ix . ct) (ix . ct) ...)
 ;; (make-cdata-getter sel [offset]) => (proc data) -> value
 ;; (make-cdata-setter sel [offset]) => (proc data value) -> undefined
+
+;; working with C function calls
 ;; (ccast type data) -> <cdata>
+;; (unwrap-pointer data) -> <pointer>
+;; (unwrap-number data) -> number
+;; (unwrap-array data) -> <pointer>
 ;; (cdata-arg ffi-type guile-value) -> (ffi-desc . value)
 ;; (ctype->ffi type) => ffi-type (e.g., ffi:int)
+
+;; misc utilities
+;; (ctype-kind type) -> symbol
+;; (cdata-kind data) -> symbol
+
 
 ;; thinking about this this:
 ;; (make-cdata ct)
@@ -140,18 +151,6 @@
   (kind ctype-kind)                ; type kind (base aggr array bits)
   (info ctype-info)                ; kind-specific info
   (name ctype-name))               ; name or #f
-
-#|
-;;.@deftp {Record} <cbase> arch ctyped
-;; This record keeps, for each arch, map of symbolic type names to
-;; @code{<ctype>}.
-;;.@end deftp
-(define-record-type <cbase-info>
-  (%make-cbase-info arch ctyped)
-  cbase-info?
-  (arch cbase-info-arch)
-(ctyped cbase-info-ctyped))
-|#
 
 ;; @deftp {Record} <cbitfield> mtype shift width signed?
 ;; Bitfields are not direct type kinds, but part of fields within
@@ -314,7 +313,10 @@
            (name (ctype-name type))
            (bv-addr (pointer-address (bytevector->pointer bv))))
       (format port "#<cdata")
-      (if name (format port " ~a" name) (format port " ~a" kind))
+      (cond
+       (name (format port " ~a" name))
+       ((eq? 'base kind) (format port " ~a" (ctype-info type)))
+       (else (format port " ~a" kind)))
       (format port " 0x~x>" (+ bv-addr ix)))))
 
 (define-inlinable (assert-ctype p v)
@@ -785,8 +787,8 @@
 ;; Return a new @code{cdata} object representing the associated selection.
 ;; For example,
 ;; @example
-;; dat1 -> <cdata 0x12345678 struct>
-;; (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
+;; dat1 -> <cdata struct 0x12345678>
+;; (cdata-ref dat1 'a 'b 'c) -> <cdata f64le x12345700>
 ;; @end example
 ;; @end deffn
 (define (cdata-sel data . tags)
@@ -794,7 +796,7 @@
      Return a new ‘cdata’ object representing the associated selection.
      For example,
           dat1 -> <cdata 0x12345678 struct>
-          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>"
+          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700 f64le>"
   (assert-cdata 'cdata-sel data)
   (if (null? tags) data
       (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
