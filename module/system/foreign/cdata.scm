@@ -878,10 +878,12 @@
                (mtype-bv-set! mtype bv ix (pointer-address value)))
               ((integer? value)
                (mtype-bv-set! mtype bv ix value))
+              ((string? value)
+               (mtype-bv-set! mtype bv ix
+                              (pointer-address (string->pointer value))))
               ((procedure? value)
                (unless (eq? (ctype-kind pt) 'function)
                  (error "cdata: expecting pointer to function, got" pt))
-               ;;(sferr "Xcdata-set! procedure\n")
                (mtype-bv-set! mtype bv ix
                               (pointer-address
                                ((cfunction-proc->ptr (ctype-info pt)) value))))
