@@ -637,6 +637,15 @@
       (otherwise
        (fherr "unwrap-mdecl: missed:\n~A" (ppstr mtail))))))
 
+(define* (defined-type-wrapper name mname)
+  (let* ((udecl (expand-typerefs
+                 `(udecl (decl-spec-list (type-spec (typename ,name)))
+                         (init-declr (ident ,mname))) (*udict*) '()))
+         (mdecl (udecl->mdecl udecl)))
+    (match (md-tail mdecl)
+      (`((enum-def . ,_)) (list (sfsym "wrap-~a" name) mname))
+      (__ #f))))
+
 (define (wrap-mdecl mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*))
         (mname (string->symbol (md-label mdecl)))
@@ -648,8 +657,9 @@
       (`((typename ,name))
        (cond
         ((member name def-defined) #f)
-	((member name defined) `(make-cdata ,(string->symbol name) ,mname))
-	((member name wrapped) (list (sfsym "wrap-~A" name) mname))
+	;;((member name defined) `(make-cdata ,(string->symbol name) ,mname))
+	((member name defined) (defined-type-wrapper name mname))
+	((member name wrapped) (list (sfsym "wrap-~a" name) mname))
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
        (and (member (w/enum name) wrapped)
