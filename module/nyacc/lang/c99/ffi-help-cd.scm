@@ -603,7 +603,7 @@
       (__ #f))))
 
 (define (unwrap-mdecl mdecl)
-  (let ((wrapped (*wrapped*)) (defined (*defined*))
+  (let (#;(wrapped (*wrapped*)) (defined (*defined*))
         (mname (string->symbol (md-label mdecl))) (mtail (md-tail mdecl)))
     (match (car mtail)
       (`(fixed-type ,name) `(unwrap-number ,mname))
@@ -613,21 +613,21 @@
        (cond
 	((member name def-defined) `(unwrap-number ,name))
 	((member name defined) (defined-type-unwrapper name mname))
-	((member name wrapped) (list (strings->symbol "unwrap-" name) mname))
+	;;((member name wrapped) (list (strings->symbol "unwrap-" name) mname))
 	(else #f)))
       (`(enum-def (ident ,name) ,_)
        (cond
-	((member (w/enum name) wrapped)
+	((member (w/enum name) defined)
          (list (strings->symbol "unwrap-enum-" name) mname))
 	(else `(unwrap~enum ,mname))))
       (`(enum-def ,_) `(unwrap~enum ,mname))
       (`(enum-ref (ident ,name))
        (cond
-	((member (w/enum name) wrapped)
+	((member (w/enum name) defined)
          (list (strings->symbol "unwrap-enum-" name) mname))
 	(else `(unwrap~enum ,mname))))
-      (`(struct-ref (ident ,name)) `(fh-object-pointer ,mname)) ;; FIXME
-      (`(union-ref (ident ,name)) `(fh-object-pointer ,mname)) ;; FIXME
+      (`(struct-ref (ident ,name)) `(cdata&-ref ,mname))
+      (`(union-ref (ident ,name)) `(cdata&-ref ,mname))
       (`(pointer-to) `(unwrap-pointer ,mname))
       (`(array-of ,size) `(unwrap-array ,mname))
       (`(array-of) `(unwrap-array ,mname))
@@ -647,7 +647,7 @@
       (__ #f))))
 
 (define (wrap-mdecl mdecl)
-  (let ((wrapped (*wrapped*)) (defined (*defined*))
+  (let (#;(wrapped (*wrapped*)) (defined (*defined*))
         (mname (string->symbol (md-label mdecl)))
         (mtail (md-tail mdecl)))
     (match mtail
@@ -659,15 +659,15 @@
         ((member name def-defined) #f)
 	;;((member name defined) `(make-cdata ,(string->symbol name) ,mname))
 	((member name defined) (defined-type-wrapper name mname))
-	((member name wrapped) (list (sfsym "wrap-~a" name) mname))
+	;;((member name wrapped) (list (sfsym "wrap-~a" name) mname))
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
-       (and (member (w/enum name) wrapped)
+       (and (member (w/enum name) defined)
             (list (sfscm "wrap-enum-~A" name) mname)))
       (`((enum-def ,_)) #f)
       (`((enum-ref (ident ,name)))
        (cond
-        ((member (w/enum name) wrapped) (sfsym "wrap-enum-~A" name))
+        ((member (w/enum name) defined) (sfsym "wrap-enum-~A" name))
 	(else 'wrap-enum)))
       (`((pointer-to) (typename ,tname))
        (cond
@@ -675,17 +675,16 @@
 	((member (w/* tname) defined)
          (let ((sname (sfsym "~A*" tname)))
            `(make-cdata ,sname ,mname)))
-	((member (w/* tname) wrapped) (list (sfsym "wrap-~A*" tname) mname))
 	(else #f)))
       (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
        (cond
-        ((member (w/struct aggr-name) wrapped)
+        ((member (w/struct aggr-name) defined)
          (let ((sname (sfsym "struct-~A*" aggr-name)))
          `(make-cdata ,sname ,mname)))
 	(else #f)))
       (`((pointer-to) (union-ref (ident ,aggr-name) . ,rest))
        (cond
-	((member (w/union aggr-name) wrapped)
+	((member (w/union aggr-name) defined)
          (let ((sname (sfsym "union-~A*" aggr-name)))
          `(make-cdata ,sname ,mname)))
 	(else #f)))
@@ -711,7 +710,7 @@
   (wrap-mdecl
    (udecl->mdecl
     (udecl-rem-type-qual
-     (expand-typerefs udecl (*udict*) (*wrapped*))))))
+     (expand-typerefs udecl (*udict*) (*defined*))))))
 
 
 ;; === function types =========================================================
@@ -732,12 +731,12 @@
   (values (udecl->ffi-decl return) (map udecl->ffi-decl params)))
 
 (define (function-execs return params)
-  (values (wrap-udecl return (*wrapped*))
-          (map (lambda (p) (unwrap-udecl p (*wrapped*))) params)))
+  (values (wrap-udecl return (*defined*))
+          (map (lambda (p) (unwrap-udecl p (*defined*))) params)))
 
 (define (function-callbacks return params)
-  (values (unwrap-udecl return (*wrapped*))
-          (map (lambda (p) (wrap-udecl p (*wrapped*))) params)))
+  (values (unwrap-udecl return (*defined*))
+          (map (lambda (p) (wrap-udecl p (*defined*))) params)))
 
 ;; @deffn {Procedure} function*-wraps return params => values
 ;; Based on return udecl @var{return} and udecl params @var{params},
@@ -836,8 +835,8 @@
 ;; Return updated (string based) keep-list, which will be modified if the
 ;; declaration is a typedef.  The typelist is the set of keepers used for
 ;; @code{udecl->mdecl}.
-;; Returns (values wrapped, defined), where defined is a fh-def for a type
-;; and wrapped means there is are converters to/from fh to scheme.
+;; Returns (values wrapped defined), where defined is a list of defined
+;; types, and wrapped is the same, not used.
 ;; @end deffn
 (define (cnvt-udecl udecl udict wrapped defined)
 
