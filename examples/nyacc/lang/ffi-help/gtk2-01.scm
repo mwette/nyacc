@@ -21,12 +21,6 @@
 (use-modules (ffi gobject))
 (use-modules (ffi gtk2))
 
-(use-modules (ice-9 pretty-print))
-(define (pperr exp)
-  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
-(define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
-
 (define delete-event
   (make-cdata
    GtkEventCallback
@@ -35,8 +29,6 @@
      (gtk_main_quit)
      1)))
 
-;; This will generate a FFI code wrapper around the lambda.  Then below
-;; we use (ccast GCallback hello) to match the argument signature.
 (define hello
   (make-cdata
    GtkCallback

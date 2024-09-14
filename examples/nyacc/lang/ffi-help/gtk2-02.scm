@@ -21,12 +21,6 @@
 (use-modules (ffi gobject))
 (use-modules (ffi gtk2))
 
-(use-modules (ice-9 pretty-print))
-(define (pperr exp)
-  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
-(define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
-
 ;; Different from gtk2-01.scm: we don't make a function type.
 ;; The ffi-helper handler for g_signal_connect will do the
 ;; conversion for us.
