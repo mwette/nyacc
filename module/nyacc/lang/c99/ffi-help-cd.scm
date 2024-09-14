@@ -30,16 +30,7 @@
 	    define-ffi-module
 	    compile-ffi-file
 	    load-include-file
-	    ;;fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl->str fh-scm-str->scm-exp
-	    ;;string-member-proc string-renamer
-	    ;;
-	    ;;C-decl->scm C-decl
-	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
-
-	    ;;ffi-symmap  		; <= debugging
-
-	    ;;C-fun-decl->scm		; deprecated
-	    )
+	    ccode->scheme)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
@@ -57,6 +48,7 @@
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
 		#:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
+  #:use-module (system foreign arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 pprint)
@@ -128,9 +120,6 @@
 ;; strings->symbol
 (define (strings->symbol . string-list)
   (string->symbol (apply string-append string-list)))
-
-(define (noblanks str)
-  (string-map (lambda (c) (if (char=? #\space c) #\- c)) str))
 
 ;; "unsigned int" => unsigned-int
 (define (cstrnam->symnam strname)
@@ -298,8 +287,17 @@
     "uint64_t" "float _Complex" "double _Complex" "char" "signed char"
     "unsigned char" "wchar_t" "char16_t" "char32_t" "_Bool" "bool"))
 
-(define ffi-long-long #f)               ; defined below from cpp-defs
-(define ffi-unsigned-long-long #f)      ; defined below from cpp-defs
+(define ffi-long-long
+  (case (sizeof-basetype 'long-long)
+    ((8) 'ffi:int64)
+    ((4) 'ffi:int32)
+    (else (fherr "can't make long-long FFI type\n"))))
+
+(define ffi-unsigned-long-long
+  (case (sizeof-basetype 'unsigned-long-long)
+    ((8) 'ffi:uint64)
+    ((4) 'ffi:uint32)
+    (else (fherr "can't make unsigned-long-long FFI type\n"))))
 
 (define ffi-typemap
   ;; see system/foreign.scm
@@ -346,9 +344,7 @@
     (ffi:int32 . ,int32) (ffi:uint32 . ,uint32) (ffi:int64 . ,int64)
     (ffi:uint64 . ,uint64) ('* . *)))
 
-;; assumes fields are unitized
-;; this does not do the job right because needs to include double
-;; if that is used
+;; a hack: assumes fields are unitized; not sure this works correctly
 (define (bounding-mtail-for-union-fields fields)
   (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
     (if (null? flds) btail
@@ -375,8 +371,6 @@
 
 
 ;; === cdata/ctype support =====================================================
-
-(use-modules (system foreign arch-info))
 
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)))
@@ -455,26 +449,7 @@
          ((union-ref (ident ,name))
           (strings->symbol "union-" name))
          (,otherwise (fherr "mtail->ctype missed:\n~A" (ppstr mtail))))))))
-(export mtail->ctype)
 
-;; === hookup ==================================================================
-
-(define target 'ct)
-
-(define Tmodules
-  (case target
-    ((ct) '((system foreign cdata)))
-    (else (error "bad target" target))))
-
-(define Tpointer
-  (case target
-    ((ct) 'cpointer)
-    (else (error "bad target" target))))
-
-(define mtail->ttype
-  (case target
-    ((ct) mtail->ctype)
-    (else (error "bad target" target))))
 
 ;; === output ffi-module header ================================================
 
@@ -512,8 +487,8 @@
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
      (opts->mopts module-opts))
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
-    (sfscm "  #:use-module (system foreign-library))\n")
-    (ppscm `(use-modules ,@Tmodules))
+    (sfscm "  #:use-module (system foreign-library)\n")
+    (sfscm "  #:use-module (system foreign cdata))\n")
     (sfscm "\n")
     (ppscm
      `(define (foreign-pointer-search name)
@@ -880,7 +855,7 @@
         (match mtail
 
           (`((array-of ,dim) . ,rest)
-           (ppscm (deftype type (mtail->ttype mtail)))
+           (ppscm (deftype type (mtail->ctype mtail)))
            (ppscm (deftype type* `(cpointer ,type)))
            (values (cons name defined) seed))
 
@@ -902,7 +877,7 @@
            (values (cons name defined) seed))
 
           (`((pointer-to) . ,rest)
-           (ppscm (deftype type (mtail->ttype mtail)))
+           (ppscm (deftype type (mtail->ctype mtail)))
            (case (caar rest)
              ((fixed-type float-type) (values defined seed))
              (else (values (cons name defined) seed))))
@@ -913,7 +888,7 @@
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
               (let ((aname (strings->symbol "struct-" agname))
                     (aname* (strings->symbol "struct-" agname "*")))
-                (ppscm (deftype type (mtail->ttype mtail)))
+                (ppscm (deftype type (mtail->ctype mtail)))
                 (ppscm (deftype type* `(cpointer ,type)))
                 (ppscm (deftype aname type))
                 (ppscm (deftype aname* type*)))
@@ -922,14 +897,14 @@
                       seed))
 
              ((struct-def ,field-list)
-              (ppscm (deftype type (mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ctype mtail)))
               (ppscm (deftype type* `(cpointer ,type)))
               (values  (cons* name (w/* name) defined) seed))
 
              ((union-def (ident ,agname) ,field-list)
               (let ((aname (strings->symbol "union-" agname))
                     (aname* (strings->symbol "union-" agname "*")))
-                (ppscm (deftype type (mtail->ttype mtail)))
+                (ppscm (deftype type (mtail->ctype mtail)))
                 (ppscm (deftype type* `(cpointer ,type)))
                 (ppscm (deftype aname type))
                 (ppscm (deftype aname* type*)))
@@ -938,14 +913,14 @@
                       seed))
 
              ((union-def ,field-list)
-              (ppscm (deftype type (mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ctype mtail)))
               (ppscm (deftype type* `(cpointer ,type)))
               (values (cons* name (w/* name) defined) seed))
 
              ((struct-ref (ident ,agname))
               (cond
                ((member (w/struct agname) defined) ;; defined previously
-                (ppscm (deftype type (mtail->ttype mtail)))
+                (ppscm (deftype type (mtail->ctype mtail)))
 	        (ppscm (deftype type* (sfsym "struct-~A*-type" agname))))
                ((udict-struct-ref udict agname) ;; defined later
                 =>
@@ -962,7 +937,7 @@
              ((union-ref (ident ,agname))
               (cond
                ((member (w/union agname) defined) ;; defined previously
-                (ppscm (deftype type (mtail->ttype mtail)))
+                (ppscm (deftype type (mtail->ctype mtail)))
 	        (ppscm (deftype type* (sfsym "union-~A*-type" agname))))
                ((udict-union-ref udict agname) ;; defined later
                 =>
@@ -977,11 +952,11 @@
                       seed))
 
              (((fixed-type float-type) ,basename)
-              (ppscm (deftype type (mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ctype mtail)))
               (values defined seed))
 
              ((enum-def ,enum-def-list)
-              (ppscm (deftype type (mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ctype mtail)))
               (ppscm `(define-public ,(sfsym "unwrap-~A" name)
                         (let ((vald (cenum-vald (ctype-info ,type))))
                           (lambda (arg) (or (assq-ref vald arg) arg)))))
@@ -991,7 +966,7 @@
               (values (cons name defined) seed))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
-              (ppscm (deftype type (mtail->ttype mtail)))
+              (ppscm (deftype type (mtail->ctype mtail)))
               (ppscm `(define-public ,(sfsym "unwrap-~A" name)
                         (let ((vald (cenum-vald (ctype-info ,type))))
                           (lambda (arg) (or (assq-ref vald arg) arg)))))
@@ -1050,7 +1025,7 @@
          (let* ((atype (strings->symbol "struct-" agname))
                 (atype* (strings->symbol "struct-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
-                (sflds (cnvt-fields (sx-tail field-list) mtail->ttype))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->ctype))
                 (agdef (if (packed? aggr-attr)
                            `(cstruct (list ,@sflds) #t)
                            `(cstruct (list ,@sflds)))))
@@ -1081,7 +1056,7 @@
              (let* ((atype (strings->symbol "union-" agname))
                     (atype* (strings->symbol "union-" agname "*"))
                     (field-list (expand-field-list-typerefs field-list))
-                    (sflds (cnvt-fields (sx-tail field-list) mtail->ttype))
+                    (sflds (cnvt-fields (sx-tail field-list) mtail->ctype))
                     (agdef `(cunion (list ,@sflds))))
                (ppscm (deftype atype agdef))
                (ppscm (deftype atype* `(cpointer ,atype)))
@@ -1127,7 +1102,7 @@
              (name (md-label mdecl))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
              (mtail* `((pointer-to) . ,mtail))
-             (type* (mtail->ttype mtail*))
+             (type* (mtail->ctype mtail*))
              (name* (strings->symbol name "*")))
         (ppscm `(define ,name* ,type*))
         (ppscm
@@ -1219,25 +1194,10 @@
 
 (define fh-inc-dirs
   (append
-   `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
+   `("." ,(assq-ref %guile-build-info 'includedir) "/usr/include")
    (get-sys-inc-dirs)))
 
 (define fh-inc-help c99-def-help)
-
-(case (and=> (assoc-ref fh-cpp-dict "__LONG_LONG_WIDTH__") string->number)
-  ((64)
-   (set! ffi-long-long 'ffi:int64)
-   (set! ffi-unsigned-long-long 'ffi:uint64))
-  ((32)
-   (set! ffi-long-long 'ffi:int32)
-   (set! ffi-unsigned-long-long 'ffi:uint32))
-  (else
-   (sferr "ffi-help: warning: unknown ffi type: long-long")
-   (set! ffi-long-long 'ffi:long)
-   (set! ffi-unsigned-long-long 'ffi:unsigned-long)))
-
-;; DEBUGGING
-(set! fh-inc-dirs (cons "." fh-inc-dirs))
 
 ;; @deffn parse-code code [attrs]
 ;; Parse @var{code}, a Scheme string, using cpp-defs and inc-dirs from
@@ -1295,12 +1255,12 @@
 
 ;; === main converter ==================
 
-;; => (values wrapped defined)
+;; => (values defined forms)
 (define* (process-decls decls udict
-			#:optional (wrapped '()) (defined '())
+			#:optional (defined '())
 			#:key (declf (lambda (k) #t)))
-  (fold-values			  ; from (sxml fold)
-   (lambda (name defined seed) ; name: "foo_t" or (enum . "foo")
+  (fold-values
+   (lambda (name defined seed) ; name: "foo_t", (enum . "foo"), ...
      (catch 'ffi-help-error
        (lambda ()
 	 (cond
@@ -1383,15 +1343,11 @@
     ;; Convert and output foreign declarations.
     (call-with-values
 	(lambda ()
-	  ;; We need to have externs in wrapped because function param
-	  ;; type have wrapped types preserved (e.g., enums).
-	  ;; swap of udecls with udict failed on glib g???
+	  ;; We need to have externs in wrapped because function parameter
+	  ;; types have wrapped types preserved (e.g., enums).
 	  (process-decls ffi-decls udecls ;; udict <= swap failed 01 Dec 2018
-			 ;; wrapped and defined:
-			 ext-defd (append def-defined ext-defd)
-			 ;; declaration filter
-			 #:declf declf))
-      (lambda (wrapped defined)
+			 (append def-defined ext-defd) #:declf declf))
+      (lambda (defined seed)
 	;; Set ffimod-defined for including, but removed built-in types.
 	(let* ((bity (car def-defined))	; first built-in type
 	       (defd (let loop ((res '()) (defs defined))
@@ -1415,71 +1371,17 @@
     #t))
 
 
-;; === test compiler ================
+;; === translators ================
 
-;; @deffn {Procedure} C-decl->scm code-string => sexp
-;; Generate a symbolic expression that evals to a Guile procedure.
+;; @deffn {Procedure} ccode->scheme string => tree
+;; Convert a snippet of C code to list of scheme forms.
 ;; @example
-;; (define fmod-exp (C-fun-decl->proc "double dmod(double, double);"))
-;; (define fmod (eval fmod-exp (current-module)))
-;; (fmod 2.3 0.5)
+;; 
 ;; @end example
 ;; @end deffn
-(define* (C-decl->scm code #:key expand)
-  (let ((tree (with-input-from-string code
-                (lambda () (parse-c99 #:cpp-defs (get-sys-cpp-defs)
-                                      #:inc-dirs (get-sys-inc-dirs))))))
-    (and tree
-	 (let* ((udict (c99-trans-unit->udict tree))
-		(udecl (cdr (last udict)))
-		(udecl (if expand (expand-typerefs udecl udict) udecl))
-		(str-decl (fh-cnvt-udecl udecl udict))
-		(scm-decl (with-input-from-string str-decl read))
-		(scm-value (sx-ref scm-decl 2)))
-	   scm-value))))
-(define C-fun-decl->scm C-decl->scm)
+(define* (ccode->scheme code-string #:key inc-dirs cpp-defs)
+  #f)
 
-(define-syntax-rule (C-decl c-code-string)
-  (eval (C-decl->scm c-code-string) (current-module)))
-
-(define* (fh-cnvt-udecl udecl udict #:key (prefix "fh"))
-  (parameterize ((*options* '()) (*defined* '())
-		 (*renamer* identity) (*errmsgs* '()) (*prefix* prefix)
-		 (*mport* (open-output-string)) (*udict* udict))
-    (cnvt-udecl udecl udict '() '())
-    (let ((res (get-output-string (*mport*))))
-      (close (*mport*))
-      res)))
-
-;; convert string-body of Scheme code to a Scheme expression
-;; @example
-;; (fh-scm-str->scm-exp "(define a 1)") => '(begin (define a 1))
-;; @end example
-(define (fh-scm-str->scm-exp str)
-  (call-with-input-string str
-    (lambda (iport)
-      (cons 'begin
-	    (let loop ((exp (read iport)))
-	      (if (eof-object? exp) '()
-		  (cons exp (loop (read iport)))))))))
-
-;; Convert declaration with @var{name} in string-body of C @var{code}
-;; to string-body of Scheme code.
-;; @example
-;; (fh-cnvt-cdecl "sqrt" "double sqrt(double x);") =>
-;;   "(define ~sqrt ...)\n (define (sqrt x) ...)"
-;; @end example
-(define* (fh-cnvt-cdecl->str name code #:key (prefix "fh"))
-  (let* ((tree (with-input-from-string code parse-c99))
-	 (udict (c99-trans-unit->udict tree))
-	 (udecl (assoc-ref udict name)))
-    (fh-cnvt-udecl udecl udict)))
-
-;; like above but then convert to Scheme expression
-(define* (fh-cnvt-cdecl name code #:key (prefix "fh"))
-  (and=> (fh-cnvt-cdecl->str name code #:prefix prefix) fh-scm-str->scm-exp))
-
-;; === repl compiler ================
 
 ;; @deffn {Procedure} load-include-file filename [#pkg-config pkg]
 ;; This is the functionality that Ludo was asking for: to be at guile
@@ -1521,7 +1423,7 @@
       (*udict* udict)
       (ppscm '(use-modules ((system foreign) #:prefix ffi:)))
       (ppscm '(use-modules (system foreign-library)))
-      (ppscm `(use-modules ,@Tmodules))
+      (ppscm '(use-modules (system foreign cdata)))
       (ppscm
        `(define (foreign-pointer-search name)
           (let loop ((libs (list #f ,@(pkg-config-libs pkg-config))))
@@ -1529,14 +1431,12 @@
              ((null? libs) (fherr "not found: ~s" name))
              ((false-if-exception (foreign-library-pointer (car libs) name)))
              (else (loop (cdr libs)))))))
-      (process-decls decls udict '() def-defined)
+      (process-decls decls udict def-defined)
       (close (*mport*))
       (simple-format #t "wrote ~S; compile and load: ...\n" scmfile)
       (load-compiled (compile-file scmfile #:opts '()))
       (if #f #f))))
 
-
-;; === file compiler ================
 
 ;; Return #t when ffi-file has an mtime greater than that of scm-file
 (define (more-recent? ffi-file scm-file)
