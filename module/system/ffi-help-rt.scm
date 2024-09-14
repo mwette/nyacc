@@ -193,8 +193,9 @@
 ;; @end deffn
 (define-syntax-rule (fhval-set! val tag ... arg)
   ;; prob use fhval-sel 
-  (let ((rarg (cond ((ffi:pointer? arg) (ffi:pointer-address arg)) (else arg))))
-    (bytestructure-set! val tag ... rarg)
+  (let ((rval val)
+        (rarg (cond ((ffi:pointer? arg) (ffi:pointer-address arg)) (else arg))))
+    (bytestructure-set! rval tag ... rarg)
     #;(call-with-values
         (lambda () (bytestructure-unwrap val tag ...))
       (lambda (bvec oset desc)
@@ -321,31 +322,34 @@
   (unless (fh-object? obj) (fherr "fh-object-val: bad arg"))
   (struct-ref obj 0))
 
-;; @deffn {Syntax} fh-object-ref obj arg ...
+;; @deffn {Procedure} fh-object-ref obj arg ...
 ;; This returns a Guile object if appropriate, otherwise the underlying
 ;; type-system value.  Not great, so maybe cdata approach will be better.
 ;; @end deffn
 (define-syntax-rule (fh-object-ref obj tag ...)
-  (cond
-   ((fh-object? obj) (fhval-ref (struct-ref obj 0) tag ...))
-   ((fhval? obj) (fhval-ref obj tag ...))
-   (else (fherr "fh-object-ref: bad obj arg"))))
+  (let ((robj obj))
+    (cond
+     ((fh-object? robj) (fhval-ref (struct-ref robj 0) tag ...))
+     ((fhval? robj) (fhval-ref robj tag ...))
+     (else (fherr "fh-object-ref: bad obj arg")))))
 
-;; @deffn {Syntax} fh-object-set! obj arg ...
+;; @deffn {Procedure} fh-object-set! obj arg ...
 ;; I'm sad that I did it this way.  Oh well.
 ;; @end deffn
 (define-syntax-rule (fh-object-set! obj tag ... val)
-  (let ((rval (cond ((fh-object? val) (fh-object-ref val)) (else val))))
+  (let ((robj obj)
+        (rval (cond ((fh-object? val) (fh-object-ref val)) (else val))))
     (cond
-     ((fhval? obj) (fhval-set! obj tag ... rval))
-     ((fh-object? obj) (fhval-set! (struct-ref obj 0) tag ... rval))
+     ((fhval? robj) (fhval-set! robj tag ... rval))
+     ((fh-object? robj) (fhval-set! (struct-ref robj 0) tag ... rval))
      (else (fherr "fh-object-set!: bad obj arg")))))
 
 (define-syntax-rule (fh-object-sel obj tag ...)
-  (cond
-   ((fh-object? obj) (fhval-sel (struct-ref obj 0) tag ...))
-   ((fhval? obj) (fhval-sel obj tag ...))
-   (else (fherr "fh-object-sel: bad argument"))))
+  (let ((robj obj))
+    (cond
+     ((fh-object? robj) (fhval-sel (struct-ref robj 0) tag ...))
+     ((fhval? robj) (fhval-sel robj tag ...))
+     (else (fherr "fh-object-sel: bad argument")))))
 
 (define unwrap-ix 0)
 (define wrap-ix 1)
