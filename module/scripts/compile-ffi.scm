@@ -147,7 +147,8 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
                    (string-suffix? ".ffi" file)
                    (fail "expecting .ffi suffix"))
                (values opts (cons file files)))
-             `((backend . cdata) (machine . "native")) '()))
+             `((backend . ,(or (getenv "FFI_HELP_BACKEND") 'cdata))
+               (machine . "native")) '()))
 
 ;; --- check dependencies -------------------------------------------
 
