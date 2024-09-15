@@ -301,11 +301,16 @@ $1 = #f
 > (pretty-print-ctype tr64)
 (cstruct ((a s32le) (b s64le)))
 > (pretty-print-ctype tr32)
-(cstruct ((a s32le) (b s64le)))
+(cstruct ((a s32le) (b s32le)))
 @end example
 
 
 @heading CData Utilities
+
+@deffn {Procedure} pretty-print-ctype type [port]
+Converts type to a literal tree and uses Guile's pretty-print function
+to display it.  The default port is the current output port.
+@end deffn
 
 @deffn {Procedure} cdata-kind data
 Return the kind of @var{data}: pointer, base, struct, ...

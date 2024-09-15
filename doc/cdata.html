@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.1, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Copyright (C) 2024 - Matthew Wette
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC. -->
+<title>The C-data Module for Guile</title>
+
+<meta name="description" content="The C-data Module for Guile">
+<meta name="keywords" content="The C-data Module for Guile">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="texi2any">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="#Top" rel="start" title="Top">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+pre.format-preformatted {font-family: inherit}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+
+
+
+
+<div class="top-level-extent" id="Top">
+<h1 class="top" id="cdata_003a-a-Guile-Module-for-Working-with-C-Data"><span><code class="code">cdata</code>: a Guile Module for Working with C Data<a class="copiable-link" href="#cdata_003a-a-Guile-Module-for-Working-with-C-Data"> &para;</a></span></h1>
+<div class="format">
+<pre class="format-preformatted">Matt Wette
+September 2024
+</pre></div>
+
+
+<h3 class="heading" id="Introduction"><span>Introduction<a class="copiable-link" href="#Introduction"> &para;</a></span></h3>
+
+<p>The <code class="code">cdata</code> module and its partner <code class="code">arch-info</code> provide a
+way to work with data originating from C libraries.  Size and
+alignment is tracked for all 
+types.  Types are classified into the following kinds: base, struct,
+union, array, pointer, enum and function.
+The module has been designed with the goals of being easy to
+understand and easy to use.  The procedures
+<code class="code">cbase</code>, <code class="code">cstruct</code>, <code class="code">cunion</code>, <code class="code">cpointer</code>,
+<code class="code">carray</code>, <code class="code">cenum</code> and <code class="code">cfunction</code> generate <em class="emph">ctype</em>
+objects, and the procedure <code class="code">make-cdata</code> will generate data
+objects for ctyped data.  The underlying data is stored in Scheme
+bytevectors.  Access to component data is provided by the
+<code class="code">cdata-ref</code> procedure and mutation is 
+accomplished via the <code class="code">cdata-set!</code> procedure.  
+The modules support non-native machine architectures via a
+global <code class="code">*arch*</code> parameter.
+</p>
+<p>Beyond size and
+alignment, base type objects carry a symbolic tag to determine the
+appropriate low level machine type.
+The low level machine types map directly to bytevector setters
+and getters.  Support for C base types is handled by the <code class="code">cbase</code>
+procedure which converts them to underlying types.  For example, on a
+64 bit little endian architecture, <code class="code">(cbase 'uintptr_t)</code> would
+generate a type with underlying machine symbol <code class="code">u64le</code>.
+</p>
+
+<p>Here is a simple example using structures:
+</p>
+<div class="example">
+<pre class="example-preformatted">(define timeval (cstruct '((tv_sec long) (tv_usec long))))
+
+(define gettimeofday
+  (foreign-library-function
+   #f &quot;gettimeofday&quot;
+   #:return-type (ctype-&gt;ffi (cbase 'int))
+   #:arg-types (map ctype-&gt;ffi
+                    (list (cpointer timeval)
+                          (cpointer 'void)))))
+
+(define d1 (make-cdata timeval))
+(gettimeofday (cdata-ref (cdata&amp; d1)) %null-pointer)
+(format #t &quot;time: ~s ~s\n&quot;
+        (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
+time: 1719062561 676365
+</pre></div>
+
+<h3 class="heading" id="Basic-Usage"><span>Basic Usage<a class="copiable-link" href="#Basic-Usage"> &para;</a></span></h3>
+
+<p>This section provides the most-used procedures.
+</p>
+<dl class="first-deffn">
+<dt class="deffn" id="index-cbase"><span class="category-def">Procedure: </span><span><strong class="def-name">cbase</strong> <var class="def-var-arguments">name</var><a class="copiable-link" href="#index-cbase"> &para;</a></span></dt>
+<dd><p>Given symbolic <var class="var">name</var> generate a base ctype.   The name can
+be something like <code class="code">unsigned-int</code>, <code class="code">double</code>, or can be a
+<em class="emph">cdata</em> machine type like <code class="code">u64le</code>.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cstruct"><span class="category-def">Procedure: </span><span><strong class="def-name">cstruct</strong> <var class="def-var-arguments">fields [packed] =&gt; ctype</var><a class="copiable-link" href="#index-cstruct"> &para;</a></span></dt>
+<dd><p>Construct a struct ctype with given <var class="var">fields</var>.  If <var class="var">packed</var>,
+<code class="code">#f</code> by default, is <code class="code">#t</code>, create a packed structure.
+<var class="var">fields</var> is a list with entries of the form <code class="code">(name type)</code> or
+<code class="code">(name type lenth)</code> where <code class="code">name</code> is a symbol or <code class="code">#f</code>
+(for anonymous structs and unions), <code class="code">type</code> is a <code class="code">&lt;ctype&gt;</code>
+object or a symbol for a base type and <code class="code">length</code> is the length
+of the associated bitfield.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cunion"><span class="category-def">Procedure: </span><span><strong class="def-name">cunion</strong> <var class="def-var-arguments">fields</var><a class="copiable-link" href="#index-cunion"> &para;</a></span></dt>
+<dd><p>Construct a ctype union type with given <var class="var">fields</var>.
+See <em class="emph">cstruct</em> for a description of the <var class="var">fields</var> argument.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-carray"><span class="category-def">Procedure: </span><span><strong class="def-name">carray</strong> <var class="def-var-arguments">type n</var><a class="copiable-link" href="#index-carray"> &para;</a></span></dt>
+<dd><p>Create an array of <var class="var">type</var> with <var class="var">length</var>.
+If <var class="var">length</var> is zero, the array length is unbounded: it&rsquo;s length
+can be specified as argument to <code class="code">make-cdata</code>.
+</p></dd></dl>
+
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cenum"><span class="category-def">Procedure: </span><span><strong class="def-name">cenum</strong> <var class="def-var-arguments">enum-list [packed]</var><a class="copiable-link" href="#index-cenum"> &para;</a></span></dt>
+<dd><p><var class="var">enum-list</var> is a list of name or name-value pairs
+</p><div class="example">
+<pre class="example-preformatted">(cenum '((a 1) b (c 4))
+</pre></div>
+<p>If <var class="var">packed</var> is <code class="code">#t</code> the size wil be smallest that can hold it.
+</p></dd></dl>
+
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cfunction"><span class="category-def">Procedure: </span><span><strong class="def-name">cfunction</strong> <var class="def-var-arguments">proc-&gt;ptr ptr-&gt;proc [variadic?]</var><a class="copiable-link" href="#index-cfunction"> &para;</a></span></dt>
+<dd><p>Generate a C function pointer type.  You must pass the <var class="var">wrapper</var>
+and <var class="var">unwrapper</var> procedures that convert a pointer to a procedure,
+and procedure to pointer, respectively.  The optional argument
+<var class="var">#:variadic</var>, if <code class="code">#t</code>,  indicates the function uses variadic
+arguments.  For this case, (to be documented).
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value [name]]</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
+<dd><p>Generate a <em class="emph">cdata</em> object of type <var class="var">type</var> with optional
+<var class="var">value</var> and <var class="var">name</var>.  To specify name but no value use
+something like
+</p><div class="example">
+<pre class="example-preformatted">(make-cdata mytype #f &quot;foo&quot;)
+</pre></div>
+<p>As a special case, an integer arg to a zero-sized array type will
+allocate storage for that many items, associating it with an array
+type of that size.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-ref</strong> <var class="def-var-arguments">data [tag ...]</var><a class="copiable-link" href="#index-cdata_002dref"> &para;</a></span></dt>
+<dd><p>Return the Scheme (scalar) slot value for selected <var class="var">tag ...</var> with
+respect to the cdata object <var class="var">data</var>.
+</p><div class="example">
+<pre class="example-preformatted">(cdata-ref my-struct-value 'a 'b 'c))
+</pre></div>
+<p>This procedure returns XXX for cdata kinds <em class="emph">base</em>, <em class="emph">pointer</em> and
+(in the future) <em class="emph">function</em>.  Attempting to obtain values for C-type
+kinds <em class="emph">struct</em>, <em class="emph">union</em>, <em class="emph">array</em> will result in <code class="code">#f</code>.
+If, in those cases, you would like a cdata then use this:
+</p><div class="example">
+<pre class="example-preformatted">(or (cdata-ref data tag ...) (cdata-sel data tag ...))
+</pre></div>
+<p>(Or should we just make this the default behavior?)
+</p></dd></dl>
+
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_002dset_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-set!</strong> <var class="def-var-arguments">data value [tag ...]</var><a class="copiable-link" href="#index-cdata_002dset_0021"> &para;</a></span></dt>
+<dd><p>Set slot for selcted <var class="var">tag ...</var> with respect to cdata <var class="var">data</var> to
+<var class="var">value</var>.  Example:
+</p><div class="example">
+<pre class="example-preformatted">(cdata-set! my-struct-data 42 'a 'b 'c))
+</pre></div>
+<p>If <var class="var">value</var> is a <code class="code">&lt;cdata&gt;</code> object copy that, if types match.
+<br>If <var class="var">value</var> can be a procedure used to set a cfunction pointer
+value.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_0026"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata&amp;</strong> <var class="def-var-arguments">data =&gt; cdata</var><a class="copiable-link" href="#index-cdata_0026"> &para;</a></span></dt>
+<dd><p>Generate a reference (i.e., cpointer) to the contents in the underlying
+bytevector.
+</p></dd></dl>
+
+
+<h3 class="heading" id="Going-Further"><span>Going Further<a class="copiable-link" href="#Going-Further"> &para;</a></span></h3>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_002dsel"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-sel</strong> <var class="def-var-arguments">data tag ... =&gt; cdata</var><a class="copiable-link" href="#index-cdata_002dsel"> &para;</a></span></dt>
+<dd><p>Return a new <code class="code">cdata</code> object representing the associated selection.
+Note this is different from <code class="code">cdata-ref</code>: it always returns a cdata
+object.  For example,
+</p><div class="example">
+<pre class="example-preformatted">&gt; (define t1 (cstruct '((a int) (b double))))
+&gt; (define d1 (make-cdata t1))
+&gt; (cdata-set! d1 42 'a)
+&gt; (cdata-sel d1 'a)
+$1 = #&lt;cdata s32le 0x77bbf8e52260&gt;
+&gt; (cdata-ref $1)
+$2 = 42
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata*</strong> <var class="def-var-arguments">data =&gt; cdata</var><a class="copiable-link" href="#index-cdata_002a"> &para;</a></span></dt>
+<dd><p>De-reference a pointer.  Returns a <em class="emph">cdata</em> object representing the
+contents at the address in the underlying bytevector.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_0026_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata&amp;-ref</strong> <var class="def-var-arguments">data [tag ...]</var><a class="copiable-link" href="#index-cdata_0026_002dref"> &para;</a></span></dt>
+<dd><p>Does not work work (yet) for march offset addresses.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_002a_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata*-ref</strong> <var class="def-var-arguments">data [tag ...]</var><a class="copiable-link" href="#index-cdata_002a_002dref"> &para;</a></span></dt>
+<dd><p>Shortcut for <code class="code">(cdata-ref (cdata* data tag ...))</code>
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-Xcdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">Xcdata-ref</strong> <var class="def-var-arguments">bv ix ct -&gt; value</var><a class="copiable-link" href="#index-Xcdata_002dref"> &para;</a></span></dt>
+<dd><p>Reference a deconstructed cdata object. See <em class="emph">cdata-ref</em>.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-Xcdata_002dset_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">Xcdata-set!</strong> <var class="def-var-arguments">bv ix ct value</var><a class="copiable-link" href="#index-Xcdata_002dset_0021"> &para;</a></span></dt>
+<dd><p>Reference a deconstructed cdata object. See <em class="emph">cdata-set!</em>.
+</p></dd></dl>
+
+<h3 class="heading" id="Working-with-Types"><span>Working with Types<a class="copiable-link" href="#Working-with-Types"> &para;</a></span></h3>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-name_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">name-ctype</strong> <var class="def-var-arguments">name type =&gt; ctype</var><a class="copiable-link" href="#index-name_002dctype"> &para;</a></span></dt>
+<dd><p>Add a name tag to a ctype.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-ctype_002dequal_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-equal?</strong> <var class="def-var-arguments">a b</var><a class="copiable-link" href="#index-ctype_002dequal_003f"> &para;</a></span></dt>
+<dd><p>This predicate assesses equality of it&rsquo;s arguments.
+Two types are considered equal if they have the same size,
+alignment, kind, and eqivalent kind-specific properties.
+For base types, the symbolic mtype must be equal; this includes
+size, integer versus float, and signed versus unsigned.
+For struct and union kinds, the names and types of all fields
+must be equal.
+<br>TODO: algorithm to prevent infinite search for recursive structs
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-ctype_002dsel"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-sel</strong> <var class="def-var-arguments">type ix [tag ...] =&gt; ((ix . ct) (ix . ct) ...)</var><a class="copiable-link" href="#index-ctype_002dsel"> &para;</a></span></dt>
+<dd><p>This generate a list of (offset, type) pairs for a type.  The result is
+used to create getters and setter for foreign machine architectures.
+See <em class="emph">make-cdata-getter</em> and <em class="emph">make-cdata-setter</em>.
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-make_002dcdata_002dgetter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata-getter</strong> <var class="def-var-arguments">sel [offset] =&gt; lambda</var><a class="copiable-link" href="#index-make_002dcdata_002dgetter"> &para;</a></span></dt>
+<dd><p>Genererate a procedure that given a cdata object will fetch the value
+at indicated by the <var class="var">sel</var>, generated by <code class="code">ctype-sel</code>.
+The procedure takes one argument: <code class="code">(proc data [tag ...])</code>.
+Pointer dereference tags (<code class="code">'*'</code>) are not allowed.
+The optional <var class="var">offset</var> argument (default 0), is used for cross
+target use: it is the offset of the address in the host context.
+</p></dd></dl>
+
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-make_002dcdata_002dsetter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata-setter</strong> <var class="def-var-arguments">sel [offset] =&gt; lambda</var><a class="copiable-link" href="#index-make_002dcdata_002dsetter"> &para;</a></span></dt>
+<dd><p>Genererate a procedure that given a cdata object will set the value
+at the offset given the selector, generated by <code class="code">ctype-sel</code>.
+The procedure takes two arguments: <code class="code">(proc data value [tag ...])</code>.
+Pointer dereference tags (<code class="code">'*'</code>) are not allowed.
+The optional <var class="var">offset</var> argument (default 0), is used for cross
+target use: it is the offset of the address in the host context.
+</p></dd></dl>
+
+
+<h3 class="heading" id="Working-with-C-Function-Calls"><span>Working with C Function Calls<a class="copiable-link" href="#Working-with-C-Function-Calls"> &para;</a></span></h3>
+
+<p>The procedure
+<code class="code">ctype-&gt;ffi</code> is a helper for using Guile&rsquo;s
+<em class="emph">pointer-&gt;procedure</em>.
+</p>
+<dl class="first-deffn">
+<dt class="deffn" id="index-ccast"><span class="category-def">Procedure: </span><span><strong class="def-name">ccast</strong> <var class="def-var-arguments">type data [do-check] =&gt; &lt;cdata&gt;</var><a class="copiable-link" href="#index-ccast"> &para;</a></span></dt>
+<dd><p>need to be able to cast array to pointer
+</p><div class="example">
+<pre class="example-preformatted">(ccast Target* val)
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-unwrap_002dnumber"><span class="category-def">Procedure: </span><span><strong class="def-name">unwrap-number</strong><a class="copiable-link" href="#index-unwrap_002dnumber"> &para;</a></span></dt>
+<dd><p>doc to come
+</p></dd></dl>
+
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-unwrap_002dpointer"><span class="category-def">Procedure: </span><span><strong class="def-name">unwrap-pointer</strong><a class="copiable-link" href="#index-unwrap_002dpointer"> &para;</a></span></dt>
+<dd><p>doc to come
+</p></dd></dl>
+
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-unwrap_002darray"><span class="category-def">Procedure: </span><span><strong class="def-name">unwrap-array</strong><a class="copiable-link" href="#index-unwrap_002darray"> &para;</a></span></dt>
+<dd><p>doc to come
+</p></dd></dl>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-ctype_002d_003effi"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi</strong><a class="copiable-link" href="#index-ctype_002d_003effi"> &para;</a></span></dt>
+<dd><p>doc to come
+</p></dd></dl>
+
+
+<h3 class="heading" id="Handling-Machine-Architectures"><span>Handling Machine Architectures<a class="copiable-link" href="#Handling-Machine-Architectures"> &para;</a></span></h3>
+<p>Needs love ...
+</p>
+<div class="example">
+<pre class="example-preformatted">&gt; (define tx64 (with-arch &quot;x86_64&quot;
+                 (cstruct '((a int) (b long)))))
+&gt; (define tr64 (with-arch &quot;riscv64&quot;
+                 (cstruct '((a int) (b long)))))
+&gt; (define tr32 (with-arch &quot;riscv32&quot;
+                 (cstruct '((a int) (b long)))))
+&gt; (ctype-equal? tx64 tr64)
+$1 = #t
+&gt; (ctype-equal? tr64 tr32)
+$1 = #f
+&gt; (pretty-print-ctype tx64)
+(cstruct ((a s32le) (b s64le)))
+&gt; (pretty-print-ctype tr64)
+(cstruct ((a s32le) (b s64le)))
+&gt; (pretty-print-ctype tr32)
+(cstruct ((a s32le) (b s64le)))
+</pre></div>
+
+
+<h3 class="heading" id="CData-Utilities"><span>CData Utilities<a class="copiable-link" href="#CData-Utilities"> &para;</a></span></h3>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-cdata_002dkind"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-kind</strong> <var class="def-var-arguments">data</var><a class="copiable-link" href="#index-cdata_002dkind"> &para;</a></span></dt>
+<dd><p>Return the kind of <var class="var">data</var>: pointer, base, struct, ...
+</p></dd></dl>
+
+<h3 class="heading" id="Miscellaneous"><span>Miscellaneous<a class="copiable-link" href="#Miscellaneous"> &para;</a></span></h3>
+
+<p>More to come.
+</p>
+<h4 class="subheading" id="Base-Types"><span>Base Types<a class="copiable-link" href="#Base-Types"> &para;</a></span></h4>
+
+<div class="example">
+<pre class="example-preformatted">void*
+char short int long float double unsigned-short unsigned unsigned-long
+size_t ssize_t ptrdiff_t int8_t uint8_t int16_t uint16_t int32_t
+uint32_t int64_t uint64_t signed-char unsigned-char short-int
+signed-short signed-short-int signed signed-int long-int signed-long
+signed-long-int unsigned-short-int unsigned-int unsigned-long-int
+_Bool bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
+long-long long-long-int signed-long-long signed-long-long-int
+unsigned-long-long unsigned-long-long-int
+</pre></div>
+
+<h4 class="subheading" id="Other-Procedures"><span>Other Procedures<a class="copiable-link" href="#Other-Procedures"> &para;</a></span></h4>
+
+<p>More to come.
+</p>
+
+<h4 class="subheading" id="Guile-FFI-Support"><span>Guile FFI Support<a class="copiable-link" href="#Guile-FFI-Support"> &para;</a></span></h4>
+
+<p>More to come.
+</p>
+<dl class="first-deffn">
+<dt class="deffn" id="index-ctype_002d_003effi_002dtype"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi-type</strong> <var class="def-var-arguments">type</var><a class="copiable-link" href="#index-ctype_002d_003effi_002dtype"> &para;</a></span></dt>
+<dd><p>Convert a <em class="emph">ctype</em> to the (integer) code for the associated FFI
+type.
+</p></dd></dl>
+
+<h4 class="subheading" id="Copyright"><span>Copyright<a class="copiable-link" href="#Copyright"> &para;</a></span></h4>
+
+<p>Copyright (C) 2024 &ndash; Matthew Wette.
+</p>
+<p>Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+</p>
+<h3 class="heading" id="References"><span>References<a class="copiable-link" href="#References"> &para;</a></span></h3>
+
+<ol class="enumerate">
+<li> Guile Manual:
+<a class="url" href="https://www.gnu.org/software/guile/manual">https://www.gnu.org/software/guile/manual</a>
+</li><li> Scheme Bytestructures:
+<a class="url" href="https://github.com/TaylanUB/scheme-bytestructures">https://github.com/TaylanUB/scheme-bytestructures</a>
+</li></ol>
+
+</div>
+
+
+
+</body>
+</html>

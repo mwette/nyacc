@@ -673,6 +673,10 @@
 ;; See @emph{make-cdata-getter} and @emph{make-cdata-setter}.
 ;; @end deffn
 (define (ctype-sel type ix . tags)
+  "- Procedure: ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
+     This generate a list of (offset, type) pairs for a type.  The
+     result is used to create getters and setter for foreign machine
+     architectures.  See _make-cdata-getter_ and _make-cdata-setter_."
   (assert-ctype 'ctype-sel type)
   (let loop ((res '()) (ct type) (ix 0) (tags tags))
     (cond
