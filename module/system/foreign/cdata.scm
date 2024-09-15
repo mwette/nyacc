@@ -92,7 +92,7 @@
 
             Xcdata-ref Xcdata-set!
             
-            cdata-kind cdata& cdata* cdata-sel
+            cdata-kind cdata& cdata* cdata-sel cdata*-ref
             ctype-sel make-cdata-getter make-cdata-setter
             ctype->ffi
             ;;
@@ -463,13 +463,22 @@
         dict fields))
 
 ;; @deffn {Procedure} cstruct fields [packed] => ctype
-;; fields is a list with entries @code{(name type)} where @code{type} is
-;; a @code{<ctype>} object or a symbol for a base type.
+;; Construct a struct ctype with given @var{fields}.  If @var{packed},
+;; @code{#f} by default, is @code{#t}, create a packed structure.
+;; @var{fields} is a list with entries of the form @code{(name type)} or
+;; @code{(name type lenth)} where @code{name} is a symbol or @code{#f}
+;; (for anonymous structs and unions), @code{type} is a @code{<ctype>}
+;; object or a symbol for a base type and @code{length} is the length
+;; of the associated bitfield.
 ;; @end deffn
 (define* (cstruct fields #:optional packed?)
   "- Procedure: cstruct fields [packed] => ctype
-     fields is a list with entries ‘(name type)’ where ‘type’ is a
-     ‘<ctype>’ object or a symbol for a base type."
+     Construct a struct ctype with given FIELDS.  If PACKED, ‘#f’ by
+     default, is ‘#t’, create a packed structure.  FIELDS is a list with
+     entries of the form ‘(name type)’ or ‘(name type lenth)’ where
+     ‘name’ is a symbol or ‘#f’ (for anonymous structs and unions),
+     ‘type’ is a ‘<ctype>’ object or a symbol for a base type and
+     ‘length’ is the length of the associated bitfield."
   ;; cases
   ;; bitfield
   ;; 1) non-bitfield, no name => transferred and reified
@@ -530,13 +539,14 @@
 
 
 ;; @deffn {Procedure} cunion fields
-;; fields is a list with entries @code{(name type)} where @code{type} is
-;; a @code{<ctype>} object or a symbol for a base type.
+;; Construct a union ctype with given @var{fields}.
+;; See @emph{cstruct} for a description of the @var{fields} argument.
 ;; @end deffn
 (define (cunion fields)
   "- Procedure: cunion fields
-     fields is a list with entries ‘(name type)’ where ‘type’ is a
-     ‘<ctype>’ object or a symbol for a base type."
+     Construct a ctype struct type with given FIELDS.  If PACKED, ‘#f’
+     by default, is ‘#t’, create a packed structure.  See _cstruct_ for
+     a description of the FIELDS argument."
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     (if (null? sfl)
         (%make-ctype (incr-size 0 sal ssz) sal 'union
@@ -565,12 +575,14 @@
 
 ;; @deffn {Procedure} carray type n
 ;; Create an array of @var{type} with @var{length}.
-;; If @var{length} is zero, the array length is unbounded (so be careful).
+;; If @var{length} is zero, the array length is unbounded: it's length
+;; can be specified as argument to @code{make-cdata}.
 ;; @end deffn
 (define (carray type n)
   "- Procedure: carray type n
      Create an array of TYPE with LENGTH.  If LENGTH is zero, the array
-     length is unbounded (so be careful)."
+     length is unbounded: it's length can be specified as argument to
+     ‘make-cdata’."
   (assert-ctype 'carray type)
   (%make-ctype (* n (ctype-size type)) (ctype-align type)
                'array (%make-carray type n) #f))
@@ -656,8 +668,9 @@
       (else (error "bad tag" tag)))))
 
 ;; @deffn {Procedure} ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
-;; offset from zero
-;; see make-getter and make-setter
+;; This generate a list of (offset, type) pairs for a type.  The result is
+;; used to create getters and setter for foreign machine architectures.
+;; See @emph{make-cdata-getter} and @emph{make-cdata-setter}.
 ;; @end deffn
 (define (ctype-sel type ix . tags)
   (assert-ctype 'ctype-sel type)
@@ -785,10 +798,16 @@
 
 ;; @deffn {Procedure} cdata-sel data tag ... => cdata
 ;; Return a new @code{cdata} object representing the associated selection.
-;; For example,
+;; Note this is different from @code{cdata-ref}: it always returns a cdata
+;; object.  For example,
 ;; @example
-;; dat1 -> <cdata struct 0x12345678>
-;; (cdata-ref dat1 'a 'b 'c) -> <cdata f64le x12345700>
+;; > (define t1 (cstruct '((a int) (b double))))
+;; > (define d1 (make-cdata t1))
+;; > (cdata-set! d1 42 'a)
+;; > (cdata-sel d1 'a)
+;; $1 = #<cdata s32le 0x77bbf8e52260>
+;; > (cdata-ref $1)
+;; $2 = 42
 ;; @end example
 ;; @end deffn
 (define (cdata-sel data . tags)
@@ -1032,7 +1051,8 @@
   (ctype-kind (cdata-ct data)))
 
 ;; @deffn {Procedure} cdata&-ref data [tag ...]
-;; Does not work work (yet) for march offset addresses.
+;; Shortcut for @code{(cdata-ref (cdata& data tag ...))}
+;; This always returns a Guile @emph{pointer}.
 ;; @end deffn
 (define (cdata&-ref data . tags)
   (assert-cdata 'cdata&-ref data)
@@ -1040,6 +1060,12 @@
          (bptr (bytevector->pointer (cdata-bv data)))
          (addr (+ (pointer-address bptr) (cdata-ix data))))
     (make-pointer addr)))
+
+;; @deffn {Procedure} cdata*-ref data [tag ...]
+;; Shortcut for @code{(cdata-ref (cdata* data tag ...))}
+;; @end deffn
+(define (cdata*-ref data . tags)
+  (apply cdata-sel data '* tags))
 
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
 ;; need to be able to cast array to pointer
