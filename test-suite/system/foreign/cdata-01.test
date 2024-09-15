@@ -75,7 +75,7 @@
 
 (define *nfld* 5)
 (define *ntst* 1)
-(define c99-basename "ztest")
+(define c99-basename "ctest")
 (use-modules (system foreign))
 (use-modules (system foreign-library))
 
@@ -118,7 +118,7 @@
 (define (gen-c99-test-code/union k) (gen-c99-test-code 'union k))
 
 (define (gen-code/struct cases)
-  (system "rm -f ztest.c ztest.so")
+  (system "rm -f ctest.c ctest.so")
   (let ((port (open-output-file (string-append c99-basename ".c"))))
     (display "#include <stdio.h>\n\n" port)
     (for-each (lambda (code) (display code port))
@@ -132,7 +132,7 @@
   c99-basename)
 
 (define (gen-code/union cases)
-  (system "rm -f ztest.c ztest.so")
+  (system "rm -f ctest.c ctest.so")
   (with-output-to-file (string-append c99-basename ".c")
     (lambda ()
       (display "#include <stdio.h>\n\n")
