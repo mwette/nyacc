@@ -10,8 +10,11 @@ without any warranty.
 	  + see doc/cdata.info
 	  + capable of dealing with foreign architectures
 	* major ffi helper update:
-	  + including default use of cdata backend, which does not use 
-	    bytestructures or system/ffi-help-rt
+	  + by default, use cdata backend
+	    - does not use bytestructures 
+	    - does not use ffi-help-rt
+	    - generates ~20% smaller .scm files 
+	    - generates ~25% smaller .go files 
 	  + ffi-help.scm(cnvt-udecl): complete re-write, using udecl->mdecl.
  	    This no longer has special cases for some include files.
 	  + handling of functions and function types is much cleaner and
