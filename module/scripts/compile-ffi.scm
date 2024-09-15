@@ -29,14 +29,14 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
-  #:version (1 09 4))
+  #:version (2 00 0))
 
 (define (compile-scm file)
   (compile-file file
                 #:from 'scheme #:to 'bytecode
                 #:optimization-level 1 #:opts '()))
 
-(define *ffi-help-version* "1.09.4")
+(define *ffi-help-version* "2.00.0")
 
 (define %summary
   "Compile a ffi-file to .scm and maybe .go.")

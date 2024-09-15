@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 7.0.3, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.1, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2015-2019 - Matthew R. Wette.
@@ -50,7 +50,7 @@ ul.toc-numbered-mark {list-style: none}
 <p>
 Next: <a href="#Demonstration" accesskey="n" rel="next">Demonstration</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h1 class="top" id="NYACC-User_0027s-Guide">NYACC User&rsquo;s Guide</h1>
+<h1 class="top" id="NYACC-User_0027s-Guide"><span>NYACC User&rsquo;s Guide<a class="copiable-link" href="#NYACC-User_0027s-Guide"> &para;</a></span></h1>
 
 
 
@@ -105,7 +105,7 @@ Next: <a href="#Demonstration" accesskey="n" rel="next">Demonstration</a>, Previ
 <p>
 Previous: <a href="#Parsing" accesskey="p" rel="prev">Parsing</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h2 class="chapter" id="Demonstration-1">1 Demonstration</h2>
+<h2 class="chapter" id="Demonstration-1"><span>1 Demonstration<a class="copiable-link" href="#Demonstration-1"> &para;</a></span></h2>
 
 <p>A LALR(1) parser is a pushdown automata for parsing
 computer languages.  LALR parser generators like <small class="sc">NYACC</small> have been
@@ -124,7 +124,7 @@ can be found in the Bison manual (see <a class="ref" href="#References">Referenc
 <li><a href="#Debugging-Output" accesskey="3">Debugging Output</a></li>
 </ul>
 <div class="section-level-extent" id="A-Simple-Batch-Calculator">
-<h3 class="section">1.1 A Simple Batch Calculator</h3>
+<h3 class="section"><span>1.1 A Simple Batch Calculator<a class="copiable-link" href="#A-Simple-Batch-Calculator"> &para;</a></span></h3>
 
 <p>An easy way to introduce you to <small class="sc">NYACC</small> is to work through a simple
 example.  Consider the following.  A similar example is in the file
@@ -265,7 +265,7 @@ $
 
 </div>
 <div class="section-level-extent" id="Generating-a-Language-to-Run-in-Guile">
-<h3 class="section">1.2 Generating a Language to Run in Guile</h3>
+<h3 class="section"><span>1.2 Generating a Language to Run in Guile<a class="copiable-link" href="#Generating-a-Language-to-Run-in-Guile"> &para;</a></span></h3>
 
 <p>One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.
@@ -292,7 +292,7 @@ Guile backend see
 </p>
 </div>
 <div class="section-level-extent" id="Debugging-Output">
-<h3 class="section">1.3 Debugging Output</h3>
+<h3 class="section"><span>1.3 Debugging Output<a class="copiable-link" href="#Debugging-Output"> &para;</a></span></h3>
 
 <p>The parser can provide debugging output with the appropriate keyword
 argument.  In <samp class="file">calc1.scm</samp> there is a modified version of
@@ -327,7 +327,7 @@ state 4, token #&lt;eof&gt;   =&gt; (accept . 0)
 <p>
 Next: <a href="#Translation" accesskey="n" rel="next">Translation</a>, Previous: <a href="#Demonstration" accesskey="p" rel="prev">Demonstration</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h2 class="chapter" id="Parsing-1">2 Parsing</h2>
+<h2 class="chapter" id="Parsing-1"><span>2 Parsing<a class="copiable-link" href="#Parsing-1"> &para;</a></span></h2>
 
 <p>Most of the syntax and procecures for generating skelton parsers
 exported from the module <code class="code">(nyacc lalr)</code>.  Other modules include
@@ -354,19 +354,19 @@ exported from the module <code class="code">(nyacc lalr)</code>.  Other modules 
 <li><a href="#Debugging-1">Debugging</a></li>
 </ul>
 <div class="section-level-extent" id="The-Specification">
-<h3 class="section">2.1 The Specification</h3>
+<h3 class="section"><span>2.1 The Specification<a class="copiable-link" href="#The-Specification"> &para;</a></span></h3>
 <a class="anchor" id="Specification"></a>
 <p>The syntax for generating specifications is <code class="code">lalr-spec</code>.  As
 mentioned in the  previous chapter, the syntax generates an
 association list, or <em class="dfn">a-list</em>.
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-lalr_002dspec"><span class="category-def">Syntax: </span><span><strong class="def-name">lalr-spec</strong> <var class="def-var-arguments">grammar =&gt; a-list</var><a class="copiable-link" href='#index-lalr_002dspec'> &para;</a></span></dt>
+<dt class="deffn" id="index-lalr_002dspec"><span class="category-def">Syntax: </span><span><strong class="def-name">lalr-spec</strong> <var class="def-var-arguments">grammar =&gt; a-list</var><a class="copiable-link" href="#index-lalr_002dspec"> &para;</a></span></dt>
 <dd><p>This routine reads a grammar in a scheme-like syntax and returns an a-list.
 The returned a-list is normally used as an input for
 <code class="code">make-lalr-machine</code>.  The syntax is of the form
 </p><div class="example">
-<pre class="example-preformatted">(lalr-spec (<var class="var">specifier</var> &hellip;) &hellip;)
+<pre class="example-preformatted">(lalr-spec (<var class="var">specifier</var> ...) ...)
 </pre></div>
 <p>The order of the specifiers does not matter, but typically the
 <code class="code">grammar</code> specifier occurs last.
@@ -400,7 +400,7 @@ Its use prevents warning messages.
 </p></dd>
 </dl>
 
-<h4 class="subheading" id="The-Notice">The Notice</h4>
+<h4 class="subheading" id="The-Notice"><span>The Notice<a class="copiable-link" href="#The-Notice"> &para;</a></span></h4>
 
 <p>The <code class="code">notice</code> specifier allows one to provide a comment that will
 be carried into generated output files (e.g., parse tables generated
@@ -409,7 +409,7 @@ by <code class="code">write-lalr-tables</code>.  For example, if the spec&rsquo;
 <pre class="example-preformatted">(define spec
   (lalr-spec
    (notice &quot;last edit: Mar 25, 2015&quot;)
-   &hellip;))
+   ...))
 </pre></div>
 <p>and one generates parse tables from the machine with
 <code class="code">write-lalr-tables</code> then the resulting file will look like
@@ -419,17 +419,17 @@ by <code class="code">write-lalr-tables</code>.  For example, if the spec&rsquo;
 ;; last edit: Mar 25, 2015
 
 (define calc-len-v
- #(1 1 &hellip;
- &hellip;
+ #(1 1 ...
+ ...
 </pre></div>
 
 <p>The notice is available using the expression
 </p><dl class="first-deffn">
-<dt class="deffn" id="index-pp_002dlalr_002dnotice"><span class="category-def">Procedure: </span><span><strong class="def-name">pp-lalr-notice</strong> <var class="def-var-arguments">spec [port]</var><a class="copiable-link" href='#index-pp_002dlalr_002dnotice'> &para;</a></span></dt>
+<dt class="deffn" id="index-pp_002dlalr_002dnotice"><span class="category-def">Procedure: </span><span><strong class="def-name">pp-lalr-notice</strong> <var class="def-var-arguments">spec [port]</var><a class="copiable-link" href="#index-pp_002dlalr_002dnotice"> &para;</a></span></dt>
 <dd><p>Print the notice to the port, if specified, or <code class="code">(current-output-port)</code>.
 </p></dd></dl>
 
-<h4 class="subheading" id="Reserving-Tokens">Reserving Tokens</h4>
+<h4 class="subheading" id="Reserving-Tokens"><span>Reserving Tokens<a class="copiable-link" href="#Reserving-Tokens"> &para;</a></span></h4>
 
 <p>The <code class="code">notice</code> specifier allows one to provide a comment that will
 be carried into generated output files (e.g., parse tables generated
@@ -437,16 +437,16 @@ by <code class="code">write-lalr-tables</code>.
 In the javascript parser we have added reserved keywords:
 </p><div class="example">
 <pre class="example-preformatted">   (reserve &quot;abstract&quot; &quot;boolean&quot; &quot;byte&quot; &quot;char&quot;
-            &quot;class&quot; &quot;const&quot; &hellip;)
+            &quot;class&quot; &quot;const&quot; ...)
 </pre></div>
 <p>and this results in a generated match table (for a hashed machine)
 that looks like:
 </p><div class="example">
-<pre class="example-preformatted">    &hellip; (&quot;abstract&quot; . 86) (&quot;boolean&quot; . 87) (&quot;byte&quot; . 88)
-    (&quot;char&quot; . 89) (&quot;class&quot; . 90) (&quot;const&quot; . 91) &hellip;
+<pre class="example-preformatted">    ... (&quot;abstract&quot; . 86) (&quot;boolean&quot; . 87) (&quot;byte&quot; . 88)
+    (&quot;char&quot; . 89) (&quot;class&quot; . 90) (&quot;const&quot; . 91) ...
 </pre></div>
 
-<h4 class="subheading" id="Precedence-and-Associativity">Precedence and Associativity</h4>
+<h4 class="subheading" id="Precedence-and-Associativity"><span>Precedence and Associativity<a class="copiable-link" href="#Precedence-and-Associativity"> &para;</a></span></h4>
 
 <p>Recall the following specifier from the <code class="code">calc1</code> example:
 </p><div class="example">
@@ -479,17 +479,17 @@ the parser should shift.  This rule can be specificed in a C parser
 as follows:
 </p><div class="example">
 <pre class="example-preformatted">  (lalr-spec
-   &hellip;
+   ...
    (prec&lt; 'then &quot;else&quot;)	       ; &quot;then/else&quot; SR-conflict resolution
-   &hellip;
+   ...
    (grammar
-    &hellip;
+    ...
     (selection-statement
      (&quot;if&quot; &quot;(&quot; expression &quot;)&quot; statement ($prec 'then)
       ($$ `(if ,$3 ,$5)))
      (&quot;if&quot; &quot;(&quot; expression &quot;)&quot; statement &quot;else&quot; statement
       ($$ `(if ,$3 ,$5 ,$7)))
-      &hellip;
+      ...
 </pre></div>
 <p>It is important to note here that we use a quoted symbol <code class="code">'then</code>
 rather than a string <code class="code">&quot;then&quot;</code> as a dummy token.  If we would have
@@ -501,7 +501,7 @@ token when <code class="code">&quot;then&quot;</code> appears in the input and t
 <p>would produce a syntax error.
 </p>
 
-<h4 class="subheading" id="Expected-Conflicts">Expected Conflicts</h4>
+<h4 class="subheading" id="Expected-Conflicts"><span>Expected Conflicts<a class="copiable-link" href="#Expected-Conflicts"> &para;</a></span></h4>
 
 <p>There are default rules for handling shift-reduce conflicts.  If you
 can live with these it is possible to inhibit the error messages
@@ -510,15 +510,15 @@ argument the expected number of shift-reduce conflicts:
 </p><div class="example">
 <pre class="example-preformatted">  (lalr-spec
    (expect 3)
-   &hellip;
+   ...
 </pre></div>
 
-<h4 class="subheading" id="Grammar">Grammar</h4>
+<h4 class="subheading" id="Grammar"><span>Grammar<a class="copiable-link" href="#Grammar"> &para;</a></span></h4>
 
 <p>The grammer is a list of production rules.  Each production rule take
 the form
 </p><div class="example">
-<pre class="example-preformatted">(<em class="dfn">lhs</em> (<em class="dfn">rhs1</em> &hellip;) (<em class="dfn">rhs2</em> &hellip;) &hellip;)
+<pre class="example-preformatted">(<em class="dfn">lhs</em> (<em class="dfn">rhs1</em> ...) (<em class="dfn">rhs2</em> ...) ...)
 </pre></div>
 <p>where <em class="dfn">lhs</em> is the left hand side is a non-termianl represented as
 a Scheme identifier.  Each right hand side is a list non-terminals,
@@ -648,7 +648,7 @@ production rule
 </p></dd>
 </dl>
 
-<h4 class="subheading" id="Acions">Acions</h4>
+<h4 class="subheading" id="Acions"><span>Acions<a class="copiable-link" href="#Acions"> &para;</a></span></h4>
 <a class="anchor" id="Actions"></a><p>A grammar rule&rsquo;s right-hand side can contain <em class="emph">actions</em>:
 </p><div class="example">
 <pre class="example-preformatted">  ($$ <em class="emph">body</em>)
@@ -664,7 +664,7 @@ actions) they count as right-hand side items and thus the results of
 their evaluation is bound to the corresponding <code class="code">$<i class="i">n</i></code> variable
 available for the end-of-rule action.
 </p>
-<h4 class="subheading" id="Recovery-from-Syntax-Errors-1">Recovery from Syntax Errors</h4>
+<h4 class="subheading" id="Recovery-from-Syntax-Errors-1"><span>Recovery from Syntax Errors<a class="copiable-link" href="#Recovery-from-Syntax-Errors-1"> &para;</a></span></h4>
 <a class="anchor" id="Recovery-from-Syntax-Errors"></a>
 <p>The grammar specification allows the user to handle some syntax
 errors.  This allows parsing to continue.  The behavior is similar
@@ -691,7 +691,7 @@ recovery action (<em class="emph">&quot;syntax error&quot;</em>) will be execute
 </p>
 </div>
 <div class="section-level-extent" id="Parsing-a-Sublanguage-of-a-Specification">
-<h3 class="section">2.2 Parsing a Sublanguage of a Specification</h3>
+<h3 class="section"><span>2.2 Parsing a Sublanguage of a Specification<a class="copiable-link" href="#Parsing-a-Sublanguage-of-a-Specification"> &para;</a></span></h3>
 <a class="anchor" id="sublanguage"></a>
 <p>Say you have a <small class="sc">NYACC</small> specification <code class="code">cspec</code> for the C language
 and you want to generate a machine for parsing C expressions.  You can
@@ -703,10 +703,10 @@ do this using <code class="code">restart-spec</code>:
 
 </div>
 <div class="section-level-extent" id="Generating-the-Machine">
-<h3 class="section">2.3 Generating the Machine</h3>
+<h3 class="section"><span>2.3 Generating the Machine<a class="copiable-link" href="#Generating-the-Machine"> &para;</a></span></h3>
 <a class="anchor" id="Parser"></a>
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dlalr_002dmachine"><span class="category-def">Procedure: </span><span><strong class="def-name">make-lalr-machine</strong> <var class="def-var-arguments">spec =&gt; a-list</var><a class="copiable-link" href='#index-make_002dlalr_002dmachine'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dlalr_002dmachine"><span class="category-def">Procedure: </span><span><strong class="def-name">make-lalr-machine</strong> <var class="def-var-arguments">spec =&gt; a-list</var><a class="copiable-link" href="#index-make_002dlalr_002dmachine"> &para;</a></span></dt>
 <dd><p>Given a specification generated by <code class="code">lalr-spec</code> this procecure
 generates an a-list which contains the data required to implement a
 parser generated with, for example, <code class="code">make-lalr-parser</code>.
@@ -737,7 +737,7 @@ parser generated with, for example, <code class="code">make-lalr-parser</code>.
 </p></dd>
 </dl>
 
-<h4 class="subheading" id="Using-Hashed-Tables">Using Hashed Tables</h4>
+<h4 class="subheading" id="Using-Hashed-Tables"><span>Using Hashed Tables<a class="copiable-link" href="#Using-Hashed-Tables"> &para;</a></span></h4>
 
 <p>The lexical analyzer returns tokens to the parser.  The parser
 executes state transitions based on these tokens.  When we build a
@@ -790,7 +790,7 @@ new state.  We can encode the parser transitions using integers.
 <code class="code">hashify-machine</code>.
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-hashify_002dmachine"><span class="category-def">Procedure: </span><span><strong class="def-name">hashify-machine</strong> <var class="def-var-arguments">mach =&gt; mach</var><a class="copiable-link" href='#index-hashify_002dmachine'> &para;</a></span></dt>
+<dt class="deffn" id="index-hashify_002dmachine"><span class="category-def">Procedure: </span><span><strong class="def-name">hashify-machine</strong> <var class="def-var-arguments">mach =&gt; mach</var><a class="copiable-link" href="#index-hashify_002dmachine"> &para;</a></span></dt>
 <dd><p>Convert machine to use integers instead of symbols.  The match table
 will change from
 </p><div class="example">
@@ -811,14 +811,14 @@ will change from
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-machine_002dhashed_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">machine-hashed?</strong> <var class="def-var-arguments">mach =&gt; #t|#f</var><a class="copiable-link" href='#index-machine_002dhashed_003f'> &para;</a></span></dt>
+<dt class="deffn" id="index-machine_002dhashed_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">machine-hashed?</strong> <var class="def-var-arguments">mach =&gt; #t|#f</var><a class="copiable-link" href="#index-machine_002dhashed_003f"> &para;</a></span></dt>
 <dd><p>Indicate if the machine has been hashed.
 </p></dd></dl>
 
-<h4 class="subheading" id="Compacting-Machine-Tables">Compacting Machine Tables</h4>
+<h4 class="subheading" id="Compacting-Machine-Tables"><span>Compacting Machine Tables<a class="copiable-link" href="#Compacting-Machine-Tables"> &para;</a></span></h4>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-compact_002dmachine"><span class="category-def">Procedure: </span><span><strong class="def-name">compact-machine</strong> <var class="def-var-arguments">mach [#:keep 3] [#:keepers &rsquo;()] =&gt; mach</var><a class="copiable-link" href='#index-compact_002dmachine'> &para;</a></span></dt>
+<dt class="deffn" id="index-compact_002dmachine"><span class="category-def">Procedure: </span><span><strong class="def-name">compact-machine</strong> <var class="def-var-arguments">mach [#:keep 3] [#:keepers &rsquo;()] =&gt; mach</var><a class="copiable-link" href="#index-compact_002dmachine"> &para;</a></span></dt>
 <dd><p>A &quot;filter&quot; to compact the parse table.  For each state this will replace
 the most populus set of reductions of the same production rule with a
 default production.  However, reductions triggered by user-specified keepers
@@ -831,7 +831,7 @@ unaccounted comments are skipped).
 
 </div>
 <div class="section-level-extent" id="The-Match-Table">
-<h3 class="section">2.4 The Match Table</h3>
+<h3 class="section"><span>2.4 The Match Table<a class="copiable-link" href="#The-Match-Table"> &para;</a></span></h3>
 <a class="anchor" id="match-table"></a>
 <p>In some parser generators one declares terminals in the grammar file
 and the generator will provide an include file providing the list of
@@ -865,7 +865,7 @@ hashified machines this is translated to the integer <code class="code">1</code>
 </p>
 </div>
 <div class="section-level-extent" id="Constructing-Lexical-Analyzers">
-<h3 class="section">2.5 Constructing Lexical Analyzers</h3>
+<h3 class="section"><span>2.5 Constructing Lexical Analyzers<a class="copiable-link" href="#Constructing-Lexical-Analyzers"> &para;</a></span></h3>
 <a class="anchor" id="lex"></a>
 <p>The <code class="code">lex</code> module provides a set of procedures to build lexical
 analyzers.  The approach is to first build a set of <em class="dfn">readers</em> for
@@ -889,7 +889,7 @@ is
      ((number-reader ch))
      ((keyword-reader ch))
      ((ident-reader ch))
-     &hellip;
+     ...
      (else (error)))))
 </pre></div>
 <p>The types of readers used are
@@ -929,7 +929,7 @@ specify other readers.  Or, if the user prefers, lex&rsquo;ers can be rolled
 from provided readers.  Now we introduce our lex&rsquo;er generator generator:
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dlexer_002dgenerator"><span class="category-def">Procedure: </span><span><strong class="def-name">make-lexer-generator</strong> <var class="def-var-arguments">match-table [options] =&gt; generator</var><a class="copiable-link" href='#index-make_002dlexer_002dgenerator'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dlexer_002dgenerator"><span class="category-def">Procedure: </span><span><strong class="def-name">make-lexer-generator</strong> <var class="def-var-arguments">match-table [options] =&gt; generator</var><a class="copiable-link" href="#index-make_002dlexer_002dgenerator"> &para;</a></span></dt>
 <dd><p>Returns a lex&rsquo;er generator from the match table and options.  The
 options are
 </p><dl class="table">
@@ -970,18 +970,18 @@ keywords from the match table.)
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dspace_002dskipper"><span class="category-def">Procedure: </span><span><strong class="def-name">make-space-skipper</strong> <var class="def-var-arguments">chset =&gt; proc</var><a class="copiable-link" href='#index-make_002dspace_002dskipper'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dspace_002dskipper"><span class="category-def">Procedure: </span><span><strong class="def-name">make-space-skipper</strong> <var class="def-var-arguments">chset =&gt; proc</var><a class="copiable-link" href="#index-make_002dspace_002dskipper"> &para;</a></span></dt>
 <dd><p>This routine will generate a reader to skip whitespace.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-skip_002dc_002dspace"><span class="category-def">Procedure: </span><span><strong class="def-name">skip-c-space</strong> <var class="def-var-arguments">ch =&gt; #f|#t</var><a class="copiable-link" href='#index-skip_002dc_002dspace'> &para;</a></span></dt>
+<dt class="deffn" id="index-skip_002dc_002dspace"><span class="category-def">Procedure: </span><span><strong class="def-name">skip-c-space</strong> <var class="def-var-arguments">ch =&gt; #f|#t</var><a class="copiable-link" href="#index-skip_002dc_002dspace"> &para;</a></span></dt>
 <dd><p>If <code class="code">ch</code> is C whitespace, skip all spaces, then return <code class="code">#t</code>,
 else return <code class="code">#f</code>.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dident_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-ident-reader</strong> <var class="def-var-arguments">cs-first cs-rest =&gt; ch -&gt; #f|string</var><a class="copiable-link" href='#index-make_002dident_002dreader'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dident_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-ident-reader</strong> <var class="def-var-arguments">cs-first cs-rest =&gt; ch -&gt; #f|string</var><a class="copiable-link" href="#index-make_002dident_002dreader"> &para;</a></span></dt>
 <dd><p>For identifiers, given the char-set for first character and the char-set
 for following characters, return a return a reader for identifiers.
 The reader takes a character as input and returns <code class="code">#f</code> or <code class="code">string</code>.
@@ -989,84 +989,84 @@ This will generate exception on <code class="code">#&lt;eof&gt;</code>.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-read_002dc_002dident"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-ident</strong> <var class="def-var-arguments">ch =&gt; #f|string</var><a class="copiable-link" href='#index-read_002dc_002dident'> &para;</a></span></dt>
+<dt class="deffn" id="index-read_002dc_002dident"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-ident</strong> <var class="def-var-arguments">ch =&gt; #f|string</var><a class="copiable-link" href="#index-read_002dc_002dident"> &para;</a></span></dt>
 <dd><p>If ident pointer at following char, else (if #f) ch still last-read.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dident_002dlike_002dp"><span class="category-def">Procedure: </span><span><strong class="def-name">make-ident-like-p</strong> <var class="def-var-arguments">ident-reader</var><a class="copiable-link" href='#index-make_002dident_002dlike_002dp'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dident_002dlike_002dp"><span class="category-def">Procedure: </span><span><strong class="def-name">make-ident-like-p</strong> <var class="def-var-arguments">ident-reader</var><a class="copiable-link" href="#index-make_002dident_002dlike_002dp"> &para;</a></span></dt>
 <dd><p>Generate a predicate, from a reader, that determines if a string qualifies
 as an identifier.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-like_002dc_002dident_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">like-c-ident?</strong> <var class="def-var-arguments">ch</var><a class="copiable-link" href='#index-like_002dc_002dident_003f'> &para;</a></span></dt>
+<dt class="deffn" id="index-like_002dc_002dident_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">like-c-ident?</strong> <var class="def-var-arguments">ch</var><a class="copiable-link" href="#index-like_002dc_002dident_003f"> &para;</a></span></dt>
 <dd><p>Determine if a string qualifies as a C identifier.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dstring_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-string-reader</strong> <var class="def-var-arguments">delim</var><a class="copiable-link" href='#index-make_002dstring_002dreader'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dstring_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-string-reader</strong> <var class="def-var-arguments">delim</var><a class="copiable-link" href="#index-make_002dstring_002dreader"> &para;</a></span></dt>
 <dd><p>Generate a reader that uses <code class="code">delim</code> as delimiter for strings.
 TODO: need to handle matlab-type strings.
 TODO: need to handle multiple delim&rsquo;s (like python)
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-read_002doct"><span class="category-def">Procedure: </span><span><strong class="def-name">read-oct</strong> <var class="def-var-arguments">ch =&gt; &quot;0123&quot;|#f</var><a class="copiable-link" href='#index-read_002doct'> &para;</a></span></dt>
+<dt class="deffn" id="index-read_002doct"><span class="category-def">Procedure: </span><span><strong class="def-name">read-oct</strong> <var class="def-var-arguments">ch =&gt; &quot;0123&quot;|#f</var><a class="copiable-link" href="#index-read_002doct"> &para;</a></span></dt>
 <dd><p>Read octal number.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-read_002dhex"><span class="category-def">Procedure: </span><span><strong class="def-name">read-hex</strong> <var class="def-var-arguments">ch =&gt; &quot;0x7f&quot;|#f</var><a class="copiable-link" href='#index-read_002dhex'> &para;</a></span></dt>
+<dt class="deffn" id="index-read_002dhex"><span class="category-def">Procedure: </span><span><strong class="def-name">read-hex</strong> <var class="def-var-arguments">ch =&gt; &quot;0x7f&quot;|#f</var><a class="copiable-link" href="#index-read_002dhex"> &para;</a></span></dt>
 <dd><p>Read octal number.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-read_002dc_002dstring"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-string</strong> <var class="def-var-arguments">ch =&gt; ($string . &quot;foo&quot;)</var><a class="copiable-link" href='#index-read_002dc_002dstring'> &para;</a></span></dt>
+<dt class="deffn" id="index-read_002dc_002dstring"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-string</strong> <var class="def-var-arguments">ch =&gt; ($string . &quot;foo&quot;)</var><a class="copiable-link" href="#index-read_002dc_002dstring"> &para;</a></span></dt>
 <dd><p>Read a C-code string.  Output to code is <code class="code">write</code> not <code class="code">display</code>.
 Return #f if <var class="var">ch</var> is not <code class="code">&quot;</code>. This reader does not yet read
 trigraphs.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dchlit_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-chlit-reader</strong><a class="copiable-link" href='#index-make_002dchlit_002dreader'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dchlit_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-chlit-reader</strong><a class="copiable-link" href="#index-make_002dchlit_002dreader"> &para;</a></span></dt>
 <dd><p>Generate a reader for character literals. NOT DONE.
 For C, this reads <code class="code">'c'</code> or <code class="code">'\n'</code>.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-read_002dc_002dchlit"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-chlit</strong> <var class="def-var-arguments">ch</var><a class="copiable-link" href='#index-read_002dc_002dchlit'> &para;</a></span></dt>
+<dt class="deffn" id="index-read_002dc_002dchlit"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-chlit</strong> <var class="def-var-arguments">ch</var><a class="copiable-link" href="#index-read_002dc_002dchlit"> &para;</a></span></dt>
 <dd><div class="example">
 <pre class="example-preformatted">... 'c' ... =&gt; (read-c-chlit #\') =&gt; '($ch-lit . #\c)
 </pre></div>
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dnum_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-num-reader</strong> <var class="def-var-arguments">=&gt; (proc ch) =&gt; output</var><a class="copiable-link" href='#index-make_002dnum_002dreader'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dnum_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-num-reader</strong> <var class="def-var-arguments">=&gt; (proc ch) =&gt; output</var><a class="copiable-link" href="#index-make_002dnum_002dreader"> &para;</a></span></dt>
 <dd><p>Generates a procedure to read C numbers where <var class="var">output</var> is of the form
 <code class="code">#f</code>, <code class="code">($fixed . &quot;1&quot;)</code> or <code class="code">($float . &quot;1.0&quot;)</code>
 This routine will clean up floats by adding &quot;0&quot; before or after dot.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-cnumstr_002d_003escm"><span class="category-def">Procedure: </span><span><strong class="def-name">cnumstr-&gt;scm</strong> <var class="def-var-arguments">C99-str =&gt; scm-str</var><a class="copiable-link" href='#index-cnumstr_002d_003escm'> &para;</a></span></dt>
+<dt class="deffn" id="index-cnumstr_002d_003escm"><span class="category-def">Procedure: </span><span><strong class="def-name">cnumstr-&gt;scm</strong> <var class="def-var-arguments">C99-str =&gt; scm-str</var><a class="copiable-link" href="#index-cnumstr_002d_003escm"> &para;</a></span></dt>
 <dd><p>Convert C number-string (e.g, <code class="code">0x123LL</code>) to Scheme numbers-string
 (e.g., <code class="code">#x123</code>).
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-read_002dc_002dnum"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-num</strong> <var class="def-var-arguments">ch =&gt; #f|string</var><a class="copiable-link" href='#index-read_002dc_002dnum'> &para;</a></span></dt>
+<dt class="deffn" id="index-read_002dc_002dnum"><span class="category-def">Procedure: </span><span><strong class="def-name">read-c-num</strong> <var class="def-var-arguments">ch =&gt; #f|string</var><a class="copiable-link" href="#index-read_002dc_002dnum"> &para;</a></span></dt>
 <dd><p>Reader for unsigned numbers as used in C (or close to it).
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dchseq_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-chseq-reader</strong> <var class="def-var-arguments">strtab</var><a class="copiable-link" href='#index-make_002dchseq_002dreader'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dchseq_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-chseq-reader</strong> <var class="def-var-arguments">strtab</var><a class="copiable-link" href="#index-make_002dchseq_002dreader"> &para;</a></span></dt>
 <dd><p>Given alist of pairs (string, token) return a function that eats chars
 until (token . string) is returned or <code class="code">#f</code> if no match is found.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dcomm_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-comm-reader</strong> <var class="def-var-arguments">comm-table [#:eat-newline #t] =&gt; \</var><a class="copiable-link" href='#index-make_002dcomm_002dreader'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dcomm_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">make-comm-reader</strong> <var class="def-var-arguments">comm-table [#:eat-newline #t] =&gt; \</var><a class="copiable-link" href="#index-make_002dcomm_002dreader"> &para;</a></span></dt>
 <dd><p>ch bol -&gt; (&rsquo;$code-comm &quot;..&quot;)|(&rsquo;$lone-comm &quot;..&quot;)|#f
 comm-table is list of cons for (start . end) comment.
 e.g. (&quot;&ndash;&quot; . &quot;\n&quot;) (&quot;/*&quot; . &quot;*/&quot;)
@@ -1076,29 +1076,29 @@ ending with a newline a newline swallowed with the comment.
 Note: assumes backslash is never part of the end
 </p></dd></dl>
 
-<h4 class="subsubheading" id="Rolling-Your-Own-Lex_0027er">Rolling Your Own Lex&rsquo;er</h4>
+<h4 class="subsubheading" id="Rolling-Your-Own-Lex_0027er"><span>Rolling Your Own Lex&rsquo;er<a class="copiable-link" href="#Rolling-Your-Own-Lex_0027er"> &para;</a></span></h4>
 
 <p>The following routines are provided for rolling your own lexical
 analyzer generator.  An example is provided in the file
 <samp class="file">examples/nyacc/lang/matlab</samp>.
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-filter_002dmt"><span class="category-def">Procedure: </span><span><strong class="def-name">filter-mt</strong> <var class="def-var-arguments">p? al =&gt; al</var><a class="copiable-link" href='#index-filter_002dmt'> &para;</a></span></dt>
+<dt class="deffn" id="index-filter_002dmt"><span class="category-def">Procedure: </span><span><strong class="def-name">filter-mt</strong> <var class="def-var-arguments">p? al =&gt; al</var><a class="copiable-link" href="#index-filter_002dmt"> &para;</a></span></dt>
 <dd><p>Filter match-table based on cars of al.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-remove_002dmt"><span class="category-def">Procedure: </span><span><strong class="def-name">remove-mt</strong> <var class="def-var-arguments">p? al =&gt; al</var><a class="copiable-link" href='#index-remove_002dmt'> &para;</a></span></dt>
+<dt class="deffn" id="index-remove_002dmt"><span class="category-def">Procedure: </span><span><strong class="def-name">remove-mt</strong> <var class="def-var-arguments">p? al =&gt; al</var><a class="copiable-link" href="#index-remove_002dmt"> &para;</a></span></dt>
 <dd><p>Remove match-table based on cars of al.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-map_002dmt"><span class="category-def">Procedure: </span><span><strong class="def-name">map-mt</strong> <var class="def-var-arguments">f al =&gt; al</var><a class="copiable-link" href='#index-map_002dmt'> &para;</a></span></dt>
+<dt class="deffn" id="index-map_002dmt"><span class="category-def">Procedure: </span><span><strong class="def-name">map-mt</strong> <var class="def-var-arguments">f al =&gt; al</var><a class="copiable-link" href="#index-map_002dmt"> &para;</a></span></dt>
 <dd><p>Map cars of al.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-eval_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">eval-reader</strong> <var class="def-var-arguments">reader string =&gt; result</var><a class="copiable-link" href='#index-eval_002dreader'> &para;</a></span></dt>
+<dt class="deffn" id="index-eval_002dreader"><span class="category-def">Procedure: </span><span><strong class="def-name">eval-reader</strong> <var class="def-var-arguments">reader string =&gt; result</var><a class="copiable-link" href="#index-eval_002dreader"> &para;</a></span></dt>
 <dd><p>For test and debug, this procedure will evaluate a reader on a string.
 A reader is a procedure that accepts a single character argument intended
 to match a specific character sequence.  A reader will read more characters
@@ -1111,7 +1111,7 @@ last matched character.
 
 </div>
 <div class="section-level-extent" id="The-Parser_002dLex_0027er-Interface">
-<h3 class="section">2.6 The Parser-Lex&rsquo;er Interface</h3>
+<h3 class="section"><span>2.6 The Parser-Lex&rsquo;er Interface<a class="copiable-link" href="#The-Parser_002dLex_0027er-Interface"> &para;</a></span></h3>
 <a class="anchor" id="parser_002dlexer"></a>
 <p>Sometimes LALR(1) parsers must be equipped with methods to parse
 non-context free grammars.  With respect to typenames, C is not
@@ -1146,17 +1146,17 @@ next token.
 </pre></div>
 <p>and the newline reader in the lex&rsquo;er acts as follows:
 </p><div class="example">
-<pre class="example-preformatted">  &hellip;
+<pre class="example-preformatted">  ...
   ((eqv? ch #\newline)
    (if (fluid-ref *insert-semi*)
        (cons semicolon &quot;;&quot;)
        (iter (read-char))))
-  &hellip;
+  ...
 </pre></div>
 
 </div>
 <div class="section-level-extent" id="Parser-Tables-1">
-<h3 class="section">2.7 Parser Tables</h3>
+<h3 class="section"><span>2.7 Parser Tables<a class="copiable-link" href="#Parser-Tables-1"> &para;</a></span></h3>
 <a class="anchor" id="Parser-Tables"></a>
 <p>Note that generating a parser requires a machine argument.  It is
 possible to export the machine to a pair of files and later regenerate
@@ -1196,7 +1196,7 @@ more detail.
 </p>
 </div>
 <div class="section-level-extent" id="Hashing-and-Compacting-1">
-<h3 class="section">2.8 Hashing and Compacting</h3>
+<h3 class="section"><span>2.8 Hashing and Compacting<a class="copiable-link" href="#Hashing-and-Compacting-1"> &para;</a></span></h3>
 <a class="anchor" id="Hashing-and-Compacting"></a>
 <p>The <small class="sc">NYACC</small> procedure <code class="code">compact-machine</code> will compact the parse
 tables generated by <code class="code">make-lalr-machine</code>.
@@ -1213,13 +1213,13 @@ analyzer.  To use integers instead, use the procedure
 </pre></div>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-machine_002dcompacted_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">machine-compacted?</strong> <var class="def-var-arguments">mach =&gt; #t|#f</var><a class="copiable-link" href='#index-machine_002dcompacted_003f'> &para;</a></span></dt>
+<dt class="deffn" id="index-machine_002dcompacted_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">machine-compacted?</strong> <var class="def-var-arguments">mach =&gt; #t|#f</var><a class="copiable-link" href="#index-machine_002dcompacted_003f"> &para;</a></span></dt>
 <dd><p>Indicate if the machine has been compacted.
 </p></dd></dl>
 
 </div>
 <div class="section-level-extent" id="Exporting-Parsers">
-<h3 class="section">2.9 Exporting Parsers</h3>
+<h3 class="section"><span>2.9 Exporting Parsers<a class="copiable-link" href="#Exporting-Parsers"> &para;</a></span></h3>
 <p><small class="sc">NYACC</small> provides routines for exporting <small class="sc">NYACC</small> grammar
 specifications to other LALR parser generators.
 </p>
@@ -1245,11 +1245,11 @@ is a chance it does not work anymore.
 </p>
 </div>
 <div class="section-level-extent" id="Debugging-1">
-<h3 class="section">2.10 Debugging</h3>
+<h3 class="section"><span>2.10 Debugging<a class="copiable-link" href="#Debugging-1"> &para;</a></span></h3>
 <a class="anchor" id="Debugging"></a>
 <p>The provided parsers are able to generate debugging information.
 </p>
-<h4 class="subheading" id="Human-Readable-Output-1">Human Readable Output</h4>
+<h4 class="subheading" id="Human-Readable-Output-1"><span>Human Readable Output<a class="copiable-link" href="#Human-Readable-Output-1"> &para;</a></span></h4>
 <a class="anchor" id="Human-Readable-Output"></a>
 <p>You can generate text files which provide human-readable forms of
 the grammar specification and resulting automaton, akin to what you
@@ -1323,7 +1323,7 @@ might get with bison using the &lsquo;-r&rsquo; flag.
 		[&quot;/&quot; =&gt; reduce 7] REMOVED by precedence
 </pre></div>
 
-<h4 class="subheading" id="Tracing-Parsing-at-Run_002dTime">Tracing Parsing at Run-Time</h4>
+<h4 class="subheading" id="Tracing-Parsing-at-Run_002dTime"><span>Tracing Parsing at Run-Time<a class="copiable-link" href="#Tracing-Parsing-at-Run_002dTime"> &para;</a></span></h4>
 
 <p>The parsers generted by <small class="sc">NYACC</small> accept an optional keyword argument
 <code class="code">#:debug</code>.  When <code class="code">#t</code> is passed to this argument then the
@@ -1359,7 +1359,7 @@ non-terminals (e.g., <code class="code">expr</code> above) are reported as integ
 <p>
 Next: <a href="#Coding-to-the-Compiler-Tower" accesskey="n" rel="next">Coding to the Compiler Tower</a>, Previous: <a href="#Parsing" accesskey="p" rel="prev">Parsing</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h2 class="chapter" id="Translation-1">3 Translation</h2>
+<h2 class="chapter" id="Translation-1"><span>3 Translation<a class="copiable-link" href="#Translation-1"> &para;</a></span></h2>
 
 <p>In this chapter we present procedures for generating syntax trees in a
 uniform form.  This format, based on SXML, may use more cons cells
@@ -1370,7 +1370,7 @@ fold)</code>.
 </p>
 <p>The syntax of SXML trees is simple:
 </p><div class="example">
-<pre class="example-preformatted">expr =&gt; (tag item &hellip;) | (tag (@ attr &hellip;) item &hellip;)
+<pre class="example-preformatted">expr =&gt; (tag item ...) | (tag (@ attr ...) item ...)
 item =&gt; string | expr
 attr =&gt; (tag . string)
 </pre></div>
@@ -1437,7 +1437,7 @@ attr =&gt; (tag . string)
 <li><a href="#Working-with-SXML-Based-Parse-Trees" accesskey="2">Working with SXML Based Parse Trees</a></li>
 </ul>
 <div class="section-level-extent" id="Tagged-Lists-1">
-<h3 class="section">3.1 Tagged Lists</h3>
+<h3 class="section"><span>3.1 Tagged Lists<a class="copiable-link" href="#Tagged-Lists-1"> &para;</a></span></h3>
 <a class="anchor" id="Tagged-Lists"></a>
 <p>Paring actions in <small class="sc">NYACC</small> can use tagged-lists from the module
 <code class="code">(nyacc lang util)</code> to help build SXML trees efficiently.
@@ -1460,7 +1460,7 @@ Building a statement list for a program might go as follows:
 <dt><code class="code">(tl-&gt;list $1)</code></dt>
 <dd><p>Convert the tagged-list <code class="code">$1</code> to a list.  It will be of the form
 </p><div class="example">
-<pre class="example-preformatted">'(stmt-list (<em class="emph">stmt</em> &hellip;) (<em class="emph">stmt</em> &hellip;) &hellip;)
+<pre class="example-preformatted">'(stmt-list (<em class="emph">stmt</em> ...) (<em class="emph">stmt</em> ...) ...)
 </pre></div>
 <p>The first element of the
 list will be the tag <code class="code">'stmt-list</code>.  If attributes were added, the
@@ -1471,42 +1471,42 @@ list of attributes will be the second element of the list.
 <p>The following procedures are provided by the module <code class="code">(nyacc lang util)</code>:
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dtl"><span class="category-def">Procedure: </span><span><strong class="def-name">make-tl</strong> <var class="def-var-arguments">tag [item item ...]</var><a class="copiable-link" href='#index-make_002dtl'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dtl"><span class="category-def">Procedure: </span><span><strong class="def-name">make-tl</strong> <var class="def-var-arguments">tag [item item ...]</var><a class="copiable-link" href="#index-make_002dtl"> &para;</a></span></dt>
 <dd><p>Create a tagged-list structure for tag <var class="var">tag</var>.  Any number of
 additional items can be added.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-tl_002d_003elist"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-&gt;list</strong> <var class="def-var-arguments">tl</var><a class="copiable-link" href='#index-tl_002d_003elist'> &para;</a></span></dt>
+<dt class="deffn" id="index-tl_002d_003elist"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-&gt;list</strong> <var class="def-var-arguments">tl</var><a class="copiable-link" href="#index-tl_002d_003elist"> &para;</a></span></dt>
 <dd><p>Convert a tagged list structure to a list.  This collects added attributes
 and puts them right after the (leading) tag, resulting in something like
 </p><div class="example">
-<pre class="example-preformatted">(&lt;tag&gt; (@ &lt;attr&gt;) &lt;item&gt; &hellip;)
+<pre class="example-preformatted">(&lt;tag&gt; (@ &lt;attr&gt;) &lt;item&gt; ...)
 </pre></div>
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-tl_002dinsert"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-insert</strong> <var class="def-var-arguments">tl item</var><a class="copiable-link" href='#index-tl_002dinsert'> &para;</a></span></dt>
+<dt class="deffn" id="index-tl_002dinsert"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-insert</strong> <var class="def-var-arguments">tl item</var><a class="copiable-link" href="#index-tl_002dinsert"> &para;</a></span></dt>
 <dd><p>Insert item at front of tagged list (but after tag).
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-tl_002dappend"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-append</strong> <var class="def-var-arguments">tl item ...</var><a class="copiable-link" href='#index-tl_002dappend'> &para;</a></span></dt>
+<dt class="deffn" id="index-tl_002dappend"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-append</strong> <var class="def-var-arguments">tl item ...</var><a class="copiable-link" href="#index-tl_002dappend"> &para;</a></span></dt>
 <dd><p>Append items at end of tagged list.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-tl_002dextend"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-extend</strong> <var class="def-var-arguments">tl item-l</var><a class="copiable-link" href='#index-tl_002dextend'> &para;</a></span></dt>
+<dt class="deffn" id="index-tl_002dextend"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-extend</strong> <var class="def-var-arguments">tl item-l</var><a class="copiable-link" href="#index-tl_002dextend"> &para;</a></span></dt>
 <dd><p>Extend with a list of items.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-tl_002dextend_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-extend!</strong> <var class="def-var-arguments">tl item-l</var><a class="copiable-link" href='#index-tl_002dextend_0021'> &para;</a></span></dt>
+<dt class="deffn" id="index-tl_002dextend_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-extend!</strong> <var class="def-var-arguments">tl item-l</var><a class="copiable-link" href="#index-tl_002dextend_0021"> &para;</a></span></dt>
 <dd><p>Extend with a list of items.  Uses <code class="code">set-cdr!</code>.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-tl_002battr"><span class="category-def">Procedure: </span><span><strong class="def-name">tl+attr</strong> <var class="def-var-arguments">tl key val)</var><a class="copiable-link" href='#index-tl_002battr'> &para;</a></span></dt>
+<dt class="deffn" id="index-tl_002battr"><span class="category-def">Procedure: </span><span><strong class="def-name">tl+attr</strong> <var class="def-var-arguments">tl key val)</var><a class="copiable-link" href="#index-tl_002battr"> &para;</a></span></dt>
 <dd><p>Add an attribute to a tagged list.  Return the tl.
 </p><div class="example">
 <pre class="example-preformatted">(tl+attr tl 'type &quot;int&quot;)
@@ -1514,14 +1514,14 @@ and puts them right after the (leading) tag, resulting in something like
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-tl_002dmerge"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-merge</strong> <var class="def-var-arguments">tl tl1</var><a class="copiable-link" href='#index-tl_002dmerge'> &para;</a></span></dt>
+<dt class="deffn" id="index-tl_002dmerge"><span class="category-def">Procedure: </span><span><strong class="def-name">tl-merge</strong> <var class="def-var-arguments">tl tl1</var><a class="copiable-link" href="#index-tl_002dmerge"> &para;</a></span></dt>
 <dd><p>Merge guts of phony-tl <code class="code">tl1</code> into <code class="code">tl</code>.
 </p></dd></dl>
 
 
 </div>
 <div class="section-level-extent" id="Working-with-SXML-Based-Parse-Trees">
-<h3 class="section">3.2 Working with SXML Based Parse Trees</h3>
+<h3 class="section"><span>3.2 Working with SXML Based Parse Trees<a class="copiable-link" href="#Working-with-SXML-Based-Parse-Trees"> &para;</a></span></h3>
 <a class="anchor" id="SXML-Parse-Trees"></a>
 <p>To work with the trees described in the last section use
 </p><div class="example">
@@ -1532,7 +1532,7 @@ and puts them right after the (leading) tag, resulting in something like
 </pre></div>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-ref</strong> <var class="def-var-arguments">sx ix =&gt; item</var><a class="copiable-link" href='#index-sx_002dref'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-ref</strong> <var class="def-var-arguments">sx ix =&gt; item</var><a class="copiable-link" href="#index-sx_002dref"> &para;</a></span></dt>
 <dd><p>Reference the <code class="code">ix</code>-th element of the list, not counting the optional
 attributes item.  If the list is shorter than the index, return <code class="code">#f</code>.
 </p><div class="example">
@@ -1542,18 +1542,18 @@ attributes item.  If the list is shorter than the index, return <code class="cod
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dtag"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-tag</strong> <var class="def-var-arguments">sx =&gt; tag</var><a class="copiable-link" href='#index-sx_002dtag'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dtag"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-tag</strong> <var class="def-var-arguments">sx =&gt; tag</var><a class="copiable-link" href="#index-sx_002dtag"> &para;</a></span></dt>
 <dd><p>Return the tag for a tree
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dcons_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-cons*</strong> <var class="def-var-arguments">tag (attr|#f)? ... =&gt; sx</var><a class="copiable-link" href='#index-sx_002dcons_002a'> &para;</a></span></dt>
-<dt class="deffnx def-cmd-deffn" id="index-sx_002dlist"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-list</strong> <var class="def-var-arguments">tag (attr|#f)? ... =&gt; sx</var><a class="copiable-link" href='#index-sx_002dlist'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dcons_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-cons*</strong> <var class="def-var-arguments">tag (attr|#f)? ... =&gt; sx</var><a class="copiable-link" href="#index-sx_002dcons_002a"> &para;</a></span></dt>
+<dt class="deffnx def-cmd-deffn" id="index-sx_002dlist"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-list</strong> <var class="def-var-arguments">tag (attr|#f)? ... =&gt; sx</var><a class="copiable-link" href="#index-sx_002dlist"> &para;</a></span></dt>
 <dd><p>Generate the tag and the attr list if it exists.  Note that
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dtail"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-tail</strong> <var class="def-var-arguments">sx [ix] =&gt; (list)</var><a class="copiable-link" href='#index-sx_002dtail'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dtail"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-tail</strong> <var class="def-var-arguments">sx [ix] =&gt; (list)</var><a class="copiable-link" href="#index-sx_002dtail"> &para;</a></span></dt>
 <dd><p>Return the ix-th tail starting after the tag and attribut list, where
 <var class="var">ix</var> must be positive.  For example,
 </p><div class="example">
@@ -1563,12 +1563,12 @@ attributes item.  If the list is shorter than the index, return <code class="cod
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dhas_002dattr_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-has-attr?</strong> <var class="def-var-arguments">sx</var><a class="copiable-link" href='#index-sx_002dhas_002dattr_003f'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dhas_002dattr_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-has-attr?</strong> <var class="def-var-arguments">sx</var><a class="copiable-link" href="#index-sx_002dhas_002dattr_003f"> &para;</a></span></dt>
 <dd><p>A predicate to determine if <var class="var">sx</var> has attributes.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dattr"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-attr</strong> <var class="def-var-arguments">sx =&gt; &rsquo;(@ ...)|#f</var><a class="copiable-link" href='#index-sx_002dattr'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dattr"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-attr</strong> <var class="def-var-arguments">sx =&gt; &rsquo;(@ ...)|#f</var><a class="copiable-link" href="#index-sx_002dattr"> &para;</a></span></dt>
 <dd><div class="example">
 <pre class="example-preformatted">(sx-attr '(abc (@ (foo &quot;1&quot;)) def) 1) =&gt; '(@ (foo &quot;1&quot;))
 </pre></div>
@@ -1579,29 +1579,29 @@ attributes item.  If the list is shorter than the index, return <code class="cod
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dattr_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-attr-ref</strong> <var class="def-var-arguments">sx key =&gt; val</var><a class="copiable-link" href='#index-sx_002dattr_002dref'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dattr_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-attr-ref</strong> <var class="def-var-arguments">sx key =&gt; val</var><a class="copiable-link" href="#index-sx_002dattr_002dref"> &para;</a></span></dt>
 <dd><p>Return an attribute value given the key, or <code class="code">#f</code>.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dset_002dattr_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-set-attr!</strong> <var class="def-var-arguments">sx key val</var><a class="copiable-link" href='#index-sx_002dset_002dattr_0021'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dset_002dattr_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-set-attr!</strong> <var class="def-var-arguments">sx key val</var><a class="copiable-link" href="#index-sx_002dset_002dattr_0021"> &para;</a></span></dt>
 <dd><p>Set attribute for sx.  If no attributes exist, if key does not exist,
 add it, if it does exist, replace it.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dset_002dattr_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-set-attr*</strong> <var class="def-var-arguments">sx key val [key val [key ... ]]</var><a class="copiable-link" href='#index-sx_002dset_002dattr_002a'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dset_002dattr_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-set-attr*</strong> <var class="def-var-arguments">sx key val [key val [key ... ]]</var><a class="copiable-link" href="#index-sx_002dset_002dattr_002a"> &para;</a></span></dt>
 <dd><p>Generate sx with added or changed attributes.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002battr_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">sx+attr*</strong> <var class="def-var-arguments">sx key val [key val [&hellip; ]] =&gt; sx</var><a class="copiable-link" href='#index-sx_002battr_002a'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002battr_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">sx+attr*</strong> <var class="def-var-arguments">sx key val [key val [&hellip; ]] =&gt; sx</var><a class="copiable-link" href="#index-sx_002battr_002a"> &para;</a></span></dt>
 <dd><p>Add key-val pairs. <var class="var">key</var> must be a symbol and <var class="var">val</var> must be
 a string.  Return a new <em class="emph">sx</em>.
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-sx_002dfind"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-find</strong> <var class="def-var-arguments">tag sx =&gt; ((tag ...) (tag ...))</var><a class="copiable-link" href='#index-sx_002dfind'> &para;</a></span></dt>
+<dt class="deffn" id="index-sx_002dfind"><span class="category-def">Procedure: </span><span><strong class="def-name">sx-find</strong> <var class="def-var-arguments">tag sx =&gt; ((tag ...) (tag ...))</var><a class="copiable-link" href="#index-sx_002dfind"> &para;</a></span></dt>
 <dd><p>Find the first matching element (in the first level).
 </p></dd></dl>
 
@@ -1616,7 +1616,7 @@ a string.  Return a new <em class="emph">sx</em>.
 <p>
 Next: <a href="#Administrative" accesskey="n" rel="next">Administrative Notes</a>, Previous: <a href="#Translation" accesskey="p" rel="prev">Translation</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h2 class="chapter" id="Coding-to-the-Compiler-Tower-1">4 Coding to the Compiler Tower</h2>
+<h2 class="chapter" id="Coding-to-the-Compiler-Tower-1"><span>4 Coding to the Compiler Tower<a class="copiable-link" href="#Coding-to-the-Compiler-Tower-1"> &para;</a></span></h2>
 
 <div class="example">
 <pre class="example-preformatted">(define-module (language javascript spec)
@@ -1642,7 +1642,7 @@ Next: <a href="#Administrative" accesskey="n" rel="next">Administrative Notes</a
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (language tree-il))
 
-&hellip;
+...
 
 (define (compile-tree-il exp env opts)
   (let* ((xrep (js-sxml-&gt;tree-il-ext exp env opts))
@@ -1654,10 +1654,10 @@ Next: <a href="#Administrative" accesskey="n" rel="next">Administrative Notes</a
 <li><a href="#Pretty-Print-1" accesskey="1">Pretty Print</a></li>
 </ul>
 <div class="section-level-extent" id="Pretty-Print-1">
-<h3 class="section">4.1 Pretty Print</h3>
+<h3 class="section"><span>4.1 Pretty Print<a class="copiable-link" href="#Pretty-Print-1"> &para;</a></span></h3>
 <a class="anchor" id="Pretty-Print"></a>
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dpp_002dformatter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-pp-formatter</strong> <var class="def-var-arguments">[port] [#:per-line-prefix &quot;&quot;] =&gt; fmtr</var><a class="copiable-link" href='#index-make_002dpp_002dformatter'> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dpp_002dformatter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-pp-formatter</strong> <var class="def-var-arguments">[port] [#:per-line-prefix &quot;&quot;] =&gt; fmtr</var><a class="copiable-link" href="#index-make_002dpp_002dformatter"> &para;</a></span></dt>
 <dd><div class="example">
 <pre class="example-preformatted">(fmtr 'push) ;; push indent level
 (fmtr 'pop)  ;; pop indent level
@@ -1675,7 +1675,7 @@ Next: <a href="#Administrative" accesskey="n" rel="next">Administrative Notes</a
 <p>
 Next: <a href="#TODOs" accesskey="n" rel="next">TODOs, Notes, Ideas</a>, Previous: <a href="#Coding-to-the-Compiler-Tower" accesskey="p" rel="prev">Coding to the Compiler Tower</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h2 class="chapter" id="Administrative-Notes">5 Administrative Notes</h2>
+<h2 class="chapter" id="Administrative-Notes"><span>5 Administrative Notes<a class="copiable-link" href="#Administrative-Notes"> &para;</a></span></h2>
 
 <ul class="mini-toc">
 <li><a href="#Installation" accesskey="1">Installation</a></li>
@@ -1683,7 +1683,7 @@ Next: <a href="#TODOs" accesskey="n" rel="next">TODOs, Notes, Ideas</a>, Previou
 <li><a href="#The-Free-Documentation-License" accesskey="3">The Free Documentation License</a></li>
 </ul>
 <div class="section-level-extent" id="Installation">
-<h3 class="section">5.1 Installation</h3>
+<h3 class="section"><span>5.1 Installation<a class="copiable-link" href="#Installation"> &para;</a></span></h3>
 <p>Installation instructions are included in the top-level file
 <samp class="file">INSTALL</samp> of the source distribution.  If you have an installed
 Guile then the basic steps are
@@ -1703,7 +1703,7 @@ $ make install-srcs
 
 </div>
 <div class="section-level-extent" id="Reporting-Bugs">
-<h3 class="section">5.2 Reporting Bugs</h3>
+<h3 class="section"><span>5.2 Reporting Bugs<a class="copiable-link" href="#Reporting-Bugs"> &para;</a></span></h3>
 <p>Please report bugs by navigating with your browser to
 &lsquo;<code class="indicateurl">https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
 the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively,
@@ -1711,7 +1711,7 @@ ask on the Guile user&rsquo;s mailing list <a class="email" href="mailto:guile-u
 </p>
 </div>
 <div class="section-level-extent" id="The-Free-Documentation-License">
-<h3 class="section">5.3 The Free Documentation License</h3>
+<h3 class="section"><span>5.3 The Free Documentation License<a class="copiable-link" href="#The-Free-Documentation-License"> &para;</a></span></h3>
 <p>The Free Documentation License is included in the Guile Reference
 Manual.  It is included with the <small class="sc">NYACC</small> source as the file
 <samp class="file">COPYING.DOC</samp>.
@@ -1724,7 +1724,7 @@ Manual.  It is included with the <small class="sc">NYACC</small> source as the f
 <p>
 Next: <a href="#References" accesskey="n" rel="next">References</a>, Previous: <a href="#Administrative" accesskey="p" rel="prev">Administrative Notes</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h2 class="chapter" id="TODOs_002c-Notes_002c-Ideas">6 TODOs, Notes, Ideas</h2>
+<h2 class="chapter" id="TODOs_002c-Notes_002c-Ideas"><span>6 TODOs, Notes, Ideas<a class="copiable-link" href="#TODOs_002c-Notes_002c-Ideas"> &para;</a></span></h2>
 <p>Todo/Notes/Ideas:
 </p><dl class="table">
 <dt>16</dt>
@@ -1770,7 +1770,7 @@ instead of <code class="code">cons</code>.  This will then allow support of loca
 <p>
 Previous: <a href="#TODOs" accesskey="p" rel="prev">TODOs, Notes, Ideas</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
 </div>
-<h2 class="chapter" id="References-1">7 References</h2>
+<h2 class="chapter" id="References-1"><span>7 References<a class="copiable-link" href="#References-1"> &para;</a></span></h2>
 
 <dl class="table">
 <dt>[bison]</dt>

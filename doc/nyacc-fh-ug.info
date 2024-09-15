@@ -1,7 +1,7 @@
-This is nyacc-fh-ug.info, produced by makeinfo version 7.0.3 from
+This is nyacc-fh-ug.info, produced by makeinfo version 7.1 from
 nyacc-fh-ug.texi.
 
-Copyright (C) 2017-2022 – Matthew R. Wette.
+Copyright (C) 2017-2024 - Matthew Wette.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -11,8 +11,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 FFI Helper User Guide
 Matt Wette
-October 2022
-With NYACC Version 1.09.4
+Augustr 2024
+With NYACC Version 2.00.0
 
 
 File: nyacc-fh-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -28,7 +28,7 @@ File: nyacc-fh-ug.info,  Node: Introduction
 Introduction
 ============
 
-The acronym FFI stands for “Foreign Function Interface”.  It refers to
+The acronym FFI stands for "Foreign Function Interface".  It refers to
 the Guile facility for binding functions and variables from C source
 libraries into Guile programs.  This distribution provides utilities for
 generating a loadable Guile module from a set of C declarations and
@@ -66,7 +66,7 @@ reading system headers, so the generated code may well contain operating
 system and machine dependencies.  If you copy code to a new machine, you
 should re-run ‘guild compile-ffi’.
 
-   You are probably hoping to see an example, so let’s try one.
+   You are probably hoping to see an example, so let's try one.
 
    This is a small FH example to illustrate its use.  We will start with
 the Cairo (cairographics.org) package because that is the first one I
@@ -169,7 +169,7 @@ We will discuss the warnings later.  They are signals that extra code
 needs to be added to the ffi module.  But you see how the constants (but
 not CPP function macros) can be accessed.
 
-   Let’s try something more useful: a real program.  Create the
+   Let's try something more useful: a real program.  Create the
 following code in a file, say ‘cairo-demo.scm’, then fire up a Guile
 session and ‘load’ the file.
 
@@ -199,7 +199,7 @@ in the above code are notable.  First, the call to
 ‘'CAIRO_FORMAT_ARGB32’ for the format argument.  It would have also
 accepted the associated constant ‘0’.  In addition, procedures declared
 in ‘(ffi cairo)’ will accept Scheme strings where the C function wants
-“pointer to string.”
+"pointer to string."
 
    Now try this in your Guile session:
 
@@ -210,7 +210,7 @@ in ‘(ffi cairo)’ will accept Scheme strings where the C function wants
 
 Note that the FH keeps track of the C types you use.  This can be useful
 for debugging (at a potential cost of bloating the namespace).  The
-constants you see are the pointer values.  But it goes further.  Let’s
+constants you see are the pointer values.  But it goes further.  Let's
 generate a matrix type:
 
      guile> (define m (make-cairo_matrix_t))
@@ -335,8 +335,16 @@ module to acquire object pointers.
 The FFI Helper Design
 =====================
 
-In this section we hope to provide some insight into the FH works.  The
-FH specification, via the dot-ffi file, determines the set of
+TO BE EXPLAINED:
+‘fh-object-ref’
+     Returns Guile value or value in underlying type system (e.g.
+     bytestructures)
+‘fh-object-set!’
+     SYNTAX is ‘fh-object-set! obj value tag ...’
+     BS uses ‘bytestructure-set! obj tag ... value’
+
+   In this section we hope to provide some insight into the FH works.
+The FH specification, via the dot-ffi file, determines the set of
 declarations which will be included in the target Guile module.  If
 there is no declartion filter, then all the declarations from the
 specified set of include files are targeted.  With the use of a
@@ -385,7 +393,7 @@ FH module defintion to support the required additional type (e.g.,
 
    In addition, the FH type system provide unwrap and wrap procedures
 used internal to ffi-generated modules for function calls.  These
-convert FH types to and from objects of type expected by Guile’s FFI
+convert FH types to and from objects of type expected by Guile's FFI
 interface.  For example, the unwrap procedure associated with the FH
 pointer type ‘foo_t*’ will convert an ‘foo_t*’ object to a Guile
 ‘pointer’.  Similarly, on return the wrap procedure are applied to
@@ -581,14 +589,14 @@ Since this is not all straightforward you will get errors.
    Method
   1. compile-ffi with flag to echo declarations
   2. compile -O0 the resulting scm file
-  3. guile -c ’(use-modules (ffi mymod))’
+  3. guile -c '(use-modules (ffi mymod))'
 
 ‘MAX_HEAP_SECTS’
 ----------------
 
 The message is
      Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
-   The message comes from the garbage collector.  It means you’ve run
+   The message comes from the garbage collector.  It means you've run
 out of memory.  I found that this actually came from a bug in the
 ff-compiler which generated this code:
        (bs:struct
@@ -639,7 +647,7 @@ hello world demo we could write
        void gtk_main(void);
        ")
 
-   Since the above example does not ask the FH to pull in typedef’s then
+   Since the above example does not ask the FH to pull in typedef's then
 the pointer types will be expanded to native.  You could invent your own
 types or echo the typedefs from the package headers
 
@@ -692,7 +700,7 @@ User is responsible for calling string->pointer and pointer->string.
      procdure
 
    Here are the type of hacks I need to parse inside ‘/usr/include’ with
-NYACC’s C99 parser.  There is no such thing as a working C standard.
+NYACC's C99 parser.  There is no such thing as a working C standard.
      (define cpp-defs
        (cond
         ((string-contains %host-type "darwin")
@@ -776,8 +784,8 @@ Reporting Bugs
 --------------
 
 Please report bugs by navigating with your browser to
-‘https://savannah.nongnu.org/projects/nyacc’ and select the “Submit New”
-item under the “Bugs” menu.  Alternatively, ask on the Guile user’s
+‘https://savannah.nongnu.org/projects/nyacc’ and select the "Submit New"
+item under the "Bugs" menu.  Alternatively, ask on the Guile user's
 mailing list <guile-user@gnu.org>.
 
 Notes
@@ -792,12 +800,12 @@ Notes
      ‘fh-void’.  The second declaration is handled as a type-alias.
      When I get to the third declaration I define the ‘struct foo’
      compound type, then re-define the ‘foo_t’ as a compound type, and
-     it’s pointer type (missed this first time).
+     it's pointer type (missed this first time).
 
 Copyright
 ---------
 
-Copyright (C) 2017-2019 – Matthew R. Wette.
+Copyright (C) 2017-2019 - Matthew R. Wette.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -808,8 +816,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 
 Tag Table:
-Node: Top558
-Node: Introduction738
+Node: Top551
+Node: Introduction731
 
 End Tag Table
 

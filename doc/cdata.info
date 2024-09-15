@@ -1,4 +1,4 @@
-This is cdata.info, produced by texi2any version 7.1 from cdata.texi.
+This is cdata.info, produced by makeinfo version 7.1 from cdata.texi.
 
 Copyright (C) 2024 - Matthew Wette
 
@@ -8,14 +8,24 @@ any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 
-
-File: cdata.info,  Node: Top,  Up: (dir)
-
-‘cdata’: a Guile Module for Working with C Data
-***********************************************
-
+C-Data Reference Manual
 Matt Wette
 September 2024
+
+
+File: cdata.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
+
+CData Reference Manual
+**********************
+
+This is a user guide for the NYACC CData Module
+
+* Menu:
+
+* Introduction ::
+
+
+File: cdata.info,  Node: Introduction,  Up: Top
 
 Introduction
 ============
@@ -303,7 +313,8 @@ References
 
 
 Tag Table:
-Node: Top460
+Node: Top511
+Node: Introduction714
 
 End Tag Table
 

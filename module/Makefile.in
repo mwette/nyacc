@@ -62,7 +62,10 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/munge-base.go		\
 	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
-	nyacc/lang/c99/cxeval.go
+	nyacc/lang/c99/cxeval.go		\
+	system/foreign/arch-info.go		\
+	system/foreign/cdata.go			\
+	scripts/compile-ffi.go
 
 NYACC_C99_SRCS =				\
 	nyacc/lang/c99/cpp.scm			\
@@ -82,17 +85,18 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/mach.d/c99x-act.scm	\
 	nyacc/lang/c99/mach.d/c99x-tab.scm	\
 	nyacc/lang/c99/mach.d/c99cx-act.scm	\
-	nyacc/lang/c99/mach.d/c99cx-tab.scm
-
-NYACC_FH_BINS =					\
-	nyacc/lang/c99/ffi-help.go		\
-	system/ffi-help-rt.go			\
-	scripts/compile-ffi.go
-
-NYACC_FH_SRCS = 				\
-	nyacc/lang/c99/ffi-help.scm		\
-	system/ffi-help-rt.scm			\
+	nyacc/lang/c99/mach.d/c99cx-tab.scm	\
+	system/foreign/arch-info.scm		\
+	system/foreign/cdata.scm		\
 	scripts/compile-ffi.scm
+
+NYACC_FH_BS_BINS =				\
+	nyacc/lang/c99/ffi-help-bs.go		\
+	system/ffi-help-rt.go
+
+NYACC_FH_BS_SRCS = 				\
+	nyacc/lang/c99/ffi-help-bs.scm		\
+	system/ffi-help-rt.scm
 
 BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS) @NYACC_FH_BINS@
 
@@ -143,6 +147,8 @@ clean:
 	(cd nyacc; rm -f *.go)
 	(cd nyacc/lang; rm -f *.go)
 	(cd nyacc/lang/c99; rm -f *.go)
+	(cd scripts; rm -f *.go)
+	(cd system/foreign; rm -f *.go)
 
 .PHONY: dist-files
 dist-files:

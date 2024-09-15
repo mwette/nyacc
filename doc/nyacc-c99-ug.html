@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 7.0.3, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.1, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2017,2019 - Matthew R. Wette.
@@ -46,7 +46,7 @@ ul.mark-bullet {list-style-type: disc}
 <pre class="format-preformatted">C99 Parser User Guide
 Matt Wette
 June 2019
-With NYACC Version 1.09.4
+With NYACC Version 2.00.0
 </pre></div>
 
 <div class="top-level-extent" id="Top">
@@ -54,17 +54,14 @@ With NYACC Version 1.09.4
 <p>
 Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
 </div>
-<h1 class="top" id="NYACC-C99-User-Guide">NYACC C99 User Guide</h1>
+<h1 class="top" id="NYACC-C99-User-Guide"><span>NYACC C99 User Guide<a class="copiable-link" href="#NYACC-C99-User-Guide"> &para;</a></span></h1>
 <p>This is a user guide for the NYACC C99 parser.
 </p>
 
 <hr>
-<a class="node-id" id="Introduction"></a><div class="nav-panel">
-<p>
- &nbsp; </p>
+<a class="node" id="Introduction"></a><div class="nav-panel">
 </div>
-<h4 class="node">Introduction</h4>
-<h3 class="heading" id="Introduction-1">Introduction</h3>
+<h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
 
 <p>This is a manual for the C99 parser provided with NYACC.  It is a
 LALR(1) based parser written in Scheme as implemented in Guile.  The
@@ -77,7 +74,7 @@ generate FFI (foreign function interface) code for many C libraries.
 It does this by parsing the associated C header files.
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-parse_002dc99"><span class="category-def">Procedure: </span><span><strong class="def-name">parse-c99</strong> <var class="def-var-arguments">[options]</var><a class="copiable-link" href='#index-parse_002dc99'> &para;</a></span></dt>
+<dt class="deffn" id="index-parse_002dc99"><span class="category-def">Procedure: </span><span><strong class="def-name">parse-c99</strong> <var class="def-var-arguments">[options]</var><a class="copiable-link" href="#index-parse_002dc99"> &para;</a></span></dt>
 <dd><p>where options are
 </p><dl class="table">
 <dt><code class="code">#:cpp-defs <i class="i">defs-list</i></code></dt>
@@ -119,7 +116,7 @@ expressions can be fully evaluated, which may mean adding compiler generated
 defines (e.g., using <code class="code">gen-cpp-defs</code>).
 </p></dd></dl>
 
-<h4 class="subheading" id="Include-Helpers">Include Helpers</h4>
+<h4 class="subheading" id="Include-Helpers"><span>Include Helpers<a class="copiable-link" href="#Include-Helpers"> &para;</a></span></h4>
 
 <p>The C99 parsers can use &ldquo;include helpers&rdquo;.  This allows files to be
 parsed without reading full include files.  The user provides
@@ -160,23 +157,23 @@ defines for many standard includes (e.g., <samp class="file">alloca.h</samp>,
 <samp class="file">limits.h</samp>).  See the source <samp class="file">nyacc/lang/c99/util.scm</samp> for
 more detail.
 </p>
-<h4 class="subheading" id="Misc-Items">Misc Items</h4>
+<h4 class="subheading" id="Misc-Items"><span>Misc Items<a class="copiable-link" href="#Misc-Items"> &para;</a></span></h4>
 
 <p>The special symbol <code class="code">C99_ANY</code> can be used for symbols which you
 don&rsquo;t want to define.  In the parser will handle this as XXX
 </p>
-<h3 class="heading" id="Stuff">Stuff</h3>
+<h3 class="heading" id="Stuff"><span>Stuff<a class="copiable-link" href="#Stuff"> &para;</a></span></h3>
 
 <p>Note on CPP replacement text: IIRC, C99 will remove comments from CPP
 statements before processing.  I preserve this and remove inside the
 CPP parser.
 </p>
-<h3 class="heading" id="The-Unit-Parser">The Unit Parser</h3>
+<h3 class="heading" id="The-Unit-Parser"><span>The Unit Parser<a class="copiable-link" href="#The-Unit-Parser"> &para;</a></span></h3>
 
 <p>TALK ABOUT <code class="code">fixed-width-int-names</code>
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-parse_002dc99-1"><span class="category-def">Procedure: </span><span><strong class="def-name">parse-c99</strong> <var class="def-var-arguments">[#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:mode (&rsquo;code|&rsquo;file)] [#:debug bool]</var><a class="copiable-link" href='#index-parse_002dc99-1'> &para;</a></span></dt>
+<dt class="deffn" id="index-parse_002dc99-1"><span class="category-def">Procedure: </span><span><strong class="def-name">parse-c99</strong> <var class="def-var-arguments">[#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:mode (&rsquo;code|&rsquo;file)] [#:debug bool]</var><a class="copiable-link" href="#index-parse_002dc99-1"> &para;</a></span></dt>
 <dd><p>This needs to be explained in some detail.
 Default mode is <code class="code">'code</code>.
 </p><div class="example">
@@ -188,7 +185,7 @@ Default mode is <code class="code">'code</code>.
 </pre></div>
 </dd></dl>
 
-<h4 class="subheading" id="Modes">Modes</h4>
+<h4 class="subheading" id="Modes"><span>Modes<a class="copiable-link" href="#Modes"> &para;</a></span></h4>
 <p>There are several modes for parsing which affect the way the C
 preprocessor statements are handled, and how the parse tree is
 generated.  The following list explains the intent behind these
@@ -242,18 +239,18 @@ definition (used in file mode).  See below.
 worry that it does not?)
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-name"><span class="category-def">xdef?: </span><span><strong class="def-name">name</strong> <var class="def-var-arguments">mode =&gt; #t|#f</var><a class="copiable-link" href='#index-name'> &para;</a></span></dt>
+<dt class="deffn" id="index-name"><span class="category-def">xdef?: </span><span><strong class="def-name">name</strong> <var class="def-var-arguments">mode =&gt; #t|#f</var><a class="copiable-link" href="#index-name"> &para;</a></span></dt>
 <dd><p>Given string <var class="var">name</var> and <var class="var">mode</var> indicate whether the parser
 should expand using CPP defines.  The default is
 <code class="code">(lambda(name mode) (eqv? mode 'code))</code>.
 </p></dd></dl>
 
-<h3 class="heading" id="Expression-Parser">Expression Parser</h3>
+<h3 class="heading" id="Expression-Parser"><span>Expression Parser<a class="copiable-link" href="#Expression-Parser"> &para;</a></span></h3>
 
 <p>To be documented.
 </p>
 
-<h3 class="heading" id="Copying">Copying</h3>
+<h3 class="heading" id="Copying"><span>Copying<a class="copiable-link" href="#Copying"> &para;</a></span></h3>
 
 <p>Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or

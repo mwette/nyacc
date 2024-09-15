@@ -20,6 +20,9 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <link href="#Top" rel="start" title="Top">
+<link href="dir.html#Top" rel="up" title="(dir)">
+<link href="#Introduction" rel="next" title="Introduction">
+<link href="dir.html#Top" rel="prev" title="(dir)">
 <style type="text/css">
 <!--
 a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
@@ -38,15 +41,25 @@ strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
 
 
 
-<div class="top-level-extent" id="Top">
-<h1 class="top" id="cdata_003a-a-Guile-Module-for-Working-with-C-Data"><span><code class="code">cdata</code>: a Guile Module for Working with C Data<a class="copiable-link" href="#cdata_003a-a-Guile-Module-for-Working-with-C-Data"> &para;</a></span></h1>
 <div class="format">
-<pre class="format-preformatted">Matt Wette
+<pre class="format-preformatted">C-Data Reference Manual
+Matt Wette
 September 2024
 </pre></div>
 
+<div class="top-level-extent" id="Top">
+<div class="nav-panel">
+<p>
+Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
+</div>
+<h1 class="top" id="CData-Reference-Manual"><span>CData Reference Manual<a class="copiable-link" href="#CData-Reference-Manual"> &para;</a></span></h1>
+<p>This is a user guide for the NYACC CData Module
+</p>
 
-<h3 class="heading" id="Introduction"><span>Introduction<a class="copiable-link" href="#Introduction"> &para;</a></span></h3>
+<hr>
+<a class="node" id="Introduction"></a><div class="nav-panel">
+</div>
+<h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
 
 <p>The <code class="code">cdata</code> module and its partner <code class="code">arch-info</code> provide a
 way to work with data originating from C libraries.  Size and
@@ -348,11 +361,17 @@ $1 = #f
 &gt; (pretty-print-ctype tr64)
 (cstruct ((a s32le) (b s64le)))
 &gt; (pretty-print-ctype tr32)
-(cstruct ((a s32le) (b s64le)))
+(cstruct ((a s32le) (b s32le)))
 </pre></div>
 
 
 <h3 class="heading" id="CData-Utilities"><span>CData Utilities<a class="copiable-link" href="#CData-Utilities"> &para;</a></span></h3>
+
+<dl class="first-deffn">
+<dt class="deffn" id="index-pretty_002dprint_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">pretty-print-ctype</strong> <var class="def-var-arguments">type [port]</var><a class="copiable-link" href="#index-pretty_002dprint_002dctype"> &para;</a></span></dt>
+<dd><p>Converts type to a literal tree and uses Guile&rsquo;s pretty-print function
+to display it.  The default port is the current output port.
+</p></dd></dl>
 
 <dl class="first-deffn">
 <dt class="deffn" id="index-cdata_002dkind"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-kind</strong> <var class="def-var-arguments">data</var><a class="copiable-link" href="#index-cdata_002dkind"> &para;</a></span></dt>

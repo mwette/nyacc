@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 7.0.3, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.1, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!-- Copyright (C) 2017-2022 - Matthew R. Wette.
+<!-- Copyright (C) 2017-2024 - Matthew Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -45,8 +45,8 @@ ul.mark-bullet {list-style-type: disc}
 <div class="format">
 <pre class="format-preformatted">FFI Helper User Guide
 Matt Wette
-October 2022
-With NYACC Version 1.09.4
+Augustr 2024
+With NYACC Version 2.00.0
 </pre></div>
 
 <div class="top-level-extent" id="Top">
@@ -54,17 +54,14 @@ With NYACC Version 1.09.4
 <p>
 Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
 </div>
-<h1 class="top" id="NYACC-FFI-Helper-Guide">NYACC FFI Helper Guide</h1>
+<h1 class="top" id="NYACC-FFI-Helper-Guide"><span>NYACC FFI Helper Guide<a class="copiable-link" href="#NYACC-FFI-Helper-Guide"> &para;</a></span></h1>
 <p>This is a user guide for the NYACC FFI Helper.
 </p>
 
 <hr>
-<a class="node-id" id="Introduction"></a><div class="nav-panel">
-<p>
- &nbsp; </p>
+<a class="node" id="Introduction"></a><div class="nav-panel">
 </div>
-<h4 class="node">Introduction</h4>
-<h3 class="heading" id="Introduction-1">Introduction</h3>
+<h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
 
 <p>The acronym FFI stands for &ldquo;Foreign Function Interface&rdquo;.  It refers
 to the Guile facility for binding functions and variables from C source
@@ -162,7 +159,7 @@ like the following:
   (let () ((force ~cairo_version))))
 (export cairo_version)
 
-&hellip;
+...
 
 ;; typedef struct _cairo_matrix {
 ;;   double xx;
@@ -180,7 +177,7 @@ like the following:
  cairo_matrix_t? make-cairo_matrix_t)
 (export cairo_matrix_t cairo_matrix_t? make-cairo_matrix_t)
 
-&hellip; <i class="i">many, many more declarations</i> &hellip;
+... <i class="i">many, many more declarations</i> ...
 
 ;; access to enum symbols and #define'd constants:
 (define ffi-cairo-symbol-val
@@ -191,7 +188,7 @@ like the following:
             (CAIRO_PDF_VERSION_1_5 . 1)
             (CAIRO_REGION_OVERLAP_IN . 0)
             (CAIRO_REGION_OVERLAP_OUT . 1)
-            &hellip; <i class="i">more constants</i> &hellip;
+            ... <i class="i">more constants</i> ...
             (CAIRO_MIME_TYPE_JBIG2_GLOBAL_ID
               .
               &quot;application/x-cairo.jbig2-global-id&quot;))))
@@ -199,7 +196,7 @@ like the following:
 (export ffi-cairo-symbol-val)
 (export cairo-lookup)
 
-&hellip; <i class="i">more</i> &hellip;
+... <i class="i">more</i> ...
 
 </pre></div>
 
@@ -243,7 +240,7 @@ and <code class="code">load</code> the file.
 
 <div class="example">
 <pre class="example-preformatted">guile&gt; (load &quot;cairo-demo.scm&quot;)
-&hellip;
+...
 ;;; compiled /.../cairo.scm.go
 ;;; compiled /.../cairo-demo.scm.go
 guile&gt;
@@ -331,7 +328,7 @@ We could define a FH type as follows:
 
 
 
-<h3 class="heading" id="The-Guile-Foreign-Function-Interface">The Guile Foreign Function Interface</h3>
+<h3 class="heading" id="The-Guile-Foreign-Function-Interface"><span>The Guile Foreign Function Interface<a class="copiable-link" href="#The-Guile-Foreign-Function-Interface"> &para;</a></span></h3>
 
 <p>Guile has an API, called the Foreign Function Interface, which allows
 one to avoid writing and compiling C wrapper code in order to access C
@@ -421,8 +418,20 @@ library handles defined by a ffi module to acquire object pointers.
 </p>
 
 
-<h3 class="heading" id="The-FFI-Helper-Design">The FFI Helper Design</h3>
+<h3 class="heading" id="The-FFI-Helper-Design"><span>The FFI Helper Design<a class="copiable-link" href="#The-FFI-Helper-Design"> &para;</a></span></h3>
 
+
+<p>TO BE EXPLAINED:
+</p><dl class="table">
+<dt><code class="code">fh-object-ref</code></dt>
+<dd><p>Returns Guile value or value in underlying type system
+(e.g. bytestructures)
+</p></dd>
+<dt><code class="code">fh-object-set!</code></dt>
+<dd><p>SYNTAX is <code class="code">fh-object-set! obj value tag ...</code> <br>
+BS uses <code class="code">bytestructure-set! obj tag ... value</code>
+</p></dd>
+</dl>
 
 <p>In this section we hope to provide some insight into the FH works.
 The FH specification, via the dot-ffi file, determines the set of
@@ -591,7 +600,7 @@ passed by reference as return types.  For example
 </p>
 
 
-<h3 class="heading" id="Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029">Creating FFI Modules with <code class="code">(nyacc lang c99 ffi-help)</code></h3>
+<h3 class="heading" id="Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029"><span>Creating FFI Modules with <code class="code">(nyacc lang c99 ffi-help)</code><a class="copiable-link" href="#Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029"> &para;</a></span></h3>
 
 <div class="example">
 <pre class="example-preformatted">(define ffi-module <var class="var">module-name</var> ...)
@@ -694,12 +703,12 @@ preprocessor macro definitions that should be included in the output.
 </pre></div>
 
 
-<h3 class="heading" id="Direct-Usage">Direct Usage</h3>
+<h3 class="heading" id="Direct-Usage"><span>Direct Usage<a class="copiable-link" href="#Direct-Usage"> &para;</a></span></h3>
 
 <p>Work to go here:
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-load_002dinclude_002dfile"><span class="category-def">Procedure: </span><span><strong class="def-name">load-include-file</strong> <var class="def-var-arguments">filename [#pkg-config pkg]</var><a class="copiable-link" href='#index-load_002dinclude_002dfile'> &para;</a></span></dt>
+<dt class="deffn" id="index-load_002dinclude_002dfile"><span class="category-def">Procedure: </span><span><strong class="def-name">load-include-file</strong> <var class="def-var-arguments">filename [#pkg-config pkg]</var><a class="copiable-link" href="#index-load_002dinclude_002dfile"> &para;</a></span></dt>
 <dd><p>This is the functionality that Ludo was asking for: to be at guile
 prompt and be able to issue
 </p><div class="example">
@@ -717,7 +726,7 @@ guile&gt; ...
 
 
 
-<h3 class="heading" id="Tuning-and-Debugging">Tuning and Debugging</h3>
+<h3 class="heading" id="Tuning-and-Debugging"><span>Tuning and Debugging<a class="copiable-link" href="#Tuning-and-Debugging"> &para;</a></span></h3>
 
 <p>Since this is not all straightforward you will get errors.
 </p>
@@ -728,7 +737,7 @@ guile&gt; ...
 </li><li> guile -c &rsquo;(use-modules (ffi mymod))&rsquo;
 </li></ol>
 
-<h4 class="subheading" id="MAX_005fHEAP_005fSECTS"><code class="code">MAX_HEAP_SECTS</code></h4>
+<h4 class="subheading" id="MAX_005fHEAP_005fSECTS"><span><code class="code">MAX_HEAP_SECTS</code><a class="copiable-link" href="#MAX_005fHEAP_005fSECTS"> &para;</a></span></h4>
 
 <p>The message is
 </p><blockquote class="quotation">
@@ -752,7 +761,7 @@ which generated this code:
 </pre></div>
 <p>This bug, failure to evaluate <code class="code">7+1</code> to an integer, was fixed.
 </p>
-<h4 class="subheading" id="Trimming-Things-Down">Trimming Things Down</h4>
+<h4 class="subheading" id="Trimming-Things-Down"><span>Trimming Things Down<a class="copiable-link" href="#Trimming-Things-Down"> &para;</a></span></h4>
 
 <p>After using the FFI Helper to provide code for some packages you may
 notice that the quantity of code produced is large.  For example, to
@@ -800,7 +809,7 @@ own types or echo the typedefs from the package headers
 
 </pre></div>
 
-<h4 class="subheading" id="Warning_003a-Possibly-Unbound-Variable">Warning: Possibly Unbound Variable</h4>
+<h4 class="subheading" id="Warning_003a-Possibly-Unbound-Variable"><span>Warning: Possibly Unbound Variable<a class="copiable-link" href="#Warning_003a-Possibly-Unbound-Variable"> &para;</a></span></h4>
 
 <div class="example smallexample">
 <pre class="example-preformatted">;;; ffi/gtk2+.scm:3564:5: warning:
@@ -829,7 +838,7 @@ but not the pointer type.
 </p></dd>
 </dl>
 
-<h4 class="subheading" id="Other">Other</h4>
+<h4 class="subheading" id="Other"><span>Other<a class="copiable-link" href="#Other"> &para;</a></span></h4>
 
 <p>User is responsible for calling string-&gt;pointer and pointer-&gt;string.
 </p>
@@ -892,13 +901,13 @@ with NYACC&rsquo;s C99 parser.  There is no such thing as a working C standard.
 </pre></div>
 
 
-<h3 class="heading" id="The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029">The Run-time Module <code class="code">(system ffi-help-rt)</code></h3>
+<h3 class="heading" id="The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029"><span>The Run-time Module <code class="code">(system ffi-help-rt)</code><a class="copiable-link" href="#The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029"> &para;</a></span></h3>
 
 <p>Here we provide details of the run-time support module.
 </p>
 
 
-<h3 class="heading" id="Work-to-Go">Work to Go</h3>
+<h3 class="heading" id="Work-to-Go"><span>Work to Go<a class="copiable-link" href="#Work-to-Go"> &para;</a></span></h3>
 
 <dl class="table">
 <dt>02</dt>
@@ -934,7 +943,7 @@ arg?
 </dd>
 </dl>
 
-<h4 class="subheading" id="Completed">Completed</h4>
+<h4 class="subheading" id="Completed"><span>Completed<a class="copiable-link" href="#Completed"> &para;</a></span></h4>
 <dl class="table">
 <dt>01</dt>
 <dd><div class="example">
@@ -945,22 +954,22 @@ enum-unwrap 'CAIRO_STATUS_SUCCESS =&gt; 0
 </dl>
 
 
-<h3 class="heading" id="Administrative-Items">Administrative Items</h3>
+<h3 class="heading" id="Administrative-Items"><span>Administrative Items<a class="copiable-link" href="#Administrative-Items"> &para;</a></span></h3>
 
-<h4 class="subheading" id="Installation">Installation</h4>
+<h4 class="subheading" id="Installation"><span>Installation<a class="copiable-link" href="#Installation"> &para;</a></span></h4>
 
 <div class="example">
 <pre class="example-preformatted">./configure --prefix=xxx
 make install
 </pre></div>
 
-<h4 class="subheading" id="Reporting-Bugs">Reporting Bugs</h4>
+<h4 class="subheading" id="Reporting-Bugs"><span>Reporting Bugs<a class="copiable-link" href="#Reporting-Bugs"> &para;</a></span></h4>
 <p>Please report bugs by navigating with your browser to
 &lsquo;<code class="indicateurl">https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
 the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively,
 ask on the Guile user&rsquo;s mailing list <a class="email" href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
 </p>
-<h4 class="subheading" id="Notes">Notes</h4>
+<h4 class="subheading" id="Notes"><span>Notes<a class="copiable-link" href="#Notes"> &para;</a></span></h4>
 
 <ol class="enumerate">
 <li> The following situation is a bit tricky for me.
@@ -977,7 +986,7 @@ When I get to the third declaration I define the
 a compound type, and it&rsquo;s pointer type (missed this first time).
 </p></li></ol>
 
-<h4 class="subheading" id="Copyright">Copyright</h4>
+<h4 class="subheading" id="Copyright"><span>Copyright<a class="copiable-link" href="#Copyright"> &para;</a></span></h4>
 
 <p>Copyright (C) 2017-2019 &ndash; Matthew R. Wette.
 </p>

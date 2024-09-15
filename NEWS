@@ -5,27 +5,34 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2024-XX-XX  V1.10.0
-	* updated (system ffi-help-rt):i
-	  + depends on guile-3.0.9+ (system foreign-library)
-	  + definition of fh-cast changed
-	  + funtion pointers updated (to work)
-	  + add/expose fh-varg for use with procedures based on C va-args:
+2024-09-XX  V2.00.0
+	* added `cdata' module for handling type and data from C libraries
+	  + see doc/cdata.info
+	  + capable of dealing with foreign architectures
+	* major ffi helper update:
+	  + including default use of cdata backend, which does not use 
+	    bytestructures or system/ffi-help-rt
+	  + ffi-help.scm(cnvt-udecl): complete re-write, using udecl->mdecl.
+ 	    This no longer has special cases for some include files.
+	  + handling of functions and function types is much cleaner and
+	    works better (at least for the author, so far)
+	  + includes two backends: 
+	    - cdata: depends only on system/foreign/cdata module
+	    - bytestructures: depends on ffi-help-rt and bytestructures modules
+	* updated system/ffi-help-rt (which is not used by cdata)
+	  + funtion pointers reworked
+	  + now depends on guile (system foreign-library)
+	  + definition of fh-cast changed to be a real cast
+	  + add fh-varg for use with procedures based on C va-args:
 	      (printf "ans=%d" (fh-varg ffi:int 3))
-	* ffi-help.scm(cnvt-uecl): complete re-write, using udecl->mdecl
-	  You may notice that some fh-object-ref now returns guile pointer
-	  where it returned the address before.  To maintain compatibility 
-	  try using something like
-	    (define (ensure-pointer maybe-ptr)
-	      (if (ffi:pointer? maybe-ptr)
-	          maybe-ptr 
-	          (ffi:make-pointer maybe-ptr)))
-	    (define (ensure-address maybe-ptr)
-	      (if (ffi:pointer? maybe-ptr) 
-	          (ffi:pointer-address maybe-ptr) 
-	          maybe-ptr))
-	* ffi-help.scm: now depends on scheme bytestructures V2
-	* ffi-help.scm: major updates to pave the way for coming cdata
+	* scripts/compile-ffi: now accepts argument for backend:
+	  $ guild compile-ffi -b bytestructures mymodule.ffi
+	  $ FFI_HELP_BACKEND=bytestructures guild compile-ffi mymodule.ffi
+	* Work to go:
+	  + Update READMEs and other documentation.
+	  + Complete ccode->sexp function to convert strings of C code
+	    to sexps for ffi interface code.
+	  + Complete cross compiling toolage.
 
 2024-06-24  V1.09.5
 	* fixed bug 65849: crash on multiple #warning
