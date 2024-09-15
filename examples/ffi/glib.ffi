@@ -1,0 +1,40 @@
+;; glib.ffi				-*- Scheme -*-
+
+;; Copyright (C) 2018,2024 Matthew Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+(define-ffi-module (ffi glib)
+  #:pkg-config "glib-2.0"
+  #:include '("glib.h")
+  #:inc-filter (lambda (file-spec path-spec)
+		 (or (string-contains path-spec "glib/" 0)
+		     (string=? file-spec "<glibconfig.h>")))
+  )
+
+(define-public G_PI (ffi-glib-symbol-val 'G_PI))
+(define-public G_PI_2 (ffi-glib-symbol-val 'G_PI_2))
+(define-public G_PI_4 (ffi-glib-symbol-val 'G_PI_4))
+
+(define-public gpointer* (cpointer gpointer))
+(define-public gdouble* (cpointer (cbase 'double)))
+
+#|
+(define-public GDestroyNotify*-desc (bs:pointer GDestroyNotify-desc))
+(define-fh-pointer-type GDestroyNotify* GDestroyNotify*-desc
+  GDestroyNtify*? make-GDestroyNotify*)
+(export GDestroyNotify* GDestroyNotify*? make-GDestroyNotify*)
+|#
+
+;; --- last line ---

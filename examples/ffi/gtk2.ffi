@@ -1,0 +1,63 @@
+;; gtk2.ffi				-*- Scheme -*-
+
+;; Copyright (C) 2018,2024 Matthew Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+(define-ffi-module (ffi gtk2)
+  #:pkg-config "gtk+-2.0"
+  #:include '("gtk/gtk.h")
+  #:inc-filter (lambda (f p) (string-contains p "gtk/" 0))
+  #:use-ffi-module (ffi gdk2)
+  #:use-ffi-module (ffi pango)
+  #:use-ffi-module (ffi gobject)
+  #:use-ffi-module (ffi glib))
+
+(define-public gtk-symval ffi-gtk2-symbol-val)
+
+;; Create GtkEventCallback: missing somehow 
+;; typedef gboolean (*GtkEventCallback)(GtkWidget *, GdkEvent*, gpointer data);
+(define-public *GtkEventCallback
+  (cfunction
+   (lambda (~proc)
+     (ffi:procedure->pointer
+      ffi:int
+      (lambda (widget event data)
+        (let ((widget (make-cdata GtkWidget* widget))
+              (event (make-cdata GdkEvent* event))
+              (data (make-cdata gpointer data)))
+          ((lambda (~ret) (unwrap-number ~ret))
+           (~proc widget event data))))
+      (list '* '* '*)))
+   (lambda (~fptr)
+     (let ((~proc (ffi:pointer->procedure
+                   ffi:int
+                   ~fptr
+                   (list '* '* '*))))
+       (lambda (widget event data)
+         (let ((widget (unwrap-pointer widget))
+               (event (unwrap-pointer event))
+               (data (unwrap-pointer data gpointer)))
+           (~proc widget event data)))))))
+(define-public GtkEventCallback
+  (name-ctype 'GtkEventCallback (cpointer *GtkEventCallback)))
+
+;; This is the c function.
+(define-public ~gtk_widget_destroy
+  (foreign-pointer-search "gtk_widget_destroy"))
+
+(define-public ~gtk_main_quit
+  (foreign-pointer-search "gtk_main_quit"))
+
+;; --- last line ---
