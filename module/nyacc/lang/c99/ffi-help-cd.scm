@@ -568,13 +568,15 @@
 (define* (defined-type-unwrapper name mname)
   (let* ((udecl (expand-typerefs
                  `(udecl (decl-spec-list (type-spec (typename ,name)))
-                         (init-declr (ident ,mname))) (*udict*) '()))
+                         (init-declr (ident ,mname))) (*udict*)
+                         '((enum . "*any*")))) ;; hack provided 
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
       (`((pointer-to) . ,_0) `(unwrap-pointer ,mname ,(string->symbol name)))
       (`((fixed ,name)) `(unwrap-number ,mname))
       (`((float ,name)) `(unwrap-number ,mname))
       (`((enum-def . ,_)) `(unwrap~enum  ,mname))
+      (`((enum-ref . ,_)) `(unwrap~enum  ,mname))
       (__ #f))))
 
 (define (unwrap-mdecl mdecl)

@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/munge-base.scm -
 
-;; Copyright (C) 2015-2018,2020,2023 Matthew R. Wette
+;; Copyright (C) 2015-2018,2020,2023-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -415,23 +415,30 @@
        (let ((tspec (expand-aggregate 'union-def attr #f fields)))
          (values (replace-type-spec specl tspec) declr)))
 
-      ((enum-ref (ident ,name))
-       ;;(if (member (w/enum name) keep)
-       (if (keeper? '(enum) name keep)
-           (values specl declr)
-           (let ((tspec '(type-spec (fixed-type "int"))))
-             (values (replace-type-spec specl tspec) declr))))
+      ((enum-ref (@ . ,attr) (ident ,name))
+       (cond
+        ((keeper? '(enum) name keep)
+         (values specl declr))
+        ((member '(enum . "*any*") keep)
+         (values specl declr))
+        (else
+         (let ((tspec '(type-spec (fixed-type "int")))) ;; FIXME packed?
+           (values (replace-type-spec specl tspec) declr)))))
 
-      ((enum-def (ident ,name) ,rest)
+      ((enum-def (@ . ,attr) (ident ,name) ,rest)
        ;; replacing with int could be an error : should gen warning
-       ;;(if (member (w/enum name) keep)
-       (if (keeper? '(enum) name keep)
-           (values specl declr)
-           (let ((tspec '(type-spec (fixed-type "int"))))
-             (values (replace-type-spec specl tspec) declr))))
+       (cond
+        ((keeper? '(enum) name keep)
+         (values specl declr))
+        ((member '(enum . "*any*") keep)
+         (let ((tspec `(type-spec (enum-ref (ident ,name)))))
+           (values (replace-type-spec specl tspec) declr)))
+        (else
+         (let ((tspec '(type-spec (fixed-type "int")))) ;; FIXME packed?
+           (values (replace-type-spec specl tspec) declr)))))
 
-      ((enum-def ,rest)
-       (let ((tspec '(type-spec (fixed-type "int"))))
+      ((enum-def (@ . ,attr) ,rest)
+       (let ((tspec '(type-spec (fixed-type "int")))) ;; FIXME packed?
          (values (replace-type-spec specl tspec) declr)))
 
       (,_ (values specl declr)))))
@@ -451,9 +458,9 @@
 ;; Note: works with @code{(struct . "foo")}@*
 ;; Note: works with @code{(pointer . "foo_t")}
 ;; @end deffn
-;; idea: if we have a pointer to an undefined type, then use void*
-;; @*BUG HERE? if we run into a struct then the struct members have not
-;; been munged into udecls.  The behavior is actually NOT DEFINED.
+;; Note that enums not in the keep list are replaced by int's (todo:
+;; check for packed).  As a special hack, if the keep list includes
+;; @code{(enum . "*any*")} a enum ref will be emitted, if possible.
 ;; @end deffn
 (define* (expand-typerefs adecl udict #:optional (keep '()))
   ;; TODO: replace typeof() with type
