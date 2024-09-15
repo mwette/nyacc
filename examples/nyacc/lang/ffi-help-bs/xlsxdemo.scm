@@ -1,7 +1,7 @@
 ;; xlsxdemo.scm
 ;; https://github.com/jmcnamara/xlsxwriter/Readme.md
 
-(use-modules (ffi xlsxwriter))
+(use-modules (ffi-bs xlsxwriter))
 (use-modules (system ffi-help-rt))
 
 (define workbook (workbook_new "xlsxdemo.xlsx"))

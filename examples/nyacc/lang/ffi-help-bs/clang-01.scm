@@ -16,7 +16,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(use-modules (ffi clang))
+(use-modules (ffi-bs clang))
 
 (define file "clang-01a.cc")
 (define astf "clang-01a.ast")

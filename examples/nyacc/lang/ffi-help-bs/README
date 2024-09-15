@@ -1,6 +1,6 @@
-examples/nyacc/lang/ffi-help/README
+examples/nyacc/lang/ffi-help-bs/README
 
-Copyright (C) 2018 Matthew R. Wette
+Copyright (C) 2018,2024 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -8,6 +8,9 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 NOTES:
+
+THIS IS FOR THE bytestructures BACKEND.  To use 
+  $ export FFI_HELP_BACKEND=bytestructures
 
 To play with the ffi-helper you need scheme-bytestructures, from
 

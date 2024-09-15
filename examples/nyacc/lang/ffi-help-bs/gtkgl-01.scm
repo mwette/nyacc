@@ -16,10 +16,10 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(use-modules (ffi gobject))
-(use-modules (ffi gtk2))
-(use-modules (ffi gtkglext1))
-(use-modules (ffi glugl))
+(use-modules (ffi-bs gobject))
+(use-modules (ffi-bs gtk2))
+(use-modules (ffi-bs gtkglext1))
+(use-modules (ffi-bs glugl))
 (use-modules (system ffi-help-rt))
 (use-modules (bytestructures guile))
 

@@ -9,8 +9,8 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (ffi gdk2))
-(use-modules (ffi cairo))
+(use-modules (ffi-bs gdk2))
+(use-modules (ffi-bs cairo))
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 (define GDK gdk-symval)

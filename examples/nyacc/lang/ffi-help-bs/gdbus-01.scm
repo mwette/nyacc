@@ -8,9 +8,9 @@
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (bytestructures guile))
 
-(use-modules (ffi glib))
-(use-modules (ffi gobject))
-(use-modules (ffi gio))
+(use-modules (ffi-bs glib))
+(use-modules (ffi-bs gobject))
+(use-modules (ffi-bs gio))
 
 (define FALSE 0)                        ; should this go somewhere?
 

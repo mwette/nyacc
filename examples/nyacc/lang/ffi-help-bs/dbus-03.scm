@@ -29,7 +29,7 @@
 (add-to-load-path (getcwd))
 
 (use-modules (system dbus))
-(use-modules (ffi dbus))
+(use-modules (ffi-bs dbus))
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 

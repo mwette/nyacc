@@ -17,7 +17,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 (use-modules (system dbus))
-(use-modules (ffi dbus))
+(use-modules (ffi-bs dbus))
 (use-modules (system ffi-help-rt))
 (use-modules (system foreign))
 (use-modules (bytestructures guile))

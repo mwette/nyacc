@@ -4,9 +4,9 @@
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (bytestructures guile))
 
-(use-modules (ffi glib))
-(use-modules (ffi gobject))
-(use-modules (ffi gio))
+(use-modules (ffi-bs glib))
+(use-modules (ffi-bs gobject))
+(use-modules (ffi-bs gio))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (use-modules (ice-9 pretty-print))

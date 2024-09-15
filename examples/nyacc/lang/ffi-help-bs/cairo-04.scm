@@ -8,7 +8,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (ffi cairo))
+(use-modules (ffi-bs cairo))
 (use-modules (system ffi-help-rt))
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 256 256))

@@ -7,7 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (ffi cairo))               ; auto-generated from cairo.h etc
+(use-modules (ffi-bs cairo))               ; auto-generated from cairo.h etc
 (use-modules (system ffi-help-rt))      ; pointer-to
 (use-modules (system foreign))          ; pointer<->scm
 

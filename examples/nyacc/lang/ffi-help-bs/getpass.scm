@@ -7,7 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (ffi termios))
+(use-modules (ffi-bs termios))
 (use-modules (system ffi-help-rt))
 (use-modules (ice-9 rdelim))
 

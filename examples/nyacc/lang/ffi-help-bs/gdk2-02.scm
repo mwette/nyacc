@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(use-modules (ffi gdk2))
+(use-modules (ffi-bs gdk2))
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (bytestructures guile))

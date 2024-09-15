@@ -22,10 +22,10 @@
 
 ;;; Code:
 
-(use-modules (ffi glib))
-(use-modules (ffi gobject))
-(use-modules (ffi cairo))
-(use-modules (ffi pangocairo))
+(use-modules (ffi-bs glib))
+(use-modules (ffi-bs gobject))
+(use-modules (ffi-bs cairo))
+(use-modules (ffi-bs pangocairo))
 (use-modules (system ffi-help-rt))
 
 (define PANGO_SCALE (ffi-pangocairo-symbol-val 'PANGO_SCALE))

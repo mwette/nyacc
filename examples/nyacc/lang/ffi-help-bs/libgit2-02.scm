@@ -17,7 +17,7 @@
 
 (define repo-path "/home/mwette/repo/github.com/pycparser")
 
-(use-modules (ffi libgit2))
+(use-modules (ffi-bs libgit2))
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 

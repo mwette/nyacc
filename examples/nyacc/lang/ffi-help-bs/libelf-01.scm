@@ -2,7 +2,7 @@
 ;;    https://bitbucket.org/developer2developer/elfcodegenerator/
 ;;                downloads/libelf-by-example.pdf
 
-(use-modules (ffi libelf))
+(use-modules (ffi-bs libelf))
 (use-modules (system ffi-help-rt))
 ;;(use-modules (bytestructures guile))
 (use-modules ((system foreign) #:prefix ffi:))

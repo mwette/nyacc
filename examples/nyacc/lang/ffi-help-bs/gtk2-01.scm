@@ -19,9 +19,9 @@
 (use-modules (system ffi-help-rt))
 (use-modules (bytestructures guile))
 
-(use-modules (ffi glib))                ; ffi:31 scm:31889
-(use-modules (ffi gobject))             ; ffi:26 scm:12044
-(use-modules (ffi gtk2))                ; ffi:26 scm:92964
+(use-modules (ffi-bs glib))                ; ffi:31 scm:31889
+(use-modules (ffi-bs gobject))             ; ffi:26 scm:12044
+(use-modules (ffi-bs gtk2))                ; ffi:26 scm:92964
 
 (use-modules (ice-9 pretty-print))
 (define (pperr exp)
