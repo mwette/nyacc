@@ -438,8 +438,13 @@
            (values (replace-type-spec specl tspec) declr)))))
 
       ((enum-def (@ . ,attr) ,rest)
-       (let ((tspec '(type-spec (fixed-type "int")))) ;; FIXME packed?
-         (values (replace-type-spec specl tspec) declr)))
+       (cond
+        ((member '(enum . "*any*") keep)
+         (let ((tspec `(type-spec (enum-ref (ident "*any*")))))
+           (values (replace-type-spec specl tspec) declr)))
+        (else
+         (let ((tspec '(type-spec (fixed-type "int")))) ;; FIXME packed?
+           (values (replace-type-spec specl tspec) declr)))))
 
       (,_ (values specl declr)))))
 

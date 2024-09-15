@@ -616,10 +616,12 @@
 (define* (defined-type-wrapper name mname)
   (let* ((udecl (expand-typerefs
                  `(udecl (decl-spec-list (type-spec (typename ,name)))
-                         (init-declr (ident ,mname))) (*udict*) '()))
+                         (init-declr (ident ,mname))) (*udict*)
+                         '((enum . "*any*")))) ;; hack provided 
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
       (`((enum-def . ,_)) (list (sfsym "wrap-~a" name) mname))
+      (`((enum-ref . ,_)) (list (sfsym "wrap-~a" name) mname))
       (__ #f))))
 
 (define (wrap-mdecl mdecl)
