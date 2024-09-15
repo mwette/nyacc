@@ -8,12 +8,6 @@
 ;; without any warranty.
 
 (define-module (cdata-01)
-  ;;#:use-module (ice-9 match)
-  ;;#:use-module (ice-9 format)
-  ;;#:use-module ((srfi srfi-1) #:select (fold))
-  ;;#:use-module (system foreign)
-  ;;#:use-module (system foreign-library)
-  ;;#:use-module (system foreign arch-info)
   #:use-module (system foreign cdata)
   #:use-module (test-suite lib))
 
