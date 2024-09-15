@@ -17,14 +17,23 @@ copy of the license is included with the distribution as COPYING.DOC.
 @headings off
 @everyfooting @| @thispage @|
 
-@node Top
-@top @code{cdata}: a Guile Module for Working with C Data
 @format
+C-Data Reference Manual
 Matt Wette
 September 2024
 @end format
 
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top CData Reference Manual
+This is a user guide for the NYACC CData Module
+@end ifnottex
 
+@menu
+* Introduction ::
+@end menu
+
+@node Introduction
 @heading Introduction
 
 The @code{cdata} module and its partner @code{arch-info} provide a
