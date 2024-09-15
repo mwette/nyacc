@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/ffi-help/pangocairo-01.scm - this works
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -22,11 +22,11 @@
 
 ;;; Code:
 
+(use-modules (system foreign cdata))
 (use-modules (ffi glib))
 (use-modules (ffi gobject))
 (use-modules (ffi cairo))
 (use-modules (ffi pangocairo))
-(use-modules (ffi ffi-help-rt))
 
 (define PANGO_SCALE (ffi-pangocairo-symbol-val 'PANGO_SCALE))
 
@@ -48,8 +48,8 @@
   (pango_font_description_free desc)
 
   (do ((i 0 (1+ i))) ((= i N_WORDS))
-    (let ((width (make-int))
-          (height (make-int))
+    (let ((width (make-cdata (cbase 'int)))
+          (height (make-cdata (cbase 'int)))
           (angle (/ (* 360.0 i) N_WORDS))
           (red 0.0))
       (cairo_save cr)
@@ -60,8 +60,8 @@
 
       (pango_cairo_update_layout cr layout)
 
-      (pango_layout_get_size layout (pointer-to width) (pointer-to height))
-      (cairo_move_to cr (- (/ (fh-object-ref width) PANGO_SCALE 2.0)) (- RADIUS))
+      (pango_layout_get_size layout (cdata& width) (cdata& height))
+      (cairo_move_to cr (- (/ (cdata-ref width) PANGO_SCALE 2.0)) (- RADIUS))
       (pango_cairo_show_layout cr layout)
       (cairo_restore cr)))
 

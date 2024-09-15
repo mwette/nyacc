@@ -7,7 +7,7 @@
 @clear no-skip
 
 @copying
-Copyright (C) 2024 -- Matt Wette
+Copyright (C) 2024 -- Matthew Wette
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -23,7 +23,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 @top @code{cdata}: a Guile Module for Working with C Data
 @format
 Matt Wette
-June 2024
+September 2024
 @end format
 
 
@@ -48,22 +48,22 @@ use.  The procedures
 @code{cbase}, @code{cstruct}, @code{cunion}, @code{cpointer},
 @code{carray}, @code{cenum} and @code{cfunction} generate @emph{ctype}
 objects, and the procedure @code{make-cdata} will generate data
-objects for ctypes stored bytevectors.  Access to component data is provided by
-the @code{cdata-ref} procedure and mutation is accomplished via the
-@code{cdata-set!} procedure.  The procedure @code{ctype->ffi} is a
-helper for using Guile's @emph{pointer->procedure}.
+objects for ctyped data stored in bytevectors.  Access to component
+data is provided by the @code{cdata-ref} procedure and mutation is
+accomplished via the @code{cdata-set!} procedure.  The procedure
+@code{ctype->ffi} is a helper for using Guile's @emph{pointer->procedure}.
 
 Example:
 @example
-(define t1 (cstruct '((tv_sec long) (tv_usec long))))
-(define gettod
+(define timeval (cstruct '((tv_sec long) (tv_usec long))))
+(define gettimeofday
   (foreign-library-function
    #f "gettimeofday"
    #:return-type (ctype->ffi (cbase 'int))
-   #:arg-types (map ctype->ffi (list (cpointer t1) (cpointer 'void)))))
+   #:arg-types (map ctype->ffi (list (cpointer timeval) (cpointer 'void)))))
 
-(define d1 (make-cdata t1))
-(gettod (cdata-ref (cdata& d1)) %null-pointer)
+(define d1 (make-cdata timeval))
+(gettimeofday (cdata-ref (cdata& d1)) %null-pointer)
 (format #t "time: ~s ~s\n" (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
 time: 1719062561 676365
 @end example
@@ -188,6 +188,10 @@ Reference a deconstructed cdata object. See @emph{cdata-set!}.
 @end deffn
 
 @heading Working with Types
+
+@deffn {Procedure} name-ctype name type => ctype
+Add a name tag to a ctype.
+@end deffn
 
 @deffn {Procedure} ctype-equal? a b
 This predicate assesses equality of it's arguments.
