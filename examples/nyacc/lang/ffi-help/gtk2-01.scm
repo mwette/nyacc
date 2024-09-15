@@ -16,7 +16,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 (use-modules (ffi glib))
 (use-modules (ffi gobject))
 (use-modules (ffi gtk2))

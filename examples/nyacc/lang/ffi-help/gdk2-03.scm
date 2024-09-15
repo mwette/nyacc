@@ -11,7 +11,7 @@
 
 (use-modules (ffi gdk2))
 (use-modules (ffi cairo))
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 (use-modules (system foreign))
 (define GDK gdk-symval)
 

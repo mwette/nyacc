@@ -16,7 +16,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 (use-modules (ffi gdk2))
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 

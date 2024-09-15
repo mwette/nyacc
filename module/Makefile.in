@@ -1,7 +1,7 @@
 # @configure_input@
 # -*- Makefile -*-
 #
-# Copyright (C) 2015-2020 -  Matthew R. Wette
+# Copyright (C) 2015-2020,2024 -  Matthew Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -35,7 +35,6 @@ NYACC_BASE_BINS =				\
 	nyacc/export.go				\
 	nyacc/import.go				\
 	nyacc/bison.go				\
-	nyacc/lang/arch-info.go			\
 	nyacc/lang/sx-util.go			\
 	nyacc/lang/util.go
 
@@ -48,7 +47,6 @@ NYACC_BASE_SRCS =				\
 	nyacc/export.scm			\
 	nyacc/import.scm			\
 	nyacc/bison.scm				\
-	nyacc/lang/arch-info.scm		\
 	nyacc/lang/sx-util.scm			\
 	nyacc/lang/util.scm
 
@@ -63,8 +61,9 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
 	nyacc/lang/c99/cxeval.go		\
-	system/foreign/arch-info.go		\
-	system/foreign/cdata.go			\
+	nyacc/lang/c99/ffi-help-cd.go		\
+	nyacc/foreign/arch-info.go		\
+	nyacc/foreign/cdata.go			\
 	scripts/compile-ffi.go
 
 NYACC_C99_SRCS =				\
@@ -86,8 +85,9 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/mach.d/c99x-tab.scm	\
 	nyacc/lang/c99/mach.d/c99cx-act.scm	\
 	nyacc/lang/c99/mach.d/c99cx-tab.scm	\
-	system/foreign/arch-info.scm		\
-	system/foreign/cdata.scm		\
+	nyacc/lang/c99/ffi-help-cd.scm		\
+	nyacc/foreign/arch-info.scm		\
+	nyacc/foreign/cdata.scm			\
 	scripts/compile-ffi.scm
 
 NYACC_FH_BS_BINS =				\

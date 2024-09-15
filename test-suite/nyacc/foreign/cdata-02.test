@@ -8,7 +8,7 @@
 ;; without any warranty.
 
 (define-module (cdata-01)
-  #:use-module (system foreign cdata)
+  #:use-module (nyacc foreign cdata)
   #:use-module (test-suite lib))
 
 (define ctr

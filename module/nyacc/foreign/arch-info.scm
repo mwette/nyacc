@@ -1,4 +1,4 @@
-;;; system/foreign/arch-info.scm - map c types to machine arch' types
+;;; nyacc/foreign/arch-info.scm - map c types to machine arch' types
 
 ;; Copyright (C) 2020-2024 Matthew Wette
 ;;
@@ -22,7 +22,7 @@
 
 ;;; Code:
 
-(define-module (system foreign arch-info)
+(define-module (nyacc foreign arch-info)
   #:export (lookup-arch
             *arch* with-arch native-arch
             arch-cbase-map set-arch-cbase-map!

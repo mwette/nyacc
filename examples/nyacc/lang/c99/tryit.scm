@@ -27,8 +27,7 @@
 (use-modules (nyacc lang c99 munge-base))
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 util))
-(use-modules (nyacc lang c99 ffi-help))
-(use-modules (nyacc lang arch-info))
+(use-modules (nyacc foreign arch-info))
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
@@ -231,16 +230,6 @@
          (foo-t '(type-name (decl-spec-list (type-spec (typename "foo_t"))))))
     (pp (find-types foo-t udict '("let_t")))))
 
-;; bug 57949
-(when #f
-  (let* ((code "struct foo { void bar(void); };\n")
-         (tree (parse-string code))
-         (tree (remove-comments tree))
-         (udict (c99-trans-unit->udict tree))
-         (udecl (assoc-ref udict '(struct . "foo")))
-         (fdecl (fh-cnvt-udecl udecl udict))
-         (sdecl (with-input-from-string fdecl read)))
-    (display fdecl)))
 
 ;; bug #63604
 (when #f

@@ -39,12 +39,12 @@
   #:use-module (nyacc util)
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
   #:use-module (nyacc lang sx-util)
-  #:use-module (nyacc lang arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (system foreign)
+  #:use-module (nyacc foreign arch-info)
   #:use-module (ice-9 match))
 
 (use-modules (ice-9 pretty-print))
@@ -162,7 +162,7 @@
 
   (match mtail
     (`((pointer-to) . ,rest)
-     (values (sizeof-basetype '*) (alignof-basetype '*)))
+     (values (sizeof-basetype 'void*) (alignof-basetype 'void*)))
     (`((fixed-type ,name))
      (values (sizeof-basetype name) (alignof-basetype name)))
     (`((float-type ,name))
@@ -181,7 +181,7 @@
      (sizeof-mtail `((union-def (field-list . ,fields))) udict))
     (`((enum-ref . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
-    (`((enum-def . ,rest))
+    (`((enum-def . ,rest)) ;; FIXME: need to check for packed
      (values (sizeof-basetype "int") (alignof-basetype "int")))
     (_ (sferr "c99/sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
@@ -191,7 +191,7 @@
   (let* ((udecl `(udecl ,specl ,declr))
          (xdecl (expand-typerefs udecl udict))
          (mdecl (udecl->mdecl xdecl)))
-    (sizeof-mtail (cdr mdecl) udict)))
+    (sizeof-mtail (md-tail mdecl) udict)))
 
 (define (trim-mtail mtail)
   (case (caar mtail)
@@ -250,7 +250,7 @@
               (xdecl (and udecl (expand-typerefs udecl udict)))
               (mdecl (and xdecl (udecl->mdecl xdecl))))
          (if (not mdecl) (throw 'c99-error "not found: ~S" name))
-         (trim-mtail (cdr mdecl))))
+         (trim-mtail (md-tail mdecl))))
       ((array-ref ,elt ,expr)
        (let ((mtail (gen-mtail expr)))
          (match mtail
@@ -666,7 +666,7 @@
         (cond
          ((pair? decls)
           (let* ((mdecl (udecl->mdecl (car decls)))
-                 (name (car mdecl)) (mtail (cdr mdecl)))
+                 (name (md-label mdecl)) (mtail (md-tail mdecl)))
             (call-with-values (lambda () (gen-offsets mtail (+ base siz) udict))
               (lambda (el-sz el-al el-os)
                 (let ((oval (if (pair? el-os) el-os
@@ -687,7 +687,7 @@
 
   (match mtail
     (`((pointer-to) . ,rest)
-     (let ((sz (sizeof-basetype '*)) (al (alignof-basetype '*)))
+     (let ((sz (sizeof-basetype 'void*)) (al (alignof-basetype 'void*)))
        (values sz al (incr-size 0 al base))))
     (`((fixed-type ,name))
      (let ((sz (sizeof-basetype name)) (al (alignof-basetype name)))
@@ -721,7 +721,7 @@
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl)))
        (call-with-values
-           (lambda () (gen-offsets (cdr mdecl) 0 udict))
+           (lambda () (gen-offsets (md-tail mdecl) 0 udict))
          (lambda (size align offsets) offsets))))
     ((type-name ,specl)
      (find-offsets `(type-name ,specl (param-declr (ident "_"))) udict))
@@ -752,7 +752,7 @@
        (else (reverse sizes)))))
 
   (match mtail
-    (`((pointer-to) . ,rest) (sizeof-basetype '*))
+    (`((pointer-to) . ,rest) (sizeof-basetype 'void*))
     (`((fixed-type ,name)) (sizeof-basetype name))
     (`((float-type ,name)) (sizeof-basetype name))
     (`((array-of ,dim) . ,rest)
@@ -772,7 +772,7 @@
      (let* ((udecl `(udecl ,spec-list ,declr))
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl)))
-       (gen-sizes (cdr mdecl) udict)))
+       (gen-sizes (md-tail mdecl) udict)))
     ((type-name ,spec-list)
      (find-sizes `(type-name ,spec-list (param-declr (ident "_"))) udict))
     (,_ #f)))
@@ -822,7 +822,7 @@
      (let* ((udecl `(udecl ,spec-list ,declr))
             (xdecl (expand-typerefs udecl udict keep))
             (mdecl (udecl->mdecl xdecl)))
-       (gen-types (cdr mdecl) udict)))
+       (gen-types (md-tail mdecl) udict)))
     ((type-name ,spec-list)
      (find-types `(type-name ,spec-list (param-declr (ident "_"))) udict keep))
     (,_ #f)))

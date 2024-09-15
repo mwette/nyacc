@@ -1,4 +1,4 @@
-;;; system/foreign/cdata.scm -
+;;; nyacc/foreign/cdata.scm -
 
 ;; Copyright (C) 2023-2024 Matthew Wette
 ;;
@@ -80,7 +80,7 @@
 
 ;;; Code:
 
-(define-module (system foreign cdata)
+(define-module (nyacc foreign cdata)
   #:export (cbase
             cstruct cunion cpointer carray cenum cfunction
             make-cdata cdata-ref cdata-set! cdata&-ref ccast
@@ -117,7 +117,7 @@
   #:use-module (srfi srfi-9 gnu)
   #:use-module (rnrs bytevectors)
   #:use-module (system foreign)
-  #:use-module (system foreign arch-info))
+  #:use-module (nyacc foreign arch-info))
 (export %cpointer-type)
 
 (use-modules (ice-9 pretty-print))
@@ -1278,17 +1278,6 @@
 (define NULL %null-pointer)
 (define (NULL? arg)
   (equal? (if (cdata? arg) (cdata-ref arg) arg) %null-pointer))
-
-#|
-(use-modules (system foreign-library))
-
-(define (foreign-library-pointer/search libs name)
-  (let loop ((libs libs))
-    (cond
-     ((null? libs) (error "not found"))
-     ((false-if-exception (foreign-library-pointer (car libs) name)))
-     (else (loop (cdr libs))))))
-|#
 
 ;; --- c99 support -------------------------------------------------------------
 

@@ -8,7 +8,7 @@
 ;; without any warranty.
 
 (use-modules (ffi gdk2))
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 
 ;; Initialize.
 (gdk_init NULL NULL)

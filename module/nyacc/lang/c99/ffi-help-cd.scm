@@ -48,7 +48,7 @@
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
 		#:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
-  #:use-module (system foreign arch-info)
+  #:use-module (nyacc foreign arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 pprint)
@@ -493,7 +493,7 @@
      (opts->mopts module-opts))
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (system foreign-library)\n")
-    (sfscm "  #:use-module (system foreign cdata))\n")
+    (sfscm "  #:use-module (nyacc foreign cdata))\n")
     (sfscm "\n")
     (ppscm
      `(define (foreign-pointer-search name)
@@ -1468,7 +1468,7 @@
       (*udict* udict)
       (ppscm '(use-modules ((system foreign) #:prefix ffi:)))
       (ppscm '(use-modules (system foreign-library)))
-      (ppscm '(use-modules (system foreign cdata)))
+      (ppscm '(use-modules (nyacc foreign cdata)))
       (ppscm
        `(define (foreign-pointer-search name)
           (let loop ((libs (list #f ,@(pkg-config-libs pkg-config))))

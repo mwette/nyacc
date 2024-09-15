@@ -9,7 +9,7 @@
 
 (use-modules (ffi cairo))               ; auto-generated from cairo.h etc
 (use-modules (system foreign))          ; pointer<->scm
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
 (define cr (cairo_create srf))

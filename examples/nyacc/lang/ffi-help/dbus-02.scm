@@ -27,7 +27,7 @@
 
 (use-modules (ice-9 pretty-print))
 (use-modules (system foreign))
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 (use-modules (ffi dbus))
 (use-modules (system dbus))
 

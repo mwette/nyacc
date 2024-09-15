@@ -19,7 +19,7 @@
 (use-modules (ffi dbus))
 (use-modules (system dbus))
 (use-modules (system foreign))
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (use-modules (ice-9 pretty-print))

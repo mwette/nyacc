@@ -18,8 +18,8 @@
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (system foreign)
   #:use-module (system foreign-library)
-  #:use-module (system foreign arch-info)
-  #:use-module (system foreign cdata)
+  #:use-module (nyacc foreign arch-info)
+  #:use-module (nyacc foreign cdata)
   #:use-module (test-suite lib))
 
 (define ctr

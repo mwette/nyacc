@@ -24,7 +24,7 @@
 ;;; Code:
 
 (define-module (scripts compile-ffi)
-  #:use-module (system foreign arch-info)
+  #:use-module (nyacc foreign arch-info)
   #:use-module (system base language)
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))

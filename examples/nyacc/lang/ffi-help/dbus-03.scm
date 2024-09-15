@@ -29,7 +29,7 @@
 (add-to-load-path (getcwd))
 
 (use-modules (system foreign))
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 (use-modules (ffi dbus))
 (use-modules (system dbus))
 

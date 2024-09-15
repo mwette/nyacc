@@ -22,7 +22,7 @@
 
 ;;; Code:
 
-(use-modules (system foreign cdata))
+(use-modules (nyacc foreign cdata))
 (use-modules (ffi glib))
 (use-modules (ffi gobject))
 (use-modules (ffi cairo))
