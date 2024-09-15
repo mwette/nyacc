@@ -1,0 +1,46 @@
+;; test-suite/system/foreign/cdata-02.scm
+
+(use-modules (system foreign cdata))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+
+(define t8 (name-ctype 't8 (cstruct `((o int) (p int)))))
+(define t7 (name-ctype 't7 (cstruct `((m int) (n ,t8)))))
+(define t6 (name-ctype 't6 (cstruct `((j int) (l ,(cpointer t7))))))
+(define t5 (name-ctype 't5 (cstruct `((i int) (j ,t6)))))
+(define t4 (name-ctype 't4 (cstruct `((g int) (h ,t5)))))
+(define t3 (name-ctype 't3 (cstruct `((e int) (f ,(cpointer t4))))))
+(define t2 (name-ctype 't2 (cstruct `((c int) (d ,t3)))))
+(define t1 (name-ctype 't1 (cstruct `((a int) (b ,t2)))))
+
+(define (doit data sel)
+  (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
+             (sl sel))
+    (if (null? sl) #f
+        (let ()
+          (loop bv ix ct (cdr sl))))))
+
+;; (dc-cdata-ref bv ix ct) deconstructed cdata-ref
+
+;;(use-modules (system foreign))
+
+
+(define d7 (make-cdata t7))
+(define d4 (make-cdata t4))
+(define d1 (make-cdata t1))
+
+(cdata-set! d7 42 'n 'p)
+(cdata-set! d4 (cdata& d7) 'h 'j 'l)
+(cdata-set! d1 (cdata& d4) 'b 'd 'f)
+
+(define s1 (ctype-sel t1 0 'b 'd 'f '* 'g))
+(cdata-set! d1 123 'b 'd 'f '* 'g)
+(define g1 (make-cdata-getter s1))
+
+(define s2 (ctype-sel t1 0 'b 'd 'f '* 'h 'j 'l '* 'm))
+(cdata-set! d1 234 'b 'd 'f '* 'h 'j 'l '* 'm)
+(define g2 (make-cdata-getter s2))
+
+(define s3 (ctype-sel t1 0 'b 'd 'f '* 'h 'j 'l '* 'n 'p))
+(define g3 (make-cdata-getter s3))
+
+;; --- last line ---
