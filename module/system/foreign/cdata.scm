@@ -1102,17 +1102,18 @@
 
 ;;.@deffn {Procedure} Xloop sel offset data tags
 ;; Defined internally for @code{make-cdata-getter} and @code{make-cdata-setter}.
+;; @var{offset} is a base address offset for pointer dereferencing. 
 ;;.@end deffn 
 (define (Xloop sel offset data tags) ;; => bv ix ct
   (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
              (head (car sel)) (tail (cdr sel)))
     (cond
      ((null? tail)
-      (let lp ((ix ix) (ct ct) (tags tags))
+      (let lp ((ix (+ ix (car head))) (ct (cdr head)) (tags tags))
         (if (null? tags) (values bv ix ct)
             (call-with-values (lambda () (ctype-detag ct ix (car tags)))
               (lambda (ct ix) (lp ix ct (cdr tags)))))))
-     ((cpointer? (ctype-kind (cdr head)))
+     ((eq? 'pointer (ctype-kind (cdr head)))
       (let* ((px (car head)) (pt (cdr head))
              (dty (cpointer-type (ctype-info pt)))
              (mtype (cpointer-mtype (ctype-info pt)))
@@ -1120,7 +1121,8 @@
              (dptr (make-pointer (+ addr offset)))
              (bvec (pointer->bytevector dptr (ctype-size dty))))
         (loop bvec 0 dty (car tail) (cdr tail))))
-     (else (error "cdata-getter/setter: expecting pointer, bad tag?")))))
+     (else
+      (error "cdata-getter/setter: expecting pointer, bad tag?")))))
 
 ;; @deffn {Procedure} make-cdata-getter sel [offset] => lambda
 ;; Genererate a procedure that given a cdata object will fetch the value

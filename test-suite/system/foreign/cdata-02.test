@@ -7,7 +7,20 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (system foreign cdata))
+(define-module (cdata-01)
+  ;;#:use-module (ice-9 match)
+  ;;#:use-module (ice-9 format)
+  ;;#:use-module ((srfi srfi-1) #:select (fold))
+  ;;#:use-module (system foreign)
+  ;;#:use-module (system foreign-library)
+  ;;#:use-module (system foreign arch-info)
+  #:use-module (system foreign cdata)
+  #:use-module (test-suite lib))
+
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
 (define t8 (name-ctype 't8 (cstruct `((o int) (p int)))))
@@ -19,35 +32,32 @@
 (define t2 (name-ctype 't2 (cstruct `((c int) (d ,t3)))))
 (define t1 (name-ctype 't1 (cstruct `((a int) (b ,t2)))))
 
-(define (doit data sel)
-  (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
-             (sl sel))
-    (if (null? sl) #f
-        (let ()
-          (loop bv ix ct (cdr sl))))))
-
-;; (dc-cdata-ref bv ix ct) deconstructed cdata-ref
-
-;;(use-modules (system foreign))
-
-
 (define d7 (make-cdata t7))
 (define d4 (make-cdata t4))
 (define d1 (make-cdata t1))
 
-(cdata-set! d7 42 'n 'p)
-(cdata-set! d4 (cdata& d7) 'h 'j 'l)
-(cdata-set! d1 (cdata& d4) 'b 'd 'f)
+(with-test-prefix "system/foreign/cdata"
 
-(define s1 (ctype-sel t1 0 'b 'd 'f '* 'g))
-(cdata-set! d1 123 'b 'd 'f '* 'g)
-(define g1 (make-cdata-getter s1))
-
-(define s2 (ctype-sel t1 0 'b 'd 'f '* 'h 'j 'l '* 'm))
-(cdata-set! d1 234 'b 'd 'f '* 'h 'j 'l '* 'm)
-(define g2 (make-cdata-getter s2))
-
-(define s3 (ctype-sel t1 0 'b 'd 'f '* 'h 'j 'l '* 'n 'p))
-(define g3 (make-cdata-getter s3))
+  (pass-if "foreign arch test set up"
+    (let ()
+      (cdata-set! d7 42 'n 'p)
+      (cdata-set! d4 (cdata& d7) 'h 'j 'l)
+      (cdata-set! d1 (cdata& d4) 'b 'd 'f)
+      (cdata-set! d4 12 'g)
+      (cdata-set! d7 23 'm)
+      (cdata-set! d7 34 'n 'p) 
+      #t))
+      
+  (pass-if "ctype-sel, getters, setters"
+    (let* ((s1 (ctype-sel t1 0 'b 'd 'f '* 'g))
+           (g1 (make-cdata-getter s1))
+           (s2 (ctype-sel t1 0 'b 'd 'f '* 'h 'j 'l '* 'm))
+           (g2 (make-cdata-getter s2))
+           (s3 (ctype-sel t1 0 'b 'd 'f '* 'h 'j 'l '* 'n 'p))
+           (g3 (make-cdata-getter s3)))
+      (and (equal? (g1 d1) 12) (equal? (g2 d1) 23) (equal? (g3 d1) 34))))
+  )
+      
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 
 ;; --- last line ---
