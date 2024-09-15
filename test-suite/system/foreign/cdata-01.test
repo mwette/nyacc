@@ -12,20 +12,19 @@
 ;; we generate the cdata and ccode to manipulate the bitfields.  We
 ;; make foreign function calls to make sure they agree.
 
-(use-modules (ice-9 match))
-(use-modules (ice-9 format))
-(use-modules ((srfi srfi-1) #:select (fold)))
-(use-modules (rnrs bytevectors))
-(use-modules (system foreign))
-(use-modules (system foreign-library))
-(use-modules (system foreign arch-info))
-(use-modules (system foreign cdata))
+(define-module (cdata-01)
+  #:use-module (ice-9 match)
+  #:use-module (ice-9 format)
+  #:use-module ((srfi srfi-1) #:select (fold))
+  #:use-module (system foreign)
+  #:use-module (system foreign-library)
+  #:use-module (system foreign arch-info)
+  #:use-module (system foreign cdata)
+  #:use-module (test-suite lib))
 
-(use-modules (ice-9 pretty-print))
-(define (pp exp)
-  (pretty-print exp (current-output-port) #:per-line-prefix "  "))
-(define (sf fmt . args)
-  (apply simple-format (current-output-port) fmt args))
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
 
 (define (unload-foreign-library lib)
   ((@@ (system foreign-library) dlclose)
@@ -33,8 +32,6 @@
 
 (define (tsym->str tsym)
   (string-map (lambda (c) (if (char=? #\- c) #\space c)) (symbol->string tsym)))
-
-;; void struct_init(foo_t* *s, int a, double b, ...)
 
 (set! *random-state* (random-state-from-platform))
 
@@ -149,7 +146,7 @@
                          c99-basename c99-basename))
   c99-basename)
 
-(define (exec-test case-num fields testlib kind)
+(define* (exec-test case-num fields testlib kind #:optional (m-count 10))
   (define (field->rand-val fld)
     (rand-mtype-val (mtypeof-basetype (cadr fld))
                     (and (pair? (cddr fld)) (caddr fld))))
@@ -184,12 +181,9 @@
            (cons* '* int (map (lambda (t) '*) types))))
          (vars (map (lambda (t) (make-cdata (cbase t))) types))
          (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars)))
-    ;;(sf "fields=~s\n" fields)
     (fold
      (lambda (n seed)
        (let* ((vals (map field->rand-val fields)))
-         ;;(format #t "   vals=~s\n" vals)
-         ;;(format #t "   szof=~s\n" (ctype-size t-ct))
          (and seed
               (let ((res (siz-ftn sptr)))
                 (unless (eqv? size res)
@@ -215,14 +209,14 @@
                    (format #t "\t               ~s\n" fields))
                  (and (eqv? val (cdata-ref var)) seed))
                #t (iota *nfld*) names types vars vals))))
-    #t (iota 3))))
+    #t (iota m-count))))
 
 
 ;; executing do-test twice makes it always crash
-(define* (do-test/struct #:optional (n 10))
+(define* (do-test/struct #:optional (n-count 10) (m-count 10))
   (let* ((cases (map (lambda (ix)
                        (cons ix (make-rand-fields *nfld* #:w/bitfields #t)))
-                     (iota n)))
+                     (iota n-count)))
          (basename (gen-code/struct cases))
          (ldlibenv #f)
          (testlib #f))
@@ -233,17 +227,18 @@
         (set! testlib (load-foreign-library
                        basename #:search-path (list (getcwd)))))
       (lambda ()
-        (fold (lambda (kase seed)
-                (and seed (exec-test (car kase) (cdr kase) testlib 'struct)))
-              #t cases))
+        (fold
+         (lambda (kase seed)
+           (and seed (exec-test (car kase) (cdr kase) testlib 'struct m-count)))
+         #t cases))
       (lambda ()
         (unload-foreign-library testlib)
         (putenv (format #f "LD_LIBRARY_PATH=~s" ldlibenv))))))
 
-(define* (do-test/union #:optional (n 3))
+(define* (do-test/union #:optional (n-count 10) (m-count 10))
   (let* ((cases (map (lambda (ix)
                        (cons ix (make-rand-fields *nfld* #:w/bitfields #f)))
-                     (iota n)))
+                     (iota n-count)))
          (basename (gen-code/union cases))
          (ldlibenv #f)
          (testlib #f))
@@ -254,22 +249,24 @@
         (set! testlib (load-foreign-library
                        basename #:search-path (list (getcwd)))))
       (lambda ()
-        (fold (lambda (kase seed)
-                (and seed (exec-test (car kase) (cdr kase) testlib 'union)))
-              #t cases))
+        (fold
+         (lambda (kase seed)
+           (and seed (exec-test (car kase) (cdr kase) testlib 'union m-count)))
+         #t cases))
       (lambda ()
         (unload-foreign-library testlib)
         (putenv (format #f "LD_LIBRARY_PATH=~s" ldlibenv))))))
 
-(define tS1 (cstruct `((a ,(cbase 'int)) (b ,(cbase 'double)))))
-(define dS1 (make-cdata tS1))
-(define fU1
-  '((a short) (b float) (c unsigned-short) (d unsigned-short)
-    (e unsigned-short)))
-(define tU1 (cunion fU1))
-(define dU1 (make-cdata tU1))
-(define pU1 (cdata& dU1))
+(with-test-prefix "system/foreign/cdata"
 
-(do-test/struct)
+  (pass-if "struct layout vs C (with bitfields)"
+    ;; exec 10 random layouts with 10 random field values each
+    (do-test/struct 10 10))
+
+  (pass-if "union layout vs C"
+    ;; exec 10 random layouts with 10 random field values each
+    (do-test/union 10 10)))
+
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 
 ;; --- last line ---a
