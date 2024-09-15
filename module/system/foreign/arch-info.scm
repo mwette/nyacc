@@ -206,6 +206,39 @@
 
 ;; === maps ====================================================================
 
+;; ARM 64bit (little-endian)
+(define mtype-map/aarch64
+  '((void* . u64le)
+    (char . s8) (short . s16le) (int . s32le) (long . s64le)
+    (float . f32le) (double . f64le) (unsigned-short . u16le)
+    (unsigned . u32le) (unsigned-long . u64le)
+    ;;
+    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le) (int8_t . s8)
+    (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le) (int32_t . s32le)
+    (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    ;;
+    (signed-char . s8) (unsigned-char . u8)
+    (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
+    (signed . s32le) (signed-int . s32le) (long-int . s64le)
+    (signed-long . s64le) (signed-long-int . s64le)
+    (unsigned-short-int . u16le) (unsigned-int . u32le)
+    (unsigned-long-int . u64le)
+    ;;
+    (_Bool . s8) (bool . s8)
+    (intptr_t . s64le) (uintptr_t . u64le)
+    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
+    ;;
+    (long-double . f128le)
+    (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long . u64le)
+    (unsigned-long-long-int . u64le)))
+
+(define arch/aarch64
+  (make-arch-info "aarch64" 'little mtype-map/aarch64 alignof-mtype-map/natural))
+
+(add-to-arch-map "aarch64" arch/aarch64)
+
+
 (define mtype-map/avr
   '((void* . u16le)
     (char . s8) (short . s16le) (int . s16le) (long . s32le)
