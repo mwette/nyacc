@@ -58,7 +58,8 @@ install-html:
 dist-files: \
 	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html \
 	nyacc-c99-ug.info nyacc-c99-ug.pdf nyacc-c99-ug.html \
-	nyacc-fh-ug.info nyacc-fh-ug.pdf nyacc-fh-ug.html
+	nyacc-fh-ug.info nyacc-fh-ug.pdf nyacc-fh-ug.html \
+	cdata.info cdata.pdf cdata.html
 
 %_scm.texi: ../../module/nyacc/%.scm
 	./pull-texi.scm $< >$@

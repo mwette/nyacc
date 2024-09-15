@@ -25,6 +25,8 @@
 
 (define-module (scripts compile-ffi)
   #:use-module ((nyacc lang c99 ffi-help-bs) #:prefix bs:)
+  #:use-module ((nyacc lang c99 ffi-help-cd) #:prefix cd:)
+  #:use-module (system foreign arch-info)
   #:use-module (system base language)
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
@@ -145,7 +147,8 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
                    (string-suffix? ".ffi" file)
                    (fail "expecting .ffi suffix"))
                (values opts (cons file files)))
-             '((target . bytestructures)) '()))
+             `((backend . ,(or (getenv "FFI_HELP_BACKEND") 'cdata))
+               (machine . "native")) '()))
 
 ;; --- check dependencies -------------------------------------------
 
@@ -250,13 +253,13 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
         (catch 'c99-error
           (lambda ()
             (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
-            (case (assq-ref options 'target)
+            (case (assq-ref options 'backend)
               ((bs bytestructures)
                (bs:compile-ffi-file ffi-file options))
               ((cd cdata)
-               (fail "target cdata not yet supported"))
+               (cd:compile-ffi-file ffi-file options))
               (else
-               (fail "bad target")))
+               (error "bad backend target")))
             (sfmt "... wrote `~A'\n" (fix-path scm-file)))
           (lambda (key fmt . args)
             (apply throw 'ffi-help-error fmt args))))
@@ -275,7 +278,14 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       (lambda () (parse-args args))
     (lambda (opts files)
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
-      (for-each (lambda (file) (compile-ffi file opts)) (reverse files))))
+      (unless (string=? (assq-ref opts 'machine) "native")
+        (unless (memq (assq-ref opts 'backend) '(cdata))
+          (fail "only cdata supports non-native machine architectures")))
+      (for-each
+       (lambda (file)
+         (with-arch (assq-ref opts 'machine)
+           (compile-ffi file opts)))
+       (reverse files))))
   (exit 0))
 
 ;; --- last line ---

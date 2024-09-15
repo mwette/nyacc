@@ -1,4 +1,4 @@
-#!/usr/bin/env guile -s 
+#!/usr/bin/env guile
 !#
 ;; pull-texi.scm
 ;;
@@ -26,10 +26,10 @@
 		     (if (and (> (string-length line) 2)
 			      (string=? ";; " (substring line 0 3)))
 			 (iter (cons (substring line 3) res) #t (read-line))
-			 (iter res #f (read-line)))
+			 (iter (cons "\n" res) #f (read-line)))
 		     (if (and (> (string-length line) 3)
 			      (string=? ";; @" (substring line 0 4)))
-			 (iter (cons (substring line 3) res) #t (read-line))
+			 (iter (cons (substring line 3) ures) #t (read-line))
 			 (iter res #f (read-line))))
 		 (reverse res)))))
        "\n")))
