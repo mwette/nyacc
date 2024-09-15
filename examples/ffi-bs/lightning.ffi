@@ -1,0 +1,201 @@
+;; lightning.ffi			-*- Scheme -*-
+
+;; Copyright (C) 2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+(define-ffi-module (ffi-bs lightning)
+  #:include '("lightning.h" "lightning/jit_x86.h")
+  #:inc-filter (lambda (file path)
+		 (or (string-contains file "lightning")
+		     (string-contains path "lightning/")))
+  #:library '("liblightning"))
+
+(define-public jitsym ffi-lightning-symbol-val)
+
+;;; Generated from examples/nyacc/lang/c99/mkjit.scm
+
+(define (jit_get_note n u v w)
+  (_jit_get_note _jit n u v w))
+
+(define (jit_pointer_p u)
+  (_jit_pointer_p _jit u))
+
+(define (jit_callee_save_p u)
+  (_jit_callee_save_p _jit u))
+
+(define (jit_arg_register_p u)
+  (_jit_arg_register_p _jit u))
+
+(define (jit_new_node_pwd c u v w)
+  (_jit_new_node_pwd _jit c u v w))
+
+(define (jit_new_node_pwf c u v w)
+  (_jit_new_node_pwf _jit c u v w))
+
+(define (jit_new_node_pww c u v w)
+  (_jit_new_node_pww _jit c u v w))
+
+(define (jit_new_node_wwd c u v w)
+  (_jit_new_node_wwd _jit c u v w))
+
+(define (jit_new_node_wwf c u v w)
+  (_jit_new_node_wwf _jit c u v w))
+
+(define (jit_new_node_qww c l h v w)
+  (_jit_new_node_qww _jit c l h v w))
+
+(define (jit_new_node_www c u v w)
+  (_jit_new_node_www _jit c u v w))
+
+(define (jit_new_node_wd c u v)
+  (_jit_new_node_wd _jit c u v))
+
+(define (jit_new_node_wf c u v)
+  (_jit_new_node_wf _jit c u v))
+
+(define (jit_new_node_pw c u v)
+  (_jit_new_node_pw _jit c u v))
+
+(define (jit_new_node_dp c u v)
+  (_jit_new_node_dp _jit c u v))
+
+(define (jit_new_node_fp c u v)
+  (_jit_new_node_fp _jit c u v))
+
+(define (jit_new_node_wp c u v)
+  (_jit_new_node_wp _jit c u v))
+
+(define (jit_new_node_ww c u v)
+  (_jit_new_node_ww _jit c u v))
+
+(define (jit_new_node_p c u)
+  (_jit_new_node_p _jit c u))
+
+(define (jit_new_node_d c u)
+  (_jit_new_node_d _jit c u))
+
+(define (jit_new_node_f c u)
+  (_jit_new_node_f _jit c u))
+
+(define (jit_new_node_w c u)
+  (_jit_new_node_w _jit c u))
+
+(define (jit_new_node c) (_jit_new_node _jit c))
+
+(define (jit_tramp u) (_jit_tramp _jit u))
+
+(define (jit_frame u) (_jit_frame _jit u))
+
+(define (jit_set_data u v w)
+  (_jit_set_data _jit u v w))
+
+(define (jit_get_data u v)
+  (_jit_get_data _jit u v))
+
+(define (jit_set_code u v)
+  (_jit_set_code _jit u v))
+
+(define (jit_get_code u) (_jit_get_code _jit u))
+
+(define (jit_patch_abs u v)
+  (_jit_patch_abs _jit u v))
+
+(define (jit_patch_at u v)
+  (_jit_patch_at _jit u v))
+
+(define (jit_patch u) (_jit_patch _jit u))
+
+(define (jit_target_p u) (_jit_target_p _jit u))
+
+(define (jit_indirect_p u)
+  (_jit_indirect_p _jit u))
+
+(define (jit_forward_p u)
+  (_jit_forward_p _jit u))
+
+(define (jit_address node)
+  (_jit_address _jit node))
+
+(define (jit_regno reg) (logand reg #x00007fff))
+
+(define (jit_class reg) (logand reg #xffff0000))
+
+(define (JIT_F index) (jit_f index))
+
+(define (JIT_V index) (jit_v index))
+
+(define (JIT_R index) (jit_r index))
+
+(define (jit_x87_reg_p reg)
+  (and (>= reg _ST0) (<= reg _ST6)))
+
+;;; Extract from jit_x86.h
+
+(define jit_r (lambda (i) (error "undefined")))
+(define jit_r_num (lambda () (error "undefined")))
+(define jit_v (lambda (i) (error "undefined")))
+(define jit_v_num (lambda () (error "undefined")))
+(define jit_f (lambda (i) (error "undefined")))
+(define jit_f_num (lambda () (error "undefined")))
+(define JIT_R0 (if #f #f))
+(define JIT_R1 (if #f #f))
+(define JIT_R2 (if #f #f))
+(define JIT_R3 (if #f #f))
+(define JIT_V0 (if #f #f))
+(define JIT_V1 (if #f #f))
+(define JIT_V2 (if #f #f))
+(define JIT_V3 (if #f #f))
+(define JIT_F0 (if #f #f))
+(define JIT_F1 (if #f #f))
+(define JIT_F2 (if #f #f))
+(define JIT_F3 (if #f #f))
+(define JIT_F4 (if #f #f))
+(define JIT_F5 (if #f #f))
+(define JIT_F6 (if #f #f))
+(define JIT_F7 (if #f #f))
+(define jit_se_reg_p (lambda (reg) (error "undefined")))
+
+(cond
+ ((string=? %host-type "x86_64-pc-linux-gnu")
+  (set! jit_r (lambda (i) (+ (jitsym '_RAX) i)))
+  (set! jit_r_num (lambda () 4))
+  (set! jit_v (lambda (i) (+ (jitsym '_RBX) i)))
+  (set! jit_v_num (lambda () 4))
+  (set! jit_f (lambda (index) (+ (jitsym '_XMM8) index)))
+  (set! jit_f_num (lambda () 8))
+  (set! jit_R0 (jitsym '_RAX))
+  (set! jit_R1 (jitsym '_R10))
+  (set! jit_R2 (jitsym '_R11))
+  (set! jit_R3 (jitsym '_R12))
+
+  (set! jit_V0 (jitsym '_RBX))
+  (set! jit_V1 (jitsym '_R13))
+  (set! jit_V2 (jitsym '_R14))
+  (set! jit_V3 (jitsym '_R15))
+  
+  (set! jit_F0 (jitsym '_XMM8))
+  (set! jit_F1 (jitsym '_XMM9))
+  (set! jit_F2 (jitsym '_XMM10))
+  (set! jit_F3 (jitsym '_XMM11))
+  (set! jit_F4 (jitsym '_XMM12))
+  (set! jit_F5 (jitsym '_XMM13))
+  (set! jit_F6 (jitsym '_XMM14))
+  (set! jit_F7 (jitsym '_XMM15))
+  (set! jit_sse_reg_p (lambda (reg) (and (>= reg (jitsym '_XMM8))
+					 (<= reg (jitsym '_XMM0))))))
+ (else
+  (display "(ffi-bs lightning): host-type not handled\n" (current-error-port))))
+
+;; --- last line ---

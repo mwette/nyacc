@@ -1,0 +1,6 @@
+(define-ffi-module (ffi-bs bug62730)
+  #:api-code "
+typedef void (foo)(int x);
+typedef struct bar { foo x; };
+")
+ 
