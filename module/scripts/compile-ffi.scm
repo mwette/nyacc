@@ -27,9 +27,11 @@
   #:use-module (nyacc foreign arch-info)
   #:use-module (system base language)
   #:use-module ((system base compile) #:select (compile-file))
-  #:use-module ((srfi srfi-1) #:select (fold fold-right))
+  #:use-module ((srfi srfi-1) #:select (fold fold-right lset-union every))
   #:use-module (srfi srfi-37)
   #:version (2 00 0))
+
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
 (define (compile-scm file)
   (compile-file file
@@ -152,6 +154,19 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
+(define (tsort filed filel)
+  (define (covered? deps done) (every (lambda (e) (member e done)) deps))
+  (let loop ((done '()) (hd '()) (tl files))
+    (if (null? tl)
+        (if (null? hd) done (loop done '() hd))
+        (cond
+         ((not (assq-ref filed (car tl)))
+          (loop (cons (car tl) done) hd (cdr tl)))
+         ((covered? (assq-ref filed (car tl)) done)
+          (loop (cons (car tl) done) hd (cdr tl)))
+         (else
+          (loop done (cons (car tl) hd) (cdr tl)))))))
+
 (define (more-recent? ffi-file scm-file)
   ;; copied from ice-9/boot-9.scm
   (let ((stat1 (stat ffi-file)) (stat2 (stat scm-file)))
@@ -160,27 +175,17 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
              (>= (stat:mtimensec stat1)
                  (stat:mtimensec stat2))))))
 
+(define (stat-time<? stat1 stat2)
+  (or (< (stat:mtime stat1) (stat:mtime stat2))
+      (and (= (stat:mtime stat1) (stat:mtime stat2))
+           (< (stat:mtimensec stat1) (stat:mtimensec stat2)))))
+
 (define (find-in-path file)
   (let loop ((pathl %load-path))
     (if (null? pathl) #f
         (let ((path (string-append (car pathl) "/" file)))
           (if (access? path R_OK) path
               (loop (cdr pathl)))))))
-
-;; Given module spec and list of dep's, return list of out-of-date dep's.
-;; This routine assumes the scm file is in the same dir as the ffi file.
-(define (check-ffi-deps ffimod uses)
-  (fold-right
-   (lambda (fmod seed)
-     (let* ((base (string-join (map symbol->string fmod) "/"))
-            (xffi (find-in-path (string-append base ".ffi")))
-            (xscm (find-in-path (string-append base ".scm"))))
-       (unless xffi (fail "dependent ~S not found" fmod))
-       (cond
-        ((not xscm) (cons xffi seed))
-        ((more-recent? xffi xscm) (cons xffi seed))
-        (else seed))))
-   '() uses))
 
 (define-syntax find-ffi-uses
   (lambda (x)
@@ -191,11 +196,12 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       ((_ attr rest ...) #'(find-ffi-uses rest ...))
       ((_) #''()))))
 
-(define-syntax-rule (define-ffi-module path-list attr ...)
-  (check-ffi-deps (quote path-list) (find-ffi-uses attr ...)))
+(define-syntax-rule (define-ffi-module spec attr ...)
+  (cons (quote spec) (find-ffi-uses attr ...)))
 (export define-ffi-module)
 
-(define (outdated-ffi-deps file)
+;; Given ffi-module filename, return alist of dependent specs
+(define (module-ffi-deps file)
   (unless (access? file R_OK)
     (fail "not found: ~S" file))
   (call-with-input-file file
@@ -208,27 +214,50 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
            ((and (pair? exp) (eqv? 'define-ffi-module (car exp))) (eval exp env))
            (else (loop (read iport)))))))))
 
-(define (gen-ffi-deps file)
-  (let loop ((odeps '()) (next '()) (prev (outdated-ffi-deps file)))
+;; from requested compiled file, return depends-on dict of .ffi-files
+(define (all-ffi-deps file)
+  ;; sdspecd is spec->file
+  (let loop ((depd '()) (specd '()) (curr file) (todo '()))
     (cond
-     ((pair? prev)
-      (loop (cons (car prev) odeps)
-            (if (member (car prev) odeps) next (cons (car prev) next))
-            (cdr prev)))
-     ((pair? next)
-      (loop odeps '() next))
+     (file
+      (let ((mdep (module-ffi-deps file))) ;; (mod-spec . dep-specs)
+        (loop (cons mdep depd) (acons (car mdep) file specd) #f todo)))
+     ((pair? todo)
+      (let* ((base (string-join (map symbol->string (car todo) "/")))
+             (path (find-in-path (string-append base ".ffi"))))
+        (unless path (fail "can't find ~s" path))
+        (loop depd specd path (cdr todo))))
      (else
-      (reverse
-       (fold
-        (lambda (odep deps) (if (member odep deps) deps (cons odep deps)))
-        '() odeps))))))
+      (map (lambda (d) (map (lambda (m) (assoc-ref specd m)) d)) depd)))))
 
-(define (ensure-ffi-deps file options)
-  (let ((options `((no-recurse . #t) (no-exec . #f) . ,options))
-        (ffi-deps (gen-ffi-deps file)))
+;; from list of all files and depd, return supplier-for dict
+(define (gen-supd depd all)
+  (define (chk ent s) (if (member file (cdr ent)) (cons (car ent) s) s))
+  (map (lambda (file) (cons file (fold chk '() depd))) all))
+
+(define (ensure-ffi-deps file)
+  (let* ((depd (all-ffi-deps file))
+         (all (apply lset-union string=? depd))
+         (supd (gen-supd depd all))
+         (tord (tsort depd all))
+         (todo #f))
+    (let loop ((todo '()) (age0 (stat (car tord))) (ordl tord))
+      ;; so through list, adding to todo if needs update
+      (let* ((ffi (car ordl))
+             (scm (find-in-path (string-append (basename ffi ".ffi") ".scm")))
+             (age1 (and ffi (stat ffi))))
+        (unless sffi (fail "dependent ~S not found" fmod))
+        (cond
+         ;; WORKING HERE
+         ((not scm) (loop (cons todo) age0 (cons ffi seed)))
+         ((and stat (stat-time<? xstat)) 'tbd)
+         ((more-recent? xffi xscm) (cons xffi seed))
+         (else
+          (set! todo (filter (lambda (e) (memq e todo)) tord))))))
     (for-each
-     (lambda (dep-file) (compile-ffi dep-file options))
-     (reverse ffi-deps))))
+     (lambda (file) (if (member file todo) (compile-ffi-file file)))
+     tord)))
+
 
 ;; -----------------------------------------------------------------------------
 
