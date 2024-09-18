@@ -1,0 +1,50 @@
+\input texinfo.tex
+@setfilename nx-tsh.info
+@settitle Notes on NX-Tsh
+
+@copying
+Copyright (C) 2023 -- Matthew Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as @file{COPYING.DOC}.
+@end copying
+
+@headings off
+@everyfooting @| @thispage @|
+
+@node Top
+@top Notes on NX-Tsh
+@format
+Matt Wette
+April 2023
+@end format
+
+@heading Notes
+
+Tsh (pronounced ``ticklish'') is an attempt to generate a TCL-like
+interpreter that has the flavor of TCL where values are not strings.
+
+NOTES
+@itemize
+@item
+symbols must be C-like
+@item
+strings must be quoted with double-quotes
+@item
+@code{[expr ...]} is replaced with @code{(...)}. So, anywhere you see
+outermost @code{()}, you have an expression context.  In fact, in
+forms where an expression is expected, one can use a ``unit
+expression''.  This can be a constant, a symbol, a deref'd variable or
+a paren-form (i.e., @code{(...)}).
+@item
+@code{[fvec 1.0 2.0]} generates a (uniform) floating point vector
+@item
+@code{[ivec 1 2.} generates a (uniform) integer vector
+
+@end itemize
+
+@bye
+@c --- last line ---

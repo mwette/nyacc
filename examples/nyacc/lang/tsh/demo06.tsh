@@ -1,0 +1,15 @@
+# demo06.tsh - numeric and associative arrays
+
+proc addem {aax aay} {
+    return ($aax(foo) + $aay(foo))
+}
+
+set aax [struct foo 2]
+set aay [struct foo 3]
+puts [addem $aax $aay]
+
+# generate error
+set aaz [struct bar 4]
+addem $aax $aaz
+
+# --- last line ---

@@ -1,0 +1,20 @@
+set i 0
+
+set y 1
+
+proc foo {x} {
+    nonlocal y
+    set x 1
+    set y 2
+    set z 3
+    for {set i 0} {($i < 3)} {incr i} {
+	set y ($y + $i)
+    }
+    return $x
+}
+
+puts $i
+puts $y
+foo 3
+puts $i
+puts $y

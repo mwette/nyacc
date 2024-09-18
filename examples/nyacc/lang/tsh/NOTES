@@ -1,0 +1,114 @@
+set sym 1
+defines sym as a box, if not already there
+$ is the unbox operator
+( introduces expression scope
+{ introduces code scope
+[ .. ] is command eval
+"" are immutable ascii strings
+-<letter>. is a keychar (except in expression lexical context)
+--<letter>+ is a keyword (except in expression lexical context)
+--<letter>+=<nonspace>* is a keypair (except in expression lexical context)
+
+booleans are 0 false, else true
+
+vectors
+  have: [fvec 1.0 2.0 ]  or [ivec 1 2 3] [avec a 1 3.0]
+  how about [any 1.0 2 abc] ?? NEED for rest-args
+  how about [sym a b c]
+make-fvec 32 0.0
+make-ivec 32 0
+idea: add | as symbol and use [fmat 1.0 2.0 | 3.0 4.0]
+add bytevectors
+
+foo(abc) : dict
+bar(1) : array
+bar(1,2) : array
+
+[struct a 1 b 2 c 0] OR? [assoc a 1 b 2 c 3]
+
+no implicit conversion int->flt: CANT DO
+
+files end in .tsh (Tcl-iSH)
+
+add: global ports use
+
+path: abc::def::ghi      # note: use stmt is read specially so ice-9 works
+
+pass by reference: set a [box 1]; setbox $a 2; isbox $a; set b [unbox $a]
+
+===============================================================================
+
+struct/array refs:
+
+NO $$abc => $($abc)
+NO $$abc(1) => $($abc(1)) or $($abc)(1)  [prefer second]
+NO ambiguity: $$abc(1) : is this $($abc(1))
+   check var-expr in mach.scm
+NO $($a(1))(2)
+
+only syntax is:
+  set expr val
+  set $expr(x) val
+That is, indexed are always derefed.  The only way to make an array or
+struct is via the struct and array functions.
+Usng no-ws (no-whitespace) doesn't work: return [foo $abc]
+So, need to go back to parse-$-form $abc( and return (deref-ident "abc")
+Now, for paths, which I just fixed : keep as is?
+
+shared arrays?  array slices? ...   Better for ca
+
+set mat [f64mat (1.0, 2.0) (3.0, 4.0)]
+set xyz [i32mat (1, 2) (3, 4)]
+So could do $mat(1:3,0:end)
+
+===============================================================================
+
+proc is now compiled via set x [lambda ...]
+proc's can include procs
+
+===============================================================================
+
+Was thinking symbols not defined as variable identifiers should evaluate
+to themselves (i.e., $abc => abc if not defined) but this is undersireable
+if we want to catch undefined (like filtering out tsh structure)
+
+===============================================================================
+
+can't do in guile, except with bytevectors
+  typenames: i32 u32 f64 f32
+  literals: 1.0f32 1u16 ...
+  default literal int is i32
+  default literal flt is f64
+  [f64 1.0 2.0 ]
+  [i32 1 2 3]
+
+need to deal with semantics of procecure calls
+  [foo x $y "z"]
+  x is symbol
+
+data types: like rust
+  5 - i32
+  4.5 - f64
+  12i8 12u8 4.5f32
+  [flt 1.2 1.3 1.4] : passed by reference, mutable
+  'xxx' : immutable string?
+  "xxx" : mutable string?
+  -<letter> : keychar
+  -<alphanum*> : keyword
+  foo(bar) : assoc array
+
+need macro system to be able to do
+  ??? set foo [macro ... ]
+  for {k} {[range 1,10]} {
+    set cmp_k [gensym cmp $k]
+    sys $cmp_k val (23.0 + 1.0*$k)
+  }
+
+Need to preserve first word is command name so we can use unknown
+
+OK?  set x (0.0 + [foo -x 3]) # keychar in eval context
+
+BROKEN
+1) tsh (tcl) keyword arguments to translate to tree-il, because guile
+   expects keywords at end and tcl convention is at front
+

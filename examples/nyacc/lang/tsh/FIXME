@@ -1,0 +1,32 @@
+
+
+(define (nx-add-taglevel entry dict tag) #f)
+(define (nx-add-toplevel name dict) #f)
+(define (nx-add-framelevel name dict) #f)
+(define (nx-insert-scopelevel name dict) #f)
+
+(define (nx-lookup name dict) #f)
+(define (nx-lexical-symbol? name dict) #f)
+
+(define (nx-add-lexical name dict) #f)
+(define (nx-add-lexicals . args) #f)
+(define (nx-add-variable name dict) #f)
+(define nx-add-symbol nx-add-variable) #f)
+
+(define* (nx-lookup-gensym name dict #:key label) #f)
+(define (nx-lookup-in-env name env) #f)
+
+(define (nx-ensure-variable name dict) #f)
+(define (nx-ensure-variable/scope name dict) #f)
+
+(define (nx-islocal ???) #f)
+
+
+
+
+(("lvar" . (lexical ...))
+ (@F . "*anon*")
+ ("y" . (lexical)) ;; arg
+ ("return" . (lexical)) ;; arg
+ (@P ("foo . (toplevel))
+     ("@top . #t)

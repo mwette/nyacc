@@ -1,0 +1,6 @@
+# demo1.tsh
+# -*- tcl -*-
+set foo 1
+set baz (1 + 2)
+set baz (1+2)
+set baz ((3+4)/(1+2))

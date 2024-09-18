@@ -1,0 +1,19 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0
+!#
+
+(use-modules (nyacc lang tsh mach))
+(use-modules (nyacc lalr))
+
+(when (gen-tsh-files)
+  (with-output-to-file ",file.txt"
+    (lambda ()
+      (pp-lalr-grammar tsh-file-spec)
+      (pp-lalr-machine tsh-file-mach)))
+  (with-output-to-file ",stmt.txt"
+    (lambda ()
+      (pp-lalr-grammar tsh-stmt-spec)
+      (pp-lalr-machine tsh-stmt-mach))))
+
+;;; --- last line ---

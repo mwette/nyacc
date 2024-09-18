@@ -1,0 +1,11 @@
+# demo02.tsh
+# -*- tcl -*-
+
+set bar(a) (1 + 2)
+
+set bar [struct a "a" b [struct x "x"]]
+
+proc foo {arg} {
+    set i $arg(a)
+}
+

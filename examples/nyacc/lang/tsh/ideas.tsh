@@ -1,0 +1,6 @@
+syntax unless { [foo: x
+
+macro symcat args { [str2sym [string_join [map sym2str 
+macro FOO 1
+
+set [SCAT thr $i] foo

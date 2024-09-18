@@ -1,0 +1,6 @@
+
+proc myinc {x} {
+  return $x
+}
+
+puts [myinc 2]
