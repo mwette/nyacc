@@ -19,9 +19,9 @@
 
 (define-module (language nx-javascript spec)
   #:export (nx-javascript)
-  #:use-module (nyacc lang javascript parser)
-  #:use-module (nyacc lang javascript compile-tree-il)
-  #:use-module (nyacc lang javascript pprint)
+  #:use-module (language nx-javascript parser)
+  #:use-module (language nx-javascript compile-tree-il)
+  #:use-module (language nx-javascript pprint)
   #:use-module (system base language))
 
 (define-language nx-javascript

@@ -1,6 +1,6 @@
-;;; nyacc/lang/mlang/compile-tree-il.scm compile mlang sxml to tree-il
+;;; language/jx-mlang/compile-tree-il.scm compile mlang sxml to tree-il
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -24,9 +24,9 @@
 
 ;;; Code:
 
-(define-module (nyacc lang mlang compile-tree-il)
+(define-module (language nx-mlang compile-tree-il)
   #:export (compile-tree-il show-mlang-sxml show-mlang-xtil)
-  #:use-module (nyacc lang mlang xlib)
+  #:use-module (language nx-mlang xlib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   ;;#:use-module (nyacc lang util)
@@ -44,11 +44,11 @@
   ;;(pretty-print tree (current-error-port) #:per-line-prefix "  " #:width 130))
   (pretty-print tree (current-output-port) #:per-line-prefix "  " #:width 130))
 
-(define xlib-mod '(nyacc lang mlang xlib))
+(define xlib-mod '(language nx-mlang xlib))
 (define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ (nyacc lang mlang xlib) ,name))
+(define (xlib-ref name) `(@@ (language nx-mlang xlib) ,name))
                        
-;;(define undefined '(@@ (nyacc lang mlang xlib) ml:undefined))
+;;(define undefined '(@@ (language nx-mlang xlib) ml:undefined))
 ;;(define undefined `(const ,(if #f #f)))
 (define undefined nx-undefined-xtil)    ; from nx-util.scm
 

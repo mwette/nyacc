@@ -21,14 +21,10 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tcl xlib)
+(define-module (language nx-tcl xlib)
   #:export (xdict xlib-ref tcl-eval)
   #:use-module (rnrs arithmetic bitwise)
-  #:use-module (ice-9 match)
-  )
-(use-modules (ice-9 pretty-print))
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
-(define (pperr exp) (pretty-print exp (current-error-port)))
+  #:use-module (ice-9 match))
 
 ;; Evaluate expression (a string)
 (define* (tcl-eval expr #:optional (env (current-module)))
@@ -36,7 +32,7 @@
   ;;(eval-string expr #:lang 'nx-tcl)
   )
 
-(define (xlib-ref name) `(@@ (nyacc lang tcl xlib) ,name))
+(define (xlib-ref name) `(@@ (language nx-tcl xlib) ,name))
 
 ;; expr evaluator
 
@@ -44,8 +40,8 @@
 (use-modules (nyacc lex))
 (use-modules (nyacc parse))
 
-(include-from-path "nyacc/lang/tcl/mach.d/expr-act.scm")
-(include-from-path "nyacc/lang/tcl/mach.d/expr-tab.scm")
+(include-from-path "language/nx-tcl/mach.d/expr-act.scm")
+(include-from-path "language/nx-tcl/mach.d/expr-tab.scm")
 
 (define expr-lexr ((make-lexer-generator tcl-expr-mtab)))
   

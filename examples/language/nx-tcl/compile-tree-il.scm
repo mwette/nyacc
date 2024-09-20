@@ -19,9 +19,9 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tcl compile-tree-il)
+(define-module (language nx-tcl compile-tree-il)
   #:export (compile-tree-il show-tcl-sxml show-tcl-xtil)
-  #:use-module (nyacc lang tcl xlib)
+  #:use-module (language nx-tcl xlib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
@@ -36,9 +36,9 @@
 (define (pperr tree)
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
-(define xlib-mod '(nyacc lang tcl xlib))
+(define xlib-mod '(language nx-tcl xlib))
 (define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ (nyacc lang tcl xlib) ,name))
+(define (xlib-ref name) `(@@ (language nx-tcl xlib) ,name))
 
 ;; scope must be manipulated at execution time
 ;; the @code{proc} command should push-scope

@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-(define-module (nyacc lang tcl pprint)
+(define-module (language nx-tcl pprint)
   #:export (pretty-print-tcl)
   #:use-module ((srfi srfi-1) #:select (pair-for-each fold-right))
   #:use-module (nyacc lang util)

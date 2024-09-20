@@ -19,9 +19,9 @@
 
 (define-module (language nx-mlang spec)
   #:export (nx-mlang)
-  #:use-module (nyacc lang mlang parser)
-  #:use-module (nyacc lang mlang compile-tree-il)
-  #:use-module (nyacc lang mlang pprint)
+  #:use-module (language nx-mlang parser)
+  #:use-module (language nx-mlang compile-tree-il)
+  #:use-module (language nx-mlang pprint)
   #:use-module (system base language))
 
 (define-language nx-mlang

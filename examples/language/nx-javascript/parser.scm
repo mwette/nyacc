@@ -173,8 +173,8 @@
          ((read-c-comm ch #t) #f)
          (else (loop (read-char port))))))))
 
-(include-from-path "nyacc/lang/javascript/mach.d/ia-js-tab.scm")
-(include-from-path "nyacc/lang/javascript/mach.d/ia-js-act.scm")
+(include-from-path "language/nx-javascript/mach.d/ia-js-tab.scm")
+(include-from-path "language/nx-javascript/mach.d/ia-js-act.scm")
 
 (define gen-ia-js-lexer (make-js-lexer-generator ia-js-mtab))
 

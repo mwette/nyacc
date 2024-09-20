@@ -17,7 +17,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang mlang parser)
+(define-module (language nx-mlang parser)
   #:export (parse-mlang read-mlang-stmt read-mlang-file)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
@@ -241,8 +241,8 @@
 
 ;; === file parser 
 
-(include-from-path "nyacc/lang/mlang/mach.d/mlang-tab.scm")
-(include-from-path "nyacc/lang/mlang/mach.d/mlang-act.scm")
+(include-from-path "language/nx-mlang/mach.d/mlang-tab.scm")
+(include-from-path "language/nx-mlang/mach.d/mlang-act.scm")
 
 (define gen-mlang-lexer (make-mlang-lexer-generator mlang-mtab))
 
@@ -272,8 +272,8 @@
 
 ;; === interactive parser
 
-(include-from-path "nyacc/lang/mlang/mach.d/mlangia-tab.scm")
-(include-from-path "nyacc/lang/mlang/mach.d/mlangia-act.scm")
+(include-from-path "language/nx-mlang/mach.d/mlangia-tab.scm")
+(include-from-path "language/nx-mlang/mach.d/mlangia-act.scm")
 
 (define raw-ia-parser
   (make-lalr-parser

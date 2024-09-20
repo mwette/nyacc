@@ -19,8 +19,8 @@
 
 (define-module (language nx-tcl spec)
   #:export (nx-tcl)
-  #:use-module (nyacc lang tcl parser)
-  #:use-module (nyacc lang tcl compile-tree-il)
+  #:use-module (language nx-tcl parser)
+  #:use-module (language nx-tcl compile-tree-il)
   #:use-module (system base language))
 
 (define-language nx-tcl
@@ -38,6 +38,8 @@
   #:make-default-environment
                 (lambda ()
                   (let ((env (make-fresh-user-module)))
+                    (module-use! 
+                     env (resolve-interface '(language nx-tcl xlib)))
                     (module-define! env 'current-reader (make-fluid))
                     env))
   )

@@ -21,11 +21,11 @@
 
 ;;; Code:
 
-(define-module (nyacc lang mlang xlib)
+(define-module (language nx-mlang xlib)
   #:export (xdict)
   #:use-module (srfi srfi-9)
-  #:use-module (nyacc lang mlang parser)
-  #:use-module (nyacc lang mlang compile-tree-il)
+  #:use-module (language nx-mlang parser)
+  #:use-module (language nx-mlang compile-tree-il)
   #:use-module (system base compile)
   )
 (define (sferr fmt . args)
@@ -46,7 +46,7 @@
   (delta ml-range-delta)
   (end ml-range-end))
 ;; above generates syntax; we need procedures
-(define-public (make-mlang:range start delta end)
+(define-public (make-ml:range start delta end)
   (make-ml-range start delta end))
 (define-public (ml:range? obj) (ml-range? obj))
 (define-public (ml:range-start rng) (ml-range-start rng))
@@ -212,7 +212,7 @@
 ;; ===
 
 (define xdict
- `(("struct" . (@ (nyacc lang mlang xlib) ml:make-struct))
-   ("source" . (@ (nyacc lang mlang xlib) ml:source))))
+ `(("struct" . (@ (language nx-mlang xlib) ml:make-struct))
+   ("source" . (@ (language nx-mlang xlib) ml:source))))
 
 ;; --- last line ---

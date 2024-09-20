@@ -28,7 +28,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang mlang mach)
+(define-module (language nx-mlang mach)
   #:export (mlang-spec
             mlang-mach
             mlang-ia-spec

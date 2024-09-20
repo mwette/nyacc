@@ -29,7 +29,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tcl parser)
+(define-module (language nx-tcl parser)
   #:export (read-command
             read-tcl-stmt
             read-tcl-file
