@@ -400,6 +400,10 @@
 ;; @emph{cdata} machine type like @code{u64le}.
 ;; @end deffn
 (define (cbase name)
+  "- Procedure: cbase name
+     Given symbolic NAME generate a base ctype.  The name can be
+     something like ‘unsigned-int’, ‘double’, or can be a _cdata_
+     machine type like ‘u64le’."
   (let* ((arch (*arch*))
          (name (cond ((symbol? name) name)
                      ((string? name) (strname->symname name))
@@ -416,13 +420,20 @@
 ;; Generate a C pointer type to @var{type}. To reference or de-reference
 ;; cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
-;; @*note: Should we allow @ver{type} to be a promise?
+;; @*note: Should we allow @var{type} to be a promise?
 ;; @example
 ;; (define foo_t (cbase 'int))
 ;; (cpointer (delay foo_t))
 ;; @end example
 ;; @end deffn
 (define (cpointer type)
+  "- Procedure: cpointer type
+     Generate a C pointer type to TYPE.  To reference or de-reference
+     cdata object see ‘cdata&’ and ‘cdata*’.  TYPE can be the symbol
+     ‘void’ or a symbolic name used as argument to ‘cbase’.
+     note: Should we allow TYPE to be a promise?
+          (define foo_t (cbase 'int))
+          (cpointer (delay foo_t))"
   (let ((type (cond
                ((ctype? type) type)
                ((eq? 'void type) type)
@@ -544,9 +555,8 @@
 ;; @end deffn
 (define (cunion fields)
   "- Procedure: cunion fields
-     Construct a ctype struct type with given FIELDS.  If PACKED, ‘#f’
-     by default, is ‘#t’, create a packed structure.  See _cstruct_ for
-     a description of the FIELDS argument."
+     Construct a union ctype with given FIELDS.  See _cstruct_ for a
+     description of the FIELDS argument."
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     (if (null? sfl)
         (%make-ctype (incr-size 0 sal ssz) sal 'union
@@ -634,6 +644,12 @@
 ;; arguments.  For this case, (to be documented).
 ;; @end deffn
 (define* (cfunction proc->ptr ptr->proc #:optional variadic?)
+  "- Procedure: cfunction proc->ptr ptr->proc [variadic?]
+     Generate a C function pointer type.  You must pass the WRAPPER and
+     UNWRAPPER procedures that convert a pointer to a procedure, and
+     procedure to pointer, respectively.  The optional argument
+     #:VARIADIC, if ‘#t’, indicates the function uses variadic
+     arguments.  For this case, (to be documented)."
   (let ((type (cbase 'void*)) (mtype (mtypeof-basetype 'void*)))
     (%make-ctype (ctype-size type) (ctype-align type) 'function
                  (%make-cfunction proc->ptr ptr->proc variadic? mtype) #f)))
@@ -761,8 +777,19 @@
 ;; @example
 ;; (equal? foo_t struct-foo) => #t
 ;; @end example
-;; @end dedffn
+;; @end deffn
 (define (name-ctype name type)
+  "- Procedure: name-ctype name type -> <ctype>
+     Add a name to the type.  The name is useful when the type is
+     printed.  This procedure does not mutate: a new type object is
+     created.  If a specific type is used by multiple names the names
+     can share the underlying type guts.  The following generates two
+     named types.
+          (define raw (cstruct '((a 'int) (b 'double))))
+          (define foo_t (name-ctype 'foo_t raw))
+          (define struct-foo (name-ctype 'struct-foo raw))
+     These types are equal:
+          (equal? foo_t struct-foo) => #t"
   (%make-ctype (ctype-size type) (ctype-align type)
                (ctype-kind type) (ctype-info type)
                name))
@@ -780,6 +807,13 @@
 ;; type of that size.
 ;; @end deffn
 (define* (make-cdata type #:optional value)
+  "- Procedure: make-cdata type [value [name]]
+     Generate a _cdata_ object of type TYPE with optional VALUE and
+     NAME.  To specify name but no value use something like
+          (make-cdata mytype #f \"foo\")
+     As a special case, an integer arg to a zero-sized array type will
+     allocate storage for that many items, associating it with an array
+     type of that size."
   (assert-ctype 'make-cdata type)
   (case (ctype-kind type)
     ((array)
@@ -815,11 +849,17 @@
 ;; @end example
 ;; @end deffn
 (define (cdata-sel data . tags)
-  "- Procedure: cdata-sel data tag ...
+  "- Procedure: cdata-sel data tag ... => cdata
      Return a new ‘cdata’ object representing the associated selection.
-     For example,
-          dat1 -> <cdata 0x12345678 struct>
-          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700 f64le>"
+     Note this is different from ‘cdata-ref’: it always returns a cdata
+     object.  For example,
+          > (define t1 (cstruct '((a int) (b double))))
+          > (define d1 (make-cdata t1))
+          > (cdata-set! d1 42 'a)
+          > (cdata-sel d1 'a)
+          $1 = #<cdata s32le 0x77bbf8e52260>
+          > (cdata-ref $1)
+          $2 = 42"
   (assert-cdata 'cdata-sel data)
   (if (null? tags) data
       (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
@@ -854,6 +894,8 @@
 ;; Reference a deconstructed cdata object. See @emph{cdata-ref}.
 ;; @end deffn
 (define (Xcdata-ref bv ix ct)
+  "- Procedure: Xcdata-ref bv ix ct -> value
+     Reference a deconstructed cdata object.  See _cdata-ref_."
   (let* ((ti (ctype-info ct)))
     (case (ctype-kind ct)
       ((base)
@@ -885,6 +927,8 @@
 ;; Reference a deconstructed cdata object. See @emph{cdata-set!}.
 ;; @end deffn
 (define (Xcdata-set! bv ix ct value)
+  "- Procedure: Xcdata-set! bv ix ct value
+     Reference a deconstructed cdata object.  See _cdata-set!_."
   (let* ()
     (if (cdata? value)
         (let ((sz (ctype-size ct)))
@@ -1003,6 +1047,9 @@
 ;; Copy a data object (which might be a reference from another data object).
 ;; @end deffn
 (define (cdata-copy data)
+  "- Procedure: cdata-copy src) => <cdata>
+     Copy a data object (which might be a reference from another data
+     object)."
   (assert-cdata 'cdata-copy data)
   (let* ((bv (cdata-bv data))
          (ix (cdata-ix data))
@@ -1017,6 +1064,9 @@
 ;; bytevector.
 ;; @end deffn
 (define (cdata& data)
+  "- Procedure: cdata& data => cdata
+     Generate a reference (i.e., cpointer) to the contents in the
+     underlying bytevector."
   (assert-cdata 'cdata& data)
   (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
          (pa (+ (pointer-address (bytevector->pointer bv)) ix)))
@@ -1051,6 +1101,8 @@
 ;; Return the kind of @var{data}: pointer, base, struct, ...
 ;; @end deffn
 (define (cdata-kind data)
+  "- Procedure: cdata-kind data
+     Return the kind of DATA: pointer, base, struct, ..."
   (assert-cdata 'cdata-kind data)
   (ctype-kind (cdata-ct data)))
 
@@ -1059,6 +1111,9 @@
 ;; This always returns a Guile @emph{pointer}.
 ;; @end deffn
 (define (cdata&-ref data . tags)
+  "- Procedure: cdata&-ref data [tag ...]
+     Shortcut for ‘(cdata-ref (cdata& data tag ...))’ This always
+     returns a Guile _pointer_."
   (assert-cdata 'cdata&-ref data)
   (let* ((data (apply cdata-sel data tags))
          (bptr (bytevector->pointer (cdata-bv data)))
@@ -1069,6 +1124,8 @@
 ;; Shortcut for @code{(cdata-ref (cdata* data tag ...))}
 ;; @end deffn
 (define (cdata*-ref data . tags)
+  "- Procedure: cdata*-ref data [tag ...]
+     Shortcut for ‘(cdata-ref (cdata* data tag ...))’"
   (apply cdata-sel data '* tags))
 
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
@@ -1078,6 +1135,9 @@
 ;; @end example
 ;; @end deffn
 (define* (ccast type data #:key do-check)
+  "- Procedure: ccast type data [do-check] => <cdata>
+     need to be able to cast array to pointer
+          (ccast Target* val)"
   (assert-ctype 'cdata-cast type)
   (assert-cdata 'cdata-cast data)
   (define (type-miss)
@@ -1133,6 +1193,13 @@
 ;; target use: it is the offset of the address in the host context.
 ;; @end deffn 
 (define* (make-cdata-getter sel #:optional (offset 0))
+  "- Procedure: make-cdata-getter sel [offset] => lambda
+     Genererate a procedure that given a cdata object will fetch the
+     value at indicated by the SEL, generated by ‘ctype-sel’.  The
+     procedure takes one argument: ‘(proc data [tag ...])’.  Pointer
+     dereference tags (‘'*'’) are not allowed.  The optional OFFSET
+     argument (default 0), is used for cross target use: it is the
+     offset of the address in the host context."
   (unless (and (pair? sel) (pair? (cdr sel)))
     (error "make-cdata-getter: bad SEL arg"))
   (unless (integer? offset)
@@ -1150,6 +1217,13 @@
 ;; target use: it is the offset of the address in the host context.
 ;; @end deffn 
 (define* (make-cdata-setter sel #:optional (offset 0))
+  "- Procedure: make-cdata-setter sel [offset] => lambda
+     Genererate a procedure that given a cdata object will set the value
+     at the offset given the selector, generated by ‘ctype-sel’.  The
+     procedure takes two arguments: ‘(proc data value [tag ...])’.
+     Pointer dereference tags (‘'*'’) are not allowed.  The optional
+     OFFSET argument (default 0), is used for cross target use: it is
+     the offset of the address in the host context."
   (unless (and (pair? sel) (pair? (cdr sel)))
     (error "make-cdata-setter: bad SEL arg"))
   (unless (integer? offset)

@@ -5,13 +5,16 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2024-09-XX  V2.00.0
+2024-09-20  V2.00.0
 	* added `cdata' module for handling type and data from C libraries
 	  + see doc/cdata.info
 	  + capable of dealing with foreign architectures
 	* major ffi helper update:
-	  + by default, use cdata backend
-	    - does not use bytestructures 
+	  + includes two backends: 
+	    - cdata: depends only on system/foreign/cdata module
+	    - bytestructures: depends on ffi-help-rt and bytestructures modules
+	  + by default, the ffi helper now uses the cdata backend
+	    - scheme bytestructures is not required
 	    - does not use ffi-help-rt
 	    - generates ~20% smaller .scm files 
 	    - generates ~40% smaller .go files 
@@ -19,9 +22,6 @@ without any warranty.
  	    This no longer has special cases for some include files.
 	  + handling of functions and function types is much cleaner and
 	    works better (at least for the author, so far)
-	  + includes two backends: 
-	    - cdata: depends only on system/foreign/cdata module
-	    - bytestructures: depends on ffi-help-rt and bytestructures modules
 	* updated system/ffi-help-rt (which is not used by cdata)
 	  + funtion pointers reworked
 	  + now depends on guile (system foreign-library)
@@ -32,11 +32,11 @@ without any warranty.
 	  $ guild compile-ffi -b bytestructures mymodule.ffi
 	  $ FFI_HELP_BACKEND=bytestructures guild compile-ffi mymodule.ffi
   	* scripts/compile-ffi: now computes dependencies correctly (I think)
+	* moved some nx-language implementation code into examples/languages/
 	* Work to go:
 	  + Update READMEs and other documentation.
 	  + Complete ccode->sexp function to convert strings of C code
-	    to sexps for ffi interface code.
-	  + Complete cross compiling toolage.
+	    to scheme expressions for small ffi interface code
 
 2024-06-24  V1.09.5
 	* fixed bug 65849: crash on multiple #warning
