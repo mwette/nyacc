@@ -176,9 +176,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
           (if (access? path R_OK) path
               (loop (cdr pathl)))))))
 
-(define (more-recent? ffi-file scm-file)
-  ;; copied from ice-9/boot-9.scm
-  (let ((stat1 (stat ffi-file)) (stat2 (stat scm-file)))
+(define (more-recent? file1 file2)
+  ;; file1 is more recent than file2 (from ice-9/boot-9.scm)
+  (let ((stat1 (stat file1)) (stat2 (stat file2)))
     (or (> (stat:mtime stat1) (stat:mtime stat2))
         (and (= (stat:mtime stat1) (stat:mtime stat2))
              (>= (stat:mtimensec stat1)
@@ -244,37 +244,38 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
                      '() depd)))
        all))
 
+(define (scm-for-ffi ffi-file)
+  (string-append (string-drop-right ffi-file 4) ".scm"))
+
 ;; from list of all files and depd, return supplier-for dict
 (define (ensure-ffi-deps file opts)
-  (define (check-depd depd seed)
-    (fold
-     (lambda (deps todo)
-       (let loop ((todo todo) (head (car deps)) (tail (cdr deps)))
-         (cond
-          ((null? tail) todo)
-          ((member head todo) todo)
-          ((more-recent? (car tail) head) (cons head todo))
-          (else (loop todo head (cdr tail))))))
-     seed depd))
 
-  (define (check-ffis ffis seed)
+  (define (check-ffi-vs-scm ffis seed)
     (fold
      (lambda (ffi seed)
-       (let ((scm (find-in-path (string-append (basename ffi ".ffi") ".scm"))))
-         (if (and scm (more-recent? scm ffi)) seed
-             (if (member ffi seed) seed
-                 (cons ffi seed)))))
+       (let ((scm (scm-for-ffi ffi)))
+         (cond
+          ((not (access? scm R_OK)) (cons ffi seed))
+          ((more-recent? ffi scm) (cons ffi seed))
+          (else seed))))
      seed ffis))
   
-  ;; 1: loop through depd.  If any cdr is more-recent add the car.  repeat
-  ;; 2: loop through all, If any ffi is more recent than ffi add it
-  ;; 3: loop through tord, for each file in todo (from 1&2) compile-ffi it
+  (define (add-sups supd todo)
+    (fold
+     (lambda (supd-ent seed)
+       (if (member (car supd-ent) todo)
+           (lset-union string=? seed (cdr supd-ent))
+           seed))
+     todo supd))
+
+  ;; 1. if scm does not exist or is older than ffi add it
+  ;; 2. for each added, add all mods it is supplier for
   (let* ((depd (all-ffi-deps file))
          (all (apply lset-union string=? depd))
          (supd (gen-supd depd all))
          (tord (reverse (tsort depd all)))
-         (todo (check-depd depd '()))
-         (todo (check-ffis tord todo)))
+         (todo (check-ffi-vs-scm all '()))
+         (todo (add-sups supd todo)))
     (for-each
      (lambda (ffi)
        (when (and (member ffi todo) (not (string=? ffi file)))
@@ -285,7 +286,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 ;; -----------------------------------------------------------------------------
 
 (define (compile-ffi ffi-file opts)
-  (let* ((scm-file (string-append (string-drop-right ffi-file 4) ".scm"))
+  (let* ((scm-file (scm-for-ffi ffi-file))
          (compile-ffi-file (case (assq-ref opts 'backend)
                              ((bs bytestructures)
                               (@ (nyacc lang c99 ffi-help-bs) compile-ffi-file))
