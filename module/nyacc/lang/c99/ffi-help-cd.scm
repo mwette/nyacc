@@ -1432,12 +1432,14 @@
   (let* ((tree (parse-code code attrs))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (udecls (c99-trans-unit->udict tree))
-	 (ffi-decls (map car udecls)))
+	 (ffi-decls (map car udecls))
+         (cnvt (lambda (udent defined seed)
+                 (cnvt-udecl (cdr udent) udict defined seed))))
     (*udict* udict)
     (*ddict* (udict-enums->ddict udict (*ddict*)))
     `(begin
        ,@(call-with-values
-             (lambda () (fold-values cnvt-udecl decls '() '()))
+             (lambda () (fold-values cnvt udecls '() '()))
            (lambda (defined forms) (reverse forms))))))
 
 ;; @deffn {Procedure} load-include-file filename [#pkg-config pkg]
