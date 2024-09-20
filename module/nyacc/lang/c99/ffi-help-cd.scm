@@ -30,7 +30,7 @@
 	    define-ffi-module
 	    compile-ffi-file
 	    load-include-file
-	    ccode->scheme)
+	    ccode->sexp)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
@@ -1421,16 +1421,24 @@
 
 ;; === translators ================
 
-;; @deffn {Procedure} ccode->scheme string => tree
+;; @deffn {Procedure} ccode->sexp string [attrs] => tree
 ;; Convert a snippet of C code to list of scheme forms.
 ;; @example
-;; 
+;; > (ccode->sexp "double sqrt(doubld);")
+;; $1 = 
 ;; @end example
 ;; @end deffn
-(define* (ccode->scheme code-string #:key inc-dirs cpp-defs)
-  ;; need gensym on load-foreign-function-search
-  #f)
-
+(define* (ccode->sexp code #:optional attrs)
+  (let* ((tree (parse-code code attrs))
+	 (udict (c99-trans-unit->udict/deep tree))
+	 (udecls (c99-trans-unit->udict tree))
+	 (ffi-decls (map car udecls)))
+    (*udict* udict)
+    (*ddict* (udict-enums->ddict udict (*ddict*)))
+    `(begin
+       ,@(call-with-values
+             (lambda () (fold-values cnvt-udecl decls '() '()))
+           (lambda (defined forms) (reverse forms))))))
 
 ;; @deffn {Procedure} load-include-file filename [#pkg-config pkg]
 ;; This is the functionality that Ludo was asking for: to be at guile
