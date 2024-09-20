@@ -622,7 +622,7 @@
     (match (md-tail mdecl)
       (`((enum-def . ,_)) (list (sfsym "wrap-~a" name) mname))
       (`((enum-ref . ,_)) (list (sfsym "wrap-~a" name) mname))
-      (__ #f))))
+      (__ `(make-cdata ,(string->symbol name) ,mname)))))
 
 (define (wrap-mdecl mdecl)
   (let ((defined (*defined*))
@@ -1396,6 +1396,7 @@
 	  (process-decls ffi-decls udecls ;; udict <= swap failed 01 Dec 2018
 			 (append def-defined ext-defd) #:declf declf))
       (lambda (defined seed)
+        (sferr "ffi-help ended with ~s defined objects\n" (length defined))
 	;; Set ffimod-defined for including, but removed built-in types.
 	(let* ((bity (car def-defined))	; first built-in type
 	       (defd (let loop ((res '()) (defs defined))
