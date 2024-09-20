@@ -31,14 +31,18 @@
   #:use-module (srfi srfi-37)
   #:version (2 00 0))
 
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(define *ffi-help-version* "2.00.0")
 
 (define (compile-scm file)
   (compile-file file
                 #:from 'scheme #:to 'bytecode
                 #:optimization-level 1 #:opts '()))
 
-(define *ffi-help-version* "2.00.0")
+(define (fix-path path)
+  (let* ((cwd (getcwd)))
+    (if (string-contains path cwd)
+        (substring/shared path (1+ (string-length cwd)))
+        path)))
 
 (define %summary
   "Compile a ffi-file to .scm and maybe .go.")
@@ -152,41 +156,6 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 ;; --- check dependencies -------------------------------------------
 
-(define (sf fmt . args) (apply simple-format #t fmt args))
-
-(define (tsort filed filel)
-  (define (covered? deps done) (every (lambda (e) (member e done)) deps))
-  (let loop ((done '()) (hd '()) (tl files))
-    (if (null? tl)
-        (if (null? hd) done (loop done '() hd))
-        (cond
-         ((not (assq-ref filed (car tl)))
-          (loop (cons (car tl) done) hd (cdr tl)))
-         ((covered? (assq-ref filed (car tl)) done)
-          (loop (cons (car tl) done) hd (cdr tl)))
-         (else
-          (loop done (cons (car tl) hd) (cdr tl)))))))
-
-(define (more-recent? ffi-file scm-file)
-  ;; copied from ice-9/boot-9.scm
-  (let ((stat1 (stat ffi-file)) (stat2 (stat scm-file)))
-    (or (> (stat:mtime stat1) (stat:mtime stat2))
-        (and (= (stat:mtime stat1) (stat:mtime stat2))
-             (>= (stat:mtimensec stat1)
-                 (stat:mtimensec stat2))))))
-
-(define (stat-time<? stat1 stat2)
-  (or (< (stat:mtime stat1) (stat:mtime stat2))
-      (and (= (stat:mtime stat1) (stat:mtime stat2))
-           (< (stat:mtimensec stat1) (stat:mtimensec stat2)))))
-
-(define (find-in-path file)
-  (let loop ((pathl %load-path))
-    (if (null? pathl) #f
-        (let ((path (string-append (car pathl) "/" file)))
-          (if (access? path R_OK) path
-              (loop (cdr pathl)))))))
-
 (define-syntax find-ffi-uses
   (lambda (x)
     (syntax-case x ()
@@ -199,6 +168,39 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 (define-syntax-rule (define-ffi-module spec attr ...)
   (cons (quote spec) (find-ffi-uses attr ...)))
 (export define-ffi-module)
+
+(define (find-in-path file)
+  (let loop ((pathl %load-path))
+    (if (null? pathl) #f
+        (let ((path (string-append (car pathl) "/" file)))
+          (if (access? path R_OK) path
+              (loop (cdr pathl)))))))
+
+(define (more-recent? ffi-file scm-file)
+  ;; copied from ice-9/boot-9.scm
+  (let ((stat1 (stat ffi-file)) (stat2 (stat scm-file)))
+    (or (> (stat:mtime stat1) (stat:mtime stat2))
+        (and (= (stat:mtime stat1) (stat:mtime stat2))
+             (>= (stat:mtimensec stat1)
+                 (stat:mtimensec stat2))))))
+
+#;(define (stat-time<? stat1 stat2)
+  (or (< (stat:mtime stat1) (stat:mtime stat2))
+      (and (= (stat:mtime stat1) (stat:mtime stat2))
+           (< (stat:mtimensec stat1) (stat:mtimensec stat2)))))
+
+(define (tsort filed filel)
+  (define (covered? deps done) (every (lambda (e) (member e done)) deps))
+  (let loop ((done '()) (hd '()) (tl filel))
+    (if (null? tl)
+        (if (null? hd) done (loop done '() hd))
+        (cond
+         ((not (assq-ref filed (car tl)))
+          (loop (cons (car tl) done) hd (cdr tl)))
+         ((covered? (assq-ref filed (car tl)) done)
+          (loop (cons (car tl) done) hd (cdr tl)))
+         (else
+          (loop done (cons (car tl) hd) (cdr tl)))))))
 
 ;; Given ffi-module filename, return alist of dependent specs
 (define (module-ffi-deps file)
@@ -216,84 +218,98 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 ;; from requested compiled file, return depends-on dict of .ffi-files
 (define (all-ffi-deps file)
-  ;; sdspecd is spec->file
-  (let loop ((depd '()) (specd '()) (curr file) (todo '()))
+  ;; depd is file->mods, specd is mod->file
+  (let loop ((depd '()) (specd '()) (file file) (todo '()))
     (cond
-     (file
+     ((and file (not (assoc-ref depd file)))
       (let ((mdep (module-ffi-deps file))) ;; (mod-spec . dep-specs)
-        (loop (cons mdep depd) (acons (car mdep) file specd) #f todo)))
+        (loop (acons file (cdr mdep) depd) (acons (car mdep) file specd)
+              #f (append todo (cdr mdep)))))
      ((pair? todo)
-      (let* ((base (string-join (map symbol->string (car todo) "/")))
+      (let* ((base (string-join (map symbol->string (car todo)) "/"))
              (path (find-in-path (string-append base ".ffi"))))
         (unless path (fail "can't find ~s" path))
         (loop depd specd path (cdr todo))))
      (else
-      (map (lambda (d) (map (lambda (m) (assoc-ref specd m)) d)) depd)))))
+      (reverse
+       (map (lambda (d)
+              (cons (car d) (map (lambda (m) (assoc-ref specd m)) (cdr d))))
+            depd))))))
+
+(define (gen-supd depd all)
+  (map (lambda (file)
+         (cons file (fold
+                     (lambda (ent s)
+                       (if (member file (cdr ent)) (cons (car ent) s) s))
+                     '() depd)))
+       all))
 
 ;; from list of all files and depd, return supplier-for dict
-(define (gen-supd depd all)
-  (define (chk ent s) (if (member file (cdr ent)) (cons (car ent) s) s))
-  (map (lambda (file) (cons file (fold chk '() depd))) all))
+(define (ensure-ffi-deps file opts)
+  (define (check-depd depd seed)
+    (fold
+     (lambda (deps todo)
+       (let loop ((todo todo) (head (car deps)) (tail (cdr deps)))
+         (cond
+          ((null? tail) todo)
+          ((member head todo) todo)
+          ((more-recent? (car tail) head) (cons head todo))
+          (else (loop todo head (cdr tail))))))
+     seed depd))
 
-(define (ensure-ffi-deps file)
+  (define (check-ffis ffis seed)
+    (fold
+     (lambda (ffi seed)
+       (let ((scm (find-in-path (string-append (basename ffi ".ffi") ".scm"))))
+         (if (and scm (more-recent? scm ffi)) seed
+             (if (member ffi seed) seed
+                 (cons ffi seed)))))
+     seed ffis))
+  
+  ;; 1: loop through depd.  If any cdr is more-recent add the car.  repeat
+  ;; 2: loop through all, If any ffi is more recent than ffi add it
+  ;; 3: loop through tord, for each file in todo (from 1&2) compile-ffi it
   (let* ((depd (all-ffi-deps file))
          (all (apply lset-union string=? depd))
          (supd (gen-supd depd all))
-         (tord (tsort depd all))
-         (todo #f))
-    (let loop ((todo '()) (age0 (stat (car tord))) (ordl tord))
-      ;; so through list, adding to todo if needs update
-      (let* ((ffi (car ordl))
-             (scm (find-in-path (string-append (basename ffi ".ffi") ".scm")))
-             (age1 (and ffi (stat ffi))))
-        (unless sffi (fail "dependent ~S not found" fmod))
-        (cond
-         ;; WORKING HERE
-         ((not scm) (loop (cons todo) age0 (cons ffi seed)))
-         ((and stat (stat-time<? xstat)) 'tbd)
-         ((more-recent? xffi xscm) (cons xffi seed))
-         (else
-          (set! todo (filter (lambda (e) (memq e todo)) tord))))))
+         (tord (reverse (tsort depd all)))
+         (todo (check-depd depd '()))
+         (todo (check-ffis tord todo)))
     (for-each
-     (lambda (file) (if (member file todo) (compile-ffi-file file)))
+     (lambda (ffi)
+       (when (and (member ffi todo) (not (string=? ffi file)))
+         (compile-ffi ffi opts)))
      tord)))
 
 
 ;; -----------------------------------------------------------------------------
 
-(define (fix-path path)
-  (let* ((cwd (getcwd)))
-    (if (string-contains path cwd)
-        (substring/shared path (1+ (string-length cwd)))
-        path)))
-
-(define (compile-ffi ffi-file options)
-  (let* ((base (string-drop-right ffi-file 4))
-         (scm-file (string-append base ".scm"))
-         (compile-ffi-file (case (assq-ref options 'backend)
+(define (compile-ffi ffi-file opts)
+  (let* ((scm-file (string-append (string-drop-right ffi-file 4) ".scm"))
+         (compile-ffi-file (case (assq-ref opts 'backend)
                              ((bs bytestructures)
                               (@ (nyacc lang c99 ffi-help-bs) compile-ffi-file))
                              ((cd cdata)
                               (@ (nyacc lang c99 ffi-help-cd) compile-ffi-file))
                              (else (fail "bad backend specified")))))
-    (unless (assq-ref options 'no-recurse)
-      (ensure-ffi-deps ffi-file options))
-    (when (assq-ref options 'list-deps)
-      (for-each (lambda (f) (sfmt "~A\n" (fix-path f))) (gen-ffi-deps ffi-file))
+    (when (assq-ref opts 'list-deps)
+      (for-each
+       (lambda (f) (sfmt "~A\n" (fix-path f)))
+       (apply lset-union string=? (all-ffi-deps ffi-file)))
       (exit 0))
     (catch 'ffi-help-error
       (lambda ()
         (catch 'c99-error
           (lambda ()
             (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
-            (compile-ffi-file ffi-file options)
+            (compile-ffi-file ffi-file opts)
             (sfmt "... wrote `~A'\n" (fix-path scm-file)))
           (lambda (key fmt . args)
             (apply throw 'ffi-help-error fmt args))))
       (lambda (key fmt . args)
         (if (access? scm-file W_OK) (delete-file scm-file))
         (apply fail fmt args)))
-    (unless (assq-ref options 'no-exec)
+    (unless (assq-ref opts 'no-exec)
       (sfmt "compiling `~A' ...\n" (fix-path scm-file))
       (let ((go-file (compile-scm scm-file)))
         (load-compiled go-file)
@@ -304,13 +320,15 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   (call-with-values
       (lambda () (parse-args args))
     (lambda (opts files)
-      (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
+      (when (or (assq-ref opts 'help) (null? files)) (show-usage) (exit 0))
       (unless (string=? (assq-ref opts 'machine) "native")
         (unless (memq (assq-ref opts 'backend) '(cdata))
           (fail "only cdata supports non-native machine architectures")))
       (for-each
        (lambda (file)
          (with-arch (assq-ref opts 'machine)
+           (unless (assq-ref opts 'no-recurse)
+             (ensure-ffi-deps file opts))
            (compile-ffi file opts)))
        (reverse files))))
   (exit 0))
