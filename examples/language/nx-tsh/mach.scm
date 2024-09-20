@@ -30,7 +30,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tsh mach)
+(define-module (language nx-tsh mach)
   #:export (gen-tsh-files
 	    tsh-file-spec tsh-file-mach 
 	    tsh-stmt-spec tsh-stmt-mach)

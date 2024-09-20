@@ -91,7 +91,6 @@
        (cond
 	((eof-object? ch) (loop chl ty 73 ch))
 	((char-numeric? ch) (loop (cons ch chl) ty 75 (read-char)))
-	;;(else (
 	))
       ((75) ;; rustoleum
-      (else (error "coding error")))))
+       (else (error "coding error")))))

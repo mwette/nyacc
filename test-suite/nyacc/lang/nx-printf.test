@@ -1,0 +1,82 @@
+;;; nyacc/lang/nx-printf.test                -*- scheme -*-
+;;;
+;;; Copyright (C) 2023 Matthew Wette
+;;;
+;;; Copying and distribution of this file, with or without modification,
+;;; are permitted in any medium without royalty provided the copyright
+;;; notice and this notice are preserved.  This file is offered as-is,
+;;; without any warranty.
+
+;; Test the runtime parsing utilities.
+;; examples/nyacc$ guile lang/t-util.scm
+
+(define-module (nx-printf)
+  #:use-module (nyacc lang nx-printf)
+  #:use-module (test-suite lib))
+(use-modules (ice-9 pretty-print)) (define pp pretty-print)
+
+#|
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
+(define (test-istr)
+  (define (doit fmt val)
+    (sf "(string=? (nx-sprintf ~S ~S) ~S)\n"
+        fmt val (nx-printf #f fmt val)))
+  (doit "%d" 1)
+  (doit "%-04x" 1)
+  )
+
+(define (test-fstr)
+  (define (doit fmt val)
+    (sferr "(string=? (nx-sprintf ~S ~S) ~S)\n"
+           fmt val (nx-sprintf fmt val)))
+  (doit "%f" 123.45)
+  (doit "%7.1f" 123.45)
+  (doit "%-9.6f" 12.3456789)
+  (doit "%-9.6f" -12.3456789)
+  (doit "%3.1f" 1.23)
+  (doit "%3.1f" 0.123)
+  (doit "%3.1f" 0.0123)
+  (doit "%.1f" 1.23)
+  (doit "%.1f" 0.123)
+  (doit "%.1f" 0.0123)
+  )
+
+(test-istr)
+(newline)
+(test-fstr)
+|#
+
+
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
+(with-test-prefix "nyacc/lang/nx-printf"
+
+  ;; The input-stack used to pull in input from include files.
+  (pass-if "integer formatting"
+    (and
+     (string=? (nx-sprintf "%d" 1) "1")
+     (string=? (nx-sprintf "%-04x" 1) "1   ")
+     ))
+
+  (pass-if "float formatting"
+    (and
+     (string=? (nx-sprintf "%f" 123.45) "123.450000")
+     (string=? (nx-sprintf "%7.1f" 123.45) "  123.4")
+     (string=? (nx-sprintf "%-9.6f" 12.3456789) "12.345678")
+     (string=? (nx-sprintf "%-9.6f" -12.3456789) "-12.345678")
+     (string=? (nx-sprintf "%3.1f" 1.23) "1.2")
+     (string=? (nx-sprintf "%3.1f" 0.123) "0.1")
+     (string=? (nx-sprintf "%3.1f" 0.0123) "0.0")
+     (string=? (nx-sprintf "%.1f" 1.23) "1.2")
+     (string=? (nx-sprintf "%.1f" 0.123) "0.1")
+     (string=? (nx-sprintf "%.1f" 0.0123) "0.0")
+     ))
+
+  )
+
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
+
+;;; --- last line ---

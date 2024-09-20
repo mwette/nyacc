@@ -22,7 +22,7 @@
 ;;  {{cond {(expr) body ...} {(expr) body ...} ... {else
 ;;
 
-(define-module (nyacc lang tsh parser)
+(define-module (language nx-tsh parser)
   #:export (parse-tsh
 	    read-tsh-stmt
 	    read-tsh-file
@@ -160,8 +160,8 @@
 	      ((read-chseq ch))
 	      (else (cons ch (string ch)))))))))))
 
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-file-tab.scm")
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-file-act.scm")
+(include-from-path "language/nx-tsh/mach.d/tsh-file-tab.scm")
+(include-from-path "language/nx-tsh/mach.d/tsh-file-act.scm")
 
 (define raw-parser
   (make-lalr-parser (acons 'act-v tsh-file-act-v tsh-file-tables)
@@ -187,8 +187,8 @@
       (lambda () (parse-tsh #:debug debug))
       (lambda () (set-current-input-port prev)))))
 
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-stmt-tab.scm")
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-stmt-act.scm")
+(include-from-path "language/nx-tsh/mach.d/tsh-stmt-tab.scm")
+(include-from-path "language/nx-tsh/mach.d/tsh-stmt-act.scm")
 
 (define raw-ia-parser
   (make-lalr-parser (acons 'act-v tsh-stmt-act-v tsh-stmt-tables)

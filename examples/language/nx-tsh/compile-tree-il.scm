@@ -26,9 +26,9 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tsh compile-tree-il)
+(define-module (language nx-tsh compile-tree-il)
   #:export (compile-tree-il show-tsh-sxml show-tsh-xtil)
-  #:use-module (nyacc lang tsh xlib)
+  #:use-module (language nx-tsh xlib)
   #:use-module (nyacc lang nx-lib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)

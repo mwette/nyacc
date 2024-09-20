@@ -21,10 +21,10 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tsh xlib)
+(define-module (language nx-tsh xlib)
   #:export (xdict xlib-ref tsh:source tsh:puts)
-  #:use-module (nyacc lang tsh parser)
-  #:use-module (nyacc lang tsh compile-tree-il)
+  #:use-module (language nx-tsh parser)
+  #:use-module (language nx-tsh compile-tree-il)
   #:use-module (nyacc lang nx-lib)
   #:use-module (nyacc lang nx-printf)
   #:use-module ((srfi srfi-1) #:select (split-at last))
@@ -36,7 +36,7 @@
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define (pperr exp) (pretty-print exp (current-error-port)))
 
-(define (xlib-ref name) `(@@ (nyacc lang tsh xlib) ,name))
+(define (xlib-ref name) `(@@ (language nx-tsh xlib) ,name))
 
 (define tsh:+ +)
 (define tsh:- -)
@@ -159,13 +159,13 @@
 ;; ====
 
 (define (tsh:show_sxml)
-  (set! (@@ (nyacc lang tsh compile-tree-il) show-sxml) #t))
+  (set! (@@ (language nx-tsh compile-tree-il) show-sxml) #t))
 (define (tsh:hide_sxml)
-  (set! (@@ (nyacc lang tsh compile-tree-il) show-sxml) #f))
+  (set! (@@ (language nx-tsh compile-tree-il) show-sxml) #f))
 (define (tsh:show_xtil)
-  (set! (@@ (nyacc lang tsh compile-tree-il) show-xtil) #t))
+  (set! (@@ (language nx-tsh compile-tree-il) show-xtil) #t))
 (define (tsh:hide_xtil)
-  (set! (@@ (nyacc lang tsh compile-tree-il) show-xtil) #f))
+  (set! (@@ (language nx-tsh compile-tree-il) show-xtil) #f))
 
 ;; === xdict
 
