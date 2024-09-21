@@ -26,7 +26,8 @@
    GtkEventCallback
    (lambda (widget event data)
      (display "delete event occurred\n")
-     (gtk_main_quit))))
+     (gtk_main_quit)
+     1)))
 
 (define hello
   (make-cdata
