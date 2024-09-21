@@ -5,6 +5,14 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-09-21  V2.00.1
+	* fixed bug in compile-ffi: it no longer compiles all dependencies
+	  automatically
+	* for function types, convert callback args to cdata types where
+	  applicable; was only for enums
+	* crude implementation of code->sexp in (nyacc lang c99 ffi-help-cd):
+	  This is just a start: convert c code string to ctypes.
+
 2024-09-20  V2.00.0
 	* added `cdata' module for handling type and data from C libraries
 	  + see doc/cdata.info
