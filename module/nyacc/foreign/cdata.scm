@@ -681,7 +681,7 @@
          (values type (+ ix (* tag (ctype-size type))))))
       ((pointer)
        (error "ctype-detag: don't call on me for a pointer dereference"))
-      (else (error "bad tag" tag)))))
+      (else (error "bad tag:" tag)))))
 
 ;; @deffn {Procedure} ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
 ;; This generate a list of (offset, type) pairs for a type.  The result is
@@ -707,7 +707,7 @@
          ((integer? (car tags))
           (let ((ix (+ ix (* (car tags) (ctype-size type)))))
             (loop (cons (cons ix ct) res) type 0 (cdr tags))))
-         (else (error "bad tag for pointer")))))
+         (else (error "ctype-sel: bad tag for pointer")))))
      (else
       (call-with-values (lambda () (ctype-detag ct ix (car tags)))
         (lambda (ct ix)
@@ -825,7 +825,7 @@
                 (bv (make-bytevector (* value sz))))
            (%make-cdata bv 0 (carray et value))))
         (else
-         (when value (error "can't initialize arrays yet"))
+         (when value (error "make-cdata: can't initialize arrays yet"))
          (%make-cdata (make-bytevector (ctype-size type)) 0 type)))))
     (else
      (let* ((size (ctype-size type))
@@ -877,7 +877,7 @@
                  (addr (let ((addr (mtype-bv-ref (cpointer-mtype cptr) bv ix)))
                          (cond ((eq? '* tag) addr)
                                ((integer? tag) (+ addr (* elsz tag)))
-                               (else (error "cdata-sel: bad tag" tag)))))
+                               (else (error "cdata-sel: bad tag:" tag)))))
                  (eptr (make-pointer addr)))
             (cond
              ((zero? addr)
@@ -919,7 +919,7 @@
               (mtype (cfunction-ptr-mtype ti))
               (addr (mtype-bv-ref mtype bv ix))
               (ptr->proc (cfunction-ptr->proc ti)))
-         (if (zero? addr) (error "cdata-ref: bad function address"))
+         (if (zero? addr) (error "cdata-ref: null function address"))
          (ptr->proc (make-pointer addr))))
       (else (error "cdata-ref: giving up")))))
 
@@ -956,7 +956,7 @@
                (mtype-bv-set! mtype bv ix
                               (pointer-address
                                ((cfunction-proc->ptr (ctype-info pt)) value))))
-              (else (error "cdata-set!: bad arg" value)))))
+              (else (error "cdata-set!: bad arg:" value)))))
           ((bitfield)
            (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
                   (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
@@ -1273,7 +1273,7 @@
           (else `(cpointer ,(cnvt (cpointer-type info))))))
         ((array)
          `(carray ,(cnvt (carray-type info)) ,(carray-length info)))
-        (else (error "pretty-print-ctype: needs work" (ctype-kind type))))))
+        (else (error "pretty-print-ctype: needs work:" (ctype-kind type))))))
   (pretty-print (cnvt type) port))
 
 ;; --- not sure about this ===--------------------------------------------------
@@ -1335,7 +1335,7 @@
                         ((pointer) (ctype-info (cpointer-type info)))
                         (else (error "not ok")))))
            ((cfunction-proc->ptr func) arg)))
-        (else (error "unwrap-pointer: bad arg: ~s" arg))))
+        (else (error "unwrap-pointer: bad arg:" arg))))
 
 ;; @deffn {Procedure} unwrap-number
 ;; doc to come
