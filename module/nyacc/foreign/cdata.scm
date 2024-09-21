@@ -407,14 +407,14 @@
   (let* ((arch (*arch*))
          (name (cond ((symbol? name) name)
                      ((string? name) (strname->symname name))
-                     (else (error "cbase: bad arg"))))
+                     (else (error "cbase: bad arg:" name))))
          (cmap (or (assoc-ref (*cbase-map*) arch)
                    (let ((cmap (make-cbase-map arch)))
                      (*cbase-map* (acons arch cmap (*cbase-map*)))
                      cmap))))
     (or (assq-ref cmap name)
         (and (memq name cbase-symbols) name)
-        (error "cbase: not found: " name))))
+        (error "cbase: not found:" name))))
 
 ;; @deffn {Procedure} cpointer type
 ;; Generate a C pointer type to @var{type}. To reference or de-reference
@@ -439,7 +439,7 @@
                ((eq? 'void type) type)
                ((symbol? type) (cbase type))
                ((promise? type) type)
-               (else (error "cpointer: bad arg" type)))))
+               (else (error "cpointer: bad arg:" type)))))
     (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
                  'pointer (%make-cpointer type (mtypeof-basetype 'void*)) #f)))
 
@@ -933,7 +933,7 @@
     (if (cdata? value)
         (let ((sz (ctype-size ct)))
           (unless (ctype-equal? (cdata-ct value) ct)
-            (error "cdata-set!: bad arg"))
+            (error "cdata-set!: bad arg:" value))
           (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
         (case (ctype-kind ct)
           ((base)
@@ -1320,7 +1320,7 @@
 (define (unwrap-number arg)
   (cond ((number? arg) arg)
         ((cdata? arg) (cdata-ref arg))
-        (else (error "unwrap-number: bad arg: ~s" arg))))
+        (else (error "unwrap-number: bad arg:" arg))))
 
 ;; @deffn {Procedure} unwrap-number
 ;; doc to come
@@ -1344,11 +1344,11 @@
 (define (unwrap-array arg)
   (unless
     (cdata? arg)
-    (error "unwrap-array: bad arg: " arg))
+    (error "unwrap-array: bad arg:" arg))
   (case (cdata-kind arg)
     ((pointer) (cdata-ref arg))
     ((array) (cdata&-ref arg))
-    (else (error "unwrap-array: bad arg: " arg))))
+    (else (error "unwrap-array: bad arg:" arg))))
 
 (define NULL %null-pointer)
 (define (NULL? arg)
