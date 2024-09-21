@@ -398,7 +398,7 @@
            (lambda () (let ((return (mdecl->udecl (cons "~ret" tail))))
                         (function*-wraps return params)))
          (lambda (wrapper unwrapper)
-           `(cfunction ,wrapper ,unwrapper))))
+           `(cpointer (cfunction ,wrapper ,unwrapper)))))
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        `(cpointer (cbase 'void*)))
       (`((pointer-to) (struct-ref (ident ,name)))
