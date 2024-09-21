@@ -1276,7 +1276,8 @@
         (else (error "pretty-print-ctype: needs work:" (ctype-kind type))))))
   (pretty-print (cnvt type) port))
 
-;; --- not sure about this ===--------------------------------------------------
+
+;; --- not sure about this -----------------------------------------------------
 
 (define (mtype->ffi mtype)
   (or
