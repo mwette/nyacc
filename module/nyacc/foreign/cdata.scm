@@ -1126,7 +1126,7 @@
 (define (cdata*-ref data . tags)
   "- Procedure: cdata*-ref data [tag ...]
      Shortcut for ‘(cdata-ref (cdata* data tag ...))’"
-  (apply cdata-sel data '* tags))
+  (apply cdata-ref data '* tags))
 
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
 ;; need to be able to cast array to pointer
