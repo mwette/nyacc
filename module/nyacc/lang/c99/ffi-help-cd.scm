@@ -693,12 +693,14 @@
 
 (define (setup-function return params)
   (define void-param '(param-decl (decl-spec-list (type-spec (void)))))
-  (let* ((params (let loop ((rl '()) (pl params))
+  (let* ((namer (make-arg-namer))
+         (params (let loop ((rl '()) (pl params))
                    (cond
                     ((null? pl) (reverse rl))
                     ((equal? '(ellipsis) (car pl)) (reverse rl))
                     ((equal? void-param (car pl)) '())
-                    (else (loop (cons (reify-udecl (car pl)) rl) (cdr pl))))))
+                    (else (loop (cons (reify-udecl (car pl) namer) rl)
+                                (cdr pl))))))
          (names (map string->symbol
                      (map (lambda (u) (declr-name (sx-ref u 2))) params))))
     (values params names)))
@@ -943,7 +945,7 @@
                 ((member (w/struct agname) defined) ;; defined previously
                  (xcons* seed
                    (deftype type (mtail->ctype mtail))
-	           (deftype type* (sfsym "struct-~A*-type" agname))))
+	           (deftype type* (sfsym "struct-~A*" agname))))
                 ((udict-struct-ref udict agname) ;; defined later
                  =>
                  (lambda (decl)
@@ -963,7 +965,7 @@
                ((member (w/union agname) defined) ;; defined previously
                 (xcons* seed
                   (deftype type (mtail->ctype mtail))
-	          (deftype type* (sfsym "union-~A*-type" agname))))
+	          (deftype type* (sfsym "union-~A*" agname))))
                ((udict-union-ref udict agname) ;; defined later
                 =>
                 (lambda (decl)
