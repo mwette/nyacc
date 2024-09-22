@@ -116,7 +116,13 @@
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (rnrs bytevectors)
-  #:use-module (system foreign)         ; beware: lots of type names exported
+  #:use-module ((system foreign)
+                #:select (%null-pointer
+                          make-pointer pointer? pointer-address
+                          scm->pointer string->pointer
+                          pointer->bytevector bytevector->pointer
+                          int8 uint8 int16 uint16 int32 uint32 int64 uint64
+                          float double))
   #:use-module (nyacc foreign arch-info))
 (export %cpointer-type)
 
