@@ -170,7 +170,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 (export define-ffi-module)
 
 (define (find-in-path file)
-  (let loop ((pathl %load-path))
+  (let loop ((pathl (cons "." %load-path)))
     (if (null? pathl) #f
         (let ((path (string-append (car pathl) "/" file)))
           (if (access? path R_OK) path
@@ -227,8 +227,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
               #f (append todo (cdr mdep)))))
      ((pair? todo)
       (let* ((base (string-join (map symbol->string (car todo)) "/"))
-             (path (find-in-path (string-append base ".ffi"))))
-        (unless path (fail "can't find ~s" path))
+             (ffi-file (string-append base ".ffi"))
+             (path (find-in-path ffi-file)))
+        (unless path (fail "can't find ~s" ffi-file))
         (loop depd specd path (cdr todo))))
      (else
       (reverse
@@ -287,12 +288,11 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 (define (compile-ffi ffi-file opts)
   (let* ((scm-file (scm-for-ffi ffi-file))
-         (compile-ffi-file (case (assq-ref opts 'backend)
-                             ((bs bytestructures)
-                              (@ (nyacc lang c99 ffi-help-bs) compile-ffi-file))
-                             ((cd cdata)
-                              (@ (nyacc lang c99 ffi-help-cd) compile-ffi-file))
-                             (else (fail "bad backend specified")))))
+         (mod (case (assq-ref opts 'backend)
+                ((bytestructures bs) '(nyacc lang c99 ffi-help-bs))
+                ((cdata cd) '(nyacc lang c99 ffi-help-cd))
+                (else (fail "bad backend: ~s" (assq-ref opts 'backend)))))
+         (compile-ffi-file (module-ref (resolve-module mod) 'compile-ffi-file)))
     (when (assq-ref opts 'list-deps)
       (for-each
        (lambda (f) (sfmt "~A\n" (fix-path f)))
