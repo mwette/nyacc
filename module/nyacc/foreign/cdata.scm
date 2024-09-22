@@ -116,7 +116,7 @@
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (rnrs bytevectors)
-  #:use-module (system foreign)
+  #:use-module (system foreign)         ; beware: lots of type names exported
   #:use-module (nyacc foreign arch-info))
 (export %cpointer-type)
 
@@ -605,11 +605,11 @@
 ;; @end example
 ;; If @var{packed} is @code{#t} the size wil be smallest that can hold it.
 ;; @end deffn
-(define* (cenum enum-list #:optional basetype)
-  "- Procedure: cenum enum-list [basetype]
+(define* (cenum enum-list #:optional packed)
+  "- Procedure: cenum enum-list [packed]
      ENUM-LIST is a list of name or name-value pairs
           (cenum '((a 1) b (c 4))
-     If SHORT is ‘#t’ the size wil be smallest that can hold it."
+     If PACKED is ‘#t’ the size wil be smallest that can hold it."
   (define (short-mtype mn mx)
     (if (< 0 mn)
         (cond
@@ -627,7 +627,7 @@
     (if (null? enl)
         (let* ((mx (cdar nvl)) (nvl (reverse nvl)) (mn (cdar nvl))
                (vnl (map (lambda (p) (cons (cdr p) (car p))) nvl))
-               (mtype (if short (short-mtype mn mx) (mtypeof-basetype 'int))))
+               (mtype (if packed (short-mtype mn mx) (mtypeof-basetype 'int))))
           (%make-ctype (sizeof-mtype mtype) (alignof-mtype mtype)
                        'enum (%make-cenum mtype vnl nvl) #f))
         (match (car enl)
@@ -1273,6 +1273,14 @@
           (else `(cpointer ,(cnvt (cpointer-type info))))))
         ((array)
          `(carray ,(cnvt (carray-type info)) ,(carray-length info)))
+        ((enum)
+         (cond
+          ((ctype-name type) => identity)
+          (else `(enum ...))))
+        ((function)
+         (cond
+          ((ctype-name type) => identity)
+          (else `(function ...))))
         (else (error "pretty-print-ctype: needs work:" (ctype-kind type))))))
   (pretty-print (cnvt type) port))
 
