@@ -886,7 +886,7 @@
                    (values
                     (cons name defined)
                     (xcons* seed
-                      `(define-public ,*type (cfunction ,pr->pc ,pc->pr))
+                      `(define ,*type (cfunction ,pr->pc ,pc->pr))
                       (deftype type `(cpointer ,*type)))))))))
 
           (`((pointer-to) . ,rest)
@@ -951,11 +951,10 @@
                  (lambda (decl)
                   (bkref-extend! decl name)
                   (xcons* seed
-                    `(define-public ,type 'void)
                     (deftype type* `(cpointer (delay ,type))))))
                 (else ;; not defined
                  (xcons* seed
-                   `(define-public ,type 'void)
+                   `(define ,type 'void)
                    (deftype type* `(cpointer ,type)))))))
 
              ((union-ref (ident ,agname))
@@ -971,8 +970,7 @@
                 (lambda (decl)
                   (bkref-extend! decl name)
                   (xcons* seed
-                    `(define-public ,type 'void)
-                    `(define-public ,type* (cpointer (delay ,type))))))
+                    (deftype type* `(cpointer (delay ,type))))))
                (else ;; not defined
                 (xcons* seed
                   `(define-public ,type 'void)
@@ -1071,7 +1069,7 @@
 	        (lambda (name defined seed)
                   (let ((type (strings->symbol name)))
                     (values (cons name defined)
-                            (cons `(set! ,type ,atype) seed))))
+                            (cons (deftype type atype) seed))))
 	        name-list
                 (cons (w/struct agname) defined)
                 (xcons* seed
@@ -1099,7 +1097,7 @@
 	        (lambda (name defined seed)
                   (let ((type (strings->symbol name)))
                     (values (cons name defined)
-                            (cons `(set! ,type ,atype) seed))))
+                            (cons (deftype type atype) seed))))
 	        name-list
                 (cons (w/union agname) defined)
                 (xcons* seed
