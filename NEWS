@@ -5,6 +5,14 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-09-22  V2.00.3
+	* cdata.scm(cenum): packed arg hopefully handled correctly,
+	  was being treated at #t always
+	* compile-ffi.scm: add '.' to path; report file-not-found correctly
+	* ffi-help-cd.scm(setup-function): add param namer, was getting errors
+	  for multiply defined params
+	* ffi-help-cd.scm(cnvt-udecl): removed incorrect "-type" from def's
+
 2024-09-21  V2.00.2
 	* ffi-help-cd.scm: fixed translation of function pointer typedefs
 	* cdata.scm(Xcdata-ref): fixed pointer to cfuntion eval
