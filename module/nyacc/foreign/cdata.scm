@@ -108,8 +108,7 @@
             cpointer-type cpointer-mtype
             carray-type carray-length
             cenum-vald cenum-symd
-            cfunction-proc->ptr cfunction-ptr->proc
-            )
+            cfunction-proc->ptr cfunction-ptr->proc)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
   #:use-module ((srfi srfi-1) #:select (fold xcons))
@@ -124,7 +123,6 @@
                           int8 uint8 int16 uint16 int32 uint32 int64 uint64
                           float double))
   #:use-module (nyacc foreign arch-info))
-(export %cpointer-type)
 
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
@@ -308,7 +306,6 @@
   (bv cdata-bv)                         ; bvec
   (ix cdata-ix)                         ; index
   (ct cdata-ct))                        ; type
-(export %make-cdata) ;; needed?
 
 (set-record-type-printer! <cdata>
   (lambda (data port)
@@ -392,7 +389,6 @@
   (with-arch arch
     (map (lambda (name) (cons name (make-cbase name)))
          base-type-symbol-list)))
-(export make-cbase-map)
 
 (define cbase-symbols
   '(s8 u8 s16 s32 s64 i128 u16 u32 u64 u128 f16 f32 f64 f128
