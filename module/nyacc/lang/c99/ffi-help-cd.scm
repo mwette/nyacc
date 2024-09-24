@@ -264,7 +264,6 @@
   (map
    (lambda (dent)
      (let* ((name (car dent)) (udecl (cdr dent))
-            (name (if (or (not name) (positive? (string-length name))) name #f))
 	    (mdecl (udecl->mdecl (udecl-rem-type-qual udecl)))
 	    (type (expand-tail (md-tail mdecl))))
        (if (and (pair? type) (eq? 'cbitfield (car type)))
