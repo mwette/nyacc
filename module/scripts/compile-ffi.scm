@@ -74,7 +74,7 @@
   (acons key (cons val (or (assq-ref seed key) '())) seed))
 
 (define (show-usage)
-  (simple-format #t "Usage: compile [OPTION] FILE
+  (simple-format #t "Usage: guild compile-ffi [OPTIONS] FILE
 Generate a Guile Scheme file from the source FFI file FILE.
 
   -h, --help            print this help message
@@ -91,6 +91,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -X, --no-exec         don't generate .go file(s)
   -R, --no-recurse      don't do recursive compile on dep's
 
+See the FFI-Helper User's Manual for help generating a .ffi file.
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 (define options
@@ -183,11 +184,6 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
         (and (= (stat:mtime stat1) (stat:mtime stat2))
              (>= (stat:mtimensec stat1)
                  (stat:mtimensec stat2))))))
-
-#;(define (stat-time<? stat1 stat2)
-  (or (< (stat:mtime stat1) (stat:mtime stat2))
-      (and (= (stat:mtime stat1) (stat:mtime stat2))
-           (< (stat:mtimensec stat1) (stat:mtimensec stat2)))))
 
 (define (tsort filed filel)
   (define (covered? deps done) (every (lambda (e) (member e done)) deps))
