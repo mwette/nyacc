@@ -30,7 +30,8 @@
 	    define-ffi-module
 	    compile-ffi-file
 	    load-include-file
-	    ccode->sexp)
+	    ccode->sexp
+            udecl->sexp)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
@@ -328,7 +329,7 @@
     ;; hacks
     ("intptr_t" . ffi:intptr_t) ("uintptr_t" . ffi:uintptr_t)
     ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
-    ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
+    ("wchar_t" . ffi:int) ("char16_t" . ffi:int16) ("char32_t" . ffi:int32)
     ("long long" . ,ffi-long-long) ("long long int" . ,ffi-long-long)
     ("signed long long" . ,ffi-long-long)
     ("signed long long int" . ,ffi-long-long)
@@ -807,14 +808,14 @@
 	   '() (clean-and-unitize-fields (sx-tail field-list))))))
 
 
-;; @deffn {Procedure} cnvt-udecl udecl udict defined seed)
+;; @deffn {Procedure} udecl->sexp udecl udict defined seed)
 ;; Given @var{udecl} produce scheme FFI wrappers for C types, C functions,
 ;; and C variables. Return updated @var{defined}, a string based list of
 ;; types defined. The list is used used in the conversion subroutines.
 ;; Returns (values wrapped defined), where defined is a list of defined
 ;; types, and wrapped is the same, not used.
 ;; @end deffn
-(define (cnvt-udecl udecl udict defined seed)
+(define (udecl->sexp udecl udict defined seed)
 
   (define (specl-props specl)
     (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
@@ -1038,9 +1039,9 @@
                       (values defined seed))))
 	       (else
 	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
-	          (cnvt-udecl xdecl udict defined seed)))))
+	          (udecl->sexp xdecl udict defined seed)))))
              (,__
-              (sferr "cnvt-udecl missed typedef:\n") (pperr mdecl)
+              (sferr "udecl->sexp missed typedef:\n") (pperr mdecl)
               (values defined seed)))))))
 
      ((ftn-declr? declr)
@@ -1162,7 +1163,7 @@
       (values defined seed))
 
      (else
-      (sferr "cnvt-udecl: total miss\n") (pperr udecl)
+      (sferr "udecl->sexp: total miss\n") (pperr udecl)
       (values defined seed)))))
 
 
@@ -1316,12 +1317,10 @@
 	     (if (*echo-decls*)
 		 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
              (call-with-values
-                 (lambda () (cnvt-udecl udecl udict defined seed))
+                 (lambda () (udecl->sexp udecl udict defined seed))
                (lambda (defined forms)
-                 ;;(pperr forms) (quit)
                  (for-each ppscm (reverse forms))
-                 (values defined seed)))
-             ))
+                 (values defined seed)))))
 	  (else (values defined seed))))
        ;; exception handler:
        (lambda (key fmt . args)
@@ -1433,7 +1432,7 @@
 	 (udecls (c99-trans-unit->udict tree))
 	 (ffi-decls (map car udecls))
          (cnvt (lambda (udent defined seed)
-                 (cnvt-udecl (cdr udent) udict defined seed))))
+                 (udecl->sexp (cdr udent) udict defined seed))))
     (*udict* udict)
     (*ddict* (udict-enums->ddict udict (*ddict*)))
     `(begin
