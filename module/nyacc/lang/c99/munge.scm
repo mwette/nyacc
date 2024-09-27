@@ -217,7 +217,7 @@
 ;; functions @code{struct} and @code{union} field lists.  The result needs
 ;; to be reversed.
 ;; @end deffn
-(define* (dictize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
+(define* (dictize-comp-decl decl #:optional (seed '()) #:key namer)
   (cond
    ((not (pair? decl))
     (throw 'nyacc-error "dictize-decl: bad arg: ~S" decl))
@@ -227,7 +227,7 @@
     (let-values (((tag attr spec-l declrs) (split-decl decl)))
       (iter-declrs 'comp-udecl attr spec-l declrs seed)))
    (else
-    (acons (namer) decl seed))))
+    (acons (and namer (namer)) decl seed))))
 
 (define* (unitize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
   (fold-right
@@ -859,10 +859,10 @@
     (doit `(ident ,name) rest)))
 
 (define (clean-and-unitize-fields fields)
-  (fold-right unitize-decl '() (clean-fields fields)))
+  (fold-right unitize-comp-decl '() (clean-fields fields)))
 
-(define (clean-and-dictize-fields fields)
-  (fold-right dictize-decl '() (clean-fields fields)))
+(define* (clean-and-dictize-fields fields #:optional namer)
+  (fold-right dictize-comp-decl '() (clean-fields fields)))
 
 (define (specl-props specl)
   (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
