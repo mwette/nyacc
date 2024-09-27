@@ -5,6 +5,12 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-09-XX  V2.00.4
+	* ffi-help-cd(cnvt-udecl): no longer generating (set! x)
+	  modules can now really be declarative
+	* reorg example languages; merge updates from fhdev branch
+	* munge.scm: change default namer for clean-and-dictize-fields
+
 2024-09-22  V2.00.3
 	* cdata.scm(cenum): packed arg hopefully handled correctly,
 	  was being treated at #t always
