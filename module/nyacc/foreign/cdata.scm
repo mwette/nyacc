@@ -724,7 +724,9 @@
 ;; size, integer versus float, and signed versus unsigned.
 ;; For struct and union kinds, the names and types of all fields
 ;; must be equal.
-;; @*TODO: algorithm to prevent infinite search for recursive structs
+;; @* WARNING: Currently equality of pointers uses @code{eq?} (with
+;; forced promises).  Fixme is to create algorithm to chase down pointers
+;; without infinite search.
 ;; @end deffn
 (define (ctype-equal? a b)
   "- Procedure: ctype-equal? a b
