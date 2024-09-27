@@ -45,7 +45,7 @@
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
 (define (xlib-ref name)
-  `(@@ (nyacc lang tsh xlib) ,name))
+  `(@@ (language nx-tsh xlib) ,name))
 
 (define (op-call op kseed)
   (rev/repl 'call (xlib-ref op) kseed))

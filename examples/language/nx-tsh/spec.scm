@@ -31,7 +31,7 @@
                          (string? (port-filename p))
                          (not (string-prefix? "/dev/" (port-filename p))))
                     (read-tsh-file p e))
-                   (else (read-tcl-stmt p e))))
+                   (else (read-tsh-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator   (lambda (exp mod) (primitive-eval exp))
   #:printer     write

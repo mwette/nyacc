@@ -85,7 +85,7 @@
    ))
 
 (define-public (tsh:format fmt . args)
-  (apply nx-printf #f fmt args))
+  (apply nx-sprintf fmt args))
 
 (define-public tsh:last last)
 

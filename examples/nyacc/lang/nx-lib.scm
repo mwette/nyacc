@@ -1,6 +1,6 @@
 ;; nyacc/lang/nx-util.scm - run-time library
 
-;; Copyright (C) 2018,2024 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -59,6 +59,7 @@
             nx-use-module
             nx-C-predicate
             nx-undefined
+            nx-error
             ;;
             make-nx-hash-table nx-hash-ref nx-hash-set!
             nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
