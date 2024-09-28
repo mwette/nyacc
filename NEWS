@@ -9,7 +9,7 @@ without any warranty.
 	* ffi-help-cd(cnvt-udecl): no longer generating (set! x)
 	  modules can now really be declarative
 	* update ctype-equal? to check arrays, enums, functions.
-	  checking functions may need update to <cfunction>
+	  checking functions may need update to <cfunction> record
 	* reorg example languages; merge updates from fhdev branch
 	* munge.scm: change default namer for clean-and-dictize-fields
 
