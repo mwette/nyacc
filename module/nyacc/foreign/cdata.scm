@@ -774,7 +774,7 @@
               (eq? (cfunction-proc->ptr a) (cfunction-proc->ptr b))
               ;; HARD TO DO
               #t))
-            (else #f))))
+            (else #f)))))
     (cond
      ((or (not (ctype? a)) (not (ctype? b))) #f)
      ((not (eq? (ctype-kind a) (ctype-kind b))) #f)

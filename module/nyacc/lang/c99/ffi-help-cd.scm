@@ -62,7 +62,7 @@
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:re-export (*nyacc-version*)
-  #:version (2 00 3))
+  #:version (2 00 4))
 
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))

@@ -12,7 +12,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 FFI Helper User Guide
 Matt Wette
 Augustr 2024
-With NYACC Version 2.00.3
+With NYACC Version 2.00.4
 
 
 File: nyacc-fh-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -42,24 +42,31 @@ compile-ffi’ to produce an associated file of Guile Scheme code.
 The FH does not generate C code.  The hooks to access functions in the
 Cairo library are provided in 100% Guile Scheme via ‘(system foreign)’.
 
+   Since version 2.00, the FFI Helper uses it's own backend for using
+bytestructures to handle C data.  In previous versions, the module
+‘(bytestructures guile)’ was used.  The previous version is still
+available by passin ‘-b bytestructures’ to ‘guild compile-ffi’, or by
+setting the environment variable
+     FFI_HELP_BACKEND=bytestructures
+   Use of the FFI-helper module depends on the _scheme-bytestructure_
+package available from
+<https://github.com/TaylanUB/scheme-bytestructures>.  Releases are
+available at
+<https://github.com/TaylanUB/scheme-bytestructures/releases>.  In this
+manual we discuss only the _cdata_ default.
+
    To generate Guile Scheme for smaller C code units one can write a
 ffi-module with the ‘#:api-code’ or import the ‘ffi-help’ module an use
-the functions ‘load-include-file’, ‘C-decl->scm’ or ‘C-fun-decl->scm’.
-The latter functions are not well tested, though.
+the functions ‘load-include-file’, ‘ccode->sexp’.  The latter functions
+are not well tested, though.
 
    The compiler for the FFI Helper (FH) is based on the C parser and
 utilities which are included in the NYACC (https://www.nongnu.org/nyacc)
 package.  Within the NYACC distribution, there are a number of example
 dot-ffi files in the directory ‘examples/ffi’.
 
-   Use of the FFI-helper module depends on the _scheme-bytestructure_
-package available from
-<https://github.com/TaylanUB/scheme-bytestructures>.  Releases are
-available at
-<https://github.com/TaylanUB/scheme-bytestructures/releases>.
-
    At runtime, after the FFI Helper has been used to create Scheme code,
-the modules ‘(system ffi-help-rt)’ and ‘(bytestructures guile)’ are
+the modules ‘(nyacc foreign cdata)’ and ‘(nyacc foreign arch-info)’ are
 required.  No other code from the NYACC distribution is needed.
 However, note that the process of creating the Scheme output depends on
 reading system headers, so the generated code may well contain operating
@@ -92,62 +99,58 @@ directory, a file named ‘cairo.ffi’ with the following contents:
 To generate a Guile module you execute ‘guild’ as follows:
 
      $ guild compile-ffi ffi/cairo.ffi
-     wrote `ffi/cairo.scm'
+     compiling `ffi/cairo.ffi' ...
+     ... wrote `ffi/cairo.scm'
+     compiling `ffi/cairo.scm' ...
+     ... wrote `cairo.scm.go'
 
 Though the file ‘cairo/cairo.ffi’ is only three lines long, the file
-‘ffi/cairo.scm’ will be over five thousand lines long.  It looks like
-the following:
+‘ffi/cairo.scm’ will be over five thousand lines long.  It looks
+something like the following:
 
      (define-module (ffi cairo)
-       #:use-module (system ffi-help-rt)
        #:use-module ((system foreign) #:prefix ffi:)
-       #:use-module (bytestructures guile))
-     (define link-libs
-       (list (dynamic-link "libcairo")))
+       #:use-module (system foreign-library)
+       #:use-module (nyacc foreign cdata))
 
-     ;; int cairo_version(void);
-     (define ~cairo_version
-       (delay (fh-link-proc ffi:int "cairo_version" (list) link-libs)))
-     (define (cairo_version)
-       (let () ((force ~cairo_version))))
-     (export cairo_version)
+     ;; extern int cairo_version(void);
+     (define-public cairo_version
+       (let ((~proc (delay (ffi:pointer->procedure
+                             ffi:int
+                             (foreign-pointer-search "cairo_version")
+                             (list)))))
+         (lambda () (let () ((force ~proc))))))
 
      ...
 
-     ;; typedef struct _cairo_matrix {
-     ;;   double xx;
-     ;;   double yx;
-     ;;   double xy;
-     ;;   double yy;
-     ;;   double x0;
-     ;;   double y0;
-     ;; } cairo_matrix_t;
-     (define-public cairo_matrix_t-desc
-       (bs:struct
-         (list `(xx ,double) `(yx ,double) `(xy ,double)
-               `(yy ,double) `(x0 ,double) `(y0 ,double))))
-     (define-fh-compound-type cairo_matrix_t cairo_matrix_t-desc
-      cairo_matrix_t? make-cairo_matrix_t)
-     (export cairo_matrix_t cairo_matrix_t? make-cairo_matrix_t)
+     (define-public cairo_matrix_t
+       (name-ctype
+         'cairo_matrix_t
+         (cstruct
+           (list `(xx ,(cbase 'double))
+                 `(yx ,(cbase 'double))
+                 `(xy ,(cbase 'double))
+                 `(yy ,(cbase 'double))
+                 `(x0 ,(cbase 'double))
+                 `(y0 ,(cbase 'double))))))
+     (define-public cairo_matrix_t*
+       (name-ctype
+         'cairo_matrix_t*
+         (cpointer cairo_matrix_t)))
 
      ... many, many more declarations ...
 
      ;; access to enum symbols and #define'd constants:
+     (define ffi-cairo-symbol-tab
+       '((CAIRO_SVG_UNIT_PERCENT . 9)
+         (CAIRO_SVG_UNIT_PC . 8)
+         (CAIRO_SVG_UNIT_PT . 7)
+         ... more constants ...
+         ))
      (define ffi-cairo-symbol-val
-       (let ((sym-tab
-               '((CAIRO_SVG_VERSION_1_1 . 0)
-                 (CAIRO_SVG_VERSION_1_2 . 1)
-                 (CAIRO_PDF_VERSION_1_4 . 0)
-                 (CAIRO_PDF_VERSION_1_5 . 1)
-                 (CAIRO_REGION_OVERLAP_IN . 0)
-                 (CAIRO_REGION_OVERLAP_OUT . 1)
-                 ... more constants ...
-                 (CAIRO_MIME_TYPE_JBIG2_GLOBAL_ID
-                   .
-                   "application/x-cairo.jbig2-global-id"))))
-         (lambda (k) (or (assq-ref sym-tab k)))))
+       (lambda (k)
+         (or (assq-ref ffi-cairo-symbol-tab k))))
      (export ffi-cairo-symbol-val)
-     (export cairo-lookup)
 
      ... more ...
 
@@ -188,7 +191,6 @@ session and ‘load’ the file.
 
      guile> (load "cairo-demo.scm")
      ...
-     ;;; compiled /.../cairo.scm.go
      ;;; compiled /.../cairo-demo.scm.go
      guile>
 
@@ -204,61 +206,50 @@ in ‘(ffi cairo)’ will accept Scheme strings where the C function wants
    Now try this in your Guile session:
 
      guile> srf
-     $4 = #<cairo_surface_t* 0x7fda53e01880>
+     $4 = #<cdata cairo_surface_t* 0x7fda53e01880>
      guile> cr
-     $5 = #<cairo_t* 0x7fda54828800>
+     $5 = #<cdata cairo_t* 0x7fda54828800>
 
 Note that the FH keeps track of the C types you use.  This can be useful
 for debugging (at a potential cost of bloating the namespace).  The
 constants you see are the pointer values.  But it goes further.  Let's
 generate a matrix type:
 
+     guile> (use-modules (nyacc foreign cdata))
      guile> (define m (make-cairo_matrix_t))
      guile> m
-     $6 = #<cairo_matrix_t 0x10cc26c00>
-     guile> (use-modules (system ffh-help-rt))
-     guile> (pointer-to m)
-     $7 = #<cairo_matrix_t* 0x10cc26c00>
+     $6 = #<cdata cairo_matrix_t 0x7056028777a0>
+     guile> (cdata& m)
+     $7 = #<cdata cairo_matrix_t* 0x7055f7da7b30>
 
 When it comes to C APIs that expect the user to allocate memory for a
 structure and pass the pointer address to the C function, FH provides a
 solution:
 
-     guile> (cairo_get_matrix cr (pointer-to m))
-     guile> (fh-object-ref m 'xx)
-     $9 = 1.0
+     guile> (cairo_get_matrix cr (cdata& m))
+     guile> (cdata-ref m 'xx)
+     $8 = 1.0
 
    But the FFI helper can also be used on a per declaration basis, but
 you must first import the proper modules and libraries.  This
 functionality is still under development.
 
    The following example shows how to convert to scheme code using the
-procedure ‘C-decl->scm’:
+procedure ‘ccode->sexp’:
 
-     guile> (use-modules (nyacc lang c99 ffi-help))
-     guile> (define struct-foo-desc (C-decl->scm "struct foo { int x; double y; };"))
-     guile> ,pp struct-foo-desc
-     $1 = (bs:struct (list `(x ,int) `(y ,double)))
-
-   If we import more modules we can use the syntax ‘C-decl’ to complete
-definitions:
-
-     guile> (use-modules (system ffi-help-rt))
-     guile> (use-modules (bytestructures guile))
-     guile> (use-modules ((system foreign) #:prefix ffi:))
-     guile> (define ffi-libs '()) ;; hack for now
-
-     guile> (define my-sqrt "double sqrt(double);")
-     guile> (my-sqrt 4.0)
-
-   Note that for functions like the above to work any dependent
-libraries must be loaded first, via ‘(dynamic-link)’.
-
-   Note: currently the above defines a bytestructure, but not a FH type.
-We could define a FH type as follows:
-
-     guile> (define-fh-compound-type struct-foo
-             struct-foo-desc struct-foo? make-struct-foo)
+     guile> (use-modules (nyacc lang c99 ffi-help-cd))
+     guile> (define sx (ccode->sexp "struct foo { int x; };"))
+     guile> ,pp sx
+     $4 = (begin
+       (define-public struct-foo
+         (name-ctype
+           'struct-foo
+           (cstruct (list `(x ,(cbase 'int))))))
+       (define-public struct-foo*
+         (name-ctype 'struct-foo* (cpointer struct-foo))))
+     guile> (eval sx (current-module))
+     guile> struct-foo
+     $5 = #<ctype struct struct-foo 0x73af1fc95480>
 
 The Guile Foreign Function Interface
 ====================================
@@ -272,15 +263,19 @@ Manual.  For more info on libffi internals visit libffi
 (https://github.com/libffi/libffi).
 
    The relevant procedures used by the FH are
-‘dynamic-link’
-     links libraries into Guile session
-‘dynamic-func’
-     generated Scheme-level pointer to a C function
+‘foreign-library-pointer’
+     generates Scheme-level pointer to a C function or data
 ‘pointer->procedure’
      geneates a Scheme lambda given C function signature
 ‘dynamic-pointer’
      provides access to global C variables
-Several of the above require import of the module ‘(system foreign)’.
+‘string->pointer’
+     converts a Scheme string to a Guile pointer
+‘pointer->string’
+     converts Guile pointer for C string to a Scheme string
+
+   Several of the above require import one or both of the modules
+‘(system foreign)’ and ‘(system foreign-library’.
 
    In order to generate a Guile procedure wrapper for a function, say
 ‘int foo(char *str)’, in some foreign library, say ‘libbar.so’, you can
@@ -288,7 +283,7 @@ use something like the following:
      (use-modules (system foreign))
      (define foo (pointer->procedure
                   int
-                  (dynamic-func "foo" (dynamic-link "libbar"))
+                  (foreign-library-pointer "foo" "libbar")
                   (list '*)))
 The argument ‘int’ is a variable name for the return type, the next
 argument is an expression for the function pointer and the third
@@ -311,8 +306,10 @@ to be even more forgiving, allowing one to pass symbols where C enums
 (i.e., integers) are expected.
 
    As mentioned, access to libraries not compiled into Guile is
-accomplished via ‘dynamic-link’.  To link the shared library ‘libfoo.so’
-into Guile one would write something like the following:
+accomplished via ‘foreign-library-pointer’.
+FIXME: update this.
+To link the shared library ‘libfoo.so’ into Guile one would write
+something like the following:
      (define foo-lib (dynamic-link "libfoo"))
 Note that Guile takes care of dealing with the file extension (e.g.,
 ‘.so’).  Where Guile looks for libraries is system dependent, but
@@ -332,19 +329,16 @@ provide a handle to acquire object handles, but I have found this is not
 always the case.  The FH will try all library handles defined by a ffi
 module to acquire object pointers.
 
+The C-data Module
+=================
+
+Explanation of the C-data module is provided in a separate document.
+
 The FFI Helper Design
 =====================
 
-TO BE EXPLAINED:
-‘fh-object-ref’
-     Returns Guile value or value in underlying type system (e.g.
-     bytestructures)
-‘fh-object-set!’
-     SYNTAX is ‘fh-object-set! obj value tag ...’
-     BS uses ‘bytestructure-set! obj tag ... value’
-
-   In this section we hope to provide some insight into the FH works.
-The FH specification, via the dot-ffi file, determines the set of
+In this section we hope to provide some insight into the FH works.  The
+FH specification, via the dot-ffi file, determines the set of
 declarations which will be included in the target Guile module.  If
 there is no declartion filter, then all the declarations from the
 specified set of include files are targeted.  With the use of a
@@ -381,17 +375,20 @@ aggregates, it will automatically generate types for associated
 pointers.  For example, in the case above with ‘foo_t’ the FH will
 generate an aggregate type named ‘foo_t’ and a pointer type named
 ‘foo_t*’.  In addition the FH generates code to link these two together
-so that, given an object ‘f1’ of type ‘foo_t’, the expression
-‘(pointer-to f1)’ will generate an object of type ‘foo_t*’.  This makes
-the task of generating an object value in Scheme, and then passing the
-pointer to that value as an argument to a FFI-generated procedure, easy.
-The inverse operation ‘value-at’ is also provided.  Note that sometimes
+so that, given an object ‘f1’ of type ‘foo_t’, the expression ‘(cdata&
+f1)’ will generate an object of type ‘foo_t*’.  This makes the task of
+generating an object value in Scheme, and then passing the pointer to
+that value as an argument to a FFI-generated procedure, easy.  The
+inverse operation ‘(cdata* f1*’ is also provided.  Note that sometimes
 the C code needs to work with pointer pointer types.  The FH does not
 produce double-pointers and in that case, the user must add code to the
 FH module defintion to support the required additional type (e.g.,
 ‘foo_t**’).
 
-   In addition, the FH type system provide unwrap and wrap procedures
+
+   FIXME: Need to re-write this.
+
+   In addition, the FH type system provides unwrap and wrap procedures
 used internal to ffi-generated modules for function calls.  These
 convert FH types to and from objects of type expected by Guile's FFI
 interface.  For example, the unwrap procedure associated with the FH
@@ -433,47 +430,6 @@ _bytevectors_.  See the Guile Reference Manual for more information on
 this datatype.
 
    The following routines are user-level procedures provided by the
-runtime module ‘(system ffi-help-rt)’:
-‘fh-type?’
-     a predicate to indicate whether an object is a FH type
-‘fh-object?’
-     a predicate to indicate whether an object is a FH object
-‘fh-object-val’
-     the underlying bytestructure value
-‘fh-object-ref’
-     a procedure that works like ‘bytestructure-ref’ on the underlying
-     object
-‘fh-object-set!’
-     a procedure that works like ‘bytestructure-set!’ on the underlying
-     object
-‘pointer-to’
-     a procedure, given a FH object, or a bytestructure, that returns an
-     associated pointer object (i.e., a pointer type whose object value
-     is the address of the underlying argument); this may be a FH type
-     or a bytestructure
-‘value-at’
-     a procedure to dereference an object
-‘fh-cast’
-     a procedure to cast arguments for varaidic C functions
-‘make-type’
-     make base type, as listed below; also used to make bytestructure
-     objects for base types (e.g., ‘(make-double)’ for ‘double’)
-
-   Supported base types are
-short              unsigned-short     int                unsigned
-long               unsigned-long      float              double
-size_t             ssize_t            intptr_t           uintptr_t
-ptrdiff_t
-int8               uint8              int16              uint16
-int32              uint32             int64              uint64
-These types are useful for cases where the corresponding types are
-passed by reference as return types.  For example
-     (let ((name (make-char*)))
-       (some_function (pointer-to name))
-       (display "name: ") (display (char*->string name)) (newline))
-     (let ((return-val (make-double)))
-       (another_function (pointer-to return-val))
-       (simple-format #t "val is ~S\n" (fh-object-ref return-val)))
 
    You can pass a bytestructure struct value:
      guile> (make-ENTRY `((key 0) (data 0)))
