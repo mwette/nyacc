@@ -273,6 +273,7 @@
 ;; procedure (typically calling Guile's @code{pointer->procedure}).
 ;; @* psize is proxy size (usually void* mtype).  Think of the proxy as a
 ;; trampoline for the function.  The pointer points to proxy (trampoline)
+;; @* This may need another field to enable correct @code{ctype-equal?}.
 ;; @end deftp
 (define-record-type <cfunction>
   (%make-cfunction proc->ptr ptr->proc variadic? ptr-mtype)
@@ -758,8 +759,22 @@
                 ((and (promise? at) (promise? bt)) (eq? (force at) (force bt)))
                 ((promise? at) (eq? (force at) bt))
                 ((promise? bt) (eq? at (force bt)))
-                ((eq? at bt)))))
-            (else #f)))))
+                ((eq? at bt))
+                (else #f))))
+            ((array)
+             (and (eqv? (carray-length a) (carray-length b))
+                  (ctype-equal? (carray-type a) (carray-type b))))
+            ((enum)
+             (and (eq? (cenum-mtype a) (cenum-mtype b))
+                  (equal? (cenum-symd a) (cenum-symd b))))
+            ((function)
+             (and
+              (eq? (cfunction-variadic? a) (cfunction-variadic? b))
+              (eq? (cfunction-ptr-mtype a) (cfunction-ptr-mtype b))
+              (eq? (cfunction-proc->ptr a) (cfunction-proc->ptr b))
+              ;; HARD TO DO
+              #t))
+            (else #f))))
     (cond
      ((or (not (ctype? a)) (not (ctype? b))) #f)
      ((not (eq? (ctype-kind a) (ctype-kind b))) #f)
