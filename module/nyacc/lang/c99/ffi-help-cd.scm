@@ -1055,7 +1055,7 @@
      ((ftn-declr? declr)
       (let* ((specl `(decl-spec-list (type-spec ,tspec)))
              (mdecl (udecl->mdecl (sx-list 'udecl #f specl declr)))
-             (name (md-label mdecl))
+             (name (rename (md-label mdecl)))
              (return (mdecl->udecl (cons "~ret" (cdr (md-tail mdecl)))))
              (params (cdadar (md-tail mdecl))))
         (values defined (cnvt-fctn name return params seed))))
