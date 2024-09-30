@@ -93,6 +93,17 @@ be something like @code{unsigned-int}, @code{double}, or can be a
 @emph{cdata} machine type like @code{u64le}.
 @end deffn
 
+@deffn {Procedure} cpointer type
+Generate a C pointer type to @var{type}. To reference or de-reference
+cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
+the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
+@*note: Should we allow @var{type} to be a promise?
+@example
+(define foo_t (cbase 'int))
+(cpointer (delay foo_t))
+@end example
+@end deffn
+
 @deffn {Procedure} cstruct fields [packed] => ctype
 Construct a struct ctype with given @var{fields}.  If @var{packed},
 @code{#f} by default, is @code{#t}, create a packed structure.
@@ -132,16 +143,10 @@ and procedure to pointer, respectively.  The optional argument
 arguments.  For this case, (to be documented).
 @end deffn
 
-@deffn {Procedure} make-cdata type [value [name]]
-Generate a @emph{cdata} object of type @var{type} with optional
-@var{value} and @var{name}.  To specify name but no value use
-something like
-@example
-(make-cdata mytype #f "foo")
-@end example
-As a special case, an integer arg to a zero-sized array type will
-allocate storage for that many items, associating it with an array
-type of that size.
+@deffn {Procedure} make-cdata type [value]
+Generate a @emph{cdata} object of type @var{type} with optional @var{value}.
+As a special case, an integer arg to a zero-sized array type will allocate
+storage for that many items, associating it with an array type of that size.
 @end deffn
 
 @deffn {Procedure} cdata-ref data [tag ...]

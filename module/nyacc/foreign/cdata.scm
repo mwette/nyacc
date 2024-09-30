@@ -815,22 +815,14 @@
 
 
 ;; @deffn {Procedure} make-cdata type [value]
-;; Generate a @emph{cdata} object of type @var{type} with optional
-;; @var{value} and @var{name}.  To specify name but no value use
-;; something like
-;; @example
-;; (make-cdata mytype #f "foo")
-;; @end example
-;; As a special case, an integer arg to a zero-sized array type will
-;; allocate storage for that many items, associating it with an array
-;; type of that size.
+;; Generate a @emph{cdata} object of type @var{type} with optional @var{value}.
+;; As a special case, an integer arg to a zero-sized array type will allocate
+;; storage for that many items, associating it with an array type of that size.
 ;; @end deffn
 (define* (make-cdata type #:optional value)
   "- Procedure: make-cdata type [value]
-     Generate a _cdata_ object of type TYPE with optional VALUE and
-     NAME.  To specify name but no value use something like
-          (make-cdata mytype #f \"foo\")
-     As a special case, an integer arg to a zero-sized array type will
+     Generate a _cdata_ object of type TYPE with optional VALUE.  As a
+     special case, an integer arg to a zero-sized array type will
      allocate storage for that many items, associating it with an array
      type of that size."
   (assert-ctype 'make-cdata type)

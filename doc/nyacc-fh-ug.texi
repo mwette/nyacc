@@ -62,8 +62,8 @@ still available by passin @code{-b bytestructures} to
 @example
 FFI_HELP_BACKEND=bytestructures
 @end example
-Use of the FFI-helper module depends on the
-@emph{scheme-bytestructure} package available from
+The bytestructures backend uses the
+@emph{scheme-bytestructure} package, available from
 @uref{https://github.com/TaylanUB/scheme-bytestructures}.  Releases
 are available at
 @uref{https://github.com/TaylanUB/scheme-bytestructures/releases}.
