@@ -120,6 +120,18 @@ be something like <code class="code">unsigned-int</code>, <code class="code">dou
 </p></dd></dl>
 
 <dl class="first-deffn">
+<dt class="deffn" id="index-cpointer"><span class="category-def">Procedure: </span><span><strong class="def-name">cpointer</strong> <var class="def-var-arguments">type</var><a class="copiable-link" href="#index-cpointer"> &para;</a></span></dt>
+<dd><p>Generate a C pointer type to <var class="var">type</var>. To reference or de-reference
+cdata object see <code class="code">cdata&amp;</code> and <code class="code">cdata*</code>.  <var class="var">type</var> can be
+the symbol <code class="code">void</code> or a symbolic name used as argument to <code class="code">cbase</code>.
+<br>note: Should we allow <var class="var">type</var> to be a promise?
+</p><div class="example">
+<pre class="example-preformatted">(define foo_t (cbase 'int))
+(cpointer (delay foo_t))
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn">
 <dt class="deffn" id="index-cstruct"><span class="category-def">Procedure: </span><span><strong class="def-name">cstruct</strong> <var class="def-var-arguments">fields [packed] =&gt; ctype</var><a class="copiable-link" href="#index-cstruct"> &para;</a></span></dt>
 <dd><p>Construct a struct ctype with given <var class="var">fields</var>.  If <var class="var">packed</var>,
 <code class="code">#f</code> by default, is <code class="code">#t</code>, create a packed structure.
@@ -164,16 +176,10 @@ arguments.  For this case, (to be documented).
 </p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value [name]]</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
-<dd><p>Generate a <em class="emph">cdata</em> object of type <var class="var">type</var> with optional
-<var class="var">value</var> and <var class="var">name</var>.  To specify name but no value use
-something like
-</p><div class="example">
-<pre class="example-preformatted">(make-cdata mytype #f &quot;foo&quot;)
-</pre></div>
-<p>As a special case, an integer arg to a zero-sized array type will
-allocate storage for that many items, associating it with an array
-type of that size.
+<dt class="deffn" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value]</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
+<dd><p>Generate a <em class="emph">cdata</em> object of type <var class="var">type</var> with optional <var class="var">value</var>.
+As a special case, an integer arg to a zero-sized array type will allocate
+storage for that many items, associating it with an array type of that size.
 </p></dd></dl>
 
 <dl class="first-deffn">

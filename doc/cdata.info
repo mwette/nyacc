@@ -79,6 +79,14 @@ This section provides the most-used procedures.
      something like ‘unsigned-int’, ‘double’, or can be a _cdata_
      machine type like ‘u64le’.
 
+ -- Procedure: cpointer type
+     Generate a C pointer type to TYPE.  To reference or de-reference
+     cdata object see ‘cdata&’ and ‘cdata*’.  TYPE can be the symbol
+     ‘void’ or a symbolic name used as argument to ‘cbase’.
+     note: Should we allow TYPE to be a promise?
+          (define foo_t (cbase 'int))
+          (cpointer (delay foo_t))
+
  -- Procedure: cstruct fields [packed] => ctype
      Construct a struct ctype with given FIELDS.  If PACKED, ‘#f’ by
      default, is ‘#t’, create a packed structure.  FIELDS is a list with
@@ -108,11 +116,9 @@ This section provides the most-used procedures.
      #:VARIADIC, if ‘#t’, indicates the function uses variadic
      arguments.  For this case, (to be documented).
 
- -- Procedure: make-cdata type [value [name]]
-     Generate a _cdata_ object of type TYPE with optional VALUE and
-     NAME.  To specify name but no value use something like
-          (make-cdata mytype #f "foo")
-     As a special case, an integer arg to a zero-sized array type will
+ -- Procedure: make-cdata type [value]
+     Generate a _cdata_ object of type TYPE with optional VALUE.  As a
+     special case, an integer arg to a zero-sized array type will
      allocate storage for that many items, associating it with an array
      type of that size.
 

@@ -12,7 +12,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 FFI Helper User Guide
 Matt Wette
 Augustr 2024
-With NYACC Version 2.00.4
+With NYACC Version 2.00.5
 
 
 File: nyacc-fh-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -48,10 +48,9 @@ bytestructures to handle C data.  In previous versions, the module
 available by passin ‘-b bytestructures’ to ‘guild compile-ffi’, or by
 setting the environment variable
      FFI_HELP_BACKEND=bytestructures
-   Use of the FFI-helper module depends on the _scheme-bytestructure_
-package available from
-<https://github.com/TaylanUB/scheme-bytestructures>.  Releases are
-available at
+   The bytestructures backend uses the _scheme-bytestructure_ package,
+available from <https://github.com/TaylanUB/scheme-bytestructures>.
+Releases are available at
 <https://github.com/TaylanUB/scheme-bytestructures/releases>.  In this
 manual we discuss only the _cdata_ default.
 

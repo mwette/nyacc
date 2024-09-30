@@ -29,9 +29,9 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right lset-union every))
   #:use-module (srfi srfi-37)
-  #:version (2 00 4))
+  #:version (2 00 5))
 
-(define *ffi-help-version* "2.00.4")
+(define *ffi-help-version* "2.00.5")
 
 (define (compile-scm file)
   (compile-file file
