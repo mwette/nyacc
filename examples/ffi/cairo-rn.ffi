@@ -1,4 +1,4 @@
-;; cairo.ffi				-*- Scheme -*-
+;; cairo-rn.ffi				-*- Scheme -*-
 
 ;; Copyright (C) 2018,2024 Matthew Wette
 ;;
@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(define-ffi-module (ffi cairo)
+(define-ffi-module (ffi cairo-rn)
   #:pkg-config "cairo"
   #:include '("cairo.h"
 	      ;;"cairo-ft.h"
@@ -32,16 +32,16 @@
 	      ;;"cairo-xlib.h"
 	      ;;"cairo-xml.h"
 	      )
-  ;;#:renamer (lambda (name)
-  ;;            (string-map (lambda (c) (if (char=? c #\_) #\- c)) name))
+  #:renamer (lambda (name)
+              (string-map (lambda (c) (if (char=? c #\_) #\- c)) name))
   #:export (M_PI M_2PI make-cairo-unit-matrix)
   )
 
-(define-public cairo_raster_source_acquire_func_t*
-  (cpointer  cairo_raster_source_acquire_func_t))
+(define-public cairo-raster-source-acquire-func-t*
+  (cpointer  cairo-raster-source-acquire-func-t))
 
-(define-public cairo_raster_source_release_func_t*
-  (cpointer  cairo_raster_source_release_func_t))
+(define-public cairo-raster-source-release-func-t*
+  (cpointer  cairo-raster-source-release-func-t))
 
 #|
 (define (make-cairo-unit-matrix)
