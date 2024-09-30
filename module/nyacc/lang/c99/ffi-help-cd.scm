@@ -1580,13 +1580,6 @@
     (check-deps module-options)
     (expand-ffi-module-spec (quote path-list) module-options)))
 
-;;(define (string-member-proc . args)
-;;  (lambda (s) (member s args)))
-
-;; to convert symbol-based #:renamer to string-based
-;;(define (string-renamer proc)
-;;  (lambda (s) (string->symbol (proc (symbol->string s)))))
-
 (define call-with-output-file/atomic
   (@@ (system base compile) call-with-output-file/atomic))
 
