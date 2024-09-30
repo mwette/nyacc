@@ -815,6 +815,7 @@
 ;; Returns (values wrapped defined), where defined is a list of defined
 ;; types, and wrapped is the same, not used.
 ;; @end deffn
+;; this used to be cnvt-udecl
 (define (udecl->sexp udecl udict defined seed)
 
   (define (specl-props specl)
@@ -854,9 +855,9 @@
      ((memq 'typedef sspec)
       (let* ((specl `(decl-spec-list (type-spec ,tspec)))
              (mdecl (udecl->mdecl (sx-list 'udecl #f specl declr)))
-             (name (md-label mdecl))
+             (name (rename (md-label mdecl)))
              (type (strings->symbol name))
-             (type* (strings->symbol name"*"))
+             (type* (strings->symbol name "*"))
              (mtail (md-tail mdecl)))
 
         (match mtail
@@ -901,16 +902,17 @@
            (sx-match (car mtail)
              
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
-              (values
-               (cons* name (w/* name) (w/struct agname)
-                      (w/struct* agname) defined)
-               (let ((aname (strings->symbol "struct-" agname))
-                     (aname* (strings->symbol "struct-" agname "*")))
-                 (xcons* seed
-                   (deftype type (mtail->ctype mtail))
-                   (deftype type* `(cpointer ,type))
-                   (deftype aname type)
-                   (deftype aname* type*)))))
+              (let ((agname (rename agname)))
+                (values
+                 (cons* name (w/* name) (w/struct agname)
+                        (w/struct* agname) defined)
+                 (let ((aname (strings->symbol "struct-" agname))
+                       (aname* (strings->symbol "struct-" agname "*")))
+                   (xcons* seed
+                     (deftype type (mtail->ctype mtail))
+                     (deftype type* `(cpointer ,type))
+                     (deftype aname type)
+                     (deftype aname* type*))))))
 
              ((struct-def ,field-list)
               (values
@@ -920,16 +922,17 @@
                  (deftype type* `(cpointer ,type)))))
 
              ((union-def (ident ,agname) ,field-list)
-              (values
-               (cons* name (w/* name) (w/union agname)
-                      (w/union* agname) defined)
-               (let ((aname (strings->symbol "union-" agname))
-                     (aname* (strings->symbol "union-" agname "*")))
-                 (xcons* seed
-                   (deftype type (mtail->ctype mtail))
-                   (deftype type* `(cpointer ,type))
-                   (deftype aname type)
-                   (deftype aname* type*)))))
+              (let ((agname (rename agname)))
+                (values
+                 (cons* name (w/* name) (w/union agname)
+                        (w/union* agname) defined)
+                 (let ((aname (strings->symbol "union-" agname))
+                       (aname* (strings->symbol "union-" agname "*")))
+                   (xcons* seed
+                     (deftype type (mtail->ctype mtail))
+                     (deftype type* `(cpointer ,type))
+                     (deftype aname type)
+                     (deftype aname* type*))))))
 
              ((union-def ,field-list)
               (values
@@ -939,42 +942,44 @@
                  (deftype type* `(cpointer ,type)))))
 
              ((struct-ref (ident ,agname))
-              (values
-               (cons* name (w/* name) defined)
-               (cond
-                ((member (w/struct agname) defined) ;; defined previously
-                 (xcons* seed
-                   (deftype type (mtail->ctype mtail))
-	           (deftype type* (sfsym "struct-~A*" agname))))
-                ((udict-struct-ref udict agname) ;; defined later
-                 =>
-                 (lambda (decl)
-                  (bkref-extend! decl name)
-                  (xcons* seed
-                    (deftype type* `(cpointer (delay ,type))))))
-                (else ;; not defined
-                 (xcons* seed
-                   `(define ,type 'void)
-                   (deftype type* `(cpointer ,type)))))))
+              (let ((agname (rename agname)))
+                (values
+                 (cons* name (w/* name) defined)
+                 (cond
+                  ((member (w/struct agname) defined) ;; defined previously
+                   (xcons* seed
+                     (deftype type (mtail->ctype mtail))
+	             (deftype type* (sfsym "struct-~A*" agname))))
+                  ((udict-struct-ref udict agname) ;; defined later
+                   =>
+                   (lambda (decl)
+                     (bkref-extend! decl name)
+                     (xcons* seed
+                       (deftype type* `(cpointer (delay ,type))))))
+                  (else ;; not defined
+                   (xcons* seed
+                     `(define ,type 'void)
+                     (deftype type* `(cpointer ,type))))))))
 
              ((union-ref (ident ,agname))
-              (values
-               (cons* name (w/* name) defined)
-              (cond
-               ((member (w/union agname) defined) ;; defined previously
-                (xcons* seed
-                  (deftype type (mtail->ctype mtail))
-	          (deftype type* (sfsym "union-~A*" agname))))
-               ((udict-union-ref udict agname) ;; defined later
-                =>
-                (lambda (decl)
-                  (bkref-extend! decl name)
-                  (xcons* seed
-                    (deftype type* `(cpointer (delay ,type))))))
-               (else ;; not defined
-                (xcons* seed
-                  `(define-public ,type 'void)
-                  (deftype type* `(cpointer ,type)))))))
+              (let ((agname (rename agname)))
+                (values
+                 (cons* name (w/* name) defined)
+                 (cond
+                  ((member (w/union agname) defined) ;; defined previously
+                   (xcons* seed
+                     (deftype type (mtail->ctype mtail))
+	             (deftype type* (sfsym "union-~A*" agname))))
+                  ((udict-union-ref udict agname) ;; defined later
+                   =>
+                   (lambda (decl)
+                     (bkref-extend! decl name)
+                     (xcons* seed
+                       (deftype type* `(cpointer (delay ,type))))))
+                  (else ;; not defined
+                   (xcons* seed
+                     `(define-public ,type 'void)
+                     (deftype type* `(cpointer ,type))))))))
 
              (((fixed-type float-type) ,basename)
               (values defined (cons (deftype type (mtail->ctype mtail)) seed)))
@@ -992,26 +997,28 @@
                       (lambda (arg) (or (assq-ref symd arg) arg)))))))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
-              (values
-               (cons* name (w/enum enum-name) defined)
-               (xcons* seed
-                 (deftype type (mtail->ctype mtail))
-                 `(define-public ,(sfsym "unwrap-~A" name)
-                    (let ((vald (cenum-vald (ctype-info ,type))))
-                      (lambda (arg) (or (assq-ref vald arg) arg))))
-                 `(define-public ,(sfsym "wrap-~A" name)
-                    (let ((symd (cenum-symd (ctype-info ,type))))
-                      (lambda (arg) (or (assq-ref symd arg) arg)))))))
+              (let ((enum-name (rename enum-name)))
+                (values
+                 (cons* name (w/enum enum-name) defined)
+                 (xcons* seed
+                   (deftype type (mtail->ctype mtail))
+                   `(define-public ,(sfsym "unwrap-~A" name)
+                      (let ((vald (cenum-vald (ctype-info ,type))))
+                        (lambda (arg) (or (assq-ref vald arg) arg))))
+                   `(define-public ,(sfsym "wrap-~A" name)
+                      (let ((symd (cenum-symd (ctype-info ,type))))
+                        (lambda (arg) (or (assq-ref symd arg) arg))))))))
 
              ((enum-ref (ident ,enum-name))
-              (values
-               (cons (w/enum enum-name) defined)
-               (xcons* seed
-                 (deftype type (sfsym "enum-~a" enum-name))
-                 `(define-public ,(sfsym "wrap-~A" name)
-                    ,(sfstr "wrap-enum-~A" enum-name))
-                 `(define-public ,(sfsym "unwrap-~A" name)
-                    ,(sfsym "unwrap-enum-~A" enum-name)))))
+              (let ((enum-name (rename enum-name)))
+                (values
+                 (cons (w/enum enum-name) defined)
+                 (xcons* seed
+                   (deftype type (sfsym "enum-~a" enum-name))
+                   `(define-public ,(sfsym "wrap-~A" name)
+                      ,(sfstr "wrap-enum-~A" enum-name))
+                   `(define-public ,(sfsym "unwrap-~A" name)
+                      ,(sfsym "unwrap-enum-~A" enum-name))))))
 
              ((void)
               (values
@@ -1024,8 +1031,9 @@
               (cond
 	       ((member typename def-defined)
 	        (values defined seed))
-	       ((member typename defined)
-                (let* ((aka (string->symbol typename))
+	       ((member (rename typename) defined)
+                (let* ((typename (rename typename))
+                       (aka (string->symbol typename))
                        (atype (strings->symbol typename))
                        (defined (cons name defined))
                        (seed (cons (deftype type atype) seed)))
@@ -1055,7 +1063,8 @@
      ((sx-match tspec
 
         ((struct-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
-         (let* ((atype (strings->symbol "struct-" agname))
+         (let* ((agname (rename agname))
+                (atype (strings->symbol "struct-" agname))
                 (atype* (strings->symbol "struct-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
                 (sflds (cnvt-fields (sx-tail field-list) mtail->ctype))
@@ -1085,7 +1094,8 @@
 	     (values defined seed)))))
 
         ((union-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
-         (let* ((atype (strings->symbol "union-" agname))
+         (let* ((agname (rename agname))
+                (atype (strings->symbol "union-" agname))
                 (atype* (strings->symbol "union-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
                 (sflds (cnvt-fields (sx-tail field-list) mtail->ctype))
@@ -1113,23 +1123,25 @@
 	     (values defined seed)))))
 
         ((enum-def (ident ,enum-name) ,enum-def-list)
-         (cond
-	  ((member (w/enum enum-name) defined)
-	   (values defined seed))
-	  (else
-           (let* ((type (sfsym "enum-~a" enum-name))
-                  (defs (canize-enum-def-list enum-def-list (*udict*) (*ddict*)))
-                  (enums (enum-def-list->alist defs)))
-	     (values
-              (cons (w/enum enum-name) defined)
-              (xcons* seed
-                (deftype type `(cenum ',enums))
-                `(define-public ,(sfsym "unwrap-~A" type)
-                   (let ((vald (cenum-vald (ctype-info ,type))))
-                     (lambda (arg) (or (assq-ref vald arg) arg))))
-                `(define-public ,(sfsym "wrap-~A" type)
-                   (let ((symd (cenum-symd (ctype-info ,type))))
-                     (lambda (arg) (or (assq-ref symd arg) arg))))))))))
+         (let ((enum-name (rename enum-name)))
+           (cond
+	    ((member (w/enum enum-name) defined)
+	     (values defined seed))
+	    (else
+             (let* ((type (sfsym "enum-~a" enum-name))
+                    (defs (canize-enum-def-list
+                           enum-def-list (*udict*) (*ddict*)))
+                    (enums (enum-def-list->alist defs)))
+	       (values
+                (cons (w/enum enum-name) defined)
+                (xcons* seed
+                  (deftype type `(cenum ',enums))
+                  `(define-public ,(sfsym "unwrap-~A" type)
+                     (let ((vald (cenum-vald (ctype-info ,type))))
+                       (lambda (arg) (or (assq-ref vald arg) arg))))
+                  `(define-public ,(sfsym "wrap-~A" type)
+                     (let ((symd (cenum-symd (ctype-info ,type))))
+                       (lambda (arg) (or (assq-ref symd arg) arg)))))))))))
 
         ((enum-def ,enum-def-list)
 	 (values defined seed))
@@ -1568,12 +1580,12 @@
     (check-deps module-options)
     (expand-ffi-module-spec (quote path-list) module-options)))
 
-(define (string-member-proc . args)
-  (lambda (s) (member s args)))
+;;(define (string-member-proc . args)
+;;  (lambda (s) (member s args)))
 
 ;; to convert symbol-based #:renamer to string-based
-(define (string-renamer proc)
-  (lambda (s) (string->symbol (proc (symbol->string s)))))
+;;(define (string-renamer proc)
+;;  (lambda (s) (string->symbol (proc (symbol->string s)))))
 
 (define call-with-output-file/atomic
   (@@ (system base compile) call-with-output-file/atomic))
