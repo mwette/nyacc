@@ -825,25 +825,24 @@
      special case, an integer arg to a zero-sized array type will
      allocate storage for that many items, associating it with an array
      type of that size."
+  (define (make-data type value)
+    (let* ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type)))
+      (if value (cdata-set! data value))
+      data))
   (assert-ctype 'make-cdata type)
   (case (ctype-kind type)
     ((array)
      (let* ((ca (ctype-info type)) (ln (carray-length ca)))
        (cond
         ((zero? ln)
-         (unless (integer? value) (error "make-cdata: zero sized array type"))
+         (unless (integer? value)
+           (error "make-cdata: zero sized array type"))
          (let* ((et (carray-type ca)) (sz (ctype-size et))
                 (bv (make-bytevector (* value sz))))
            (%make-cdata bv 0 (carray et value))))
         (else
-         (when value (error "make-cdata: can't initialize arrays yet"))
-         (%make-cdata (make-bytevector (ctype-size type)) 0 type)))))
-    (else
-     (let* ((size (ctype-size type))
-            (bvec (make-bytevector size))
-            (data (%make-cdata bvec 0 type)))
-       (if value (cdata-set! data value))
-       data))))
+         (make-data type value)))))
+    (else (make-data type value))))
 
 ;; @deffn {Procedure} cdata-sel data tag ... => cdata
 ;; Return a new @code{cdata} object representing the associated selection.
@@ -935,11 +934,13 @@
       (else (error "cdata-ref: giving up")))))
 
 ;; @deffn {Procedure} Xcdata-set! bv ix ct value
-;; Reference a deconstructed cdata object. See @emph{cdata-set!}.
+;; Reference a deconstructed cdata object, where @var{bv}, @var{ix}
+;; and @var{ct} are extracted from a cdata objerct. See @emph{cdata-set!}.
 ;; @end deffn
 (define (Xcdata-set! bv ix ct value)
   "- Procedure: Xcdata-set! bv ix ct value
-     Reference a deconstructed cdata object.  See _cdata-set!_."
+     Reference a deconstructed cdata object, where BV, IX and CT are
+     extracted from a cdata objerct.  See _cdata-set!_."
   (let* ()
     (if (cdata? value)
         (let ((sz (ctype-size ct)))
@@ -986,10 +987,24 @@
                               (assq-ref (cenum-vald info) value)))
               (else
                (error "cdata-set! bad value arg: ~s" value)))))
+          ((array)
+           (let* ((ti (ctype-info ct))
+                  (at (carray-type ti))
+                  (al (carray-length ti)))
+             (if (and (array? value)
+                      (eqv? 1 (array-rank value))
+                      (eq? 'base (ctype-kind at))
+                      (= (array-length value) al))
+                 (let* ((mt (ctype-info at)) (sz (sizeof-mtype mt)))
+                   (sferr "do loop\n")
+                   (do ((i 0 (1+ i)) (ix ix (+ ix sz)))
+                       ((>= i al) (if #f #f))
+                     (sferr "i=~s\n" i)
+                     (mtype-bv-set! mt bv ix (array-ref value i))))
+                 (error "cdata-set!: can't set! this array value"))))
           ((function) (error "cdata-set!: can't set! function value"))
           ((struct) (error "cdata-set!: can't set! struct value"))
           ((union) (error "cdata-set!: can't set! union value"))
-          ((array) (error "cdata-set!: can't set! array value"))
           (else (error "cdata-set!: bad arg 2" value))))))
 
 ;; @deffn {Procedure} cdata-ref data [tag ...]
