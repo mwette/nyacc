@@ -32,10 +32,7 @@
 	      ;;"cairo-xlib.h"
 	      ;;"cairo-xml.h"
 	      )
-  ;;#:renamer (lambda (name)
-  ;;            (string-map (lambda (c) (if (char=? c #\_) #\- c)) name))
-  #:export (M_PI M_2PI make-cairo-unit-matrix)
-  )
+  #:export (M_PI M_2PI make-cairo-unit-matrix))
 
 (define-public cairo_raster_source_acquire_func_t*
   (cpointer  cairo_raster_source_acquire_func_t))
