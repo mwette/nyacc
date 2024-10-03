@@ -366,4 +366,51 @@
     (pp xdecl)
     ))
 
+(use-modules (nyacc lang c99 ffi-help-cd))
+(when #t
+  (let* ((code1 "
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <pixman.h>
+struct wlr_damage_ring {
+   //int32_t width, height; 
+   pixman_region32_t current;
+   pixman_region32_t previous[2];
+   //size_t previous_idx;
+ };")
+         (code2 "
+typedef struct foo foo_t;
+typedef struct foo { int x; int y; };
+typedef struct bar { foo_t a; foo_t b[2]; } bar_t;
+")
+         #|
+         (code code1)
+         (inc-dirs (cons "/usr/include/pixman-1" (get-sys-inc-dirs)))
+         (tree (parse-string code #:inc-dirs inc-dirs))
+         (udict (c99-trans-unit->udict/deep tree)) ;; deep does not help
+         (udecl (assoc-ref udict '(struct . "wlr_damage_ring")))
+         (pix (assoc-ref udict "pixman_region32_t"))
+         (pix-st (assoc-ref udict '(struct . "pixman_region32")))
+         |#
+         ;;#|
+         (code code2)
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (udecl (assoc-ref udict "bar_t"))
+         ;;|#
+         (xdecl (expand-typerefs udecl udict)) 
+         (mdecl (udecl->mdecl xdecl))
+         )
+    ;;(pperr pix)
+    ;;(pperr pix-st)
+    ;;(pperr (last tree))
+    ;;(pperr (last udict))
+    (pperr udecl)
+    (pperr xdecl)
+    ;;(pperr mdecl)
+    ;;(pperr (mtail->ctype (md-tail mdecl)))
+    ;;(pperr (mtail->ctype (md-tail mdecl)))
+    #f))
+
 ;; --- last line ---
