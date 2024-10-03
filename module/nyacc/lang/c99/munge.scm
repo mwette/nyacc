@@ -847,6 +847,7 @@
       (`((array-of ,size) . ,rest) (doit `(ary-declr ,declr ,size) rest))
       (`((struct-ref ,id)) (make-udecl (car mdecl-tail) declr))
       (`((union-ref ,id)) (make-udecl (car mdecl-tail) declr))
+      (`((enum-ref ,id))  (make-udecl (car mdecl-tail) declr))
       (`((struct-def . ,rest)) (make-udecl (car mdecl-tail) declr))
       (`((union-def . ,rest)) (make-udecl (car mdecl-tail) declr))
       (`((enum-def . ,rest))  (make-udecl (car mdecl-tail) declr))
