@@ -437,7 +437,7 @@
             (if (packed? attr)
                 `(cenum ',(enum-def-list->alist def-list) #t)
                 `(cenum ',(enum-def-list->alist def-list)))))
-         ((enum-ref ,name) (strings->symbol "enum-" name))
+         ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
          ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
           (mtail->ctype `((struct-def (@ . ,attr) ,field-list))))
          ((struct-def (@ . ,attr) (field-list . ,fields))
