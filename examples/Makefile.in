@@ -29,13 +29,9 @@ prefix = @prefix@
 SHELL = @SHELL@
 
 FH_FFIS = \
-	ffi/cairo.ffi ffi/gdbm.ffi ffi/sqlite3.ffi \
-	ffi/libgit2.ffi \
-	ffi/glib.ffi ffi/gobject.ffi ffi/gio.ffi \
-	ffi/librsvg.ffi
-
-FH_FFIS = \
-	ffi/cairo.ffi ffi/gdbm.ffi ffi/sqlite3.ffi
+	ffi/cairo.ffi ffi/cairo-rn.ffi ffi/dbus.ffi ffi/epoll.ffi \
+	ffi/gdk2.ffi ffi/glib.ffi ffi/gobject.ffi ffi/gtk2.ffi \
+	ffi/pangocairo.ffi ffi/pango.ffi ffi/TMPL.ffi
 
 # -------------------------------------
 # development:

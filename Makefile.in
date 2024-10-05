@@ -38,9 +38,9 @@ uninstall:
 install-srcs:
 	@(cd module; $(MAKE) DESTDIR=$(DESTDIR) install-srcs)
 
-.PHONY: install-ffi-help
-install-ffi-help:
-	@echo "FFI helper now part of normal distribution"
+.PHONY: install-examples
+install-examples:
+	(cd examples; $(MAKE) DESTDIR=$(DESTDIR) install)
 
 .PHONY: dist-files
 dist-files:
