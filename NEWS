@@ -5,6 +5,18 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-10-05  V2.00.6
+	* ffi-help-cd.scm(unwrap-mdecl): if base type unwrap-number of arg
+	  not type (as string)
+	* ffi-help-cd.scm(mtail->ctype): seeing void should be fherr
+	* munge-base.scm(pointer-declr?): array is not pointer:
+	  This bug resulted in some struct-refs being resolved as void.
+	* examples/ffi/cairo-rn.ffi: new file to demonstrate use of renamer
+	* cdata.scm(Xcdata-set!): support setting array as value
+	* ffi-help-cd(mtail->ctype): resolve undefined enum-ref to int
+	* ffi-help-cd(udecl->sexp): extract name from enum-ref correctly
+	* munge.scm(mdecl->udecl): added missing enum-ref case
+
 2024-09-30  V2.00.5
 	* cdata.scm: fixed documentation for make-cdata
 	* ffi-help-cd.scm: completed implementation of #:renamer option
