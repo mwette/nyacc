@@ -587,7 +587,7 @@
       (`(void) #f)
       (`(typename ,name)
        (cond
-	((member name def-defined) `(unwrap-number ,name))
+	((member name def-defined) `(unwrap-number ,mname))
 	((member name defined) (defined-type-unwrapper name mname))
 	(else #f)))
       (`(enum-def (ident ,name) ,_)

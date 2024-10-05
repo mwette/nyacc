@@ -366,8 +366,8 @@
     (pp xdecl)
     ))
 
-(when #t
-  ;; field comes out a is ok but field b is hosed
+(when #f
+  ;; munge's pointer-declr? was erroneously saying arrays are pointers
   (use-modules (nyacc lang c99 ffi-help-cd))
   (let* ((code "
 typedef struct foo foo_t;
@@ -376,8 +376,9 @@ typedef struct bar { foo_t a; foo_t b[2]; } bar_t;")
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          (udecl (assoc-ref udict "bar_t"))
-         (xdecl (expand-typerefs udecl udict)) 
-         (mdecl (udecl->mdecl xdecl)))
+         (udecl (sx-ref* udecl 1 2 1 2 2))
+         (xdecl (expand-typerefs udecl udict)))
+         )
     (pperr udecl)
     (pperr xdecl)
     #f))
