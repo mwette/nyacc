@@ -139,10 +139,10 @@
          ((param-declr ,declr) (pointer-declr? declr))
          ;;
          ((ptr-declr . ,rest) #t)
-         ((ary-declr . ,rest) #t)
+         ;;((ary-declr . ,rest) #t) ;; removed 10/3/24 M.Wette
          ((ftn-declr . ,rest) #t)
          ((abs-ptr-declr . ,rest) #t)
-         ((abs-ary-declr . ,rest) #t)
+         ;;((abs-ary-declr . ,rest) #t) ;; removed 10/3/24 M.Wette
          ((abs-ftn-declr . ,rest) #t)
          ;;
          ((init-declr-list . ,declrs)
