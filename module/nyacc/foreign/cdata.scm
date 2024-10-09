@@ -476,6 +476,21 @@
           (acons (cfield-name field) (cfield/moved-offset field offset) seed))
         dict fields))
 
+(define (alist->phash alist)
+  (define (nextn n) (+ n (/ (if (odd? n) (1+ n) n) 2)))
+  (let loop ((kl '()) (n (length alist)) (mx -1) (mn #xffffffff) (al alist))
+    (if (pair? al)
+        (let ((hv (hash (caar al) n)))
+          (if (memq hv kl)
+              (loop '() (nextn n) -1 #xffffffff alist)
+              (loop (cons hv kl) n (max mx hv) (min mn hv) (cdr al))))
+        (let* ((sz (- mx mn -1))
+               (hv (make-vector sz #f)))
+          (for-each (lambda (k kv) (vector-set! hv (- k mn) (cdr kv))) kl alist)
+          ;; to finish need lambda:
+          (sferr "ral size =~s ph len=~s min=~s\n" (length alist) sz mn)
+          (lambda (sym) (vector-ref hv (- (hash sym n) mn)))))))
+
 ;; @deffn {Procedure} cstruct fields [packed] => ctype
 ;; Construct a struct ctype with given @var{fields}.  If @var{packed},
 ;; @code{#f} by default, is @code{#t}, create a packed structure.
