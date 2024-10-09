@@ -240,8 +240,8 @@
 (define (w/struct* name) (cons 'pointer (cons 'struct name)))
 (define (w/union* name) (cons 'pointer (cons 'union name)))
 
-(define (rename name)
-  ((*renamer*) name))
+(define (rename name ctxt)
+  ((*renamer*) name ctxt))
 
 (define (const-expr->number expr)
   (catch 'c99-error
@@ -264,7 +264,7 @@
   (define uq 'unquote)
   (map
    (lambda (dent)
-     (let* ((name (car dent)) (udecl (cdr dent))
+     (let* ((name (rename (car dent) 'field)) (udecl (cdr dent))
 	    (mdecl (udecl->mdecl (udecl-rem-type-qual udecl)))
 	    (type (expand-tail (md-tail mdecl))))
        (if (and (pair? type) (eq? 'cbitfield (car type)))
@@ -277,7 +277,8 @@
   (map (lambda (defn)
          (sx-match defn
            ((enum-defn (ident ,name) (fixed ,value))
-            (list (string->symbol name) (string->number value)))))
+            (list (string->symbol (rename name 'enum))
+                  (string->number value)))))
        (sx-tail enum-def-list)))
 
 (define def-defined
@@ -381,7 +382,7 @@
   (let ((defined (*defined*)))
     (match mtail
       (`((pointer-to) (typename ,name))
-       (let ((name (rename name)))
+       (let ((name (rename name 'type)))
 	 (if (member (w/* name) defined)
 	     (strings->symbol name "*")
              `(cpointer ,(mtail->ctype (cdr mtail))))))
@@ -417,7 +418,7 @@
       (__
        (sx-match (car mtail)
          ((typename ,name)
-          (let ((name (rename name)))
+          (let ((name (rename name 'type)))
 	    (cond
              ((member name base-type-name-list)
               `(cbase ',(cstrnam->symnam name)))
@@ -765,7 +766,8 @@
 (define (cnvt-fctn name return params seed)
   ;; can't use function*-wraps just because of the delay :(
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
-  (let* ((params names (setup-function return params))
+  (let* ((rname (rename name 'function))
+         (params names (setup-function return params))
          (decl-ret decl-par (function-decls return params))
          (exec-ret exec-par (function-execs return params))
          (urap-par (fold-right (lambda (n u s) (if u (cons `(,n ,u) s) s))
@@ -773,7 +775,7 @@
          (call `((force ~proc) ,@names))
 	 (va-call `(apply ~proc ,@names (map cdr ~rest))))
     (xcons* seed
-      `(define-public ,(string->symbol name)
+      `(define-public ,(string->symbol rname)
          ,(if varargs?
               `(lambda (,@names . ~rest)
 	         (let ((~proc (ffi:pointer->procedure
@@ -854,7 +856,7 @@
      ((memq 'typedef sspec)
       (let* ((specl `(decl-spec-list (type-spec ,tspec)))
              (mdecl (udecl->mdecl (sx-list 'udecl #f specl declr)))
-             (name (rename (md-label mdecl)))
+             (name (rename (md-label mdecl) 'type))
              (type (strings->symbol name))
              (type* (strings->symbol name "*"))
              (mtail (md-tail mdecl)))
@@ -901,7 +903,7 @@
            (sx-match (car mtail)
              
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
-              (let ((agname (rename agname)))
+              (let ((agname (rename agname 'type)))
                 (values
                  (cons* name (w/* name) (w/struct agname)
                         (w/struct* agname) defined)
@@ -921,7 +923,7 @@
                  (deftype type* `(cpointer ,type)))))
 
              ((union-def (ident ,agname) ,field-list)
-              (let ((agname (rename agname)))
+              (let ((agname (rename agname 'type)))
                 (values
                  (cons* name (w/* name) (w/union agname)
                         (w/union* agname) defined)
@@ -941,7 +943,7 @@
                  (deftype type* `(cpointer ,type)))))
 
              ((struct-ref (ident ,agname))
-              (let ((agname (rename agname)))
+              (let ((agname (rename agname 'type)))
                 (values
                  (cons* name (w/* name) defined)
                  (cond
@@ -961,7 +963,7 @@
                      (deftype type* `(cpointer ,type))))))))
 
              ((union-ref (ident ,agname))
-              (let ((agname (rename agname)))
+              (let ((agname (rename agname 'type)))
                 (values
                  (cons* name (w/* name) defined)
                  (cond
@@ -996,7 +998,7 @@
                       (lambda (arg) (or (assq-ref symd arg) arg)))))))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
-              (let ((enum-name (rename enum-name)))
+              (let ((enum-name (rename enum-name 'type)))
                 (values
                  (cons* name (w/enum enum-name) defined)
                  (xcons* seed
@@ -1009,7 +1011,7 @@
                         (lambda (arg) (or (assq-ref symd arg) arg))))))))
 
              ((enum-ref (ident ,enum-name))
-              (let ((enum-name (rename enum-name)))
+              (let ((enum-name (rename enum-name 'type)))
                 (values
                  (cons (w/enum enum-name) defined)
                  (xcons* seed
@@ -1027,26 +1029,28 @@
                  (deftype type* `(cpointer ,type)))))
 
              ((typename ,typename)
-              (cond
-	       ((member typename def-defined)
-	        (values defined seed))
-	       ((member (rename typename) defined)
-                (let* ((typename (rename typename))
-                       (aka (string->symbol typename))
-                       (atype (strings->symbol typename))
-                       (defined (cons name defined))
-                       (seed (cons (deftype type atype) seed)))
-	          (if (member (w/* typename) defined)
-                      (let* ((name* (strings->symbol name "*"))
-                             (aka* (strings->symbol typename "*"))
-                             (atype* (strings->symbol typename "*")))
-	                (values
-                         (cons (w/* name) defined)
-                         (cons (deftype type* atype*) seed)))
-                      (values defined seed))))
-	       (else
-	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
-	          (udecl->sexp xdecl udict defined seed)))))
+              (let ((typerename (rename typename 'type)))
+                (cond
+	         ((member typename def-defined)
+	          (values defined seed))
+	         ((member typerename defined)
+                  (let* ((typename typerename)
+                         (aka (string->symbol typename))
+                         (atype (strings->symbol typename))
+                         (defined (cons name defined))
+                         (seed (cons (deftype type atype) seed)))
+	            (if (member (w/* typename) defined)
+                        (let* ((name* (strings->symbol name "*"))
+                               (aka* (strings->symbol typename "*"))
+                               (atype* (strings->symbol typename "*")))
+	                  (values
+                           (cons (w/* name) defined)
+                           (cons (deftype type* atype*) seed)))
+                        (values defined seed))))
+	        (else
+	         (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
+	           (udecl->sexp xdecl udict defined seed))))))
+             
              (,__
               (sferr "udecl->sexp missed typedef:\n") (pperr mdecl)
               (values defined seed)))))))
@@ -1054,7 +1058,7 @@
      ((ftn-declr? declr)
       (let* ((specl `(decl-spec-list (type-spec ,tspec)))
              (mdecl (udecl->mdecl (sx-list 'udecl #f specl declr)))
-             (name (rename (md-label mdecl)))
+             (name (md-label mdecl))
              (return (mdecl->udecl (cons "~ret" (cdr (md-tail mdecl)))))
              (params (cdadar (md-tail mdecl))))
         (values defined (cnvt-fctn name return params seed))))
@@ -1062,7 +1066,7 @@
      ((sx-match tspec
 
         ((struct-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
-         (let* ((agname (rename agname))
+         (let* ((agname (rename agname 'type))
                 (atype (strings->symbol "struct-" agname))
                 (atype* (strings->symbol "struct-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
@@ -1093,7 +1097,7 @@
 	     (values defined seed)))))
 
         ((union-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
-         (let* ((agname (rename agname))
+         (let* ((agname (rename agname 'type))
                 (atype (strings->symbol "union-" agname))
                 (atype* (strings->symbol "union-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
@@ -1122,7 +1126,7 @@
 	     (values defined seed)))))
 
         ((enum-def (ident ,enum-name) ,enum-def-list)
-         (let ((enum-name (rename enum-name)))
+         (let ((enum-name (rename enum-name 'type)))
            (cond
 	    ((member (w/enum enum-name) defined)
 	     (values defined seed))
@@ -1151,6 +1155,7 @@
       (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
              (mdecl (udecl->mdecl udecl))
              (name (md-label mdecl))
+             (rname (rename name 'variable))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
              (mtail* `((pointer-to) . ,mtail))
              (type* (mtail->ctype mtail*))
@@ -1159,7 +1164,7 @@
          defined
          (xcons* seed
            `(define ,name* ,type*)
-           `(define-public ,(string->symbol name)
+           `(define-public ,(string->symbol rname)
 	      (let* ((obj
                       (delay
                         (make-cdata ,name* (foreign-pointer-search ,name)))))
@@ -1353,7 +1358,10 @@
 	 (attrs (opts->attrs module-options script-options))
 	 (incf (or (assq-ref attrs 'inc-filter) #f))
 	 (declf (or (assq-ref attrs 'decl-filter) identity))
-	 (renamer (or (assq-ref attrs 'renamer) identity))
+         ;; renamer was of one arg, now two; make it backwards compatible
+	 (renamer (let ((rn (or (assq-ref attrs 'renamer) (lambda (n c) n))))
+                    (if (false-if-exception (rn "foo" 'type))
+                        rn (lambda (n c) (rn n)))))
 	 ;;
 	 (tree (begin
 		 (if (memq 'parse dbugl) (*debug-parse* #t))
