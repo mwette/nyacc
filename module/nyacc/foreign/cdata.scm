@@ -198,7 +198,7 @@
 (define-record-type <cstruct>
   (%make-cstruct fields select)
   cstruct?
-  (fields cstruct-fields)          ; vector of fields
+  (fields cstruct-fields)          ; list of fields
   (select cstruct-select))         ; proc: symbol => field
 
 ;; @deftp {Record} <cunion> fields select
@@ -210,7 +210,7 @@
 (define-record-type <cunion>
   (%make-cunion fields select)
   cunion?
-  (fields cunion-fields)           ; vector of fields
+  (fields cunion-fields)           ; list of fields
   (select cunion-select))          ; proc: symbol => field
 
 ;; @deftp {Record} <carray> type length
