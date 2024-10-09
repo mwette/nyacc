@@ -991,11 +991,11 @@
                (xcons* seed
                  (deftype type (mtail->ctype mtail))
                  `(define-public ,(sfsym "unwrap-~A" name)
-                    (let ((vald (cenum-vald (ctype-info ,type))))
-                      (lambda (arg) (or (assq-ref vald arg) arg))))
+                    (let ((numf (cenum-numf (ctype-info ,type))))
+                      (lambda (arg) (or (numf arg) arg))))
                  `(define-public ,(sfsym "wrap-~A" name)
-                    (let ((symd (cenum-symd (ctype-info ,type))))
-                      (lambda (arg) (or (assq-ref symd arg) arg)))))))
+                    (let ((symf (cenum-symf (ctype-info ,type))))
+                      (lambda (arg) (or (symf arg) arg)))))))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
               (let ((enum-name (rename enum-name 'type)))
@@ -1004,11 +1004,11 @@
                  (xcons* seed
                    (deftype type (mtail->ctype mtail))
                    `(define-public ,(sfsym "unwrap-~A" name)
-                      (let ((vald (cenum-vald (ctype-info ,type))))
-                        (lambda (arg) (or (assq-ref vald arg) arg))))
+                      (let ((numf (cenum-numf (ctype-info ,type))))
+                        (lambda (arg) (or (numf arg) arg))))
                    `(define-public ,(sfsym "wrap-~A" name)
-                      (let ((symd (cenum-symd (ctype-info ,type))))
-                        (lambda (arg) (or (assq-ref symd arg) arg))))))))
+                      (let ((symf (cenum-symf (ctype-info ,type))))
+                        (lambda (arg) (or (symf arg) arg))))))))
 
              ((enum-ref (ident ,enum-name))
               (let ((enum-name (rename enum-name 'type)))

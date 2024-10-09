@@ -101,13 +101,13 @@
             ;;
             mtype-bv-ref mtype-bv-set!
             ;; debug
-            cstruct-fields cstruct-dict
-            cunion-fields cunion-dict
+            cstruct-fields cstruct-select
+            cunion-fields cunion-select
             cfield-name cfield-type cfield-offset
             cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-signed?
             cpointer-type cpointer-mtype
             carray-type carray-length
-            cenum-vald cenum-symd
+            cenum-symf cenum-numf cenum-syml
             cfunction-proc->ptr cfunction-ptr->proc)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
@@ -189,29 +189,29 @@
   (type cfield-type)
   (offset cfield-offset))
 
-;; @deftp {Record} <cstruct> fields dict
-;; struct
+;; @deftp {Record} <cstruct> fields select
 ;; @table @var
-;; @item type
+;; @item fields
+;; @item select
 ;; @end table
 ;; @end deftp
 (define-record-type <cstruct>
-  (%make-cstruct fields dict)
+  (%make-cstruct fields select)
   cstruct?
-  (fields cstruct-fields)             ; list of fields (change to vector)
-  (dict cstruct-dict))                ; dict: name => field
+  (fields cstruct-fields)          ; vector of fields
+  (select cstruct-select))         ; proc: symbol => field
 
-;; @deftp {Record} <cunion> fields dict
-;; union
+;; @deftp {Record} <cunion> fields select
 ;; @table @var
-;; @item type
+;; @item fields
+;; @item select
 ;; @end table
 ;; @end deftp
 (define-record-type <cunion>
-  (%make-cunion fields dict)
+  (%make-cunion fields select)
   cunion?
-  (fields cunion-fields)           ; list of fields (change to vector)
-  (dict cunion-dict))              ; dict: name => field
+  (fields cunion-fields)           ; vector of fields
+  (select cunion-select))          ; proc: symbol => field
 
 ;; @deftp {Record} <carray> type length
 ;; XXX
@@ -225,24 +225,25 @@
   (type carray-type)
   (length carray-length))
 
-;; @deftp {Record} <cenum> mtype symd vald
+;; @deftp {Record} <cenum> mtype symf numf syml
 ;; @table @var
 ;; @item mtype
 ;; machine type to store
-;; @item symd
-;; value to symbol dict (or call it nambynum?)
-;; @item vald
-;; symbol to value (or call it numbynam?)
-;; @table @var
-;; @item type
+;; @item symf
+;; value to symbol proc
+;; @item numf
+;; symbol to value proc
+;; @item syml
+;; list of symbols
 ;; @end table
 ;; @end deftp
 (define-record-type <cenum>
-  (%make-cenum mtype symd vald)
+  (%make-cenum mtype symf numf syml)
   cenum?
   (mtype cenum-mtype)                   ; underlying basic C type
-  (symd cenum-symd)                     ; value -> name
-  (vald cenum-vald))                    ; name -> value
+  (symf cenum-symf)                     ; proc: number -> symbol
+  (numf cenum-numf)                     ; proc: symbol -> number
+  (syml cenum-syml))                    ; list of symbols
 
 ;; @deftp {Record} <cpointer> type mtype
 ;; Once we get to this level, we shouldn't need @code{arch} anymore
@@ -476,7 +477,8 @@
           (acons (cfield-name field) (cfield/moved-offset field offset) seed))
         dict fields))
 
-(define (alist->phash alist)
+;; convert alist to perfect hash lookup : work in progress
+(define (alist->phlkup alist)
   (define (nextn n) (+ n (/ (if (odd? n) (1+ n) n) 2)))
   (let loop ((kl '()) (n (length alist)) (mx -1) (mn #xffffffff) (al alist))
     (if (pair? al)
@@ -520,8 +522,9 @@
     ;; cfl: C field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl)
-        (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
-                     (%make-cstruct (reverse cfl) (reverse ral)) #f)
+        (let* ((ral (reverse ral)) (lkup (lambda (sym) (assq-ref ral sym))))
+          (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
+                       (%make-cstruct (reverse cfl) lkup) #f))
         (match (car sfl)
           ((name type)                  ; non-bitfield
            (let* ((type (cond ((symbol? type) (cbase type))
@@ -577,8 +580,9 @@
      description of the FIELDS argument."
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     (if (null? sfl)
-        (%make-ctype (incr-size 0 sal ssz) sal 'union
-                     (%make-cunion (reverse cfl) (reverse ral)) #f)
+        (let* ((ral (reverse ral)) (lkup (lambda (sym) (assq-ref ral sym))))
+          (%make-ctype (incr-size 0 sal ssz) sal 'union
+                       (%make-cunion (reverse cfl) lkup) #f))
         (let* ((name (caar sfl))
                (type (cadar sfl))
                (type (cond ((symbol? type)
@@ -641,17 +645,19 @@
          ((< mx 32768) (mtypeof-basetype 'uint16_t))
          ((< mx 2147483648) (mtypeof-basetype 'uint32_t))
          (else (mtypeof-basetype 'int)))))
-  (let loop ((nvl '()) (nxt 0) (enl enum-list))
+  (let loop ((snl '()) (nxt 0) (enl enum-list))
     (if (null? enl)
-        (let* ((mx (cdar nvl)) (nvl (reverse nvl)) (mn (cdar nvl))
-               (vnl (map (lambda (p) (cons (cdr p) (car p))) nvl))
-               (mtype (if packed (short-mtype mn mx) (mtypeof-basetype 'int))))
+        (let* ((mx (cdar snl)) (snl (reverse snl)) (mn (cdar snl))
+               (nsl (map (lambda (p) (cons (cdr p) (car p))) snl))
+               (mtype (if packed (short-mtype mn mx) (mtypeof-basetype 'int)))
+               (symf (lambda (num) (assq-ref nsl num)))
+               (numf (lambda (sym) (assq-ref snl sym))))
           (%make-ctype (sizeof-mtype mtype) (alignof-mtype mtype)
-                       'enum (%make-cenum mtype vnl nvl) #f))
+                       'enum (%make-cenum mtype symf numf (map car snl)) #f))
         (match (car enl)
-          (`(,n ,v) (loop (acons n v nvl) (1+ v) (cdr enl)))
-          ((? symbol? n) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
-          (((? symbol? n)) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
+          (`(,n ,v) (loop (acons n v snl) (1+ v) (cdr enl)))
+          ((? symbol? n) (loop (acons n nxt snl) (1+ nxt) (cdr enl)))
+          (((? symbol? n)) (loop (acons n nxt snl) (1+ nxt) (cdr enl)))
           (_ (error "cenum: bad enum def'n"))))))
 
 ;; @deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?]
@@ -686,11 +692,11 @@
   (let ((ti (ctype-info ct)))
     (case (ctype-kind ct)
       ((struct)
-       (let ((fld (assq-ref (cstruct-dict ti) tag)))
+       (let ((fld ((cstruct-select ti) tag)))
          (unless fld (error "ctype: bad field " tag))
          (values (cfield-type fld) (+ ix (cfield-offset fld)))))
       ((union)
-       (let ((fld (assq-ref (cunion-dict ti) tag)))
+       (let ((fld ((cunion-select ti) tag)))
          (unless fld (error "ctype: bad field " tag))
          (values (cfield-type fld) (+ ix (cfield-offset fld)))))
       ((array)
@@ -781,7 +787,7 @@
                   (ctype-equal? (carray-type a) (carray-type b))))
             ((enum)
              (and (eq? (cenum-mtype a) (cenum-mtype b))
-                  (equal? (cenum-symd a) (cenum-symd b))))
+                  (equal? (cenum-syml a) (cenum-syml b))))
             ((function)
              (and
               (eq? (cfunction-variadic? a) (cfunction-variadic? b))
@@ -936,8 +942,8 @@
       ((enum)
        (let* ((info (ctype-info ct))
               (mtype (cenum-mtype info))
-              (vnl (cenum-symd info)))
-         (assq-ref vnl (mtype-bv-ref mtype bv ix))))
+              (numf (cenum-numf info)))
+         (numf (mtype-bv-ref mtype bv ix))))
       ((array struct union) (%make-cdata bv ix ct))
       ((function)
        (let* ((ti (ctype-info ct))
@@ -998,8 +1004,7 @@
               ((integer? value)
                (mtype-bv-set! mtype bv ix value))
               ((symbol? value)
-               (mtype-bv-set! mtype bv ix
-                              (assq-ref (cenum-vald info) value)))
+               (mtype-bv-set! mtype bv ix ((cenum-numf info) value)))
               (else
                (error "cdata-set! bad value arg: ~s" value)))))
           ((array)
