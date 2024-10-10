@@ -33,7 +33,7 @@
   (make-cdata
    GtkCallback
    (lambda (widget data)
-     (display "Hello world!\n"))))
+     (display "Hello, World!\n"))))
 
 (define (main)
   (define window #f)
