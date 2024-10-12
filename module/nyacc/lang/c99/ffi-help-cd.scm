@@ -1140,11 +1140,11 @@
                 (xcons* seed
                   (deftype type `(cenum ',enums))
                   `(define-public ,(sfsym "unwrap-~A" type)
-                     (let ((vald (cenum-vald (ctype-info ,type))))
-                       (lambda (arg) (or (assq-ref vald arg) arg))))
+                     (let ((numf (cenum-numf (ctype-info ,type))))
+                       (lambda (arg) (or (numf arg) arg))))
                   `(define-public ,(sfsym "wrap-~A" type)
-                     (let ((symd (cenum-symd (ctype-info ,type))))
-                       (lambda (arg) (or (assq-ref symd arg) arg)))))))))))
+                     (let ((symf (cenum-symf (ctype-info ,type))))
+                       (lambda (arg) (or (symf arg) arg)))))))))))
 
         ((enum-def ,enum-def-list)
 	 (values defined seed))
