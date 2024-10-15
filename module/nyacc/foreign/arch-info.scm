@@ -408,7 +408,7 @@
 
 
 ;; sparc 32 bit (big endian)
-(define mtype-map/sparc
+(define mtype-map/sparc32
   '((void* . u32be)
     (char . s8) (short . s16be) (int . s32be) (long . s32be)
     (float . f32be) (double . f64be)
@@ -433,10 +433,10 @@
     (signed-long-long-int . s64be) (unsigned-long-long . u64be)
     (unsigned-long-long-int . u64be)))
 
-(define arch/sparc
-  (make-arch-info 'sparc 'big mtype-map/sparc alignof-mtype-map/natural))
+(define arch/sparc32
+  (make-arch-info 'sparc32 'big mtype-map/sparc alignof-mtype-map/natural))
 
-(add-to-arch-map "sparc" arch/sparc)
+(add-to-arch-map "sparc32" arch/sparc32)
 
 
 (define mtype-map/x86_64
