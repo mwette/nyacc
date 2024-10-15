@@ -1,0 +1,130 @@
+/*
+  CFLAGS = -g -I/opt/local/include/guile/3.0 -Wunused
+  LIBS = -L/opt/local/lib -Wl,--rpath=/opt/local/lib -lguile-3.0
+  gcc -shared -fPIC -o chkarch.so $CFLAGS $LIBS
+*/
+
+#include <stdint.h>
+#include <string.h>
+#include <wchar.h>
+#include <uchar.h>
+#include <libguile.h>
+
+SCM_DEFINE(scm_arch_sizeof, "arch-sizeof", 1, 0, 0,
+	   (SCM typename),
+	   "")
+#define FUNC_NAME s_scm_arch_sizeof
+{
+  size_t size;
+  char *arg = scm_to_locale_string(typename);
+  
+  if (strcmp("void*", arg) == 0) {
+    size = sizeof(void*);
+  } else if (strcmp("char", arg) == 0) {
+    size = sizeof(char);
+  } else if (strcmp("short", arg) == 0) {
+    size = sizeof(short);
+  } else if (strcmp("int", arg) == 0) {
+    size = sizeof(int);
+  } else if (strcmp("long", arg) == 0) {
+    size = sizeof(long);
+  } else if (strcmp("float", arg) == 0) {
+    size = sizeof(float);
+  } else if (strcmp("double", arg) == 0) {
+    size = sizeof(double);
+  } else if (strcmp("unsigned-short", arg) == 0) {
+    size = sizeof(unsigned short);
+  } else if (strcmp("unsigned", arg) == 0) {
+    size = sizeof(unsigned);
+  } else if (strcmp("unsigned-long", arg) == 0) {
+    size = sizeof(unsigned long);
+  } else if (strcmp("size_t", arg) == 0) {
+    size = sizeof(size_t);
+  } else if (strcmp("ssize_t", arg) == 0) {
+    size = sizeof(ssize_t);
+  } else if (strcmp("ptrdiff_t", arg) == 0) {
+    size = sizeof(ptrdiff_t);
+  } else if (strcmp("int8_t", arg) == 0) {
+    size = sizeof(int8_t);
+  } else if (strcmp("uint8_t", arg) == 0) {
+    size = sizeof(uint8_t);
+  } else if (strcmp("int16_t", arg) == 0) {
+    size = sizeof(int16_t);
+  } else if (strcmp("uint16_t", arg) == 0) {
+    size = sizeof(uint16_t);
+  } else if (strcmp("int32_t", arg) == 0) {
+    size = sizeof(int32_t);
+  } else if (strcmp("uint32_t", arg) == 0) {
+    size = sizeof(uint32_t);
+  } else if (strcmp("int64_t", arg) == 0) {
+    size = sizeof(int64_t);
+  } else if (strcmp("uint64_t", arg) == 0) {
+    size = sizeof(uint64_t);
+  } else if (strcmp("signed-char", arg) == 0) {
+    size = sizeof(signed char);
+  } else if (strcmp("unsigned-char", arg) == 0) {
+    size = sizeof(unsigned char);
+  } else if (strcmp("short-int", arg) == 0) {
+    size = sizeof(short int);
+  } else if (strcmp("signed-short", arg) == 0) {
+    size = sizeof(signed short);
+  } else if (strcmp("signed-short-int", arg) == 0) {
+    size = sizeof(signed short int);
+  } else if (strcmp("signed", arg) == 0) {
+    size = sizeof(signed);
+  } else if (strcmp("signed-int", arg) == 0) {
+    size = sizeof(signed int);
+  } else if (strcmp("long-int", arg) == 0) {
+    size = sizeof(long int);
+  } else if (strcmp("signed-long", arg) == 0) {
+    size = sizeof(signed long);
+  } else if (strcmp("signed-long-int", arg) == 0) {
+    size = sizeof(signed long int);
+  } else if (strcmp("unsigned-short-int", arg) == 0) {
+    size = sizeof(unsigned short int);
+  } else if (strcmp("unsigned-int", arg) == 0) {
+    size = sizeof(unsigned int);
+  } else if (strcmp("unsigned-long-int", arg) == 0) {
+    size = sizeof(unsigned long int);
+  } else if (strcmp("_Bool", arg) == 0) {
+    size = sizeof(_Bool);
+  } else if (strcmp("bool", arg) == 0) {
+    size = sizeof(_Bool);
+  } else if (strcmp("intptr_t", arg) == 0) {
+    size = sizeof(intptr_t);
+  } else if (strcmp("uintptr_t", arg) == 0) {
+    size = sizeof(uintptr_t);
+  } else if (strcmp("wchar_t", arg) == 0) {
+    size = sizeof(wchar_t);
+  } else if (strcmp("char16_t", arg) == 0) {
+    size = sizeof(char16_t);
+  } else if (strcmp("char32_t", arg) == 0) {
+    size = sizeof(char32_t);
+  } else if (strcmp("long-double", arg) == 0) {
+    size = sizeof(long double);
+  } else if (strcmp("long-long", arg) == 0) {
+    size = sizeof(long long);
+  } else if (strcmp("long-long-int", arg) == 0) {
+    size = sizeof(long long int);
+  } else if (strcmp("signed-long-long", arg) == 0) {
+    size = sizeof(signed long long);
+  } else if (strcmp("signed-long-long-int", arg) == 0) {
+    size = sizeof(signed long long int);
+  } else if (strcmp("unsigned-long-long", arg) == 0) {
+    size = sizeof(unsigned long long);
+  } else if (strcmp("unsigned-long-long-int", arg) == 0) {
+    size = sizeof(unsigned long long int);
+  } else {
+    size = 0;
+  }
+  return scm_from_size_t(size);
+}
+#undef FUNC_NAME
+
+
+void chkarch_init() {
+  scm_c_define_gsubr (s_scm_arch_sizeof, 1, 0, 0, (scm_t_subr) scm_arch_sizeof);
+  //scm_c_define_subr (s_scm_arch_alignof, 1, 0, 0, (scm_t_subr) scm_arch_alignof);
+}
+
+/* --- last line --- */

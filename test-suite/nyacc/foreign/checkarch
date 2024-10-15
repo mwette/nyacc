@@ -1,0 +1,31 @@
+#!/bin/bash
+# -*- scheme -*-
+CFLAGS="-g -I/opt/local/include/guile/3.0 -Wunused"
+libdir=$(guile -c "(display (assoc-ref %guile-build-info 'libdir))")
+LIBS="-L$libdir -Wl,--rpath=$libdir -lguile-3.0"
+gcc -o chkarch.so chkarch.c $CFLAGS -shared -fPIC $LIBS
+export LD_LIBRARY_PATH=$(pwd)
+exec guile -s $0
+!#
+
+(use-modules (nyacc foreign arch-info))
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
+(load-extension "chkarch" "chkarch_init")
+
+(for-each
+ (lambda (n)
+   (let ((c-sz (arch-sizeof n))
+         (s-sz (sizeof-basetype n)))
+     (sf "~a: ~s ~s\n" n c-sz s-sz)))
+ base-type-name-list)
+
+(for-each
+ (lambda (n)
+   (let ((c-sz (arch-alignof n))
+         (s-sz (alignof-basetype n)))
+     (sf "~a: ~s ~s\n" n c-sz s-sz)))
+ base-type-name-list)
+
+;; --- last line --- 
+
