@@ -133,7 +133,8 @@
 ;; @deffn {Parameter} *arch*
 ;; Parameter set to global architecture record; initialized to native arch.
 ;; Currently supported machine architectures are @emph{avr}, @emph{i686},
-;; @emph{powerpc}, @emph{riscv32}, @emph{riscv64}, @emph{sparc}, @emph{x86_64}.
+;; @emph{powerpc32}, @emph{powerpc64}, @emph{riscv32}, @emph{riscv64},
+;; @emph{sparc32}, @emph{sparc64} and @emph{x86_64}.
 ;; @end deffn
 (define *arch* (make-parameter #f))
 
@@ -306,10 +307,11 @@
   (make-arch-info 'i686 'little mtype-map/i686 alignof-mtype-map/natural))
 
 (add-to-arch-map "i686" arch/i686)
+(add-to-arch-map "i386" arch/i686)
 
 
-;; 32bit powerpc aka ppc, big endian
-(define mtype-map/powerpc
+;; 32 bit powerpc aka ppc32, big endian
+(define mtype-map/powerpc32
   '((void* . u32be)
     (char . s8) (short . s16be) (int . s32be) (long . s64be)
     (float . f32be) (double . f64be)
@@ -334,10 +336,44 @@
     (signed-long-long-int . s64be) (unsigned-long-long . u64be)
     (unsigned-long-long-int . u64be)))
 
-(define arch/powerpc
-  (make-arch-info 'powerpc 'big mtype-map/powerpc alignof-mtype-map/natural))
+(define arch/powerpc32
+  (make-arch-info 'powerpc32 'big mtype-map/powerpc32 alignof-mtype-map/natural))
 
-(add-to-arch-map "powerpc" arch/powerpc)
+(add-to-arch-map "powerpc32" arch/powerpc32)
+(add-to-arch-map "ppc32" arch/powerpc32)
+
+
+;; 64 bit powerpc, aka ppc64 (big endian)
+(define mtype-map/powerpc64
+  '((void* . u32be)
+    (char . s8) (short . s16be) (int . s32be) (long . s64be)
+    (float . f32be) (double . f64be)
+    (unsigned-short . u16be) (unsigned . u32be) (unsigned-long . u64be)
+    ;;
+    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be) (int8_t . s8)
+    (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be) (int32_t . s32be)
+    (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    ;;
+    (signed-char . s8) (unsigned-char . u8)
+    (short-int . s16be) (signed-short . s16be) (signed-short-int . s16be)
+    (signed . s32be) (signed-int . s32be) (long-int . s64be)
+    (signed-long . s64be) (signed-long-int . s64be)
+    (unsigned-short-int . u16be) (unsigned-int . u32be)
+    (unsigned-long-int . u64be)
+    ;;
+    (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
+    (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
+    ;;
+    (long-double . f128be)
+    (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
+    (signed-long-long-int . s64be) (unsigned-long-long . u64be)
+    (unsigned-long-long-int . u64be)))
+
+(define arch/powerpc64
+  (make-arch-info 'powerpc64 'big mtype-map/powerpc64 alignof-mtype-map/natural))
+
+(add-to-arch-map "powerpc64" arch/powerpc64)
+(add-to-arch-map "ppc64" arch/powerpc32)
 
 
 ;; riscv 32 bit (little endian)
@@ -356,7 +392,7 @@
     (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
     (signed . s32le) (signed-int . s32le) (long-int . s32le)
     (signed-long . s32le) (signed-long-int . s32le)
-    (unsigned-short-int . s16le) (unsigned-int . u32le)
+    (unsigned-short-int . u16le) (unsigned-int . u32le)
     (unsigned-long-int . u32le)
     ;;
     (_Bool . s8) (bool . s8) (intptr_t . s32le) (uintptr_t . u32le)
@@ -422,7 +458,7 @@
     (short-int . s16be) (signed-short . s16be) (signed-short-int . s16be)
     (signed . s32be) (signed-int . s32be) (long-int . s32be)
     (signed-long . s32be) (signed-long-int . s32be)
-    (unsigned-short-int . s16be) (unsigned-int . u32be)
+    (unsigned-short-int . u16be) (unsigned-int . u32be)
     (unsigned-long-int . u32be)
     ;;
     (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
@@ -434,7 +470,7 @@
     (unsigned-long-long-int . u64be)))
 
 (define arch/sparc32
-  (make-arch-info 'sparc32 'big mtype-map/sparc alignof-mtype-map/natural))
+  (make-arch-info 'sparc32 'big mtype-map/sparc32 alignof-mtype-map/natural))
 
 (add-to-arch-map "sparc32" arch/sparc32)
 
@@ -454,7 +490,7 @@
     (short-int . s16be) (signed-short . s16be) (signed-short-int . s16be)
     (signed . s32be) (signed-int . s32be) (long-int . s64be)
     (signed-long . s64be) (signed-long-int . s64be)
-    (unsigned-short-int . s16be) (unsigned-int . u32be)
+    (unsigned-short-int . u16be) (unsigned-int . u32be)
     (unsigned-long-int . u64be)
     ;;
     (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
@@ -466,7 +502,7 @@
     (unsigned-long-long-int . u64be)))
 
 (define arch/sparc64
-  (make-arch-info 'sparc64 'big mtype-map/sparc alignof-mtype-map/natural))
+  (make-arch-info 'sparc64 'big mtype-map/sparc64 alignof-mtype-map/natural))
 
 (add-to-arch-map "sparc64" arch/sparc64)
 
@@ -487,7 +523,7 @@
     (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
     (signed . s32le) (signed-int . s32le)
     (long-int . s64le) (signed-long . s64le) (signed-long-int . s64le)
-    (unsigned-short-int . u8) (unsigned-int . u32le)
+    (unsigned-short-int . u16le) (unsigned-int . u32le)
     (unsigned-long-int . u64le)
     ;;
     (_Bool . u8) (bool . s8) (intptr_t . s64le) (uintptr_t . u64le)
