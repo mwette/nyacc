@@ -439,6 +439,39 @@
 (add-to-arch-map "sparc32" arch/sparc32)
 
 
+;; sparc 64 bit (big endian)
+(define mtype-map/sparc64
+  '((void* . u32be)
+    (char . s8) (short . s16be) (int . s32be) (long . s64be)
+    (float . f32be) (double . f64be)
+    (unsigned-short . u16be) (unsigned . u32be) (unsigned-long . u64be)
+    ;;
+    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be) (int8_t . s8)
+    (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be) (int32_t . s32be)
+    (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    ;;
+    (signed-char . s8) (unsigned-char . u8)
+    (short-int . s16be) (signed-short . s16be) (signed-short-int . s16be)
+    (signed . s32be) (signed-int . s32be) (long-int . s64be)
+    (signed-long . s64be) (signed-long-int . s64be)
+    (unsigned-short-int . s16be) (unsigned-int . u32be)
+    (unsigned-long-int . u64be)
+    ;;
+    (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
+    (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
+    ;;
+    (long-double . f128be)
+    (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
+    (signed-long-long-int . s64be) (unsigned-long-long . u64be)
+    (unsigned-long-long-int . u64be)))
+
+(define arch/sparc64
+  (make-arch-info 'sparc64 'big mtype-map/sparc alignof-mtype-map/natural))
+
+(add-to-arch-map "sparc64" arch/sparc64)
+
+
+;; intel amd x86_64
 (define mtype-map/x86_64
   '((void* . u64le)
     (char . s8) (short . s16le) (int . s32le) (long . s64le)
@@ -453,9 +486,9 @@
     (signed-char . s8) (unsigned-char . u8)
     (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
     (signed . s32le) (signed-int . s32le)
-    (long-int . s64le) (signed-long . s64le) (signed-long-int . s32le)
+    (long-int . s64le) (signed-long . s64le) (signed-long-int . s64le)
     (unsigned-short-int . u8) (unsigned-int . u32le)
-    (unsigned-long-int . u32le)
+    (unsigned-long-int . u64le)
     ;;
     (_Bool . u8) (bool . s8) (intptr_t . s64le) (uintptr_t . u64le)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
