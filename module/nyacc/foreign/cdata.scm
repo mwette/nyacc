@@ -86,7 +86,8 @@
             make-cdata cdata-ref cdata-set! cdata&-ref ccast
             pretty-print-ctype
             
-            ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
+            ctype-size ctype-align ctype-kind ctype-info ctype-name
+            ctype? ctype-equal?
             cdata? cdata-bv cdata-ix cdata-ct
             cdata-copy name-ctype
 
@@ -99,7 +100,6 @@
             NULL NULL?
             unwrap-number unwrap-pointer unwrap-array
             ;;
-            mtype-bv-ref mtype-bv-set!
             ;; debug
             cstruct-fields cstruct-select
             cunion-fields cunion-select
@@ -109,6 +109,7 @@
             carray-type carray-length
             cenum-symf cenum-numf cenum-syml
             cfunction-proc->ptr cfunction-ptr->proc)
+  #:re-export (mtype-bv-ref mtype-bv-set!)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
   #:use-module ((srfi srfi-1) #:select (fold xcons))
@@ -331,53 +332,6 @@
 (define-inlinable (assert-cdata p v)
   (unless (cdata? v)
     (error (simple-format #f "~a: expected <cdata>, got ~s" p v))))
-
-(define-syntax be (identifier-syntax (endianness big)))
-(define-syntax le (identifier-syntax (endianness little)))
-
-;; => arch-info
-(define (mtype-bv-ref mtype bv ix)
-  (case mtype
-    ((u8) (bytevector-u8-ref bv ix))
-    ((s8) (bytevector-s8-ref bv ix))
-    ((u16le) (bytevector-u16-ref bv ix le))
-    ((s16le) (bytevector-s16-ref bv ix le))
-    ((u32le) (bytevector-u32-ref bv ix le))
-    ((s32le) (bytevector-s32-ref bv ix le))
-    ((u64le) (bytevector-u64-ref bv ix le))
-    ((s64le) (bytevector-s64-ref bv ix le))
-    ((f32le) (bytevector-ieee-single-ref bv ix le))
-    ((f64le) (bytevector-ieee-double-ref bv ix le))
-    ((u16be) (bytevector-u16-ref bv ix be))
-    ((s16be) (bytevector-s16-ref bv ix be))
-    ((u32be) (bytevector-u32-ref bv ix be))
-    ((s32be) (bytevector-s32-ref bv ix be))
-    ((u64be) (bytevector-u64-ref bv ix be))
-    ((s64be) (bytevector-s64-ref bv ix be))
-    ((f32be) (bytevector-ieee-single-ref bv ix be))
-    ((f64be) (bytevector-ieee-double-ref bv ix be))))
-
-;; => arch-info
-(define (mtype-bv-set! mtype bv ix value)
-  (case mtype
-    ((u8) (bytevector-u8-set! bv ix value))
-    ((s8) (bytevector-s8-set! bv ix value))
-    ((u16le) (bytevector-u16-set! bv ix value le))
-    ((s16le) (bytevector-s16-set! bv ix value le))
-    ((u32le) (bytevector-u32-set! bv ix value le))
-    ((s32le) (bytevector-s32-set! bv ix value le))
-    ((u64le) (bytevector-u64-set! bv ix value le))
-    ((s64le) (bytevector-s64-set! bv ix value le))
-    ((f32le) (bytevector-ieee-single-set! bv ix value le))
-    ((f64le) (bytevector-ieee-double-set! bv ix value le))
-    ((u16be) (bytevector-u16-set! bv ix value be))
-    ((s16be) (bytevector-s16-set! bv ix value be))
-    ((u32be) (bytevector-u32-set! bv ix value be))
-    ((s32be) (bytevector-s32-set! bv ix value be))
-    ((u64be) (bytevector-u64-set! bv ix value be))
-    ((s64be) (bytevector-s64-set! bv ix value be))
-    ((f32be) (bytevector-ieee-single-set! bv ix value be))
-    ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
 ;;.@deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
@@ -804,8 +758,8 @@
      (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b))))))
 
 ;; @deffn {Procedure} name-ctype name type -> <ctype>
-;; Add a name to the type.  The name is useful when the type is printed.
-;; This procedure does not mutate: a new type object is created.
+;; Create a new named version of the type.  The name is useful when the type
+;; is printed.  This procedure does not mutate: a new type object is created.
 ;; If a specific type is used by multiple names the names can share
 ;; the underlying type guts.  The following generates two named types.
 ;; @example
@@ -815,21 +769,21 @@
 ;; @end example
 ;; These types are equal:
 ;; @example
-;; (equal? foo_t struct-foo) => #t
+;; (ctype-equal? foo_t struct-foo) => #t
 ;; @end example
 ;; @end deffn
 (define (name-ctype name type)
   "- Procedure: name-ctype name type -> <ctype>
-     Add a name to the type.  The name is useful when the type is
-     printed.  This procedure does not mutate: a new type object is
-     created.  If a specific type is used by multiple names the names
-     can share the underlying type guts.  The following generates two
-     named types.
+     Create a new named version of the type.  The name is useful when
+     the type is printed.  This procedure does not mutate: a new type
+     object is created.  If a specific type is used by multiple names
+     the names can share the underlying type guts.  The following
+     generates two named types.
           (define raw (cstruct '((a 'int) (b 'double))))
           (define foo_t (name-ctype 'foo_t raw))
           (define struct-foo (name-ctype 'struct-foo raw))
      These types are equal:
-          (equal? foo_t struct-foo) => #t"
+          (ctype-equal? foo_t struct-foo) => #t"
   (%make-ctype (ctype-size type) (ctype-align type)
                (ctype-kind type) (ctype-info type)
                name))
@@ -1352,10 +1306,17 @@
     mtype)
    (error "mtype->ffi: bad mtype")))
 
-;; @deffn {Procedure} ctype->ffi
-;; doc to come
+;; @deffn {Procedure} ctype->ffi type
+;; Generate a argument spec for Guile's ffi interface.
+;; Example:
+;; @example
+;; (ctype->ffi (cpointer (cbase int))) => '*
+;; @end example
 ;; @end deffn
 (define (ctype->ffi type)
+  "- Procedure: ctype->ffi type
+     Generate a argument spec for Guile's ffi interface.  Example:
+          (ctype->ffi (cpointer (cbase int))) => '*"
   (assert-ctype 'ctype->ffi type)
   (let ((info (ctype-info type)))
     (case (ctype-kind type)
@@ -1364,22 +1325,35 @@
        (make-list (/ (ctype-size type) (ctype-align type))
                   (case (ctype-align type)
                     ((1) int8) ((2) int16) ((4) int32) ((8) int64))))
-      ((pointer array) '*)
-      ((function) (error "ctype->ffi: functions are work to go"))
+      ((pointer array function) '*)
       (else (error "ctype->ffi: unsupported:" (ctype-kind type))))))
 
-;; @deffn {Procedure} unwrap-number
-;; doc to come
+;; @deffn {Procedure} unwrap-number arg
+;; Convert an argument to numeric form for a ffi procedure call.
+;; This will reference a cdata object or pass a number through.
 ;; @end deffn
 (define (unwrap-number arg)
+  "- Procedure: unwrap-number arg
+     Convert an argument to numeric form for a ffi procedure call.  This
+     will reference a cdata object or pass a number through."
   (cond ((number? arg) arg)
         ((cdata? arg) (cdata-ref arg))
         (else (error "unwrap-number: bad arg:" arg))))
 
-;; @deffn {Procedure} unwrap-number
-;; doc to come
+;; @deffn {Procedure} unwrap-pointer arg
+;; Convert an argument to a Guile pointer for a ffi procedure call.
+;; This will reference a cdata object or pass a number through.
+;; If the argument is a function, it will attempt to convert that
+;; to a pointer via @code{procedure->pointer} if given the function
+;; pointer type @var{hint}.
 ;; @end deffn
 (define* (unwrap-pointer arg #:optional hint)
+  "- Procedure: unwrap-pointer arg
+     Convert an argument to a Guile pointer for a ffi procedure call.
+     This will reference a cdata object or pass a number through.  If
+     the argument is a function, it will attempt to convert that to a
+     pointer via ‘procedure->pointer’ if given the function pointer type
+     HINT."
   (cond ((pointer? arg) arg)
         ((string? arg) (string->pointer arg))
         ((cdata? arg) (cdata-ref arg))
@@ -1392,10 +1366,14 @@
            ((cfunction-proc->ptr func) arg)))
         (else (error "unwrap-pointer: bad arg:" arg))))
 
-;; @deffn {Procedure} unwrap-number
-;; doc to come
+;; @deffn {Procedure} unwrap-array arg
+;; This will convert an array to a form suitable to pass to a Guile
+;; ffi procedure.
 ;; @end deffn
 (define (unwrap-array arg)
+  "- Procedure: unwrap-array arg
+     This will convert an array to a form suitable to pass to a Guile
+     ffi procedure."
   (unless
     (cdata? arg)
     (error "unwrap-array: bad arg:" arg))
@@ -1405,7 +1383,14 @@
     (else (error "unwrap-array: bad arg:" arg))))
 
 (define NULL %null-pointer)
+
+;; @deffn {Procedure} NULL? arg
+;; Check if argument is null Guile pointer, or a cdata form of the same.
+;; @end deffn
 (define (NULL? arg)
+  "- Procedure: NULL? arg
+     Check if argument is null Guile pointer, or a cdata form of the
+     same."
   (equal? (if (cdata? arg) (cdata-ref arg) arg) %null-pointer))
 
 ;; --- c99 support -------------------------------------------------------------

@@ -31,9 +31,11 @@
             mtypeof-basetype sizeof-mtype alignof-mtype
             base-type-name-list base-type-symbol-list
             c-strname->symname c-symname->strname
+            mtype-bv-ref mtype-bv-set!
             mtype-signed?)
   #:declarative? #t
-  #:use-module (srfi srfi-9))
+  #:use-module (srfi srfi-9)
+  #:use-module (rnrs bytevectors))
 
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
@@ -204,6 +206,53 @@
 (define (mtype-signed? mtype)
   (and (member mtype '(s8 s16 s32 s64 s16le s32le s64le s16be s32be s64be)) #t))
 
+
+(define-syntax be (identifier-syntax (endianness big)))
+(define-syntax le (identifier-syntax (endianness little)))
+
+;; => arch-info
+(define (mtype-bv-ref mtype bv ix)
+  (case mtype
+    ((u8) (bytevector-u8-ref bv ix))
+    ((s8) (bytevector-s8-ref bv ix))
+    ((u16le) (bytevector-u16-ref bv ix le))
+    ((s16le) (bytevector-s16-ref bv ix le))
+    ((u32le) (bytevector-u32-ref bv ix le))
+    ((s32le) (bytevector-s32-ref bv ix le))
+    ((u64le) (bytevector-u64-ref bv ix le))
+    ((s64le) (bytevector-s64-ref bv ix le))
+    ((f32le) (bytevector-ieee-single-ref bv ix le))
+    ((f64le) (bytevector-ieee-double-ref bv ix le))
+    ((u16be) (bytevector-u16-ref bv ix be))
+    ((s16be) (bytevector-s16-ref bv ix be))
+    ((u32be) (bytevector-u32-ref bv ix be))
+    ((s32be) (bytevector-s32-ref bv ix be))
+    ((u64be) (bytevector-u64-ref bv ix be))
+    ((s64be) (bytevector-s64-ref bv ix be))
+    ((f32be) (bytevector-ieee-single-ref bv ix be))
+    ((f64be) (bytevector-ieee-double-ref bv ix be))))
+
+;; => arch-info
+(define (mtype-bv-set! mtype bv ix value)
+  (case mtype
+    ((u8) (bytevector-u8-set! bv ix value))
+    ((s8) (bytevector-s8-set! bv ix value))
+    ((u16le) (bytevector-u16-set! bv ix value le))
+    ((s16le) (bytevector-s16-set! bv ix value le))
+    ((u32le) (bytevector-u32-set! bv ix value le))
+    ((s32le) (bytevector-s32-set! bv ix value le))
+    ((u64le) (bytevector-u64-set! bv ix value le))
+    ((s64le) (bytevector-s64-set! bv ix value le))
+    ((f32le) (bytevector-ieee-single-set! bv ix value le))
+    ((f64le) (bytevector-ieee-double-set! bv ix value le))
+    ((u16be) (bytevector-u16-set! bv ix value be))
+    ((s16be) (bytevector-s16-set! bv ix value be))
+    ((u32be) (bytevector-u32-set! bv ix value be))
+    ((s32be) (bytevector-s32-set! bv ix value be))
+    ((u64be) (bytevector-u64-set! bv ix value be))
+    ((s64be) (bytevector-s64-set! bv ix value be))
+    ((f32be) (bytevector-ieee-single-set! bv ix value be))
+    ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
 ;; === maps ====================================================================
 
