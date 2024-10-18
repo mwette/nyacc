@@ -5,6 +5,18 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-XX-XX  V2.01.0
+	* reworked the FH renamer to work with context: 
+	    (rename "foo" 'enum) 'type 'function 'variable 'field
+	* updated cdata.scm to provide lookup procedures instead of alists,
+	  making path for using (perfect?) functions for lookups
+	* updated documentation for cdata (cdata.texi, etc)
+	* in arch-info, renamed sparc to sparc32, added sparc64
+	* created test for sizeof-mtype alignof-mtype;
+	  fixed some errors in arch-info mtypeof/x86_64
+	* moved mtype-bv-ref, set! to arch-info.scm from cdata.scm
+	* updated ffi-help-cd.scm to use vhashes instead of alists
+
 2024-10-05  V2.00.6
 	* ffi-help-cd.scm(unwrap-mdecl): if base type unwrap-number of arg
 	  not type (as string)
