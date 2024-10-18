@@ -44,7 +44,8 @@
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (ice-9 match)
-  #:use-module (ice-9 hash-table))
+  #:use-module (ice-9 hash-table)
+  #:use-module (ice-9 vlist))
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
@@ -302,6 +303,8 @@
 
 (define (keeper? qualifier name keepers)
   (cond
+   ((vhash? keepers)
+    (vhash-assoc (if qualifier (cons qualifier name) name) keepers))
    ((hash-table? keepers)
     (hash-ref keepers (if qualifier (cons qualifier name) name)))
    ((pair? keepers)
