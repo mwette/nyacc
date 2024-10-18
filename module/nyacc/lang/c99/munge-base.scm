@@ -44,7 +44,7 @@
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (ice-9 match)
-  #:use-module (system base pmatch))
+  #:use-module (ice-9 hash-table))
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
@@ -300,23 +300,12 @@
 (define (w/struct* name) (cons 'pointer (cons 'struct name)))
 (define (w/union* name) (cons 'pointer (cons 'union name)))
 
-;; qualified match
-;; (qual-match '(pointer struct) "foo" (pointer struct . "foo")) => #t
-(define (qual-match qual name term)
-  (let loop ((qual qual) (term term))
-    (cond
-     ((null? qual)
-      (and (string? term) (string=? name term)))
-     ((pair? term)
-      (and (eq? (car qual) (car term))
-           (loop (cdr qual) (cdr term))))
-     (else #f))))
-
 (define (keeper? qualifier name keepers)
   (cond
+   ((hash-table? keepers)
+    (hash-ref keepers (if (null? qualifier) name (cons qualifier name))))
    ((pair? keepers)
-    (or (qual-match qualifier name (car keepers))
-        (keeper? qualifier name (cdr keepers))))
+    (assoc-ref keepers (if (null? qualifier) name (cons qualifier name))))
    ((eq? #t keepers) #t)
    (else #f)))
 
