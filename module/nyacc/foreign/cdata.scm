@@ -110,6 +110,7 @@
             cenum-symf cenum-numf cenum-syml
             cfunction-proc->ptr cfunction-ptr->proc)
   #:re-export (mtype-bv-ref mtype-bv-set!)
+  #:use-module (ice-9 hash-table)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
   #:use-module ((srfi srfi-1) #:select (fold xcons))
@@ -333,18 +334,19 @@
   (unless (cdata? v)
     (error (simple-format #f "~a: expected <cdata>, got ~s" p v))))
 
-;;.@deffn {Procedure} make-cbase-map arch
-;; where @var{arch} is string or @code{<arch>}
+;;.@deffn {Procedure} make-cbase-map arch => hashq-table
+;; Create a hashq table for @var{arch} mapping base C types to cdata types.
 ;;.@end deffn
-(define (make-cbase-map arch) ;; => ((double . (cbase "double")) ...)
+(define (make-cbase-map arch)
   (define (make-cbase name)
     (let* ((mtype (mtypeof-basetype name))
            (size (sizeof-basetype name))
            (align (alignof-basetype name)))
       (%make-ctype size align 'base mtype #f)))
   (with-arch arch
-    (map (lambda (name) (cons name (make-cbase name)))
-         base-type-symbol-list)))
+    (alist->hashq-table
+     (map (lambda (name) (cons name (make-cbase name)))
+          base-type-symbol-list))))
 
 (define cbase-symbols
   '(s8 u8 s16 s32 s64 i128 u16 u32 u64 u128 f16 f32 f64 f128
@@ -352,7 +354,7 @@
        f16le f32le f64le f128le s16be s32be s64be i128be
        u16be u32be u64be u128be f16be f32be f64be f128be))
 
-;; @deffn {Procedure} cbase name
+;; @deffn {Procedure} cbase name => <ctype>
 ;; Given symbolic @var{name} generate a base ctype.   The name can
 ;; be something like @code{unsigned-int}, @code{double}, or can be a
 ;; @emph{cdata} machine type like @code{u64le}.
@@ -370,11 +372,11 @@
                    (let ((cmap (make-cbase-map arch)))
                      (*cbase-map* (acons arch cmap (*cbase-map*)))
                      cmap))))
-    (or (assq-ref cmap name)
+    (or (hashq-ref cmap name)
         (and (memq name cbase-symbols) name)
         (error "cbase: not found:" name))))
 
-;; @deffn {Procedure} cpointer type
+;; @deffn {Procedure} cpointer type => <ctype>
 ;; Generate a C pointer type to @var{type}. To reference or de-reference
 ;; cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
@@ -447,7 +449,7 @@
           (sferr "ral size =~s ph len=~s min=~s\n" (length alist) sz mn)
           (lambda (sym) (vector-ref hv (- (hash sym n) mn)))))))
 
-;; @deffn {Procedure} cstruct fields [packed] => ctype
+;; @deffn {Procedure} cstruct fields [packed] => <ctype>
 ;; Construct a struct ctype with given @var{fields}.  If @var{packed},
 ;; @code{#f} by default, is @code{#t}, create a packed structure.
 ;; @var{fields} is a list with entries of the form @code{(name type)} or
@@ -524,7 +526,7 @@
            (error "yuck"))))))
 
 
-;; @deffn {Procedure} cunion fields
+;; @deffn {Procedure} cunion fields => <ctype>
 ;; Construct a union ctype with given @var{fields}.
 ;; See @emph{cstruct} for a description of the @var{fields} argument.
 ;; @end deffn
@@ -559,7 +561,7 @@
                 (maxi-size fsz fal ssz) (max fal sal) (cdr sfl))))))
 
 
-;; @deffn {Procedure} carray type n
+;; @deffn {Procedure} carray type n => <ctype>
 ;; Create an array of @var{type} with @var{length}.
 ;; If @var{length} is zero, the array length is unbounded: it's length
 ;; can be specified as argument to @code{make-cdata}.
@@ -574,7 +576,7 @@
                'array (%make-carray type n) #f))
 
 
-;; @deffn {Procedure} cenum enum-list [packed]
+;; @deffn {Procedure} cenum enum-list [packed] => <ctype>
 ;; @var{enum-list} is a list of name or name-value pairs
 ;; @example
 ;; (cenum '((a 1) b (c 4))
@@ -614,7 +616,7 @@
           (((? symbol? n)) (loop (acons n nxt snl) (1+ nxt) (cdr enl)))
           (_ (error "cenum: bad enum def'n"))))))
 
-;; @deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?]
+;; @deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?] => <ctype>
 ;; Generate a C function pointer type.  You must pass the @var{wrapper}
 ;; and @var{unwrapper} procedures that convert a pointer to a procedure,
 ;; and procedure to pointer, respectively.  The optional argument
@@ -632,7 +634,7 @@
     (%make-ctype (ctype-size type) (ctype-align type) 'function
                  (%make-cfunction proc->ptr ptr->proc variadic? mtype) #f)))
 
-;; @deffn {Procedure} ctype-detag type ix tag -> type ix
+;; @deffn {Procedure} ctype-detag type ix tag => type ix
 ;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
 ;; field name.  For arrays and pointers, the tag is a non-negative integer.
 ;; An integer tag applied to the pointer increments the pointer by the
@@ -692,7 +694,7 @@
           (loop res ct ix (cdr tags))))))))
 
 
-;; @deffn {Procedure} ctype-equal? a b
+;; @deffn {Procedure} ctype-equal? a b => #t|#f
 ;; This predicate assesses equality of it's arguments.
 ;; Two types are considered equal if they have the same size,
 ;; alignment, kind, and eqivalent kind-specific properties.
@@ -1291,10 +1293,6 @@
   (or
    (assq-ref
     `((s8 . ,int8)  (u8 . ,uint8)
-      ;;(s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
-      ;;(u16 . ,uint16) (u32 . ,uint32) (u64 . ,uint64)
-      ;;(f32 . ,float) (f64 . ,double)
-      ;;(s128 . #f) (u128 . #f) (f16 . #f) (f128 . #f)
       (s16le . ,int16) (s32le . ,int32) (s64le . ,int64)
       (u16le . ,uint16) (u32le . ,uint32) (u64le . ,uint64)
       (f32le . ,float) (f64le . ,double)
@@ -1302,7 +1300,12 @@
       (u16be . ,uint16) (u32be . ,uint32) (u64be . ,uint64)
       (f32be . ,float) (f64be . ,double)
       (u128le . #f) (f16le . #f) (f128le . #f) (s128be . #f)
-      (i128le . #f) (u128be . #f) (f16be . #f) (f128be . #f))
+      (i128le . #f) (u128be . #f) (f16be . #f) (f128be . #f)
+      ;;(s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
+      ;;(u16 . ,uint16) (u32 . ,uint32) (u64 . ,uint64)
+      ;;(f32 . ,float) (f64 . ,double)
+      ;;(s128 . #f) (u128 . #f) (f16 . #f) (f128 . #f)
+      )
     mtype)
    (error "mtype->ffi: bad mtype")))
 
