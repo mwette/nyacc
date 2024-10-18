@@ -40,7 +40,7 @@
   #:use-module (nyacc lang sx-util)
   #:use-module ((nyacc lang util) #:select (report-error))
   #:use-module (rnrs arithmetic bitwise)
-  #:use-module (system base pmatch))
+  #:use-module (ice-9 match))
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
@@ -351,30 +351,30 @@
      ((char? (car tkl))
       (loop stl (cons (car tkl) chl) nxt (cdr tkl)))
      (else
-      (pmatch tkl
-	((($ident . ,rval) $dhash ($ident . ,lval) . ,rest)
+      (match tkl
+	(`(($ident . ,rval) $dhash ($ident . ,lval) . ,rest)
 	 (loop stl chl nxt
 	       (acons '$ident (string-append lval rval) (list-tail tkl 3))))
-	((($ident . ,arg) $hash . ,rest)
+	(`(($ident . ,arg) $hash . ,rest)
 	 (loop stl chl (string-append "\"" arg "\"") (list-tail tkl 2)))
-	((($ident . ,iden) ($ident . ,lval) . ,rest)
+	(`(($ident . ,iden) ($ident . ,lval) . ,rest)
 	 (loop stl chl iden rest))
-	((($ident . ,iden) . ,rest)
+	(`(($ident . ,iden) . ,rest)
 	 (loop stl chl iden rest))
-	((($string . ,val) . ,rest)
+	(`(($string . ,val) . ,rest)
 	 (loop stl (cons #\" chl) (esc-c-str val) (cons #\" rest)))
-	((($echo . ,val) . ,rest)
+	(`(($echo . ,val) . ,rest)
 	 (loop stl chl val rest))
-	(($space $space . ,rest)
+	(`($space $space . ,rest)
 	 (loop stl chl nxt rest))
-	(($space . ,rest)
+	(`($space . ,rest)
 	 (loop stl (cons #\space chl) nxt rest))
-	((($comm . ,val) . ,rest)
+	(`(($comm . ,val) . ,rest)
 	 ;; replace comment with extra trailing space
 	 (loop stl chl (string-append "/*" val "*/ ") rest))
-	((,asis . ,rest)
+	(`(,asis . ,rest)
 	 (loop stl chl asis rest))
-	(,otherwise
+	(otherwise
 	 (error "nyacc cpp rtokl->string, no match" tkl)))))))
 
 ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
