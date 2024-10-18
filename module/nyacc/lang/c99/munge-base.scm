@@ -297,15 +297,15 @@
 (define (w/union name) (cons 'union name))
 (define (w/enum name) (cons 'enum name))
 (define (w/* name) (cons 'pointer name))
-(define (w/struct* name) (cons 'pointer (cons 'struct name)))
-(define (w/union* name) (cons 'pointer (cons 'union name)))
+(define (w/struct* name) (cons 'struct-pointer name))
+(define (w/union* name) (cons 'union-pointer name))
 
 (define (keeper? qualifier name keepers)
   (cond
    ((hash-table? keepers)
-    (hash-ref keepers (if (null? qualifier) name (cons qualifier name))))
+    (hash-ref keepers (if qualifier (cons qualifier name) name)))
    ((pair? keepers)
-    (assoc-ref keepers (if (null? qualifier) name (cons qualifier name))))
+    (member (if qualifier (cons qualifier name) name) keepers))
    ((eq? #t keepers) #t)
    (else #f)))
 
@@ -355,10 +355,10 @@
 
       ((typename ,name)
        (cond
-        ((keeper? '() name keep)        ; keeper; don't expand
+        ((keeper? #f name keep)        ; keeper; don't expand
          (values specl declr))
         ((and (pointer-declr? declr)
-              (keeper? '(pointer) name keep))
+              (keeper? 'pointer name keep))
          (values specl declr))
         (else                           ; expand
          (call-with-values
@@ -368,10 +368,10 @@
 
       ((struct-ref (ident ,name))
        (cond
-        ((keeper? '(struct) name keep)
+        ((keeper? 'struct name keep)
          (values specl declr))
         ((pointer-declr? declr)
-         (if (keeper? '(pointer struct) name keep)
+         (if (keeper? 'struct-pointer name keep)
              (values specl declr)
              (values (replace-type-spec specl '(type-spec (void))) declr)))
         (else
@@ -379,10 +379,10 @@
 
       ((union-ref (ident ,name))
        (cond
-        ((keeper? '(union) name keep)
+        ((keeper? 'union name keep)
          (values specl declr))
         ((pointer-declr? declr)
-         (if (keeper? '(pointer union) name keep)
+         (if (keeper? 'union-pointer name keep)
              (values specl declr)
              (values (replace-type-spec specl '(type-spec (void))) declr)))
         (else
@@ -406,7 +406,7 @@
 
       ((enum-ref (@ . ,attr) (ident ,name))
        (cond
-        ((keeper? '(enum) name keep)
+        ((keeper? 'enum name keep)
          (values specl declr))
         ((member '(enum . "*any*") keep)
          (values specl declr))
@@ -417,9 +417,9 @@
       ((enum-def (@ . ,attr) (ident ,name) ,rest)
        ;; replacing with int could be an error : should gen warning
        (cond
-        ((keeper? '(enum) name keep)
+        ((keeper? 'enum name keep)
          (values specl declr))
-        ((member '(enum . "*any*") keep)
+        ((keeper? 'enum "*any*" keep)
          (let ((tspec `(type-spec (enum-ref (ident ,name)))))
            (values (replace-type-spec specl tspec) declr)))
         (else
@@ -428,7 +428,7 @@
 
       ((enum-def (@ . ,attr) ,rest)
        (cond
-        ((member '(enum . "*any*") keep)
+        ((keeper? 'enum  "*any*" keep)
          (let ((tspec `(type-spec (enum-ref (ident "*any*")))))
            (values (replace-type-spec specl tspec) declr)))
         (else
