@@ -249,7 +249,7 @@
 (define (w/union name) (cons 'union name))
 (define (w/enum name) (cons 'enum name))
 (define (w/* name) (cons 'pointer name))
-(define (w/struct* name) (cons 'struct-pointer 'struct name))
+(define (w/struct* name) (cons 'struct-pointer name))
 (define (w/union* name) (cons 'union-pointer name))
 
 (define (rename name)
