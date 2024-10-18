@@ -428,7 +428,7 @@
 
       ((enum-def (@ . ,attr) ,rest)
        (cond
-        ((keeper? 'enum  "*any*" keep)
+        ((keeper? 'enum "*any*" keep)
          (let ((tspec `(type-spec (enum-ref (ident "*any*")))))
            (values (replace-type-spec specl tspec) declr)))
         (else
