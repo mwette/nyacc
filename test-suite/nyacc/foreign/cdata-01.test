@@ -1,4 +1,4 @@
-;; system/foreign/cdata-01.scm		-*- scheme -*-
+;; nyacc/foreign/cdata-01.test		-*- scheme -*-
 ;;
 ;; Copyright (C) 2024 Matthew Wette
 ;;
@@ -218,12 +218,9 @@
                        (cons ix (make-rand-fields *nfld* #:w/bitfields #t)))
                      (iota n-count)))
          (basename (gen-code/struct cases))
-         (ldlibenv #f)
          (testlib #f))
     (dynamic-wind
       (lambda ()
-        (set! ldlibenv (getenv "LD_LIBRARY_PATH"))
-        (putenv (format #f "LD_LIBRARY_ENV=~s:~s" (getcwd) ldlibenv))
         (set! testlib (load-foreign-library
                        basename #:search-path (list (getcwd)))))
       (lambda ()
@@ -232,20 +229,16 @@
            (and seed (exec-test (car kase) (cdr kase) testlib 'struct m-count)))
          #t cases))
       (lambda ()
-        (unload-foreign-library testlib)
-        (putenv (format #f "LD_LIBRARY_PATH=~s" ldlibenv))))))
+        (unload-foreign-library testlib)))))
 
 (define* (do-test/union #:optional (n-count 10) (m-count 10))
   (let* ((cases (map (lambda (ix)
                        (cons ix (make-rand-fields *nfld* #:w/bitfields #f)))
                      (iota n-count)))
          (basename (gen-code/union cases))
-         (ldlibenv #f)
          (testlib #f))
     (dynamic-wind
       (lambda ()
-        (set! ldlibenv (getenv "LD_LIBRARY_PATH"))
-        (putenv (format #f "LD_LIBRARY_ENV=~s:~s" (getcwd) ldlibenv))
         (set! testlib (load-foreign-library
                        basename #:search-path (list (getcwd)))))
       (lambda ()
@@ -254,8 +247,7 @@
            (and seed (exec-test (car kase) (cdr kase) testlib 'union m-count)))
          #t cases))
       (lambda ()
-        (unload-foreign-library testlib)
-        (putenv (format #f "LD_LIBRARY_PATH=~s" ldlibenv))))))
+        (unload-foreign-library testlib)))))
 
 (with-test-prefix "nyacc/foreign/cdata-01"
 
