@@ -377,7 +377,7 @@
         (error "cbase: not found:" name))))
 
 ;; @deffn {Procedure} cpointer type => <ctype>
-;; Generate a C pointer type to @var{type}. To reference or de-reference
+;; Generate a C pointer type for @var{type}. To reference or de-reference
 ;; cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
 ;; @*note: Should we allow @var{type} to be a promise?
@@ -387,8 +387,8 @@
 ;; @end example
 ;; @end deffn
 (define (cpointer type)
-  "- Procedure: cpointer type
-     Generate a C pointer type to TYPE.  To reference or de-reference
+  "- Procedure: cpointer type => <ctype>
+     Generate a C pointer type for TYPE.  To reference or de-reference
      cdata object see ‘cdata&’ and ‘cdata*’.  TYPE can be the symbol
      ‘void’ or a symbolic name used as argument to ‘cbase’.
      note: Should we allow TYPE to be a promise?
@@ -581,13 +581,15 @@
 ;; @example
 ;; (cenum '((a 1) b (c 4))
 ;; @end example
-;; If @var{packed} is @code{#t} the size wil be smallest that can hold it.
+;; If @var{packed} is @code{#t} the size will be smallest that can hold it,
+;; as if defined in C with @code{__attribute__((packed))}.
 ;; @end deffn
 (define* (cenum enum-list #:optional packed)
-  "- Procedure: cenum enum-list [packed]
+  "- Procedure: cenum enum-list [packed] => <ctype>
      ENUM-LIST is a list of name or name-value pairs
           (cenum '((a 1) b (c 4))
-     If PACKED is ‘#t’ the size wil be smallest that can hold it."
+     If PACKED is ‘#t’ the size will be smallest that can hold it, as if
+     defined in C with ‘__attribute__((packed))’."
   (define (short-mtype mn mx)
     (if (< 0 mn)
         (cond
@@ -617,19 +619,33 @@
           (_ (error "cenum: bad enum def'n"))))))
 
 ;; @deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?] => <ctype>
-;; Generate a C function pointer type.  You must pass the @var{wrapper}
-;; and @var{unwrapper} procedures that convert a pointer to a procedure,
-;; and procedure to pointer, respectively.  The optional argument
-;; @var{#:variadic}, if @code{#t},  indicates the function uses variadic
-;; arguments.  For this case, (to be documented).
+;; Generate a C function type to be used with @code{cpointer}.  You must
+;; pass the @var{wrapper} and @var{unwrapper} procedures that convert a
+;; procedure to a pointer, and pointer to procedure, respectively.  The
+;; optional argument @var{#:variadic}, if @code{#t},  indicates the function
+;; uses variadic arguments.  For this case (I need to add documention).
+;; Here is an example:
+;; @example
+;; (define (f-proc->ptr proc)
+;;   (ffi:procedure->pointer ffi:void proc (list)))
+;; (define (f-ptr->proc fptr)
+;;   (ffi:pointer->procedure ffi:void fptr (list)))
+;; (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))
+;; @end example
 ;; @end deffn
 (define* (cfunction proc->ptr ptr->proc #:optional variadic?)
-  "- Procedure: cfunction proc->ptr ptr->proc [variadic?]
-     Generate a C function pointer type.  You must pass the WRAPPER and
-     UNWRAPPER procedures that convert a pointer to a procedure, and
-     procedure to pointer, respectively.  The optional argument
-     #:VARIADIC, if ‘#t’, indicates the function uses variadic
-     arguments.  For this case, (to be documented)."
+  "- Procedure: cfunction proc->ptr ptr->proc [variadic?] => <ctype>
+     Generate a C function type to be used with ‘cpointer’.  You must
+     pass the WRAPPER and UNWRAPPER procedures that convert a procedure
+     to a pointer, and pointer to procedure, respectively.  The optional
+     argument #:VARIADIC, if ‘#t’, indicates the function uses variadic
+     arguments.  For this case (I need to add documention).  Here is an
+     example:
+          (define (f-proc->ptr proc)
+            (ffi:procedure->pointer ffi:void proc (list)))
+          (define (f-ptr->proc fptr)
+            (ffi:pointer->procedure ffi:void fptr (list)))
+          (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))"
   (let ((type (cbase 'void*)) (mtype (mtypeof-basetype 'void*)))
     (%make-ctype (ctype-size type) (ctype-align type) 'function
                  (%make-cfunction proc->ptr ptr->proc variadic? mtype) #f)))
@@ -911,13 +927,13 @@
       (else (error "cdata-ref: giving up")))))
 
 ;; @deffn {Procedure} Xcdata-set! bv ix ct value
-;; Reference a deconstructed cdata object, where @var{bv}, @var{ix}
+;; Set the value of a deconstructed cdata object, where @var{bv}, @var{ix}
 ;; and @var{ct} are extracted from a cdata objerct. See @emph{cdata-set!}.
 ;; @end deffn
 (define (Xcdata-set! bv ix ct value)
   "- Procedure: Xcdata-set! bv ix ct value
-     Reference a deconstructed cdata object, where BV, IX and CT are
-     extracted from a cdata objerct.  See _cdata-set!_."
+     Set the value of a deconstructed cdata object, where BV, IX and CT
+     are extracted from a cdata objerct.  See _cdata-set!_."
   (let* ()
     (if (cdata? value)
         (let ((sz (ctype-size ct)))
@@ -983,20 +999,15 @@
           ((union) (error "cdata-set!: can't set! union value"))
           (else (error "cdata-set!: bad arg 2" value))))))
 
-;; @deffn {Procedure} cdata-ref data [tag ...]
+;; @deffn {Procedure} cdata-ref data [tag ...] => value
 ;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
 ;; respect to the cdata object @var{data}.
 ;; @example
 ;; (cdata-ref my-struct-value 'a 'b 'c))
 ;; @end example
-;; This procedure returns XXX for cdata kinds @emph{base}, @emph{pointer} and
-;; (in the future) @emph{function}.  Attempting to obtain values for C-type
-;; kinds @emph{struct}, @emph{union}, @emph{array} will result in @code{#f}.
-;; If, in those cases, you would like a cdata then use this:
-;; @example
-;; (or (cdata-ref data tag ...) (cdata-sel data tag ...))
-;; @end example
-;; (Or should we just make this the default behavior?)
+;; This procedure returns Guile values for cdata kinds @emph{base},
+;; @emph{pointer} and @emph{procedure}.   For other cases, a @emph{cdata}
+;; object is returned.  If you always want a cdata object, use @code{cdata-sel}.
 ;; @end deffn
 (define (cdata-ref data . tags)
   "- Procedure: cdata-ref data [tag ...]
@@ -1020,7 +1031,8 @@
 ;; (cdata-set! my-struct-data 42 'a 'b 'c))
 ;; @end example
 ;; If @var{value} is a @code{<cdata>} object copy that, if types match.
-;; @*If @var{value} can be a procedure used to set a cfunction pointer
+;; @*The @var{value} argument can be a procedure when the associated ctype
+;; is a pointer to function.
 ;; value.
 ;; @end deffn
 (define (cdata-set! data value . tags)
@@ -1108,7 +1120,7 @@
   (assert-cdata 'cdata-kind data)
   (ctype-kind (cdata-ct data)))
 
-;; @deffn {Procedure} cdata&-ref data [tag ...]
+;; @deffn {Procedure} cdata&-ref data [tag ...] => value
 ;; Shortcut for @code{(cdata-ref (cdata& data tag ...))}
 ;; This always returns a Guile @emph{pointer}.
 ;; @end deffn
@@ -1122,7 +1134,7 @@
          (addr (+ (pointer-address bptr) (cdata-ix data))))
     (make-pointer addr)))
 
-;; @deffn {Procedure} cdata*-ref data [tag ...]
+;; @deffn {Procedure} cdata*-ref data [tag ...] => value
 ;; Shortcut for @code{(cdata-ref (cdata* data tag ...))}
 ;; @end deffn
 (define (cdata*-ref data . tags)
