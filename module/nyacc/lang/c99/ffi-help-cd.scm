@@ -79,16 +79,17 @@
 
 (define *errmsgs* (make-parameter '()))	; list of warnings
 
+(define *defined* (make-parameter (alist->vhash '())))
 
 ;; === utilities
 
-(define *defined* (make-parameter (alist->vhash '())))
-
+;; like cons* but intended for use w/ *defined*
 (define-syntax dcons
   (syntax-rules ()
     ((_ last) last)
     ((_ item1 rest ...) (vhash-cons item1 #t (dcons rest ...)))))
 
+;; like member but intended for use w/ *defined*
 (define (dmem? item table) (vhash-assoc item table))
 
 (define-syntax xcons*
