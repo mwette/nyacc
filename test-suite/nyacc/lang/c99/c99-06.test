@@ -116,15 +116,15 @@
      #t
      '(("typedef struct foo foo_t; foo_t *x;" ((pointer . "foo_t"))
         "foo_t *x;")
-       ("typedef struct foo foo_t; foo_t *x;" ((pointer . (struct . "foo")))
+       ("typedef struct foo foo_t; foo_t *x;" ((struct-pointer . "foo"))
         "struct foo *x;")
-       ("typedef struct foo foo_t; foo_t *x;" ()
+       ("typedef struct foo foo_t; foo_t *x;" #f
         "void *x;")
        ("struct foo { int a; }; typedef struct foo foo_t; const foo_t x;" ()
         "const struct { int a; } x;")
        ("typedef union foo foo_t; foo_t *x;" ((pointer . "foo_t"))
         "foo_t *x;")
-       ("typedef union foo foo_t; foo_t *x;" ((pointer . (union . "foo")))
+       ("typedef union foo foo_t; foo_t *x;" ((union-pointer . "foo"))
         "union foo *x;")
        ("typedef union foo foo_t; foo_t *x;" ()
         "void *x;")

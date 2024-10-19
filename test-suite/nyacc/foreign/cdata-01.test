@@ -257,7 +257,7 @@
         (unload-foreign-library testlib)
         (putenv (format #f "LD_LIBRARY_PATH=~s" ldlibenv))))))
 
-(with-test-prefix "system/foreign/cdata"
+(with-test-prefix "nyacc/foreign/cdata-01"
 
   (pass-if "struct layout vs C (with bitfields)"
     ;; exec 10 random layouts with 10 random field values each

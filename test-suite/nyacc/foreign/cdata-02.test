@@ -30,7 +30,7 @@
 (define d4 (make-cdata t4))
 (define d1 (make-cdata t1))
 
-(with-test-prefix "system/foreign/cdata"
+(with-test-prefix "nyacc/foreign/cdata-02"
 
   (pass-if "foreign arch test set up"
     (let ()
