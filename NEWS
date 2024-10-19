@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2024-XX-XX  V2.01.0
+2024-10-19  V2.01.0
 	* reworked the FH renamer to work with context: 
 	    (rename "foo" 'enum) 'type 'function 'variable 'field
 	* updated cdata.scm to provide lookup procedures instead of alists,
@@ -15,7 +15,11 @@ without any warranty.
 	* created test for sizeof-mtype alignof-mtype;
 	  fixed some errors in arch-info mtypeof/x86_64
 	* moved mtype-bv-ref, set! to arch-info.scm from cdata.scm
+	* changed c99-munge to use simpler names for some keys:
+	  (struct-pointer . name) instead of (struct pointer . name)
+	  (union-pointer . name) instead of (union pointer . name)
 	* updated ffi-help-cd.scm to use vhashes instead of alists
+	* added test for arch-info reported sizes and alignments
 
 2024-10-05  V2.00.6
 	* ffi-help-cd.scm(unwrap-mdecl): if base type unwrap-number of arg
