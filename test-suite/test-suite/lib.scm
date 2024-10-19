@@ -1,6 +1,6 @@
 ;;;; test-suite/lib.scm --- generic support for testing
-;;;; Copyright (C) 1999, 2000, 2001, 2004, 2006, 2007, 2009, 2010,
-;;;;   2011, 2012, 2013, 2014 Free Software Foundation, Inc.
+;;;; Copyright (C) 1999-2001,2004,2006-2007,2009-2014,2016,2018,2020
+;;;;   Free Software Foundation, Inc.
 ;;;;
 ;;;; This program is free software; you can redistribute it and/or
 ;;;; modify it under the terms of the GNU Lesser General Public
@@ -18,8 +18,8 @@
 ;;;; Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 (define-module (test-suite lib)
-  #:use-module (ice-9 stack-catch)
   #:use-module (ice-9 regex)
+  #:use-module (ice-9 match)
   #:autoload   (srfi srfi-1)  (append-map)
   #:autoload   (system base compile) (compile)
   #:export (
@@ -39,7 +39,6 @@
  exception:string-contains-nul
  exception:read-error
  exception:null-pointer-error
- exception:vm-error
 
  ;; Reporting passes and failures.
  run-test
@@ -68,7 +67,7 @@
 
  ;; Reporting results in various ways.
  register-reporter unregister-reporter reporter-registered?
- make-count-reporter print-counts
+ make-count-reporter print-counts count-summary-line
  make-log-reporter
  full-reporter
  user-reporter))
@@ -287,15 +286,13 @@
 (define exception:system-error
   (cons 'system-error ".*"))
 (define exception:encoding-error
-  (cons 'encoding-error "(cannot convert.* to output locale|input (locale conversion|decoding) error)"))
+  (cons 'encoding-error "(cannot convert.* to output locale|input (locale conversion|decoding) error|conversion to port encoding failed)"))
 (define exception:miscellaneous-error
   (cons 'misc-error "^.*"))
 (define exception:read-error
   (cons 'read-error "^.*$"))
 (define exception:null-pointer-error
   (cons 'null-pointer-error "^.*$"))
-(define exception:vm-error
-  (cons 'vm-error "^.*$"))
 
 ;; as per throw in scm_to_locale_stringn()
 (define exception:string-contains-nul
@@ -386,32 +383,26 @@
 
 ;;; A helper function to implement the macros that test for exceptions.
 (define (run-test-exception name exception expect-pass thunk)
-  (run-test name expect-pass
-    (lambda ()
-      (stack-catch (car exception)
-	(lambda () (thunk) #f)
-	(lambda (key proc message . rest)
-	  (cond
-           ;; handle explicit key
-           ((string-match (cdr exception) message)
-            #t)
-           ;; handle `(error ...)' which uses `misc-error' for key and doesn't
-           ;; yet format the message and args (we have to do it here).
-           ((and (eq? 'misc-error (car exception))
-                 (list? rest)
-                 (string-match (cdr exception)
-                               (apply simple-format #f message (car rest))))
-            #t)
-           ;; handle syntax errors which use `syntax-error' for key and don't
-           ;; yet format the message and args (we have to do it here).
-           ((and (eq? 'syntax-error (car exception))
-                 (list? rest)
-                 (string-match (cdr exception)
-                               (apply simple-format #f message (car rest))))
-            #t)
-           ;; unhandled; throw again
-           (else
-            (apply throw key proc message rest))))))))
+  (match exception
+    ((expected-key . expected-pattern)
+     (run-test
+      name
+      expect-pass
+      (lambda ()
+        (catch expected-key
+          (lambda () (thunk) #f)
+          (lambda (key proc message . rest)
+            ;; Match the message against the expected pattern.  If that
+            ;; doesn't work, in the case of `misc-error' and
+            ;; `syntax-error' we treat the message as a format string,
+            ;; and format it.  This is pretty terrible but it's
+            ;; historical.
+            (or (and (string-match expected-pattern message) #t)
+                (and (memq expected-key '(misc-error syntax-error))
+                     (list? rest)
+                     (let ((out (apply simple-format #f message (car rest))))
+                       (and (string-match expected-pattern out) #t)))
+                (apply throw key proc message rest)))))))))
 
 ;;; A short form for tests that expect a certain exception to be thrown.
 (define-syntax pass-if-exception
@@ -431,18 +422,15 @@
 
 ;;;; Turn a test name into a nice human-readable string.
 (define (format-test-name name)
-  ;; Choose a Unicode-capable encoding so that the string port can contain any
-  ;; valid Unicode character.
-  (with-fluids ((%default-port-encoding "UTF-8"))
-    (call-with-output-string
-     (lambda (port)
-       (let loop ((name name)
-                  (separator ""))
-         (if (pair? name)
-             (begin
-               (display separator port)
-               (display (car name) port)
-               (loop (cdr name) ": "))))))))
+  (call-with-output-string
+   (lambda (port)
+     (let loop ((name name)
+                (separator ""))
+       (if (pair? name)
+           (begin
+             (display separator port)
+             (display (car name) port)
+             (loop (cdr name) ": ")))))))
 
 ;;;; For a given test-name, deliver the full name including all prefixes.
 (define (full-name name)
@@ -474,22 +462,35 @@
 (define-syntax c&e
   (syntax-rules (pass-if pass-if-equal pass-if-exception)
     "Run the given tests both with the evaluator and the compiler/VM."
+    ((_ (pass-if exp))
+     (c&e (pass-if "[unnamed test]" exp)))
     ((_ (pass-if test-name exp))
      (begin (pass-if (string-append test-name " (eval)")
-                     (primitive-eval 'exp))
-            (pass-if (string-append test-name " (compile)")
-                     (compile 'exp #:to 'value #:env (current-module)))))
+              (primitive-eval 'exp))
+            (pass-if (string-append test-name " (compile -O0)")
+              (compile 'exp #:to 'value #:env (current-module)
+                       #:optimization-level 0))
+            (pass-if (string-append test-name " (compile -O2)")
+              (compile 'exp #:to 'value #:env (current-module)
+                       #:optimization-level 2))))
     ((_ (pass-if-equal test-name val exp))
      (begin (pass-if-equal (string-append test-name " (eval)") val
               (primitive-eval 'exp))
-            (pass-if-equal (string-append test-name " (compile)") val
-              (compile 'exp #:to 'value #:env (current-module)))))
+            (pass-if-equal (string-append test-name " (compile -O0)") val
+              (compile 'exp #:to 'value #:env (current-module)
+                       #:optimization-level 0))
+            (pass-if-equal (string-append test-name " (compile -O2)") val
+              (compile 'exp #:to 'value #:env (current-module)
+                       #:optimization-level 2))))
     ((_ (pass-if-exception test-name exc exp))
-     (begin (pass-if-exception (string-append test-name " (eval)")
-                               exc (primitive-eval 'exp))
-            (pass-if-exception (string-append test-name " (compile)")
-                               exc (compile 'exp #:to 'value
-                                            #:env (current-module)))))))
+     (begin (pass-if-exception (string-append test-name " (eval)") exc
+              (primitive-eval 'exp))
+            (pass-if-exception (string-append test-name " (compile -O0)") exc
+              (compile 'exp #:to 'value #:env (current-module)
+                       #:optimization-level 0))
+            (pass-if-exception (string-append test-name " (compile -O2)") exc
+              (compile 'exp #:to 'value #:env (current-module)
+                       #:optimization-level 2))))))
 
 ;;; (with-test-prefix/c&e PREFIX BODY ...)
 ;;; Same as `with-test-prefix', but the enclosed tests are run both with
@@ -694,6 +695,17 @@
 				"no total available for `" (car tag) "'"))))
      result-tags)
     (newline port)))
+
+(define (count-summary-line results)
+  (string-join
+   (map (lambda (tag-info)
+          (match-let* (((tag tag-name _) tag-info)
+                       ((_ . count) (or (assq tag results) '(#f #f))))
+            (if (zero? count)
+                ""
+                (string-append tag-name "=" (or (number->string count) "???")))))
+        result-tags)
+   " "))
 
 ;;; Return a reporter procedure which prints all results to the file
 ;;; FILE, in human-readable form.  FILE may be a filename, or a port.
