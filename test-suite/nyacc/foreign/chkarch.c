@@ -11,12 +11,17 @@
 #include <libguile.h>
 
 SCM_DEFINE(scm_arch_sizeof, "arch-sizeof", 1, 0, 0,
-	   (SCM typename),
-	   "")
+	   (SCM typesym),
+           "")
 #define FUNC_NAME s_scm_arch_sizeof
 {
   size_t size;
-  char *arg = scm_to_locale_string(typename);
+  char *arg;
+
+  if (!scm_is_symbol(typesym)) {
+    return SCM_BOOL_F;
+  }
+  arg = scm_to_locale_string(scm_symbol_to_string(typesym));
   
   if (strcmp("void*", arg) == 0) {
     size = sizeof(void*);
@@ -122,9 +127,126 @@ SCM_DEFINE(scm_arch_sizeof, "arch-sizeof", 1, 0, 0,
 #undef FUNC_NAME
 
 
+SCM_DEFINE(scm_arch_alignof, "arch-alignof", 1, 0, 0,
+	   (SCM typesym),
+           "")
+#define FUNC_NAME s_scm_arch_alignof
+{
+  size_t almt;
+  char *arg;
+
+  if (!scm_is_symbol(typesym)) {
+    return SCM_BOOL_F;
+  }
+  arg = scm_to_locale_string(scm_symbol_to_string(typesym));
+  
+  if (strcmp("void*", arg) == 0) {
+    almt = __alignof__(void*);
+  } else if (strcmp("char", arg) == 0) {
+    almt = __alignof__(char);
+  } else if (strcmp("short", arg) == 0) {
+    almt = __alignof__(short);
+  } else if (strcmp("int", arg) == 0) {
+    almt = __alignof__(int);
+  } else if (strcmp("long", arg) == 0) {
+    almt = __alignof__(long);
+  } else if (strcmp("float", arg) == 0) {
+    almt = __alignof__(float);
+  } else if (strcmp("double", arg) == 0) {
+    almt = __alignof__(double);
+  } else if (strcmp("unsigned-short", arg) == 0) {
+    almt = __alignof__(unsigned short);
+  } else if (strcmp("unsigned", arg) == 0) {
+    almt = __alignof__(unsigned);
+  } else if (strcmp("unsigned-long", arg) == 0) {
+    almt = __alignof__(unsigned long);
+  } else if (strcmp("size_t", arg) == 0) {
+    almt = __alignof__(size_t);
+  } else if (strcmp("ssize_t", arg) == 0) {
+    almt = __alignof__(ssize_t);
+  } else if (strcmp("ptrdiff_t", arg) == 0) {
+    almt = __alignof__(ptrdiff_t);
+  } else if (strcmp("int8_t", arg) == 0) {
+    almt = __alignof__(int8_t);
+  } else if (strcmp("uint8_t", arg) == 0) {
+    almt = __alignof__(uint8_t);
+  } else if (strcmp("int16_t", arg) == 0) {
+    almt = __alignof__(int16_t);
+  } else if (strcmp("uint16_t", arg) == 0) {
+    almt = __alignof__(uint16_t);
+  } else if (strcmp("int32_t", arg) == 0) {
+    almt = __alignof__(int32_t);
+  } else if (strcmp("uint32_t", arg) == 0) {
+    almt = __alignof__(uint32_t);
+  } else if (strcmp("int64_t", arg) == 0) {
+    almt = __alignof__(int64_t);
+  } else if (strcmp("uint64_t", arg) == 0) {
+    almt = __alignof__(uint64_t);
+  } else if (strcmp("signed-char", arg) == 0) {
+    almt = __alignof__(signed char);
+  } else if (strcmp("unsigned-char", arg) == 0) {
+    almt = __alignof__(unsigned char);
+  } else if (strcmp("short-int", arg) == 0) {
+    almt = __alignof__(short int);
+  } else if (strcmp("signed-short", arg) == 0) {
+    almt = __alignof__(signed short);
+  } else if (strcmp("signed-short-int", arg) == 0) {
+    almt = __alignof__(signed short int);
+  } else if (strcmp("signed", arg) == 0) {
+    almt = __alignof__(signed);
+  } else if (strcmp("signed-int", arg) == 0) {
+    almt = __alignof__(signed int);
+  } else if (strcmp("long-int", arg) == 0) {
+    almt = __alignof__(long int);
+  } else if (strcmp("signed-long", arg) == 0) {
+    almt = __alignof__(signed long);
+  } else if (strcmp("signed-long-int", arg) == 0) {
+    almt = __alignof__(signed long int);
+  } else if (strcmp("unsigned-short-int", arg) == 0) {
+    almt = __alignof__(unsigned short int);
+  } else if (strcmp("unsigned-int", arg) == 0) {
+    almt = __alignof__(unsigned int);
+  } else if (strcmp("unsigned-long-int", arg) == 0) {
+    almt = __alignof__(unsigned long int);
+  } else if (strcmp("_Bool", arg) == 0) {
+    almt = __alignof__(_Bool);
+  } else if (strcmp("bool", arg) == 0) {
+    almt = __alignof__(_Bool);
+  } else if (strcmp("intptr_t", arg) == 0) {
+    almt = __alignof__(intptr_t);
+  } else if (strcmp("uintptr_t", arg) == 0) {
+    almt = __alignof__(uintptr_t);
+  } else if (strcmp("wchar_t", arg) == 0) {
+    almt = __alignof__(wchar_t);
+  } else if (strcmp("char16_t", arg) == 0) {
+    almt = __alignof__(char16_t);
+  } else if (strcmp("char32_t", arg) == 0) {
+    almt = __alignof__(char32_t);
+  } else if (strcmp("long-double", arg) == 0) {
+    almt = __alignof__(long double);
+  } else if (strcmp("long-long", arg) == 0) {
+    almt = __alignof__(long long);
+  } else if (strcmp("long-long-int", arg) == 0) {
+    almt = __alignof__(long long int);
+  } else if (strcmp("signed-long-long", arg) == 0) {
+    almt = __alignof__(signed long long);
+  } else if (strcmp("signed-long-long-int", arg) == 0) {
+    almt = __alignof__(signed long long int);
+  } else if (strcmp("unsigned-long-long", arg) == 0) {
+    almt = __alignof__(unsigned long long);
+  } else if (strcmp("unsigned-long-long-int", arg) == 0) {
+    almt = __alignof__(unsigned long long int);
+  } else {
+    almt = 0;
+  }
+  return scm_from_size_t(almt);
+}
+#undef FUNC_NAME
+
+
 void chkarch_init() {
-  scm_c_define_gsubr (s_scm_arch_sizeof, 1, 0, 0, (scm_t_subr) scm_arch_sizeof);
-  //scm_c_define_subr (s_scm_arch_alignof, 1, 0, 0, (scm_t_subr) scm_arch_alignof);
+  scm_c_define_gsubr(s_scm_arch_sizeof, 1,0,0, (scm_t_subr)scm_arch_sizeof);
+  scm_c_define_gsubr(s_scm_arch_alignof, 1,0,0, (scm_t_subr)scm_arch_alignof);
 }
 
 /* --- last line --- */

@@ -1,0 +1,81 @@
+;; nyacc/foreign/arch-info-01.test	-*- scheme -*-
+;;
+;; Copyright (C) 2024 Matthew Wette
+;;
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-module (arch-info-01)
+  #:use-module (nyacc foreign arch-info)
+  #:use-module ((srfi srfi-1) #:select(fold))
+  #:use-module (system foreign)
+  #:use-module (system foreign-library)
+  #:use-module (test-suite lib))
+
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+
+(define* (load-extension* lib init #:key search-path)
+  (let* ((xlib (load-foreign-library lib #:search-path search-path))
+         (xinit (pointer->procedure
+                 void (foreign-library-pointer xlib init) (list))))
+    (xinit)))
+
+(with-test-prefix "nyacc/foreign/arch-info-01"
+
+  (let* ((eff-vers (effective-version))
+         (incdir (string-append (assq-ref %guile-build-info 'includedir)
+                                "/guile/" eff-vers))
+         (libdir (assq-ref %guile-build-info 'libdir))
+         (flags (format #f "-shared -fPIC -I~a" incdir))
+         (libs (format #f "-L~a -lguile-~a" libdir eff-vers))
+         (cstr (format #f "gcc -o chkarch.so chkarch.c ~a ~a" flags libs))
+         (status (status:exit-val (system cstr))))
+
+    (when (zero? status)
+      (load-extension* "chkarch" "chkarch_init" #:search-path (list (getcwd))))
+
+    (run-test
+     "scheme sizeof vs cc sizeof" #t
+     (lambda ()
+       (cond
+        ((zero? status)
+         (fold
+          (lambda (n s)
+            (let ((g-sz (sizeof-basetype n))
+                  (n-sz (arch-sizeof n)))
+              (and s (= n-sz g-sz))))
+          #t base-type-symbol-list))
+        (else 'untested))))
+
+    (run-test
+     "scheme alignof vs cc __alignof__" #t
+     (lambda ()
+       (cond
+        ((zero? status)
+         (fold
+          (lambda (n s)
+            (let ((g-sz (sizeof-basetype n))
+                  (n-sz (arch-sizeof n)))
+              (and s (= n-sz g-sz))))
+          #t base-type-symbol-list))
+        (else 'untested))))
+
+    #;(pass-if "nyacc alignof vs gcc alignof"
+    (fold
+     (lambda (n s)
+       (let ((n-sz (arch-sizeof n))
+             (g-sz (sizeof-basetype n)))
+         (and s (= n-sz g-sz))))
+     #t base-type-name-list))
+      
+    ))
+
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
+
+;; --- last line ---
