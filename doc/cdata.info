@@ -8,17 +8,17 @@ any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 
-C-Data Reference Manual
-Matt Wette
-September 2024
-
 
 File: cdata.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 
 CData Reference Manual
 **********************
 
-This is a user guide for the NYACC CData Module
+
+Matt Wette
+October 2024
+
+This is a user guide for the NYACC CData module for Guile.
 
 * Menu:
 
@@ -30,57 +30,64 @@ File: cdata.info,  Node: Introduction,  Up: Top
 Introduction
 ============
 
-The ‘cdata’ module and its partner ‘arch-info’ provide a way to work
-with data originating from C libraries.  Size and alignment is tracked
-for all types.  Types are classified into the following kinds: base,
-struct, union, array, pointer, enum and function.  The module has been
-designed with the goals of being easy to understand and easy to use.
-The procedures ‘cbase’, ‘cstruct’, ‘cunion’, ‘cpointer’, ‘carray’,
-‘cenum’ and ‘cfunction’ generate _ctype_ objects, and the procedure
-‘make-cdata’ will generate data objects for ctyped data.  The underlying
-data is stored in Scheme bytevectors.  Access to component data is
-provided by the ‘cdata-ref’ procedure and mutation is accomplished via
-the ‘cdata-set!’ procedure.  The modules support non-native machine
-architectures via a global ‘*arch*’ parameter.
+The _cdata_ module and its partner _arch-info_ provide a way to work
+with data originating from C libraries.  We hope module is reasonably
+easy to understand and use.  Size and alignment is tracked for all
+types.  Types are classified into the following kinds: base, struct,
+union, array, pointer, enum and function.  The procedures ‘cbase’,
+‘cstruct’, ‘cunion’, ‘cpointer’, ‘carray’, ‘cenum’ and ‘cfunction’
+generate _ctype_ objects, and the procedure ‘make-cdata’ will generate
+data objects based on these.  The underlying bits of data are stored in
+Scheme bytevectors.  Access to component data is provided by the
+‘cdata-ref’ procedure and mutation is accomplished via the ‘cdata-set!’
+procedure.  The modules support non-native machine architectures via a
+global parameter called ‘*arch*’.
 
    Beyond size and alignment, base type objects carry a symbolic tag to
 determine the appropriate low level machine type.  The low level machine
 types map directly to bytevector setters and getters.  Support for C
 base types is handled by the ‘cbase’ procedure which converts them to
 underlying types.  For example, on a 64 bit little endian architecture,
-‘(cbase 'uintptr_t)’ would generate a type with underlying machine
-symbol ‘u64le’.
+‘(cbase 'uintptr_t)’ would generate a type with underlying symbol
+‘u64le’.
 
-   Here is a simple example using structures:
+   Here is a simple example of using _cdata_ for structures:
 
-     (define timeval (cstruct '((tv_sec long) (tv_usec long))))
+     (use-modules (system foreign))
+     (use-modules (system foreign-library))
+     (use-modules (nyacc foreign cdata))
+
+     (define timeval_t (cstruct '((tv_sec long) (tv_usec long))))
 
      (define gettimeofday
        (foreign-library-function
         #f "gettimeofday"
         #:return-type (ctype->ffi (cbase 'int))
         #:arg-types (map ctype->ffi
-                         (list (cpointer timeval)
+                         (list (cpointer timeval_t)
                                (cpointer 'void)))))
 
-     (define d1 (make-cdata timeval))
+     (define d1 (make-cdata timeval_t))
      (gettimeofday (cdata-ref (cdata& d1)) %null-pointer)
      (format #t "time: ~s ~s\n"
              (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
      time: 1719062561 676365
+   In the above ‘cdata&’ generates a cdata pointer to ‘d1’ and
+‘cdata-ref’ extracts the Guile value.
 
 Basic Usage
 ===========
 
-This section provides the most-used procedures.
+This section provides an introduction to procedures you are likely to
+want on your first approach.
 
  -- Procedure: cbase name
-     Given symbolic NAME generate a base ctype.  The name can be
-     something like ‘unsigned-int’, ‘double’, or can be a _cdata_
-     machine type like ‘u64le’.
+     Given symbolic NAME generate a base ctype.  The name can be a
+     symbol like ‘unsigned-int’, ‘double’, or can be a _arch-info_
+     machine type symbol like ‘u64le’.
 
- -- Procedure: cpointer type
-     Generate a C pointer type to TYPE.  To reference or de-reference
+ -- Procedure: cpointer type => <ctype>
+     Generate a C pointer type for TYPE.  To reference or de-reference
      cdata object see ‘cdata&’ and ‘cdata*’.  TYPE can be the symbol
      ‘void’ or a symbolic name used as argument to ‘cbase’.
      note: Should we allow TYPE to be a promise?
@@ -95,43 +102,46 @@ This section provides the most-used procedures.
      ‘type’ is a ‘<ctype>’ object or a symbol for a base type and
      ‘length’ is the length of the associated bitfield.
 
- -- Procedure: cunion fields
+ -- Procedure: cunion fields => <ctype>
      Construct a ctype union type with given FIELDS.  See _cstruct_ for
      a description of the FIELDS argument.
 
- -- Procedure: carray type n
+ -- Procedure: carray type n => <ctype>
      Create an array of TYPE with LENGTH.  If LENGTH is zero, the array
      length is unbounded: it's length can be specified as argument to
      ‘make-cdata’.
 
- -- Procedure: cenum enum-list [packed]
+ -- Procedure: cenum enum-list [packed] => <ctype>
      ENUM-LIST is a list of name or name-value pairs
           (cenum '((a 1) b (c 4))
-     If PACKED is ‘#t’ the size wil be smallest that can hold it.
+     If PACKED is ‘#t’ the size will be smallest that can hold it.
 
- -- Procedure: cfunction proc->ptr ptr->proc [variadic?]
-     Generate a C function pointer type.  You must pass the WRAPPER and
-     UNWRAPPER procedures that convert a pointer to a procedure, and
-     procedure to pointer, respectively.  The optional argument
-     #:VARIADIC, if ‘#t’, indicates the function uses variadic
-     arguments.  For this case, (to be documented).
+ -- Procedure: cfunction proc->ptr ptr->proc [variadic?] => <ctype>
+     Generate a C function type to be used with ‘cpointer’.  You must
+     pass the WRAPPER and UNWRAPPER procedures that convert a procedure
+     to a pointer, and pointer to procedure, respectively.  The optional
+     argument #:VARIADIC, if ‘#t’, indicates the function uses variadic
+     arguments.  For this case (I need to add documention).  Here is an
+     example:
+          (define (f-proc->ptr proc)
+            (ffi:procedure->pointer ffi:void proc (list)))
+          (define (f-ptr->proc fptr)
+            (ffi:pointer->procedure ffi:void fptr (list)))
+          (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))
 
- -- Procedure: make-cdata type [value]
+ -- Procedure: make-cdata type [value] => <cdata>
      Generate a _cdata_ object of type TYPE with optional VALUE.  As a
      special case, an integer arg to a zero-sized array type will
      allocate storage for that many items, associating it with an array
      type of that size.
 
- -- Procedure: cdata-ref data [tag ...]
+ -- Procedure: cdata-ref data [tag ...] => value
      Return the Scheme (scalar) slot value for selected TAG ... with
      respect to the cdata object DATA.
           (cdata-ref my-struct-value 'a 'b 'c))
-     This procedure returns XXX for cdata kinds _base_, _pointer_ and
-     (in the future) _function_.  Attempting to obtain values for C-type
-     kinds _struct_, _union_, _array_ will result in ‘#f’.  If, in those
-     cases, you would like a cdata then use this:
-          (or (cdata-ref data tag ...) (cdata-sel data tag ...))
-     (Or should we just make this the default behavior?)
+     This procedure returns Guile values for cdata kinds _base_,
+     _pointer_ and _procedure_.  For other cases, a _cdata_ object is
+     returned.  If you always want a cdata object, use ‘cdata-sel’.
 
  -- Procedure: cdata-set! data value [tag ...]
      Set slot for selcted TAG ... with respect to cdata DATA to VALUE.
@@ -143,6 +153,10 @@ This section provides the most-used procedures.
  -- Procedure: cdata& data => cdata
      Generate a reference (i.e., cpointer) to the contents in the
      underlying bytevector.
+
+ -- Procedure: cdata* data => cdata
+     De-reference a pointer.  Returns a _cdata_ object representing the
+     contents at the address in the underlying bytevector.
 
 Going Further
 =============
@@ -159,27 +173,33 @@ Going Further
           > (cdata-ref $1)
           $2 = 42
 
- -- Procedure: cdata* data => cdata
-     De-reference a pointer.  Returns a _cdata_ object representing the
-     contents at the address in the underlying bytevector.
+ -- Procedure: cdata&-ref data [tag ...] => value
+     Shortcut for ‘(cdata-ref (cdata& data tag ...))’ This always
+     returns a Guile _pointer_.
 
- -- Procedure: cdata&-ref data [tag ...]
-     Does not work work (yet) for march offset addresses.
-
- -- Procedure: cdata*-ref data [tag ...]
+ -- Procedure: cdata*-ref data [tag ...] => value
      Shortcut for ‘(cdata-ref (cdata* data tag ...))’
 
  -- Procedure: Xcdata-ref bv ix ct -> value
      Reference a deconstructed cdata object.  See _cdata-ref_.
 
  -- Procedure: Xcdata-set! bv ix ct value
-     Reference a deconstructed cdata object.  See _cdata-set!_.
+     Set the value of a deconstructed cdata object.  See _cdata-set!_.
 
 Working with Types
 ==================
 
- -- Procedure: name-ctype name type => ctype
-     Add a name tag to a ctype.
+ -- Procedure: name-ctype name type => <ctype>
+     Create a new named version of the type.  The name is useful when
+     the type is printed.  This procedure does not mutate: a new type
+     object is created.  If a specific type is used by multiple names
+     the names can share the underlying type guts.  The following
+     generates two named types.
+          (define raw (cstruct '((a 'int) (b 'double))))
+          (define foo_t (name-ctype 'foo_t raw))
+          (define struct-foo (name-ctype 'struct-foo raw))
+     These types are equal:
+          (ctype-equal? foo_t struct-foo) => #t
 
  -- Procedure: ctype-equal? a b
      This predicate assesses equality of it's arguments.  Two types are
@@ -221,39 +241,176 @@ _pointer->procedure_.
      need to be able to cast array to pointer
           (ccast Target* val)
 
- -- Procedure: unwrap-number
-     doc to come
+ -- Procedure: unwrap-number arg => number
+     Convert an argument to numeric form for a ffi procedure call.  This
+     will reference a cdata object or pass a number through.
 
- -- Procedure: unwrap-pointer
-     doc to come
+ -- Procedure: unwrap-pointer arg [hint] => pointer
+     Convert an argument to a Guile pointer for a ffi procedure call.
+     This will reference a cdata object or pass a number through.  If
+     the argument is a function, it will attempt to convert that to a
+     pointer via ‘procedure->pointer’ if given the function pointer type
+     HINT.
 
- -- Procedure: unwrap-array
-     doc to come
+ -- Procedure: unwrap-array arg => pointer
+     This will convert an array to a form suitable to pass to a Guile
+     ffi procedure.
 
- -- Procedure: ctype->ffi
-     doc to come
+ -- Procedure: ctype->ffi ctype => ffi type
+     Generate a argument spec for Guile's ffi interface.  Example:
+          (ctype->ffi (cpointer (cbase int))) => '*
+
+Operations on CType Kinds
+=========================
+
+The ctype ‘kind’ field indicates which kind a type is and the ‘info’
+field provide kind-specific information for a ctype.  The ‘name’ field
+provides the type name, if provided, or ‘#f’ if not.
+
+   Note that the kind procecures, ‘cstruct’, ‘cpointer’, ..., create
+_ctype_ objects of different _kinds_.  To operate on kind-specific
+attributes of types, requries one to fetch the ‘info’ field from the
+ctype.  From the ‘info’ field, one can then operate using the fields
+specific to the kind info.
+
+     > (define float* (cpointer (cbase 'float)))
+     > double*
+     $1 = #<ctype pointer 0x75f3212cbed0>
+     > (ctype-kind float*)
+     $2 = pointer
+     > (define float*-info (ctype-info float*))
+     > (cpointer-type float*-info)
+     $3 = #<ctype f32le 0x75f323f8ec90>
+     > (cpointer-mtype float*-info)
+     $4 = u64le
+   The ‘cpointer-mtype’ procedure lets us know that pointers are stored
+as unsigned 64 bit (little endian) integers.
+
+   The info field for base types is special.  Since the only
+kind-specific type information for a base type is the machine type the
+info field provides that.  Consider the following example.
+     > (define foo-t (name-ctype 'foo-t (cbase 'int)))
+     > (ctype-name foo-t)
+     $1 = foo-t
+     > (ctype-kind foo-t)
+     $2 = base
+     > (ctype-info foo-t)
+     $3 = s32le
+
+   Structs are more involved.
+     > (define bar-s
+         (cstruct `((a int) (b float) (#f ,(cstruct '(x int) (y int))))))
+     > (define bar-s-info (ctype-info bar-s))
+     > (cstruct-fields bar-s-info)
+     $4 = (#<<cfield> name: a type: #<ctype s32le 0x75f323f8ecf0> offset: 0>
+           #<<cfield> name: b type: #<ctype f32le 0x75f323f8ec90> offset: 4>
+           #<<cfield> name: #f type: #<ctype struct 0x75f32181a570> offset: 8>)
+     > (define x-fld ((cstruct-select bar-s-info) 'x))
+     > x-fld
+     $5 = #<<cfield> name: x type: #<ctype s32le 0x75f323f8ecf0> offset: 8>
+     > (cfield-offset x-fld)
+     $6 = 8
+   Note that the selection of the ‘x’ component deals with a field which
+is an anonymous struct.  The struct ‘bar-s’ would look like the
+following in C:
+     struct bar_s {
+       int a;
+       float b;
+       struct {
+         int x;
+         int y;
+       };
+     };
+
+   And just for kicks
+     > (define sa
+         (cstruct `((a int) (b double) (#f ,(cstruct '((x short) (y int)))))))
+     > (define sp
+         (cstruct `((a int) (b double) (#f ,(cstruct '((x short) (y int))))) #t))
+
+     > (pretty-print-ctype sa)
+     (cstruct
+       ((a s32le #:offset 0)
+        (b f64le #:offset 8)
+        (#f
+         (cstruct
+           ((x s16le #:offset 0) (y s32le #:offset 4)))
+         #:offset
+         16)))
+     > (pretty-print-ctype sp)
+     (cstruct
+       ((a s32le #:offset 0)
+        (b f64le #:offset 4)
+        (#f
+         (cstruct
+           ((x s16le #:offset 0) (y s32le #:offset 4)))
+         #:offset
+         12)))
+   Note the difference in offsets: ‘sa’ is aligned and ‘sp’ is packed.
+The offsets reported for anonymous structs can be misleading.  To get
+the right offsets use select:
+     > (define tia (ctype-info sa))
+     > (define tip (ctype-info sp))
+     > ((cstruct-select tia) 'y)
+     $8 = 20
+     > ((cstruct-select tip) 'y)
+     $9 = 16
+
+Enum Conversions
+----------------
+
+The enum ctype provides procedures to convert between the numeric and
+symbolic parts of each enum entry.  Currently, the cdata module does not
+provide enum wrapper and unwrapper routines.  However, the FFI Helper
+will create these.  The wrapper, converting a number to a symbol, and
+unwrapper, converting a symbol to a number, can be generated as the
+following example demonstrates.
+
+     > (define color_t (cenum '((RED #xf00) (GREEN #x0f0) (BLUE #x00f))))
+     > (define color_t-info (ctype-info color_t))
+     > (define wrap-color_t (cenum-symf color_t-info))
+     > (define unwrap-color_t (cenum-numf color_t-info))
+     > (wrap-color_t #xf00)
+     $1 = RED
+     > (unwrap-color_t 'GREEN)
+     $2 = 240
 
 Handling Machine Architectures
 ==============================
 
-Needs love ...
+One of the author's main motivations for writing CData was to be able to
+work with cross-target machine architectures.  This is pretty cool.
+Just to let you know what's going on, consider the following:
 
-     > (define tx64 (with-arch "x86_64"
-                      (cstruct '((a int) (b long)))))
-     > (define tr64 (with-arch "riscv64"
-                      (cstruct '((a int) (b long)))))
-     > (define tr32 (with-arch "riscv32"
-                      (cstruct '((a int) (b long)))))
+     > (use-modules (nyacc foreign arch-info))
+     > (define tx64 (with-arch "x86_64" (cstruct '((a int) (b long)))))
+     > (define tr64 (with-arch "riscv64" (cstruct '((a int) (b long)))))
+     > (define tr32 (with-arch "riscv32" (cstruct '((a int) (b long)))))
+     > (define sp32 (with-arch "sparc" (cstruct '((a int) (b long)))))
      > (ctype-equal? tx64 tr64)
      $1 = #t
      > (ctype-equal? tr64 tr32)
      $1 = #f
+     > (ctype-equal? tr32 ts32)
+     $1 = #f
      > (pretty-print-ctype tx64)
-     (cstruct ((a s32le) (b s64le)))
+     (cstruct ((a s32le #:offset 0) (b s64le #:offset 8)))
      > (pretty-print-ctype tr64)
-     (cstruct ((a s32le) (b s64le)))
+     (cstruct ((a s32le #:offset 0) (b s64le #:offset 8)))
      > (pretty-print-ctype tr32)
-     (cstruct ((a s32le) (b s32le)))
+     (cstruct ((a s32le #:offset 0) (b s32le #:offset 4)))
+     > (pretty-print-ctype ts32)
+     (cstruct ((a s32be #:offset 0) (b s32be #:offset 4)))
+
+   Rocks, right?
+
+   arch-info maps base C types to machine types (e.g., i32le) and
+alignment for the given machine architecture.  To get sizes, it's a
+simple matter of mapping machine types to sizes.
+
+   The arch-info module currently has size and alignment information for
+the for the following: aarch64, avr, i383, i686, powerpc32, powerpc64,
+ppc32, ppc64, riscv32, riscv64, sparc32, sparc64, x86_64.
 
 CData Utilities
 ===============
@@ -319,8 +476,8 @@ References
 
 
 Tag Table:
-Node: Top511
-Node: Introduction714
+Node: Top460
+Node: Introduction700
 
 End Tag Table
 
