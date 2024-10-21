@@ -35,20 +35,26 @@ install: install-info install-pdf install-html
 
 .PHONY: install-info
 install-info:
+	@echo "installing NYACC info docs in $(DESTDIR)$(SITE_SCM_DIR)"
 	mkdir -p $(DESTDIR)$(INFODIR)
-	for file in nyacc-ug.info nyacc-c99-ug.info nyacc-fh-ug.info cdata.info;
+	for file in \
+		nyacc-ug.info nyacc-c99-ug.info nyacc-fh-ug.info cdata.info; \
 	do $(INSTALL) $(TOPDIR)/doc/$${file} $(DESTDIR)$(INFODIR); done
 
 .PHONY: install-pdf
 install-pdf:
+	@echo "installing NYACC pdf docs in $(DESTDIR)$(DOCDIR)"
 	mkdir -p $(DESTDIR)$(DOCDIR)
-	for file in nyacc-ug.pdf nyacc-c99-ug.pdf nyacc-fh-ug.pdf cdata.pdf;
+	for file in \
+		nyacc-ug.pdf nyacc-c99-ug.pdf nyacc-fh-ug.pdf cdata.pdf; \
 	do $(INSTALL) $(TOPDIR)/doc/$${file} $(DESTDIR)$(DOCDIR); done
 
 .PHONY: install-html
 install-html:
+	@echo "installing NYACC html docs in $(DESTDIR)$(DOCDIR)"
 	mkdir -p $(DESTDIR)$(DOCDIR)
-	for file in nyacc-ug.html nyacc-c99-ug.html nyacc-fh-ug.html cdata.html;
+	for file in \
+		nyacc-ug.html nyacc-c99-ug.html nyacc-fh-ug.html cdata.html; \
 	do $(INSTALL) $(TOPDIR)/doc/$${file} $(DESTDIR)$(DOCDIR); done
 
 .PHONY: dist-files
