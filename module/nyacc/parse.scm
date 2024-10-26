@@ -76,10 +76,11 @@
 
 (define (parse-error state laval)
   (let* ((sp (source-properties laval))
-         (fn (or (assq-ref sp 'filename)
+         (fn (or (and=> (assq-ref sp 'filename) car)
                  (port-filename (current-input-port))
                  "(unknown)"))
-	 (ln (1+ (or (assq-ref sp 'line) (port-line (current-input-port))))))
+	 (ln (1+ (or (and=> (assq-ref sp 'line) car)
+                     (port-line (current-input-port))))))
     (throw 'nyacc-error
 	   "~A:~A: parse failed at state ~A, on input ~S"
 	   fn ln (car state) (cdr laval))))
