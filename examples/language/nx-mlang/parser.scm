@@ -151,7 +151,7 @@
               (let* ((lxm (loop (read-char)))
                      (port (current-input-port))
                      (file (port-filename port))
-                     (props `((filename ,file) (line ,line) (column ,0))))
+                     (props `((filename . ,file) (line . ,line) (column . 0))))
                 (set-source-properties! lxm props)
                 lxm))
             (lambda () (loop (read-char))))))))
