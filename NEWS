@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-10-31  V2.01.2
+	* munge-base using member instead of keeper?, fixed
+	* forgot to update version numbers for V2.01.1 release, fixed
+	* add _Float16 to c99 parser and arch-info
+
 2024-10-20  V2.01.1
 	* fixed doc/Makefile.in: missing continuation
 
