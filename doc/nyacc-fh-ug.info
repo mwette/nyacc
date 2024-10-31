@@ -11,7 +11,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 FFI Helper User Guide
 Matt Wette
-Augustr 2024
+October 2024
 With NYACC Version 2.01.2
 
 
@@ -43,7 +43,7 @@ The FH does not generate C code.  The hooks to access functions in the
 Cairo library are provided in 100% Guile Scheme via ‘(system foreign)’.
 
    Since version 2.00, the FFI Helper uses it's own backend for using
-bytestructures to handle C data.  In previous versions, the module
+bytevectors to handle C data.  In previous versions, the module
 ‘(bytestructures guile)’ was used.  The previous version is still
 available by passin ‘-b bytestructures’ to ‘guild compile-ffi’, or by
 setting the environment variable
