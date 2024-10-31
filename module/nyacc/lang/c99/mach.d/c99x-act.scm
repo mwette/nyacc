@@ -353,6 +353,8 @@
    ;; float-type-specifier => "long" "double"
    (lambda ($2 $1 . $rest)
      '(float-type "long double"))
+   ;; float-type-specifier => "_Float16"
+   (lambda ($1 . $rest) '(float-type "_Float16"))
    ;; float-type-specifier => "_Float128"
    (lambda ($1 . $rest) '(float-type "_Float128"))
    ;; complex-type-specifier => "_Complex"
