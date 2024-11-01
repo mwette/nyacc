@@ -280,7 +280,7 @@ The following example shows how to convert to scheme code using
 the procedure @code{ccode->sexp}:
 
 @example
-guile> (use-modules (nyacc lang c99 ffi-help-cd))
+guile> (use-modules (nyacc lang c99 ffi-help))
 guile> (define sx (ccode->sexp "struct foo @{ int x; @};"))
 guile> ,pp sx
 $4 = (begin
