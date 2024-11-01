@@ -109,7 +109,7 @@
     "unsigned short int" "unsigned int" "unsigned long int" "_Bool" "bool"
     "intptr_t" "uintptr_t" "wchar_t" "char16_t" "char32_t" "long double"
     "long long" "long long int" "signed long long" "signed long long int"
-    "unsigned long long" "unsigned long long int"))
+    "unsigned long long" "unsigned long long int" "_Float16" "_Float128"))
 
 (define base-type-symbol-list
   '(void*
@@ -120,7 +120,7 @@
     signed-long-int unsigned-short-int unsigned-int unsigned-long-int
     _Bool bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
     long-long long-long-int signed-long-long signed-long-long-int
-    unsigned-long-long unsigned-long-long-int))
+    unsigned-long-long unsigned-long-long-int _Float16 _Float128))
 
 (define *arch-map* (make-parameter '()))
 
@@ -278,7 +278,7 @@
     (intptr_t . s64le) (uintptr_t . u64le)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     ;;
-    (long-double . f128le)
+    (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
     (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
     (signed-long-long-int . s64le) (unsigned-long-long . u64le)
     (unsigned-long-long-int . u64le)))
@@ -311,7 +311,7 @@
     (intptr_t . s16le) (uintptr_t . u16le)
     (wchar_t . #f) (char16_t . #f) (char32_t . #f)
     ;;
-    (long-double . f32le)
+    (long-double . f32le) (_Float128 . f64le) (_Float16 . f16le)
     (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
     (signed-long-long-int . s64le) (unsigned-long-long . u64le)
     (unsigned-long-long-int . u64le)))
@@ -347,7 +347,7 @@
     (intptr_t . s32le) (uintptr_t . u32le)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     ;;
-    (long-double . f128)
+    (long-double . f128) (_Float128 . f128le) (_Float16 . f16le)
     (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
     (signed-long-long-int . s64le) (unsigned-long-long . u64le)
     (unsigned-long-long-int . u64le)))
@@ -380,7 +380,7 @@
     (intptr_t . s32be) (uintptr_t . u32be)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     ;;
-    (long-double . f128be)
+    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
     (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
     (signed-long-long-int . s64be) (unsigned-long-long . u64be)
     (unsigned-long-long-int . u64be)))
@@ -413,7 +413,7 @@
     (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     ;;
-    (long-double . f128be)
+    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
     (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
     (signed-long-long-int . s64be) (unsigned-long-long . u64be)
     (unsigned-long-long-int . u64be)))
@@ -447,7 +447,7 @@
     (_Bool . s8) (bool . s8) (intptr_t . s32le) (uintptr_t . u32le)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     ;;
-    (long-double . f128le)
+    (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
     (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
     (signed-long-long-int . s64le) (unsigned-long-long . u64le)
     (unsigned-long-long-int . u64le)))
@@ -481,7 +481,7 @@
     (intptr_t . s64le) (uintptr_t . u64le)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     ;;
-    (long-double . f128le)
+    (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
     (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
     (signed-long-long-int . s64le) (unsigned-long-long . u64le)
     (unsigned-long-long-int . u64le)))
@@ -513,7 +513,7 @@
     (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     ;;
-    (long-double . f128be)
+    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
     (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
     (signed-long-long-int . s64be) (unsigned-long-long . u64be)
     (unsigned-long-long-int . u64be)))
@@ -545,7 +545,7 @@
     (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     ;;
-    (long-double . f128be)
+    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
     (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
     (signed-long-long-int . s64be) (unsigned-long-long . u64be)
     (unsigned-long-long-int . u64be)))
@@ -578,7 +578,7 @@
     (_Bool . u8) (bool . s8) (intptr_t . s64le) (uintptr_t . u64le)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     ;;
-    (long-double . f128)
+    (long-double . f128) (_Float128 . f128le) (_Float16 . f16le)
     (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
     (signed-long-long-int . s64le) (unsigned-long-long . u64le)
     (unsigned-long-long-int . u64le)))

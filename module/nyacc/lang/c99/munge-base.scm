@@ -411,7 +411,7 @@
        (cond
         ((keeper? 'enum name keep)
          (values specl declr))
-        ((member '(enum . "*any*") keep)
+        ((keeper? #f '(enum . "*any*") keep)
          (values specl declr))
         (else
          (let ((tspec '(type-spec (fixed-type "int")))) ;; FIXME packed?

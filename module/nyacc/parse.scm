@@ -79,7 +79,8 @@
          (fn (or (assq-ref sp 'filename)
                  (port-filename (current-input-port))
                  "(unknown)"))
-	 (ln (1+ (or (assq-ref sp 'line) (port-line (current-input-port))))))
+	 (ln (1+ (or (assq-ref sp 'line)
+                     (port-line (current-input-port))))))
     (throw 'nyacc-error
 	   "~A:~A: parse failed at state ~A, on input ~S"
 	   fn ln (car state) (cdr laval))))

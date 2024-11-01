@@ -302,6 +302,7 @@
      ("float" ($prec 'imp) ($$ '(float-type "float")))
      ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double")))
+     ("_Float16" ($$ '(float-type "_Float16")))
      ("_Float128" ($$ '(float-type "_Float128"))))
 
     (complex-type-specifier
