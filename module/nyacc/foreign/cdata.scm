@@ -1356,7 +1356,7 @@
 ;; This will reference a cdata object or pass a number through.
 ;; @end deffn
 (define (arg->number arg)
-  "- Procedure: unwrap-number arg
+  "- Procedure: arg->number arg
      Convert an argument to numeric form for a ffi procedure call.  This
      will reference a cdata object or pass a number through."
   (cond ((number? arg) arg)
@@ -1372,7 +1372,7 @@
 ;; pointer type @var{hint}.
 ;; @end deffn
 (define* (arg->pointer arg #:optional hint)
-  "- Procedure: unwrap-pointer arg
+  "- Procedure: arg->pointer arg
      Convert an argument to a Guile pointer for a ffi procedure call.
      This will reference a cdata object or pass a number through.  If
      the argument is a function, it will attempt to convert that to a
