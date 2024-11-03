@@ -62,6 +62,7 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/cxmach.go		\
 	nyacc/lang/c99/cxeval.go		\
 	nyacc/lang/c99/ffi-help-cd.go		\
+	nyacc/lang/c99/ffi-help.go		\
 	nyacc/foreign/arch-info.go		\
 	nyacc/foreign/cdata.go			\
 	scripts/compile-ffi.go
@@ -86,6 +87,7 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/mach.d/c99cx-act.scm	\
 	nyacc/lang/c99/mach.d/c99cx-tab.scm	\
 	nyacc/lang/c99/ffi-help-cd.scm		\
+	nyacc/lang/c99/ffi-help.scm		\
 	nyacc/foreign/arch-info.scm		\
 	nyacc/foreign/cdata.scm			\
 	scripts/compile-ffi.scm

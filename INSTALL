@@ -11,11 +11,6 @@ This package depends on having GNU Guile version 2.0.13 or later. See
 
   https://www.gnu.org/software/guile/download/#releases
 
-Use of the FFI Helper with optional bytestructs backend requires 
-scheme-bytestructures.  See
-
-  https://github.com/TaylanUB/scheme-bytestructures/releases
-
 To configure:
 
   $ ./configure

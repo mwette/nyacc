@@ -20,8 +20,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 @format
 FFI Helper User Guide
 Matt Wette
-Augustr 2024
-With NYACC Version 2.01.2
+November 2024
+With NYACC Version 2.01.3
 @end format
 
 @ifnottex
@@ -55,19 +55,17 @@ Cairo library are provided in 100% Guile Scheme via @code{(system
 foreign)}.
 
 Since version 2.00, the FFI Helper uses it's own backend for using
-bytestructures to handle C data.  In previous versions, the module
-@code{(bytestructures guile)} was used.   The previous version is
-still available by passin @code{-b bytestructures} to
+bytevectors to handle C data.  In previous versions, the module
+@code{(bytestructures guile)} was used.   The bytestructures 
+implementation is still available by passing  @code{-b bytestructures} to
 @code{guild compile-ffi}, or by setting the environment variable
-@example
-FFI_HELP_BACKEND=bytestructures
-@end example
-The bytestructures backend uses the
-@emph{scheme-bytestructure} package, available from
+@code{FFI_HELP_BACKEND=bytestructures}.  The bytestructures backend uses the
+@emph{scheme-bytestructures} package, available from
 @uref{https://github.com/TaylanUB/scheme-bytestructures}.  Releases
 are available at
 @uref{https://github.com/TaylanUB/scheme-bytestructures/releases}.
-In this manual we discuss only the @emph{cdata} default.
+In this manual we only discuss use of the default @emph{cdata} 
+backend implementation.
 
 To generate Guile Scheme for smaller C code units one can
 write a ffi-module with the @code{#:api-code} or import the
@@ -480,7 +478,7 @@ example @code{foo_t} it also generates an exported procedure
 The FH also generates a predicate @code{foo_t?} to determine if an
 object is of that type.  The @code{(system ffi-help-rt)} module
 provides a procedure @code{fh-object-ref} to convert an object of type
-@code{foo_t} to the underlying bytestructures representation.  For
+@code{foo_t} to the underlying bytevector representation.  For
 numeric and pointer types, this will generate a number and for
 aggregate types, a bytestructure.  Additional arguments to
 @code{fh-object-ref} for aggregates work as with the bytestructures

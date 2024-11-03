@@ -1,5 +1,5 @@
 
-Copyright (C) 2015-2019 Matthew R. Wette
+Copyright (C) 2015-2019,2024 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -24,15 +24,9 @@ After sourcing env.sh in the examples subdirectory, execute
 The Guile source program cxp will print out the parse tree for hello.c
 This is based on a C99 parser written with the NYACC parser generator.
  
-IF you modify module/nyacc/lang/c99/mach.scm you will need to rebuild the
-files in the subdirectory mach.d.  To do this run, in guile, the following:
-  (use-modules (nyacc lang c99 mach))
-  (use-modules (nyacc lang c99 cppmach))
-
-  (gen-c99-files ".")
-  (compile-file "parser.scm")
-  (gen-cpp-files ".")
-  (compile-file "cpp.scm")
+If you modify module/nyacc/lang/c99/mach.scm you will need to rebuild the
+files in the subdirectory mach.d.  To do this execute the script 
+@code{mach.gen} in @path{modules/lang/c99/}.
 
 === Nyacc eXtension languages (or not-exactly languages)
 
@@ -41,18 +35,20 @@ files in the subdirectory mach.d.  To do this run, in guile, the following:
   scheme@(guile-user)> ,L nx-javascript
   Happy hacking with nx-javascript!  To switch back, type `,L scheme'.
   nx-javascript@(guile-user)> var a = 1;
-  nx-javascript@(guile-user)> ,L nx-octave
-  Happy hacking with nx-octave!  To switch back, type `,L nx-javascript'.
+  nx-javascript@(guile-user)> ,L nx-mlang
+  Happy hacking with nx-mlang!  To switch back, type `,L nx-javascript'.
   nx-octave@(guile-user)> b = 2;
-  nx-octave@(guile-user)> ,L nx-tcl
-  Happy hacking with nx-tcl!  To switch back, type `,L nx-octave'.
-  nx-tcl@(guile-user)> set c 3
-  nx-tcl@(guile-user)> ,L scheme
+  nx-octave@(guile-user)> ,L nx-tsh
+  Happy hacking with nx-tsh!  To switch back, type `,L nx-mlang'.
+  nx-tsh@(guile-user)> set c ($a + $b)
+  nx-tsh@(guile-user)> ,L scheme
   Happy hacking with Scheme!  To switch back, type `,L nx-tcl'.
-  scheme@(guile-user)> (+ a b)
-  $1 = 3
+  scheme@(guile-user)> a
+  $1 = 1
+  scheme@(guile-user)> b
+  $2 = 2
   scheme@(guile-user)> c
-  $2 = "3"
+  $2 = 3
 
 === Hacking on the FFI Helper ====
   $ cd examples
@@ -61,25 +57,3 @@ files in the subdirectory mach.d.  To do this run, in guile, the following:
   $ cd nyacc/lang/c99/ffi-exam
   $ guile demo-cairo.scm		# should generate demo-cairo.png
 
-  $ guile
-  guile> (use-modules (nyacc lang c99 ffi-help))
-  guile> (use-modules (bytestructures guile))
-  guile> (use-modules (system ffi-help-rt))
-  guile> (use-modules ((system foreign) #:prefix ffi:))
-  guile> (define fh-llibs '())
-  guile> (define fexp (fh-cnvt-cdecl "fmod" "double fmod(double x,double y);")
-  guile> ,pp exp
-  $1 = (begin
-    (define ~fmod
-      (delay (fh-link-proc
-               ffi:double
-               "fmod"
-               (list ffi:double ffi:double)
-               fh-llibs)))
-    (define (fmod x y)
-      (let ((~x (unwrap~float x)) (~y (unwrap~float y)))
-        ((force ~fmod) ~x ~y)))
-    (export fmod))
-  guile> (eval exp (current-module))
-  guile> (fmod 2.3 0.5)
-  $2 = 0.2999999999999998

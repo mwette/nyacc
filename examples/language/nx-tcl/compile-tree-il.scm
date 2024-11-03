@@ -53,8 +53,6 @@
   (or (nx-lookup name dict)
       (nx-lookup-in-env name xlib-module)))
 
-(define make-opcall (opcall-generator xlib-mod))
-
 ;; @deffn {Procedure} make-arity args
 ;; This procedure generates a tree-il arity part of a lambda-case.
 ;; @end deffn

@@ -63,7 +63,7 @@
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:re-export (*nyacc-version*)
-  #:version (2 01 2))
+  #:version (2 01 3))
 
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
@@ -614,6 +614,12 @@
            ((dmem? name defined)
             `(arg->pointer ,mname (cpointer ,(string->symbol name))))
            (else `(arg->pointer ,mname))))
+           ((dmem? name def-defined) `(unwrap-pointer ,mname))
+           ((dmem? (w/* name) defined)
+            `(unwrap-pointer ,mname ,(strings->symbol name "*")))
+           ((dmem? name defined)
+            `(unwrap-pointer ,mname (cpointer ,(string->symbol name))))
+           (else `(unwrap-pointer ,mname))))
          (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
           (let ((return (mdecl->udecl (cons "~ret" rest))))
             (call-with-values

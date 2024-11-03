@@ -1,6 +1,6 @@
-;;; nyacc/version.scm
+;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2017-2018,2020 Matthew R. Wette
+;; Copyright (C) 2016-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -17,10 +17,13 @@
 
 ;;; Code:
 
-(define-module (nyacc version)
-  #:export (*nyacc-version*)
-  #:version (2 01 3))
-
-(define *nyacc-version* "2.01.3")
+(define-module (nyacc lang c99 ffi-help)
+  #:use-module (nyacc lang c99 ffi-help-cd)
+  #:re-export (*ffi-help-version*
+               define-ffi-module
+               compile-ffi-file
+               load-include-file
+               ccode->sexp
+               udecl->sexp))
 
 ;; --- last line ---
