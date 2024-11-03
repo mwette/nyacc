@@ -610,9 +610,9 @@
           (cond
            ((dmem? name def-defined) `(arg->pointer ,mname))
            ((dmem? (w/* name) defined)
-            `(arg->pointer ,mname (cpointer ,(string->symbol name))))
-           ((dmem? name defined)
             `(arg->pointer ,mname ,(strings->symbol name "*")))
+           ((dmem? name defined)
+            `(arg->pointer ,mname (cpointer ,(string->symbol name))))
            (else `(arg->pointer ,mname))))
          (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
           (let ((return (mdecl->udecl (cons "~ret" rest))))
@@ -990,8 +990,7 @@
                        (deftype type* `(cpointer (delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     `(define ,type 'void)
-                     (deftype type* `(cpointer ,type))))))))
+                     (deftype type* `(cpointer 'void))))))))
 
              ((union-ref (ident ,agname))
               (let ((agname (rename agname 'type)))
@@ -1010,8 +1009,7 @@
                        (deftype type* `(cpointer (delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     `(define-public ,type 'void)
-                     (deftype type* `(cpointer ,type))))))))
+                     (deftype type* `(cpointer 'void))))))))
 
              (((fixed-type float-type) ,basename)
               (values defined (cons (deftype type (mtail->ctype mtail)) seed)))
