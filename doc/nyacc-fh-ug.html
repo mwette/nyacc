@@ -45,8 +45,8 @@ ul.mark-bullet {list-style-type: disc}
 <div class="format">
 <pre class="format-preformatted">FFI Helper User Guide
 Matt Wette
-October 2024
-With NYACC Version 2.01.2
+November 2024
+With NYACC Version 2.01.3
 </pre></div>
 
 <div class="top-level-extent" id="Top">
@@ -84,17 +84,15 @@ foreign)</code>.
 <p>Since version 2.00, the FFI Helper uses it&rsquo;s own backend for using
 bytevectors to handle C data.  In previous versions, the module
 <code class="code">(bytestructures guile)</code> was used.   The bytestructures 
-implementation is still available by passing <code class="code">-b bytestructures</code> to
+implementation is still available by passing  <code class="code">-b bytestructures</code> to
 <code class="code">guild compile-ffi</code>, or by setting the environment variable
-</p><div class="example">
-<pre class="example-preformatted">FFI_HELP_BACKEND=bytestructures
-</pre></div>
-<p>The bytestructures backend uses the
-<em class="emph">scheme-bytestructure</em> package, available from
+<code class="code">FFI_HELP_BACKEND=bytestructures</code>.  The bytestructures backend uses the
+<em class="emph">scheme-bytestructures</em> package, available from
 <a class="uref" href="https://github.com/TaylanUB/scheme-bytestructures">https://github.com/TaylanUB/scheme-bytestructures</a>.  Releases
 are available at
 <a class="uref" href="https://github.com/TaylanUB/scheme-bytestructures/releases">https://github.com/TaylanUB/scheme-bytestructures/releases</a>.
-In this manual we discuss only the <em class="emph">cdata</em> default.
+In this manual we only discuss use of the default <em class="emph">cdata</em> 
+backend implementation.
 </p>
 <p>To generate Guile Scheme for smaller C code units one can
 write a ffi-module with the <code class="code">#:api-code</code> or import the
@@ -490,7 +488,7 @@ example <code class="code">foo_t</code> it also generates an exported procedure
 The FH also generates a predicate <code class="code">foo_t?</code> to determine if an
 object is of that type.  The <code class="code">(system ffi-help-rt)</code> module
 provides a procedure <code class="code">fh-object-ref</code> to convert an object of type
-<code class="code">foo_t</code> to the underlying bytestructures representation.  For
+<code class="code">foo_t</code> to the underlying bytevector representation.  For
 numeric and pointer types, this will generate a number and for
 aggregate types, a bytestructure.  Additional arguments to
 <code class="code">fh-object-ref</code> for aggregates work as with the bytestructures

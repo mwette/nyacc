@@ -65,8 +65,6 @@
               (and s (= n-sz g-sz))))
           #t base-type-symbol-list))
         (else 'untested))))
-
-    #;(pass-if "nyacc alignof vs gcc alignof"
     (fold
      (lambda (n s)
        (let ((n-sz (arch-sizeof n))

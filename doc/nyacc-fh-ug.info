@@ -11,8 +11,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 FFI Helper User Guide
 Matt Wette
-October 2024
-With NYACC Version 2.01.2
+November 2024
+With NYACC Version 2.01.3
 
 
 File: nyacc-fh-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -47,12 +47,13 @@ bytevectors to handle C data.  In previous versions, the module
 ‘(bytestructures guile)’ was used.  The bytestructures implementation is
 still available by passing ‘-b bytestructures’ to ‘guild compile-ffi’,
 or by setting the environment variable
-     FFI_HELP_BACKEND=bytestructures
-   The bytestructures backend uses the _scheme-bytestructure_ package,
-available from <https://github.com/TaylanUB/scheme-bytestructures>.
-Releases are available at
+‘FFI_HELP_BACKEND=bytestructures’.  The bytestructures backend uses the
+_scheme-bytestructures_ package, available from
+<https://github.com/TaylanUB/scheme-bytestructures>.  Releases are
+available at
 <https://github.com/TaylanUB/scheme-bytestructures/releases>.  In this
-manual we discuss only the _cdata_ default.
+manual we only discuss use of the default _cdata_ backend
+implementation.
 
    To generate Guile Scheme for smaller C code units one can write a
 ffi-module with the ‘#:api-code’ or import the ‘ffi-help’ module an use
@@ -398,12 +399,12 @@ it also generates an exported procedure ‘make-foo_t’ that users can use
 to build an object of that type.  The FH also generates a predicate
 ‘foo_t?’ to determine if an object is of that type.  The ‘(system
 ffi-help-rt)’ module provides a procedure ‘fh-object-ref’ to convert an
-object of type ‘foo_t’ to the underlying bytestructures representation.
-For numeric and pointer types, this will generate a number and for
-aggregate types, a bytestructure.  Additional arguments to
-‘fh-object-ref’ for aggregates work as with the bytestructures package
-and enable selection of components of the aggregate.  Note that the
-underlying type for a bytestructure pointer is an integer.
+object of type ‘foo_t’ to the underlying bytevector representation.  For
+numeric and pointer types, this will generate a number and for aggregate
+types, a bytestructure.  Additional arguments to ‘fh-object-ref’ for
+aggregates work as with the bytestructures package and enable selection
+of components of the aggregate.  Note that the underlying type for a
+bytestructure pointer is an integer.
 
    Enums are handled specially.  In C, enums are represented by
 integers.  The FH does not generate types for C enums or C enum
@@ -771,8 +772,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 
 Tag Table:
-Node: Top551
-Node: Introduction731
+Node: Top552
+Node: Introduction732
 
 End Tag Table
 

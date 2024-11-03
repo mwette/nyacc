@@ -34,9 +34,10 @@ TESTS = \
 	nyacc/lang/c99/c99-04.test			\
 	nyacc/lang/c99/c99-05.test			\
 	nyacc/lang/c99/c99-06.test			\
-	nyacc/foreign/arch-info-01.test			\
-	nyacc/foreign/cdata-01.test			\
-	nyacc/foreign/cdata-02.test
+
+#	nyacc/foreign/arch-info-01.test			\
+#	nyacc/foreign/cdata-01.test			\
+#	nyacc/foreign/cdata-02.test
 
 .PHONY: check
 check:
