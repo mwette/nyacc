@@ -357,7 +357,10 @@
 ;; @deffn {Procedure} cbase name => <ctype>
 ;; Given symbolic @var{name} generate a base ctype.   The name can
 ;; be something like @code{unsigned-int}, @code{double}, or can be a
-;; @emph{cdata} machine type like @code{u64le}.
+;; @emph{cdata} machine type like @code{u64le}.  For example,
+;; @example
+;; (define double-type (cbase 'double))
+;; @end example
 ;; @end deffn
 (define (cbase name)
   "- Procedure: cbase name
