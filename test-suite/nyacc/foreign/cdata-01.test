@@ -260,6 +260,6 @@
     (do-test/union 10 10)))
 
 ;; above verified on Ubuntu x86_64 only 
-;; (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 
 ;; --- last line ---a

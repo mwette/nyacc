@@ -5,6 +5,13 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-11-03  V2.01.3
+	* ffi-helper: cover more cases where passing procedure (e.g.,
+	  callback) to functions works; was only function-ptr typedefs
+	* for forward ref structs, unions which are never elaborated,
+	  don't generate a definition
+	* update some documentation for nyacc-fh-ug and cdata
+
 2024-10-31  V2.01.2
 	* munge-base using member instead of keeper?, fixed
 	* forgot to update version numbers for V2.01.1 release, fixed
