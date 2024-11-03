@@ -770,13 +770,11 @@
          (va-call `(apply ~proc ,names (map cdr ~rest))))
     (values
      ;; procedure->pointer
-     `(lambda (~proc)
-        (ffi:procedure->pointer
-         ,decl-ret
-         (lambda ,names
-           (let ,wrap-par
-             ,(if cbak-ret `((lambda (~ret) ,cbak-ret) ,call) call)))
-         (list ,@decl-par)))
+     (let* ((call (if cbak-ret `((lambda (~ret) ,cbak-ret) ,call) call))
+            (wrap (if (pair? wrap-par) `(let ,wrap-par ,call) call)))
+       `(lambda (~proc)
+          (ffi:procedure->pointer
+           ,decl-ret (lambda ,names ,wrap) (list ,@decl-par))))
      (if varargs?
          ;; pointer->procedure (varargs)
          `(lambda (~fptr)
