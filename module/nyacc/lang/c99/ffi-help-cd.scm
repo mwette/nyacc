@@ -610,9 +610,9 @@
           (cond
            ((dmem? name def-defined) `(unwrap-pointer ,mname))
            ((dmem? (w/* name) defined)
-            `(unwrap-pointer ,mname (cpointer ,(string->symbol name))))
-           ((dmem? name defined)
             `(unwrap-pointer ,mname ,(strings->symbol name "*")))
+           ((dmem? name defined)
+            `(unwrap-pointer ,mname (cpointer ,(string->symbol name))))
            (else `(unwrap-pointer ,mname))))
          (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
           (let ((return (mdecl->udecl (cons "~ret" rest))))
@@ -770,13 +770,11 @@
          (va-call `(apply ~proc ,names (map cdr ~rest))))
     (values
      ;; procedure->pointer
-     `(lambda (~proc)
-        (ffi:procedure->pointer
-         ,decl-ret
-         (lambda ,names
-           (let ,wrap-par
-             ,(if cbak-ret `((lambda (~ret) ,cbak-ret) ,call) call)))
-         (list ,@decl-par)))
+     (let* ((call (if cbak-ret `((lambda (~ret) ,cbak-ret) ,call) call))
+            (wrap (if (pair? wrap-par) `(let ,wrap-par ,call) call)))
+       `(lambda (~proc)
+          (ffi:procedure->pointer
+           ,decl-ret (lambda ,names ,wrap) (list ,@decl-par))))
      (if varargs?
          ;; pointer->procedure (varargs)
          `(lambda (~fptr)
@@ -990,8 +988,7 @@
                        (deftype type* `(cpointer (delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     `(define ,type 'void)
-                     (deftype type* `(cpointer ,type))))))))
+                     (deftype type* `(cpointer 'void))))))))
 
              ((union-ref (ident ,agname))
               (let ((agname (rename agname 'type)))
@@ -1010,8 +1007,7 @@
                        (deftype type* `(cpointer (delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     `(define-public ,type 'void)
-                     (deftype type* `(cpointer ,type))))))))
+                     (deftype type* `(cpointer 'void))))))))
 
              (((fixed-type float-type) ,basename)
               (values defined (cons (deftype type (mtail->ctype mtail)) seed)))
