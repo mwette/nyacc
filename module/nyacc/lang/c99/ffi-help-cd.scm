@@ -411,8 +411,8 @@
        (call-with-values
            (lambda () (let ((return (mdecl->udecl (cons "~ret" tail))))
                         (function*-wraps return params)))
-         (lambda (wrapper unwrapper)
-           `(cpointer (cfunction ,wrapper ,unwrapper)))))
+         (lambda (pc->pr pr->pc)
+           `(cpointer (cfunction ,pc->pr ,pr->pc)))))
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        `(cpointer (cbase 'void*)))
       (`((pointer-to) (struct-ref (ident ,name)))
@@ -594,16 +594,35 @@
 
 (define (unwrap-mdecl mdecl)
   (let ((defined (*defined*))
-        (mname (string->symbol (md-label mdecl))) (mtail (md-tail mdecl)))
+        (mname (string->symbol (md-label mdecl)))
+        (mtail (md-tail mdecl)))
     (match (car mtail)
       (`(fixed-type ,name) `(arg->number ,mname))
       (`(float-type ,name) `(arg->number ,mname))
-      (`(void) #f)
       (`(typename ,name)
        (cond
 	((dmem? name def-defined) `(arg->number ,mname))
 	((dmem? name defined) (defined-type-unwrapper name mname))
 	(else #f)))
+      (`(pointer-to)
+       (match mtail
+         (`((pointer-to) (typename ,name))
+          (cond
+           ((dmem? name def-defined) `(arg->pointer ,mname))
+           ((dmem? (w/* name) defined)
+            `(arg->pointer ,mname (cpointer ,(string->symbol name))))
+           ((dmem? name defined)
+            `(arg->pointer ,mname ,(strings->symbol name "*")))
+           (else `(arg->pointer ,mname))))
+         (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
+          (let ((return (mdecl->udecl (cons "~ret" rest))))
+            (call-with-values
+                (lambda () (function*-wraps return params))
+              (lambda (pr pc)
+                (let ((pc '(lambda (p) 'unused))) ; only proc->ptr is used
+                  `(arg->pointer ,mname (cpointer (cfunction ,pr ,pc))))))))
+        (`((pointer-to) . ,_)
+         `(arg->pointer ,mname))))
       (`(enum-def (ident ,name) ,_)
        (cond
 	((dmem? (w/enum name) defined)
@@ -617,10 +636,10 @@
 	(else `(unwrap~enum ,mname))))
       (`(struct-ref (ident ,name)) `(cdata&-ref ,mname))
       (`(union-ref (ident ,name)) `(cdata&-ref ,mname))
-      (`(pointer-to) `(arg->pointer ,mname))
       (`(array-of ,size) `(arg->pointer ,mname))
       (`(array-of) `(arg->pointer ,mname))
       ;; not expected
+      (`(void) #f)
       (`(struct-def . ,_) `(cdata&-ref ,mname))
       (`(union-def . ,_) `(cdata&-ref ,mname))
       (otherwise
@@ -733,8 +752,8 @@
 ;; Based on return udecl @var{return} and udecl params @var{params},
 ;; generate two procedures:
 ;; @enumerate
-;; @item generate procedure from pointer
 ;; @item generate pointer from procedure
+;; @item generate procedure from pointer
 ;; @end enumerate
 ;; @end deffn
 (define (function*-wraps return params)
@@ -885,22 +904,22 @@
           (`((function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
              (call-with-values (lambda () (function*-wraps return params))
-               (lambda (ptr->proc proc->ptr)
+               (lambda (proc->ptr ptr->proc)
                  (values
                   (dcons name (w/* name) defined)
                   (xcons* seed
-                    (deftype type `(cfunction ,ptr->proc ,proc->ptr))
+                    (deftype type `(cfunction ,proc->ptr ,ptr->proc))
                     (deftype type* `(cpointer ,type))))))))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
              (call-with-values (lambda () (function*-wraps return params))
                (let ((*type (strings->symbol "*" name)))
-                 (lambda (pr->pc pc->pr)
+                 (lambda (pc->pr pr->pc)
                    (values
                     (dcons name defined)
                     (xcons* seed
-                      `(define ,*type (cfunction ,pr->pc ,pc->pr))
+                      `(define ,*type (cfunction ,pc->pr ,pr->pc))
                       (deftype type `(cpointer ,*type)))))))))
 
           (`((pointer-to) . ,rest)
