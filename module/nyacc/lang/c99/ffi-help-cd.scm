@@ -588,8 +588,8 @@
       (`((pointer-to) . ,_0) `(unwrap-pointer ,mname ,(string->symbol name)))
       (`((fixed ,name)) `(unwrap-number ,mname))
       (`((float ,name)) `(unwrap-number ,mname))
-      (`((enum-def . ,_)) `(unwrap~enum  ,mname))
-      (`((enum-ref . ,_)) `(unwrap~enum  ,mname))
+      (`((enum-def . ,_1)) `(unwrap~enum  ,mname))
+      (`((enum-ref . ,_1)) `(unwrap~enum  ,mname))
       (__ #f))))
 
 (define (unwrap-mdecl mdecl)
@@ -621,14 +621,14 @@
               (lambda (pr pc)
                 (let ((pc '(lambda (p) 'unused))) ; only proc->ptr is used
                   `(unwrap-pointer ,mname (cpointer (cfunction ,pr ,pc))))))))
-         (`((pointer-to) . ,_)
+         (`((pointer-to) . ,_1)
           `(unwrap-pointer ,mname))))
-      (`(enum-def (ident ,name) ,_)
+      (`(enum-def (ident ,name) ,_1)
        (cond
 	((dmem? (w/enum name) defined)
          (list (strings->symbol "unwrap-enum-" name) mname))
 	(else `(unwrap~enum ,mname))))
-      (`(enum-def ,_) `(unwrap~enum ,mname))
+      (`(enum-def ,_1) `(unwrap~enum ,mname))
       (`(enum-ref (ident ,name))
        (cond
 	((dmem? (w/enum name) defined)
@@ -640,8 +640,8 @@
       (`(array-of) `(unwrap-array ,mname))
       ;; not expected
       (`(void) #f)
-      (`(struct-def . ,_) `(cdata&-ref ,mname))
-      (`(union-def . ,_) `(cdata&-ref ,mname))
+      (`(struct-def . ,_1) `(cdata&-ref ,mname))
+      (`(union-def . ,_1) `(cdata&-ref ,mname))
       (otherwise
        (fherr "unwrap-mdecl: missed:\n~A" (ppstr mtail))))))
 
@@ -652,8 +652,8 @@
                          '((enum . "*any*")))) ;; hack provided 
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
-      (`((enum-def . ,_)) (list (sfsym "wrap-~a" name) mname))
-      (`((enum-ref . ,_)) (list (sfsym "wrap-~a" name) mname))
+      (`((enum-def . ,_1)) (list (sfsym "wrap-~a" name) mname))
+      (`((enum-ref . ,_1)) (list (sfsym "wrap-~a" name) mname))
       (__ `(make-cdata ,(string->symbol name) ,mname)))))
 
 (define (wrap-mdecl mdecl)
@@ -672,7 +672,7 @@
       (`((enum-def (ident ,name) ,rest))
        (and (dmem? (w/enum name) defined)
             (list (sfsym "wrap-enum-~A" name) mname)))
-      (`((enum-def ,_)) #f)
+      (`((enum-def ,_1)) #f)
       (`((enum-ref (ident ,name)))
        (cond
         ((dmem? (w/enum name) defined) (sfsym "wrap-enum-~A" name))
