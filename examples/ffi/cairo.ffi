@@ -17,21 +17,7 @@
 
 (define-ffi-module (ffi cairo)
   #:pkg-config "cairo"
-  #:include '("cairo.h"
-	      ;;"cairo-ft.h"
-	      ;;"cairo-gobject.h"
-	      ;;"cairo-pdf.h"
-	      ;;"cairo-ps.h"
-	      ;;"cairo-quartz.h"
-	      ;;"cairo-quartz-image.h"
-	      ;;"cairo-script.h"
-	      ;;"cairo-script-interpreter.h"
-	      "cairo-svg.h"
-	      ;;"cairo-tee.h"
-	      ;;"cairo-xcb.h"
-	      ;;"cairo-xlib.h"
-	      ;;"cairo-xml.h"
-	      )
+  #:include '("cairo.h")
   #:export (M_PI M_2PI make-cairo-unit-matrix))
 
 (define-public cairo_raster_source_acquire_func_t*
@@ -40,10 +26,9 @@
 (define-public cairo_raster_source_release_func_t*
   (cpointer  cairo_raster_source_release_func_t))
 
-#|
 (define (make-cairo-unit-matrix)
-  (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
-|#
+  (make-cdata cairo_matrix_t
+              `((xx 1.0) (yx 0.0) (xy 0.0) (yy 1.0) (x0 0.0) (y0 0.0))))
 
 (define M_PI 3.14159265358979323846)
 (define M_2PI 6.28318530717958647692)
