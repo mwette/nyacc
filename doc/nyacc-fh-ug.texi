@@ -1023,7 +1023,21 @@ This form, with a list of strings, indicates which (shared object)
 libraries need to be loaded.  The formmat of each string in the list
 should be as provided to the @code{dynamic-link} form in Guile.
 @item #:renamer
-todo
+The argument is a procedure of the form @code{proc name ctxt)} where
+@var{name} is a string for the name being translated and @var{ctxt} is
+the context.  The context can be
+@table @code
+@item field
+field in a struct or union
+@item enum
+name of an enum
+@item type
+name of a typedef, struct, union or enum definition
+@item function
+name of a function
+@item variable
+name of an extern variable
+@end table
 @item #:cpp-defs
 This form, with a list of strings, provides extra C preprodessor
 definitions to be used in processing the header files.  The defines
