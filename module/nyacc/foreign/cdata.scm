@@ -98,7 +98,7 @@
             ctype->ffi
             ;;
             NULL NULL?
-            arg->number arg->pointer
+            cdata-arg->number cdata-arg->pointer
             unwrap-number unwrap-pointer unwrap-array
             ;;
             ;; debug
@@ -1354,11 +1354,11 @@
       ((pointer array function) '*)
       (else (error "ctype->ffi: unsupported:" (ctype-kind type))))))
 
-;; @deffn {Procedure} arg->number arg
+;; @deffn {Procedure} cdata-arg->number arg
 ;; Convert an argument to numeric form for a ffi procedure call.
 ;; This will reference a cdata object or pass a number through.
 ;; @end deffn
-(define (arg->number arg)
+(define (cdata-arg->number arg)
   "- Procedure: arg->number arg
      Convert an argument to numeric form for a ffi procedure call.  This
      will reference a cdata object or pass a number through."
@@ -1367,14 +1367,14 @@
         (else (error "unwrap-number: bad arg:" arg))))
 (define unwrap-number arg->number)
 
-;; @deffn {Procedure} arg->pointer arg
+;; @deffn {Procedure} cdata-arg->pointer arg
 ;; Convert an argument to a Guile pointer for a ffi procedure call.
 ;; This will reference a cdata object or pass a number through.
 ;; If the argument is a function, it will attempt to convert that
 ;; to a pointer via @code{procedure->pointer} if given the function
 ;; pointer type @var{hint}.
 ;; @end deffn
-(define* (arg->pointer arg #:optional hint)
+(define* (cdata-arg->pointer arg #:optional hint)
   "- Procedure: arg->pointer arg
      Convert an argument to a Guile pointer for a ffi procedure call.
      This will reference a cdata object or pass a number through.  If
@@ -1386,7 +1386,7 @@
         ((cdata? arg)
          (case (cdata-kind arg)
            ((pointer) (cdata-ref arg))
-           ((array) (cdata&-ref arg))
+           ((array struct union) (cdata&-ref arg))
            (else (error "arg->pointer; bad arg:" arg))))
         ((and (procedure? arg) (ctype? hint))
          (let* ((info (ctype-info hint))
