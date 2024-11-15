@@ -620,7 +620,8 @@
                 (lambda () (function*-wraps return params))
               (lambda (pr pc)
                 (let ((pc '(lambda (p) 'unused))) ; only proc->ptr is used
-                  `(cdata-arg->pointer ,mname (cpointer (cfunction ,pr ,pc))))))))
+                  `(cdata-arg->pointer
+                    ,mname (cpointer (cfunction ,pr ,pc))))))))
          (`((pointer-to) . ,_1)
           `(cdata-arg->pointer ,mname))))
       (`(enum-def (ident ,name) ,_1)
