@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-11-15  V2.01.4
+	* cdata.scm(Xcdata-ref): enum-ref needs symf not numf
+
 2024-11-03  V2.01.3
 	* ffi-helper: cover more cases where passing procedure (e.g.,
 	  callback) to functions works; was only function-ptr typedefs
