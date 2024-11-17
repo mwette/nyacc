@@ -1196,7 +1196,7 @@
                       (delay
                         (make-cdata ,name* (foreign-pointer-search ,name)))))
 	        (case-lambda
-	          (() (cdata-ref (force obj) '*))
+	          (() (cdata-sel (force obj) '*))
 	          ((arg) (cdata-set! (force obj) '* arg)))))))))
 
      ((memq 'const sspec)
