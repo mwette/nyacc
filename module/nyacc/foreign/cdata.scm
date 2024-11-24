@@ -93,7 +93,7 @@
 
             Xcdata-ref Xcdata-set!
             
-            cdata-kind cdata& cdata* cdata-sel cdata*-ref
+            cdata-kind cdata& cdata* cdata-sel cdata*-ref cdata&-ref
             ctype-sel make-cdata-getter make-cdata-setter
             ctype->ffi
             ;;
@@ -121,11 +121,19 @@
   #:use-module ((system foreign)
                 #:select (%null-pointer
                           make-pointer pointer? pointer-address
-                          scm->pointer string->pointer
                           pointer->bytevector bytevector->pointer
-                          int8 uint8 int16 uint16 int32 uint32 int64 uint64
-                          float double))
+                          scm->pointer string->pointer float double
+                          int8 uint8 int16 uint16 int32 uint32 int64 uint64))
   #:use-module (nyacc foreign arch-info))
+
+(define-syntax-rule (define-deprecated name message exp)
+  (begin
+    (define-syntax rule
+      (identifier-syntax
+       (begin
+         (issue-deprecation-warning message)
+         exp)))
+    (export rule)))
 
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
@@ -1364,8 +1372,8 @@
      will reference a cdata object or pass a number through."
   (cond ((number? arg) arg)
         ((cdata? arg) (cdata-ref arg))
-        (else (error "unwrap-number: bad arg:" arg))))
-(define unwrap-number arg->number)
+        (else (error "cdata-arg->number: bad arg:" arg))))
+(define-deprecated unwrap-number "use cdata-arg->number" cdata-arg->number)
 
 ;; @deffn {Procedure} cdata-arg->pointer arg
 ;; Convert an argument to a Guile pointer for a ffi procedure call.
@@ -1387,7 +1395,7 @@
          (case (cdata-kind arg)
            ((pointer) (cdata-ref arg))
            ((array struct union) (cdata&-ref arg))
-           (else (error "arg->pointer; bad arg:" arg))))
+           (else (error "cdata-arg->pointer; bad arg:" arg))))
         ((and (procedure? arg) (ctype? hint))
          (let* ((info (ctype-info hint))
                 (func (case (ctype-kind hint)
@@ -1395,9 +1403,9 @@
                         ((pointer) (ctype-info (cpointer-type info)))
                         (else (error "not ok")))))
            ((cfunction-proc->ptr func) arg)))
-        (else (error "unwrap-pointer: bad arg:" arg))))
-(define unwrap-pointer arg->pointer)
-(define unwrap-array arg->pointer)
+        (else (error "cdata-arg->pointer: bad arg:" arg))))
+(define-deprecated unwrap-pointer "use cdata-arg->pointer" cdata-arg->pointer)
+(define-deprecated unwrap-array "use cdata-arg->pointer" cdata-arg->pointer)
 
 (define NULL %null-pointer)
 
