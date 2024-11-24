@@ -126,15 +126,6 @@
                           int8 uint8 int16 uint16 int32 uint32 int64 uint64))
   #:use-module (nyacc foreign arch-info))
 
-(define-syntax-rule (define-deprecated name message exp)
-  (begin
-    (define-syntax rule
-      (identifier-syntax
-       (begin
-         (issue-deprecation-warning message)
-         exp)))
-    (export rule)))
-
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
 (define (sferr fmt . args) (apply simple-format #t fmt args))
@@ -1373,7 +1364,7 @@
   (cond ((number? arg) arg)
         ((cdata? arg) (cdata-ref arg))
         (else (error "cdata-arg->number: bad arg:" arg))))
-(define-deprecated unwrap-number "use cdata-arg->number" cdata-arg->number)
+(define unwrap-number cdata-arg->number)
 
 ;; @deffn {Procedure} cdata-arg->pointer arg
 ;; Convert an argument to a Guile pointer for a ffi procedure call.
@@ -1404,8 +1395,8 @@
                         (else (error "not ok")))))
            ((cfunction-proc->ptr func) arg)))
         (else (error "cdata-arg->pointer: bad arg:" arg))))
-(define-deprecated unwrap-pointer "use cdata-arg->pointer" cdata-arg->pointer)
-(define-deprecated unwrap-array "use cdata-arg->pointer" cdata-arg->pointer)
+(define unwrap-pointer cdata-arg->pointer)
+(define unwrap-array cdata-arg->pointer)
 
 (define NULL %null-pointer)
 
