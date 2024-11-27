@@ -148,13 +148,15 @@
      (name-seq-1 $ident ($$ (tl-append $1 $2))))
 
     (exec-stmt
-     ;;("upvar" ident-list ($$ `(nonlocal ,@(cdr $2))))
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
-     ("set" $deref/ix "(" expr-list ")" unit-expr
-      ($$ `(set-indexed (deref (ident ,$2)) ,$4 ,$6)))
+     ("set" $deref/ix "(" expr-or-tuple ")" unit-expr
+      ;;($$ `(set-indexed (deref (ident ,$2)) ,$4 ,$6)))
+      ($$ `(set-indexed (ident ,$2)
+                        ,(if (eq? 'expr (sx-tag $4)) `(expr-list ,$4) $4)
+                        ,$6)))
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
      ("lambda" "{" arg-list "}" "{" proc-stmt-list "}" ($$ `(lambda ,$3 ,$6)))
-     ("(" expr-list ")" ($$ $2))
+     ("(" expr-or-tuple ")" ($$ $2))
      ;;("{" stmt-list "}" ($$ $2))
      (if-stmt)
      ("switch" unit-expr "{" case-list "}" ($$ `(switch ,$2 ,@(cdr $4))))
@@ -167,8 +169,8 @@
      ("return" unit-expr ($$ `(return ,$2)))
      ("incr" ident ($$ `(incr ,$2)))
      ("incr" ident unit-expr ($$ `(incr ,$2 ,$3)))
-     ;;("incr" ident 'no-ws "(" expr-list ")" ($$ `(incr/ix ,$2 ,$5)))
-     #;("incr" ident 'no-ws "(" expr-list ")" unit-expr
+     ;;("incr" ident 'no-ws "(" expr-or-tuple ")" ($$ `(incr/ix ,$2 ,$5)))
+     #;("incr" ident 'no-ws "(" expr-or-tuple ")" unit-expr
      ($$ `(incr/ix ,$2 ,$5 ,$7)))
      )
 
@@ -263,7 +265,7 @@
      ("$" 'no-ws $ident 'no-ws "(" expr-list ")" ($$ `(deref-indexed ,$3 ,$6)))
      |#
      ($deref ($$ `(deref ,$1)))
-     ($deref/ix "(" expr-list ")" ($$ `(deref-indexed ,$1 ,$3)))
+     ($deref/ix "(" expr-or-tuple ")" ($$ `(deref-indexed ,$1 ,$3)))
      (fixed)
      (float)
      (string)
@@ -271,15 +273,18 @@
      (keychar)
      (keyword)
      ;;($chlit ($$ `(char ,$1)))
-     ("(" expr-list ")" ($$ `(last ,$2)))
+     ("(" expr-or-tuple ")" ($$ `(last ,$2)))
      ("[" exec-stmt "]" ($$ `(eval ,$2)))
      )
 
+    (expr-or-tuple
+     (expression ($$ `(expr ,$1)))
+     (expression "," ($$ `(expr-list ,$1)))
+     (expression "," expr-list ($$ (tl-insert $3 $1) (tl->list $3)))
+     (expression "," expr-list "," ($$ (tl-insert $3 $1) (tl->list $3))))
     (expr-list
-     (expr-list-1 ($$ (tl->list $1))))
-    (expr-list-1
      (expression ($$ (make-tl 'expr-list $1)))
-     (expr-list-1 "," expression ($$ (tl-append $1 $3))))
+     (expr-list "," expression ($$ (tl-append $1 $3))))
 
     (expr-seq
      (expr-seq-1 ($$ (tl->list $1))))

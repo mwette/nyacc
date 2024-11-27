@@ -172,7 +172,6 @@
 (define xdict
   `(
     ("puts" . ,(xlib-ref 'tsh:puts))
-    #|
     ("format" . ,(xlib-ref 'tsh:format))
     ;;
     ("avec" . ,(xlib-ref 'tsh:avec))
@@ -180,6 +179,7 @@
     ("ivec" . ,(xlib-ref 'tsh:ivec))
     ("vlen" . ,(xlib-ref 'tsh:vlen))
     ("vtype" . ,(xlib-ref 'tsh:vtype))
+    #|
     ;;
     ("struct" . ,(xlib-ref 'tsh:struct))
     ("isstruct" . ,(xlib-ref 'tsh:isstruct))
