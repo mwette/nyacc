@@ -97,14 +97,14 @@
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'er)
 	(cond
-	 ((not (or nval lval))
-	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
-	      (loop state stack (cons-source stack '$default #f) lval)
-	      (loop state stack nval (lexr)))) ; reload
 	 ((and (zero? (car state))
                interactive nval 
 	       (eqv? (car nval) start)) ; done
 	  (cdr nval))
+	 ((not (or nval lval))
+	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
+	      (loop state stack (cons-source stack '$default #f) lval)
+	      (loop state stack nval (lexr)))) ; reload
 	 (else
 	  (let* ((laval (or nval lval))
 		 (tval (car laval))
@@ -160,14 +160,14 @@
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'r)
 	(cond
-	 ((not (or nval lval))
-	  (if (eqv? $default (caar (vector-ref pat-v (car state))))
-	      (loop state stack (cons-source stack $default #f) lval)
-	      (loop state stack nval (lexr)))) ; reload
 	 ((and (zero? (car state))
                interactive nval
 	       (eqv? (car nval) start)) ; done
 	  (cdr nval))
+	 ((not (or nval lval))
+	  (if (eqv? $default (caar (vector-ref pat-v (car state))))
+	      (loop state stack (cons-source stack $default #f) lval)
+	      (loop state stack nval (lexr)))) ; reload
 	 (else
 	  (let* ((laval (or nval lval))
 		 (tval (car laval))
