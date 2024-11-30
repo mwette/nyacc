@@ -88,7 +88,7 @@ exec guile $0
 
 (define* (nx-repl
           #:key
-          (use '((ice-9 session) (ice-9 regex) (ice-9 threads)))
+          (use '(((ice-9 session)) ((ice-9 regex)) ((ice-9 threads))))
           (language (current-language))
           )
   (let ((guile-user-module (resolve-module '(guile-user))))
