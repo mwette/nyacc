@@ -65,6 +65,8 @@
   #:re-export (*nyacc-version*)
   #:version (2 01 3))
 
+(define default-renamer (lambda (name ctxt) name))
+
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
 (define *debug-parse* (make-parameter #f)) ; parse debug mode
@@ -72,7 +74,7 @@
 (define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
 
 (define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
-(define *renamer* (make-parameter identity)) ; renamer from ffi-module
+(define *renamer* (make-parameter default-renamer)) ; renamer from ffi-module
 
 (define *udict* (make-parameter '()))	   ; udecl dict
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
@@ -839,7 +841,7 @@
 	     (cons (expand-typerefs udecl udict defined) seed))
 	   '() (clean-and-unitize-fields (sx-tail field-list))))))
 
-;; @deffn {Procedure} udecl->sexp udecl udict defined seed)
+;; @deffn {Procedure} udecl->sexp udecl udict [defined [seed]])
 ;; Given @var{udecl} produce scheme FFI wrappers for C types, C functions,
 ;; and C variables. Return updated @var{defined}, a string based list of
 ;; types defined. The list is used used in the conversion subroutines.
@@ -847,7 +849,7 @@
 ;; types, and wrapped is the same, not used.
 ;; @end deffn
 ;; this used to be cnvt-udecl
-(define (udecl->sexp udecl udict defined seed)
+(define* (udecl->sexp udecl udict #:optional defined seed)
 
   (define (specl-props specl)
     (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
@@ -873,13 +875,15 @@
   (define (bkref-getall attr)
     (and=> (assq-ref attr 'typedef) (lambda (t) (string-split (car t) #\,))))
 
-  (*defined* defined)                   ; set global for converters
-
   (define-syntax-rule (deftype name type)
     `(define-public ,name (name-ctype ',name ,type)))
 
-  (let* ((tag attr specl declr (split-udecl udecl))
+  (let* ((defined (or defined (list->vlist '())))
+         (seed (or seed '()))
+         (tag attr specl declr (split-udecl udecl))
          (sspec tqual tspec (specl-props specl)))
+
+    (*defined* defined)                 ; set global for converters
 
     (cond
 
@@ -1180,13 +1184,16 @@
         (,__ (values #f #f))) (lambda (a b) a) => values)
 
      ((memq 'extern sspec)
+      ;; TODO: provide a type-name for mtail
       (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
              (mdecl (udecl->mdecl udecl))
              (name (md-label mdecl))
              (rname (rename name 'variable))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
-             (mtail* `((pointer-to) . ,mtail))
-             (type* (mtail->ctype mtail*))
+             ;;(mtail* `((pointer-to) . ,mtail))
+             ;;(type* (mtail->ctype mtail*))
+             (ctype (mtail->ctype mtail))
+             (type* `(cpointer ,ctype))
              (name* (strings->symbol name "*")))
         (values
          defined
@@ -1197,7 +1204,7 @@
                       (delay
                         (make-cdata ,name* (foreign-pointer-search ,name)))))
 	        (case-lambda
-	          (() (cdata-ref (force obj) '*))
+	          (() (cdata-sel (force obj) '*))
 	          ((arg) (cdata-set! (force obj) '* arg)))))))))
 
      ((memq 'const sspec)
@@ -1509,7 +1516,7 @@
           (use-modules (nyacc lang c99 ffi-help))
           (load-include-file \"cairo.h\" #:pkg-config \"cairo\")"
   (parameterize ((*options* '()) (*defined* '())
-		 (*renamer* identity) (*errmsgs* '())
+		 (*renamer* default-renamer) (*errmsgs* '())
 		 (*prefix* "") (*mport* #t) (*udict* '()))
     (let* ((attrs (acons 'include (list filename) '()))
 	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
@@ -1621,7 +1628,7 @@
 ;; @end deffn
 (define* (compile-ffi-file filename #:optional (options '()))
   (parameterize ((*options* options) (*defined* '())
-		 (*renamer* identity) (*errmsgs* '()) (*prefix* "")
+		 (*renamer* default-renamer) (*errmsgs* '()) (*prefix* "")
 		 (*mport* #t) (*udict* '()) (*ddict* '()))
     (if (not (access? filename R_OK))
 	(fherr "ERROR: not found: ~S" filename))

@@ -5,6 +5,10 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+202X-XX-XX  V2.02.0
+	* ffi-help-cd.scm: create default-renamer, was identity
+	* ffi-help-cd.scm(udecl->sexp): make defined seed optional
+
 2024-11-03  V2.01.3
 	* ffi-helper: cover more cases where passing procedure (e.g.,
 	  callback) to functions works; was only function-ptr typedefs
