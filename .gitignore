@@ -10,8 +10,7 @@ lang.zip
 gram.y
 Makefile
 examples/ffi/*.scm
-examples/nyacc/lang/ffi-help/*.png
-examples/nyacc/lang/ffi-help/xlsxlogo.png
+examples/nyacc/lang/ffi-help/cairo*.png
 .DS_Store
 config.status
 etc/autom4te.cache

@@ -61,12 +61,13 @@
 ;; "ABC=123" => '("ABC" . "123")
 ;; "MAX(X,Y)=((X)>(Y)?(X):(Y))" => ("MAX" ("X" "Y") . "((X)>(Y)?(X):(Y))")
 ;; "DEF=#f" => '("DEF" . #f)
+;; "FOO" => '("FOO" . "1")
 ;; @end example
 ;; @end deffn
 (define (split-cppdef defstr)
   (let* ((ex (string-index defstr #\=))
          (lhs (if ex (substring defstr 0 ex) defstr))
-         (rhs (if ex (substring defstr (1+ ex)) ""))
+         (rhs (if ex (substring defstr (1+ ex)) "1"))
          (lx (string-index lhs #\())
          (rx (string-index lhs #\))))
     (cons
