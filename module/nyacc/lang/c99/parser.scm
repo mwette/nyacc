@@ -66,7 +66,7 @@
 (define (split-cppdef defstr)
   (let* ((ex (string-index defstr #\=))
          (lhs (if ex (substring defstr 0 ex) defstr))
-         (rhs (if ex (substring defstr (1+ ex)) ""))
+         (rhs (if ex (substring defstr (1+ ex)) "1"))
          (lx (string-index lhs #\())
          (rx (string-index lhs #\))))
     (cons
