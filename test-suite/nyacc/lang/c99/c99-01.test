@@ -1,6 +1,6 @@
 ;; nyacc/lang/c99/c99-01.test           -*- scheme -*-
 ;;
-;; Copyright (C) 2017,2023 Matthew R. Wette
+;; Copyright (C) 2017,2023,2024 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -319,6 +319,27 @@
          (decl (decl-spec-list
                 (type-spec (float-type "double")))
                (init-declr-list (init-declr (ident "xy")))))))))
+
+  (pass-if "bug 66626"
+    (let* ((code
+            (string-append
+             "struct { struct { int value; } elements; } global;\n"
+             "#define VALUE(elements) elements.value\n"
+             "#define elements        GLOBAL(elements)\n"
+             "#define GLOBAL(name)    global.name\n"
+             "int v2 = VALUE(elements);\n"))
+           (tree (parse-string code))
+           (decl (caddr tree)))
+      (equal?
+       decl
+       '(decl (decl-spec-list (type-spec (fixed-type "int")))
+              (init-declr-list
+               (init-declr
+                (ident "v2")
+                (initzer
+                 (d-sel (ident "value")
+                        (d-sel (ident "elements")
+                               (p-expr (ident "global")))))))))))
 
   #t)
 
