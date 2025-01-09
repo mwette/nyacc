@@ -172,6 +172,8 @@
     ((_ (<ex> ...) <rhs> ...)
      (cons (parse-rhs <ex> ...)
            (parse-rhs-list <rhs> ...)))
+    ((_ ex0 ex1 ...)
+     (syntax-error "illegal term in right-hand-side:" ex0))
     ((_) '())))
 
 (define-syntax parse-grammar
@@ -179,6 +181,7 @@
     ((_ (<lhs> <rhs> ...) <prod> ...)
      (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
            (parse-grammar <prod> ...)))
+    ((_ ex0 ex1 ...) (syntax-error "illegal-rule with left-hand-side:" ex0))
     ((_) '())))
 
 (define-syntax parse-precedence
