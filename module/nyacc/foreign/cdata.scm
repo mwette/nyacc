@@ -1013,16 +1013,13 @@
 ;; object is returned.  If you always want a cdata object, use @code{cdata-sel}.
 ;; @end deffn
 (define (cdata-ref data . tags)
-  "- Procedure: cdata-ref data [tag ...]
+  "- Procedure: cdata-ref data [tag ...] => value
      Return the Scheme (scalar) slot value for selected TAG ... with
      respect to the cdata object DATA.
           (cdata-ref my-struct-value 'a 'b 'c))
-     This procedure returns XXX for cdata kinds _base_, _pointer_ and
-     (in the future) _function_.  Attempting to obtain values for C-type
-     kinds _struct_, _union_, _array_ will result in ‘#f’.  If, in those
-     cases, you would like a cdata then use this:
-          (or (cdata-ref data tag ...) (cdata-sel data tag ...))
-     (Or should we just make this the default behavior?)"
+     This procedure returns Guile values for cdata kinds _base_,
+     _pointer_ and _procedure_.  For other cases, a _cdata_ object is
+     returned.  If you always want a cdata object, use ‘cdata-sel’."
   (assert-cdata 'cdata-ref data)
   (let ((data (apply cdata-sel data tags)))
     (Xcdata-ref (cdata-bv data) (cdata-ix data) (cdata-ct data))))
