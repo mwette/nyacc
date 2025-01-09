@@ -225,6 +225,17 @@
    '()
    (pkg-config name "--libs")))
 
+(define (pkg-config-dirs name)
+  (fold-right
+   (lambda (s l)
+     (cond
+      ((< (string-length s) 3) l)
+      ((string=? "-L" (substring/shared s 0 2))
+       (cons (substring/shared s 2) l))
+      (else l)))
+   '()
+   (pkg-config name "--libs")))
+
 (define (resolve-attr-val val)
   (let* ((val (if (procedure? val) (val) val)))
     (cond
@@ -492,7 +503,9 @@
 	 (pkg-config (assq-ref attrs 'pkg-config))
          (libs (resolve-attr-val (assq-ref attrs 'library)))
          (libs (if pkg-config (append (pkg-config-libs pkg-config) libs) libs))
- 	 (libs (delete "libm" libs)))
+ 	 (libs (delete "libm" libs))
+         (dirs (resolve-attr-val (assq-ref attrs 'lib-dirs)))
+         (dirs (if pkg-config (append (pkg-config-dirs pkg-config) dirs) dirs)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
 	   (m-path->f-path path))
     (nlscm)
@@ -512,10 +525,11 @@
     (sfscm "\n")
     (ppscm
      `(define (foreign-pointer-search name)
+        (define (flc l) (load-foreign-library (car l) #:search-path ,dirs))
         (let loop ((libs (list #f ,@libs)))
           (cond
            ((null? libs) (error "no library for ~s" name))
-           ((false-if-exception (foreign-library-pointer (car libs) name)))
+           ((false-if-exception (foreign-library-pointer (flc libs) name)))
            (else (loop (cdr libs)))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
@@ -1535,10 +1549,13 @@
       (ppscm '(use-modules (nyacc foreign cdata)))
       (ppscm
        `(define (foreign-pointer-search name)
+          (define (flc l)
+            (load-foreign-library (car l)
+                                  #:search-path=,(pkg-config-dirs pkg-config)))
           (let loop ((libs (list #f ,@(pkg-config-libs pkg-config))))
             (cond
              ((null? libs) (fherr "not found: ~s" name))
-             ((false-if-exception (foreign-library-pointer (car libs) name)))
+             ((false-if-exception (foreign-library-pointer (flc libs) name)))
              (else (loop (cdr libs)))))))
       (process-decls decls udict def-defined)
       (close (*mport*))
@@ -1588,7 +1605,7 @@
 	   (member key '(#:api-code
 			 #:cpp-defs #:decl-filter #:inc-dirs #:inc-filter
 			 #:inc-help #:include #:library #:pkg-config #:renamer
-			 #:use-ffi-module #:def-keepers))))
+			 #:use-ffi-module #:def-keepers #:lib-dirs))))
     (define (module-option? key) (keyword? key))
 
     (syntax-case x ()
