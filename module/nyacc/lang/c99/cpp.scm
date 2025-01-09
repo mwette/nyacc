@@ -49,6 +49,8 @@
   (pretty-print exp (current-error-port) #:per-line-prefix plp))
 (define mkid (let ((id 0)) (lambda () (set! id (1+ id)) id)))
 
+(define DBG #t)
+
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
     "__STDC_VERSION__" "__TIME__"))
@@ -109,6 +111,8 @@
     '() str)))
 
 (define ident-like? (make-ident-like-p read-c-ident))
+(export ident-like?)
+(display "cpp: ident-like? does not work how I assumed\n")
 
 ;; @deffn {Procedure} read-ellipsis ch
 ;; read ellipsis
@@ -327,98 +331,7 @@
 	    (else (error "nyacc eval-cpp-expr: incomplete implementation"))))))
     (eval-expr tree)))
 
-;;.@deffn {Procedure} rtokl->string reverse-token-list => string
-;; Convert reverse token-list to string.
-;; @end deffn
-(define (rtokl->string tokl)
-
-  ;; Turn reverse chl into a string and insert it into the string list stl.
-  (define (add-chl chl stl)
-    (if (null? chl) stl (cons (list->string chl) stl)))
-
-  ;; Works like this: Scan through the list of tokens (key-val pairs or
-  ;; lone characters).  Lone characters are collected in a list (@code{chl});
-  ;; pairs are converted into strings and combined with list of characters
-  ;; into a list of strings.  When done the list of strings is combined to
-  ;; one string.  (The token 'argval is expansion of argument.)
-  (let loop ((stl '())		   ; list of strings to reverse-append
-	     (chl '())		   ; char list
-	     (nxt #f)		   ; next string to add after chl
-	     (tkl tokl))	   ; input token list
-    (cond
-     (nxt
-      (loop (cons nxt (add-chl chl stl)) '() #f tkl))
-     ((null? tkl)
-      (apply string-append (add-chl chl stl)))
-     ((char? (car tkl))
-      (loop stl (cons (car tkl) chl) nxt (cdr tkl)))
-     (else
-      (match tkl
-	(`(($ident . ,rval) $dhash ($ident . ,lval) . ,rest)
-	 (loop stl chl nxt
-	       (acons '$ident (string-append lval rval) (list-tail tkl 3))))
-	(`(($ident . ,arg) $hash . ,rest)
-	 (loop stl chl (string-append "\"" arg "\"") (list-tail tkl 2)))
-	(`(($ident . ,iden) ($ident . ,lval) . ,rest)
-	 (loop stl chl iden rest))
-	(`(($ident . ,iden) . ,rest)
-	 (loop stl chl iden rest))
-	(`(($string . ,val) . ,rest)
-	 (loop stl (cons #\" chl) (esc-c-str val) (cons #\" rest)))
-	(`(($echo . ,val) . ,rest)
-	 (loop stl chl val rest))
-	(`($space $space . ,rest)
-	 (loop stl chl nxt rest))
-	(`($space . ,rest)
-	 (loop stl (cons #\space chl) nxt rest))
-	(`(($comm . ,val) . ,rest)
-	 ;; replace comment with extra trailing space
-	 (loop stl chl (string-append "/*" val "*/ ") rest))
-	(`(,asis . ,rest)
-	 (loop stl chl asis rest))
-	(otherwise
-	 (error "nyacc cpp rtokl->string, no match" tkl)))))))
-
-;; We just scanned "defined", now need to scan the arg to inhibit expansion.
-;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
-;; return "defined(FOO)" or "defined FOO".
-(define (scan-defined-arg)
-  (let* ((ch (skip-il-ws (read-char))) (no-ec (not (char=? ch #\())))
-    (let loop ((chl (list ch)) (ch (skip-il-ws (read-char))))
-      (cond
-       ((eof-object? ch)
-	(if no-ec
-	    (list->string (cons #\space (reverse chl)))
-	    (cpp-err "illegal argument to `defined'")))
-       ((char-set-contains? c:ir ch)
-	(loop (cons ch chl) (read-char)))
-       (no-ec
-	(unread-char ch)
-	(list->string (cons #\space (reverse chl))))
-       ((char=? #\) (skip-il-ws ch))
-	(reverse-list->string (cons #\) chl)))
-       (else
-	(cpp-err "illegal argument to  `defined'"))))))
-
-;; must be (\s*<xxx>\s*) OR (\s*"xxx"\s*) => ("<xxx>") OR ("\"xxx\"")
-(define (scan-arg-literal)
-  (let ((ch (read-char)))
-    ;; if exit, then did not defined __has_include(X)=__has_include__(X)
-    (if (or (eof-object? ch) (not (char=? #\( ch)))
-	(throw 'cpp-error "expecting `('")))
-  (let loop ((chl '()) (ch (skip-il-ws (read-char))))
-    (cond
-     ((eof-object? ch) (cpp-err "illegal argument"))
-     ((char=? #\) ch)
-      (let loop2 ((res '()) (chl chl))
-	(cond
-	 ((null? chl)
-	  (string-append "(\"" (esc-c-str (list->string res)) "\")"))
-	 ((and (null? res) (char-whitespace? (car chl))) (loop2 res (cdr chl)))
-	 (else (loop2 (cons (car chl) res) (cdr chl))))))
-     (else (loop (cons ch chl) (read-char))))))
-
-(define (update-next-used uzd nuzd used)
+(define (X-update-next-used uzd nuzd used)
   ;; For scanning multiple macros in a scan, update union of used macros from
   ;; all occurances, where @{used} is entering set, @{uzd} is from last macro
   ;; expanded, and @var{nuzd} is union of new macros expanded to this point.
@@ -429,7 +342,7 @@
      ((member (car uzd) nuzd) (loop nuzd (cdr uzd)))
      (else (loop (cons (car uzd) nuzd) (cdr uzd))))))
 
-(define* (scan+x-to-mark defs used end-tok #:optional (keep-comm #t))
+(define* (X-scan+expand-to-mark defs used end-tok #:optional (keep-comm #t))
   ;; Scan and expand to mark (i.e., @code{#\)}, @code{#\,}, @code{#f}), where
   ;; @table @code
   ;; @item #\)
@@ -446,9 +359,9 @@
   ;; @* Also, keep track of @code{##} and spaces so that we can parse with
   ;; interspersed comments (e.g., ABC/*foo*/(123,456): it happens).
   
-  ;;(define id (mkid))
+  (define id (mkid))
   
-  (define (uu uzd nuzd) (update-next-used uzd nuzd used))
+  (define (uu uzd nuzd) (X-update-next-used uzd nuzd used))
   
   (define (trim-spaces tkl)
     (if (and (pair? tkl) (eqv? '$space (car tkl)))
@@ -458,15 +371,15 @@
   (define (maybe-finish tkl nuzd)
     (let* ((tkl (if end-tok (trim-spaces tkl) tkl))
 	   (repl (rtokl->string tkl)))
-      #;(if (eq? nuzd used)
-          (sferr "  ~s: maybe-finish: done repl=~s used=~s\n" id repl nuzd)
-          (sferr "  ~s: maybe-finish: redo repl=~s used=~s\n" id repl nuzd))
+      (when DBG
+        (sferr "    ~s: scan-x.maybe-finish: ~a repl=~s nuzd=~s\n"
+               id (if (eq? nuzd used) "DONE" "REDO") repl nuzd))
       (if (eq? nuzd used)
-          (values repl nuzd)
+          (values repl used)
           (with-input-from-string repl
-            (lambda () (scan+x-to-mark defs nuzd #f keep-comm))))))
+            (lambda () (scan+expand-to-mark defs nuzd #f keep-comm))))))
 
-  ;;(sferr "~s: scan+x-to-mark end-tok=~s used=~s\n" id end-tok used)
+  (if DBG (sferr "\n~s: scan+x end-tok=~s used=~s\n" id end-tok used))
   (let loop ((tkl '())                      ; token list
              (nuzd used)                    ; next used
 	     (lv 0)                         ; paren level
@@ -489,23 +402,23 @@
 	    (loop (cons '$space tkl) nuzd lv (skip-il-ws (read-char))))))
      ((read-c-ident ch) =>
       (lambda (iden)
-        ;;(sferr "  ~s: scan-x: got iden ~s\n" id iden)
+        (sferr "    ~s: scan-x: got iden ~s\n" id iden)
 	(cond
 	 ((string=? iden "defined")
-	  (loop (acons '$echo (string-append iden (scan-defined-arg)) tkl)
+	  (loop (acons '$text (string-append iden (scan-defined-arg)) tkl)
                 nuzd lv (read-char)))
 	 ((member iden '("__has_include__" "__has_include_next__"))
 	  (cond
 	   ((scan-arg-literal) =>
 	    (lambda (arg)
-	      (loop (acons '$echo (string-append iden arg) tkl)
-		    nuzd lv (read-char))))
+              (let ((tkl (acons '$text (string-append iden arg) tkl)))
+	        (loop tkl nuzd lv (read-char)))))
 	   (else
 	    (loop (acons '$ident iden tkl) nuzd lv (read-char)))))
 	 (else
           ;;(sferr "  ~s: about to macro-expand ~s w/ used=~s\n" id iden used)
  	  (let* ((rval uzd (expand-macro-ref iden defs '() used))
-                  (tkl (if rval (cons rval tkl) (acons '$ident iden tkl))))
+                 (tkl (if rval (cons rval tkl) (acons '$ident iden tkl))))
             ;;(sferr "  ~s: returns w/ uzd=~s used=~s\n" id uzd used)
             (loop tkl (uu uzd nuzd) lv (read-char)))))))
      ((read-c-string ch) =>
@@ -515,56 +428,131 @@
      (else
       (loop (cons ch tkl) nuzd lv (read-char))))))
 
-;; @deffn {Procedure} collect-args argl defs used => argd used
-;; Collect arguments to a macro which appears in C code.  If not looking at
-;; @code{(} return @code{#f}, else scan and eat up to closing @code{)}.
-;; If multiple whitespace characters are skipped at the front then only
-;; one @code{#\space} is re-inserted.
-;; @end deffn
-(define (collect-args argl defs used)
+(define (macro-expand . args0) (sferr "macro-expand not implemnted\n") (quit))
+#;(define* (macro-expand tokl defs used #:optional (keep-comm #t))
+  
+  (define id (mkid))
+  
   (define (uu uzd nuzd) (update-next-used uzd nuzd used))
-  ;;
-  ;;(define id (mkid))
-  ;;(sferr "~s: collect-args argl=~s used=~s\n" id argl used)
-  (let loop1 ((sp #f) (ch (read-char)))
-    ;;(sferr "  loop1: ch=~s\n" ch)
-    (cond
-     ((eof-object? ch)
-      ;;(sferr "eof in collect-args\n")
-      (if sp (unread-char #\space)) (values #f used))
-     ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
-     ((char=? #\( ch)
-      (let loop2 ((argl argl) (argv '()) (nuzd used) (ch ch))
-        ;;(sferr "    ~s: l2: ch=~s nuzd=~s\n" id ch nuzd)
-	(cond
-	 ((eof-object? ch)
-          (throw 'cpp-error "EOF reading args"))
-	 ((char=? ch #\))
-          ;;(sferr "      2: ch )\n")
-          (values
-	   (reverse (if (and (pair? argl) (string=? (car argl) "..."))
-		        (acons "__VA_ARGS__" "" argv) argv))
-           nuzd))
-	 ((and (pair? argl) (string=? (car argl) "..."))
-          ;;(sferr "    2: collect-args: calling scan+x-to-mark: ')'\n")
-	  (let ((val uzd (scan+x-to-mark defs used #\))))
-	    (loop2 '() (acons "__VA_ARGS__" val argv)
-                   (uu uzd nuzd) (read-char))))
-	 ((or (char=? ch #\() (char=? ch #\,)) ;; scan argument
-          ;;(sferr "    ~s: l2: collect-args: calling scan+x-to-mark: ','\n" id)
-	  (let* ((val uzd (scan+x-to-mark defs used #\,)))
-	    (cond
-	     ((pair? argl)
-	      (loop2 (cdr argl) (acons (car argl) val argv)
-                     (uu uzd nuzd) (read-char)))
-	     ((string=? "" val)
-	      (loop2 argl argv (uu uzd nuzd) (read-char)))
-	     (else (throw 'cpp-error "function macro arg mismatch")))))
-	 (else
-	  (throw 'cpp-error "cpp.scm: collect-args coding error")))))
-     (else (unread-char ch) (if sp (unread-char #\space)) (values #f used)))))
+  
+  (define (trim-spaces tkl)
+    (if (and (pair? tkl) (eqv? '$space (car tkl)))
+	(trim-spaces (cdr tkl))
+	tkl))
 
-;; @deffn {Procedure} px-cpp-ftn argd repl => string
+  (define (maybe-finish tkl nuzd)
+    (let* (;;(tkl (if end-tok (trim-spaces tkl) tkl))
+	   ;;(repl (rtokl->string tkl))
+           )
+      (if (eq? nuzd used)
+          (values repl used)
+          (with-input-from-string repl
+            (lambda () (scan+expand-to-mark defs nuzd #f keep-comm))))))
+
+  (if DBG (sferr "\n~s: scan+x end-tok=~s used=~s\n" id end-tok used))
+  (let loop ((ntkl '())                 ; next token list
+             (nuzd used)                ; next used
+	     (lv 0)                     ; paren level
+	     (ptkl tokl))               ; prev token list
+    (cond
+     ((eof-object? ch) (maybe-finish tkl nuzd))
+     ((and (eqv? end-tok ch) (zero? lv))
+      (unread-char ch) (maybe-finish tkl nuzd))
+     ((and end-tok (char=? #\) ch) (zero? lv))
+      (unread-char ch) (maybe-finish tkl nuzd))
+     ((char-set-contains? c:ws ch)	; whitespace
+      (loop (cons '$space tkl) nuzd lv (skip-il-ws (read-char))))
+     ((read-c-comm ch #f) =>		; comment
+      (lambda (comm)
+	;; Normally comments in CPP def's are replaced by a space.  We allow
+	;; comments to get passed through, hoping this does not break code.
+	(if keep-comm
+	    (loop (acons '$comm (cdr comm) tkl) nuzd lv (skip-il-ws (read-char)))
+	    (loop (cons '$space tkl) nuzd lv (skip-il-ws (read-char))))))
+     ((read-c-ident ch) =>
+      (lambda (iden)
+        (sferr "    ~s: scan-x: got iden ~s\n" id iden)
+	(cond
+	 ((string=? iden "defined")
+	  (loop (acons '$text (string-append iden (scan-defined-arg)) tkl)
+                nuzd lv (read-char)))
+	 ((member iden '("__has_include__" "__has_include_next__"))
+	  (cond
+	   ((scan-arg-literal) =>
+	    (lambda (arg)
+              (let ((tkl (acons '$text (string-append iden arg) tkl)))
+	        (loop tkl nuzd lv (read-char)))))
+	   (else
+	    (loop (acons '$ident iden tkl) nuzd lv (read-char)))))
+	 (else
+          ;;(sferr "  ~s: about to macro-expand ~s w/ used=~s\n" id iden used)
+ 	  (let* ((rval uzd (expand-macro-ref iden defs '() used))
+                 (tkl (if rval (cons rval tkl) (acons '$ident iden tkl))))
+            ;;(sferr "  ~s: returns w/ uzd=~s used=~s\n" id uzd used)
+            (loop tkl (uu uzd nuzd) lv (read-char)))))))
+     ((read-c-string ch) =>
+      (lambda (pair) (loop (cons pair tkl) nuzd lv (read-char))))
+     ((char=? #\( ch) (loop (cons ch tkl) nuzd (1+ lv) (read-char)))
+     ((char=? #\) ch) (loop (cons ch tkl) nuzd (1- lv) (read-char)))
+     (else
+      (loop (cons ch tkl) nuzd lv (read-char))))))
+
+(define* (scan+expand-to-mark defs used mark #:optional (keep-comm #t))
+  (macro-expand (tokenize-to-mark mark) defs used keep-comm))
+
+;; @deffn {Procedure} cpp-expand-text text defs [used] => string used
+;; Expand the string @var{text} using the provided CPP @var{defs} a-list.
+;; Identifiers in the list of strings @var{used} will not be expanded.
+;; @end deffn
+(define* (cpp-expand-text text defs #:optional (used '()))
+  ;;(define id (mkid))
+  ;;(sferr "~s: cpp-expand-text text=~s used=~s\n" id text used)
+  (with-input-from-string text
+    (lambda () (scan+expand-to-mark defs used #f))))
+
+;; @deffn {Procedure} collect-args argl defs used => (argd used)
+;; Collect arguments to a function macro which appears in C code.  Return an
+;; alist of arg-name, arg-tokl elements.  If not looking at @code{(} return
+;; @code{#f}, else scan and eat up to closing @code{)}.  If multiple
+;; whitespace characters are skipped at the front then only one @code{#\space}
+;; is re-inserted.
+;; @end deffn
+(display "cpp.scm: fix collect-args: does not need to return used\n")
+(define (collect-args argl defs used)
+  (define id (mkid))
+  (if DBG (sferr "~s: collect-args argl=~s used=~s\n" id argl used))
+  (and
+   (let loop1 ((sp #f) (ch (read-char)))
+     (cond
+      ((eof-object? ch) (if sp (unread-char #\space)) #f)
+      ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
+      ((not (char=? #\( ch)) (if sp (unread-char #\space)) #f)
+      (else (unread-char ch))))
+   ;; found #\(
+   (let loop2 ((argl argl) (argv '()) (ch (read-char)))
+     (cond
+      ((eof-object? ch)
+       (throw 'cpp-error "EOF reading args"))
+      ((char=? ch #\))
+       (reverse (if (and (pair? argl) (string=? (car argl) "..."))
+		    (acons "__VA_ARGS__" "" argv)
+                    argv)))
+      ((and (pair? argl) (string=? (car argl) "..."))
+       (let* ((argx (scan+expand-to-mark defs used #\))))
+	 (loop2 '() (acons "__VA_ARGS__" argx argv) (read-char))))
+      ((or (char=? ch #\() (char=? ch #\,))
+       (let ((repl (scan+expand-to-mark defs used #\))))
+	 (cond
+	  ((pair? argl)
+	   (loop2 (cdr argl) (acons (car argl) (cons '$text repl) argv)
+                  (read-char)))
+	  ((string=? repl "") ;; ???  -- I think foo()
+	   (loop2 argl argv (read-char)))
+	  (else (throw 'cpp-error "function macro arg mismatch")))))
+      (else
+       (throw 'cpp-error "cpp.scm: collect-args coding error"))))))
+
+;; @deffn {Procedure} px-cpp-ftn argd repl => tokl
 ;; Pre-expand CPP function where @var{argd} is an a-list of arg name and
 ;; replacement and @var{repl} is the pre-subsituted replacement.
 ;; @end deffn
@@ -614,16 +602,268 @@
   (with-input-from-string repl
     (lambda () (loop '() '() #f (read-char)))))
 
-;; @deffn {Procedure} cpp-expand-text text defs [used] => string used
-;; Expand the string @var{text} using the provided CPP @var{defs} a-list.
-;; Identifiers in the list of strings @var{used} will not be expanded.
+;; @deffn {Procedure} expand-macro-ref ident defs sl used => repl used
+;; This is the workhorse for expand-cpp-macro-ref.
 ;; @end deffn
-(define* (cpp-expand-text text defs #:optional (used '()))
-  ;;(define id (mkid))
-  ;;(sferr "~s: cpp-expand-text text=~s used=~s\n" id text used)
-  (with-input-from-string text
-    (lambda () (scan+x-to-mark defs used #f))))
-;; ^ TODO: move after scan+x-to-mark
+(define (expand-macro-ref ident defs sl used)
+  (define id (mkid))
+  (if DBG (sferr "~s: expand-macro-ref ident=~s used=~s\n" id ident used))
+
+  (let ((rval (assoc-ref defs ident)))
+    (cond
+     ((member ident used) (values #f used))
+     ((string? rval) ;; simple macro
+      ;; THIS IS ALL MESSED UP
+      (let* ((used (cons ident used))
+             (repl used (cpp-expand-text rval defs used)))
+	(if #f ;; (ident-like? repl)
+            (call-with-values
+                (lambda () (expand-macro-ref repl defs sl used))
+              (lambda (rpl used) (values (or rpl repl) used)))
+	    (values repl used))))
+     ((pair? rval)   ;; function macro
+      ;;(sferr "  ~s: ~s is function macro\n" id ident)
+      ;; GNU CPP manual: "A function-like macro is only expanded if its name
+      ;; appears with a pair of parentheses after it.  If you just write the
+      ;; name, it is left alone."
+      ;;(sferr "  ~s: pre collect used=~s\n" id used)
+      (call-with-values
+          ;;(lambda () (collect-args (car rval) defs (cons ident used)))
+          (lambda () (collect-args (car rval) defs ident))
+        (lambda (argd used-no-no)
+          ;;(sferr "  ~s: post collect used=~s\n" id used)
+          (sferr "  ~s: collected argd: ~s\n" id argd)
+          (if argd
+	      (let* ((used (cons ident used))
+                     (prep (px-cpp-ftn argd (cdr rval)))
+		     (repl used (cpp-expand-text prep defs used)))
+		(if #f ;; (ident-like? repl)
+                    (call-with-values
+                        (lambda ()
+                          (sferr "  ~s: ABOUT to expand-macro-ref repl=~s\n" id repl)
+                          (expand-macro-ref repl defs sl used))
+                      (lambda (rpl used) (values (or rpl repl) used)))
+		    (values repl used)))
+              (values #f used)))))
+     ((c99-std-val ident sl) => (lambda (repl) (values repl used)))
+     ;;((string=? ident "_Pragma") (finish-pragma))
+     ;;^ does not work here: move here when cpp is token-based
+     (else (values #f used)))))
+
+
+;; === tokenize & reverse ============
+
+;; We just scanned "defined", now need to scan the arg to inhibit expansion.
+;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
+;; return "defined(FOO)" or "defined FOO".
+(define (scan-defined-arg)
+  (let* ((ch (skip-il-ws (read-char))) (no-ec (not (char=? ch #\())))
+    (let loop ((chl (list ch)) (ch (skip-il-ws (read-char))))
+      (cond
+       ((eof-object? ch)
+	(if no-ec
+	    (list->string (cons #\space (reverse chl)))
+	    (cpp-err "illegal argument to `defined'")))
+       ((char-set-contains? c:ir ch)
+	(loop (cons ch chl) (read-char)))
+       (no-ec
+	(unread-char ch)
+	(list->string (cons #\space (reverse chl))))
+       ((char=? #\) (skip-il-ws ch))
+	(reverse-list->string (cons #\) chl)))
+       (else
+	(cpp-err "illegal argument to  `defined'"))))))
+
+;; must be (\s*<xxx>\s*) OR (\s*"xxx"\s*) => ("<xxx>") OR ("\"xxx\"")
+(define (scan-arg-literal)
+  (let ((ch (read-char)))
+    ;; if exit, then did not defined __has_include(X)=__has_include__(X)
+    (if (or (eof-object? ch) (not (char=? #\( ch)))
+	(throw 'cpp-error "expecting `('")))
+  (let loop ((chl '()) (ch (skip-il-ws (read-char))))
+    (cond
+     ((eof-object? ch) (cpp-err "illegal argument"))
+     ((char=? #\) ch)
+      (let loop2 ((res '()) (chl chl))
+	(cond
+	 ((null? chl)
+	  (string-append "(\"" (esc-c-str (list->string res)) "\")"))
+	 ((and (null? res) (char-whitespace? (car chl))) (loop2 res (cdr chl)))
+	 (else (loop2 (cons (car chl) res) (cdr chl))))))
+     (else (loop (cons ch chl) (read-char))))))
+
+(define* (tokenize-to-mark mark #:optional trim-trailing-space)
+  ;; mark must be one of #\, #\) #f
+  ;; Does not eat the mark.
+  (define (finish tkl)
+    (reverse
+     (if (and trim-trailing-space (pair? tkl) (eqv? '$space (car tkl)))
+         (cdr tkl)
+         tkl)))
+
+  (let loop ((tkl '()) (lv 0) (ch (skip-il-ws (read-char))))
+    (cond
+     ((eof-object? ch) (finish tkl))
+     ((and (eqv? mark ch) (zero? lv))
+      (unread-char ch) (finish tkl))
+     ((and mark (char=? #\) ch) (zero? lv)) ;; mark is #\, see #\)
+      (unread-char ch) (finish tkl))
+     ((char-set-contains? c:ws ch)	; whitespace
+      (loop (cons '$space tkl) lv (skip-il-ws (read-char))))
+     ((read-c-comm ch #f) =>		; comment
+      (if (and (pair? tkl) (eq? #\space (car tkl)))
+	  (loop tkl lv (skip-il-ws (read-char)))
+	  (loop (cons '$space tkl) lv (skip-il-ws (read-char)))))
+     ((read-c-ident ch) =>
+      (lambda (iden)
+	(cond
+	 ((string=? iden "defined")
+	  (loop (acons '$text (string-append iden (scan-defined-arg)) tkl)
+                lv (read-char)))
+	 ((member iden '("__has_include__" "__has_include_next__"))
+	  (cond
+	   ((scan-arg-literal) =>
+	    (lambda (arg) (let ((tkn (string-append iden arg)))
+	                    (loop (acons '$text tkn tkl) lv (read-char)))))
+	   (else
+	    (loop (acons '$ident iden tkl) lv (read-char)))))
+	 (else
+          (loop (acons '$ident iden tkl) lv (read-char))))))
+     ((read-c-string ch) =>
+      (lambda (pair) (loop (cons pair tkl) lv (read-char))))
+     ((char=? #\( ch) (loop (cons ch tkl) (1+ lv) (read-char)))
+     ((char=? #\) ch) (loop (cons ch tkl) (1- lv) (read-char)))
+     (else (loop (cons ch tkl) lv (read-char))))))
+
+
+(define (tokenize-args argl) ;; => args | #f
+  (and
+   (let loop1 ((sp #f) (ch (read-char)))
+     (cond
+      ((eof-object? ch) (if sp (unread-char #\space)) #f)
+      ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
+      ((not (char=? #\( ch)) (if sp (unread-char #\space)) #f)))
+   ;; found #\(
+   (let loop2 ((argv '()) (ch #\() (argl argl))
+     (sferr "loop2: al=~s\n" argl)
+     (cond
+      ((eof-object? ch)
+       (throw 'cpp-error "EOF reading args"))
+      ((memq ch '(#\( #\,)) ; start of arg
+       (let* ((anam (and (pair? argl) (car argl)))
+              (argl (and (pair? argl) (cdr argl)))
+              (atkl (tokenize-to-mark (if (equal? anam "...") #\) #\,) #t)))
+         (sferr "  start atkl=~s\n" atkl)
+         (loop2
+	  (cond
+           ((and (null? argl) (null? atkl)) argv)
+           ((string=? anam "...") (acons "__VA_ARGS__" atkl argv))
+           (else (acons anam atkl argv)))
+          (read-char) argl)))
+      ((char=? ch #\))                  ; end of args
+       (if (pair? argl)
+           (throw 'cpp-error "function macro arg count mismatch")
+           (reverse argv)))
+      (else
+       (throw 'cpp-error "cpp.scm(tokenize-args): coding error"))))))
+
+
+;;.@deffn {Procedure} rtokl->string reverse-token-list => string
+;; Convert reverse token-list to string.
+;; @end deffn
+(define (rtokl->string tokl)
+
+  ;; Turn reverse chl into a string and insert it into the string list stl.
+  (define (add-chl chl stl)
+    (if (null? chl) stl (cons (list->string chl) stl)))
+
+  ;; Works like this: Scan through the list of tokens (key-val pairs or
+  ;; lone characters).  Lone characters are collected in a list (@code{chl});
+  ;; pairs are converted into strings and combined with list of characters
+  ;; into a list of strings.  When done the list of strings is combined to
+  ;; one string.  (The token 'argval is expansion of argument.)
+  (let loop ((stl '())		   ; list of strings to reverse-append
+	     (chl '())		   ; char list
+	     (nxt #f)		   ; next string to add after chl
+	     (tkl tokl))	   ; input token list
+    (cond
+     (nxt
+      (loop (cons nxt (add-chl chl stl)) '() #f tkl))
+     ((null? tkl)
+      (apply string-append (add-chl chl stl)))
+     ((char? (car tkl))
+      (loop stl (cons (car tkl) chl) nxt (cdr tkl)))
+     (else
+      (match tkl
+	(`(($ident . ,rval) $dhash ($ident . ,lval) . ,rest)
+	 (loop stl chl nxt
+	       (acons '$ident (string-append lval rval) (list-tail tkl 3))))
+	(`(($ident . ,arg) $hash . ,rest)
+	 (loop stl chl (string-append "\"" arg "\"") (list-tail tkl 2)))
+	(`(($ident . ,iden) ($ident . ,lval) . ,rest)
+	 (loop stl chl iden rest))
+	(`(($ident . ,iden) . ,rest)
+	 (loop stl chl iden rest))
+	(`(($string . ,val) . ,rest)
+	 (loop stl (cons #\" chl) (esc-c-str val) (cons #\" rest)))
+	(`(($text . ,val) . ,rest)
+	 (loop stl chl val rest))
+	(`($space $space . ,rest)
+	 (loop stl chl nxt rest))
+	(`($space . ,rest)
+	 (loop stl (cons #\space chl) nxt rest))
+	(`(($comm . ,val) . ,rest)
+	 ;; replace comment with extra trailing space
+	 (loop stl chl (string-append "/*" val "*/ ") rest))
+	(`(,asis . ,rest)
+	 (loop stl chl asis rest))
+	(otherwise
+	 (error "nyacc cpp rtokl->string, no match" tkl)))))))
+
+(define (tokl->string rtokl)
+  (rtokl->string (reverse rtokl)))
+
+(export
+ tokenize-to-mark
+ tokenize-args
+ tokl->string)
+       
+;; === convert to tokens and process
+
+(define (maybe-expand-macro ident defs sloc used)
+  (let ((rval (assoc-ref defs ident)))
+    (cond
+     ;;((member ident used) #f)
+     ((string? rval) ;; simple macro
+      (call-with-values
+          (lambda () (macro-expand `(($ident . ,ident)) used))
+        (lambda (repl used)
+          (and repl (tokl->string repl)))))
+     ((pair? rval)
+      (let ((argd (tokenize-args (cdr rval))))
+        (and argd
+             (error "@@@")
+             )
+        (call-with-values
+          (lambda () (collect-args (car rval) defs ident))
+        (lambda (argd used-no-no)
+          ;;(sferr "  ~s: post collect used=~s\n" id used)
+          ;;(sferr "  ~s: collected argd: ~s\n" id argd)
+          (if argd
+	      (let* ((used (cons ident used))
+                     (prep (px-cpp-ftn argd (cdr rval)))
+		     (repl used (cpp-expand-text prep defs used)))
+		(if #f ;; (ident-like? repl)
+                    (call-with-values
+                        (lambda ()
+                          (expand-macro-ref repl defs sloc used))
+                      (lambda (rpl used) (values (or rpl repl) used)))
+		     (values repl used)))
+              (values #f used))))))
+     ((c99-std-val ident sloc) => (lambda (repl) (values repl used)))
+     ;;((string=? ident "_Pragma") (finish-pragma))
+     ;;^ does not work here: move here when cpp is token-based
+     (else (values #f used)))))
 
 ;; === exports =======================
 
@@ -657,6 +897,7 @@
       (throw 'c99-error "CPP error"))))
 ;; ^ TODO: move below expand-cpp-name
 
+
 ;; @deffn {Procedure} expand-cpp-macro-ref ident defs sl => repl|#f
 ;; Given an identifier seen in the current input, this checks for associated
 ;; definition in @var{defs} (generated from CPP defines).  If found as simple
@@ -673,49 +914,7 @@
 ;; The argument @var{sl} is source location info.
 ;; @end deffn
 
-;; @deffn {Procedure} expand-macro-ref ident defs sl used => repl used
-;; This is the workhorse for expand-cpp-macro-ref.
-;; @end deffn
-(define (expand-macro-ref ident defs sl used)
-  ;;(define id (mkid))
-  ;;(sferr "~s: expand-macro-ref ident=~s used=~s\n" id ident used)
-  ;;(if (equal? ident "global.GLOBAL(elements)") (quit))
-  (let ((rval (assoc-ref defs ident)))
-    (cond
-     ((member ident used) (values #f used))
-     ((string? rval)
-      (let* ((used (cons ident used))
-             (repl used (cpp-expand-text rval defs used)))
-	(if (ident-like? repl)
-            (call-with-values
-                (lambda () (expand-macro-ref repl defs sl used))
-              (lambda (rpl used) (values (or rpl repl) used)))
-	    (values repl used))))
-     ((pair? rval)
-      ;;(sferr "  ~s: ~s is function macro\n" id ident)
-      ;; GNU CPP manual: "A function-like macro is only expanded if its name
-      ;; appears with a pair of parentheses after it.  If you just write the
-      ;; name, it is left alone."
-      ;;(sferr "  ~s: pre collect used=~s\n" id used)
-      (call-with-values
-          (lambda () (collect-args (car rval) defs used)) ;; add ident?
-        (lambda (argd used)
-          ;;(sferr "  ~s: post collect ident=~s used=~s\n" id ident used)
-          (if argd
-	      (let* ((used (cons ident used))
-                     (prep (px-cpp-ftn argd (cdr rval)))
-		     (repl used (cpp-expand-text prep defs (cons ident used))))
-		(if (ident-like? repl)
-                    (call-with-values
-                        (lambda () (expand-macro-ref repl defs sl used))
-                      (lambda (rpl used) (values (or rpl repl) used)))
-		     (values repl used)))
-              (values #f used)))))
-     ((c99-std-val ident sl) => (lambda (repl) (values repl used)))
-     ;;((string=? ident "_Pragma") (finish-pragma))
-     ;;^ does not work here: move here when cpp is token-based
-     (else (values #f used)))))
-
+(display "cpp.scm: fix expand-cpp-macro-ref\n")
 (define (expand-cpp-macro-ref ident defs sl)
   (expand-macro-ref ident defs sl '()))
 (define (xexpand-cpp-macro-ref ident defs sl)
@@ -723,7 +922,7 @@
    (call-with-values
        (lambda () (expand-macro-ref ident defs sl '()))
      (lambda (repl used)
-       ;;(sferr "expand-cpp-macro-ref ~s => ~s\n" ident repl)
+       (sferr "expand-cpp-macro-ref ~s => ~s\n" ident repl)
        repl))))
 
 ;; may not catch strings w/ non-matching parens
