@@ -35,7 +35,7 @@
      (expr "\n" ($$ `(expr-stmt ,$1)))
      (assn "\n" ($$ `(assn-stmt ,$1))))
     (expr
-     (expr "+" expr ($$ `(add ,$1 ,$3)))
+     (expr "+" expr ($$ `(add ,$1 ,$3))) x
      (expr "-" expr ($$ `(sub ,$1 ,$3)))
      (expr "*" expr ($$ `(mul ,$1 ,$3)))
      (expr "/" expr ($$ `(div ,$1 ,$3)))
