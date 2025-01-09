@@ -150,7 +150,6 @@
     (exec-stmt
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
      ("set" $deref/ix "(" expr-or-tuple ")" unit-expr
-      ;;($$ `(set-indexed (deref (ident ,$2)) ,$4 ,$6)))
       ($$ `(set-indexed (ident ,$2)
                         ,(if (eq? 'expr (sx-tag $4)) `(expr-list ,$4) $4)
                         ,$6)))
