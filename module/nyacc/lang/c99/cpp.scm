@@ -428,7 +428,9 @@
      (else
       (loop (cons ch tkl) nuzd lv (read-char))))))
 
-(define (macro-expand . args0) (sferr "macro-expand not implemnted\n") (quit))
+(define* (macro-expand tokl defs used #:optional keep-comm) ;; => (tokl used)
+  (values `(macro-expand ,tokl) used))
+
 #;(define* (macro-expand tokl defs used #:optional (keep-comm #t))
   
   (define id (mkid))
@@ -552,11 +554,11 @@
       (else
        (throw 'cpp-error "cpp.scm: collect-args coding error"))))))
 
-;; @deffn {Procedure} px-cpp-ftn argd repl => tokl
-;; Pre-expand CPP function where @var{argd} is an a-list of arg name and
-;; replacement and @var{repl} is the pre-subsituted replacement.
+;; @deffn {Procedure} px-cpp-ftn argd repl used => tokl
+;; Pre-expand CPP function where @var{argd} is an a-list of arg name,
+;; non-expanded token list pairs, and repl is the tokenized RHS.
 ;; @end deffn
-(define (px-cpp-ftn argd repl)
+(define (px-cpp-ftn argd repl used)
 
   ;; Turn reverse chl into a string and insert it into the token stream.
   (define (ins-chl chl stl)
@@ -602,13 +604,30 @@
   (with-input-from-string repl
     (lambda () (loop '() '() #f (read-char)))))
 
+(define (pre-expand argd repl defs used)
+  (define (maybe-x-id rg) ;; maybe expand ident
+    (match rg (('$ident . id) (or (assoc-ref argd id) rg)) (__ rg)))
+  (let loop ((tokl repl))
+    (match tokl
+      ('() tokl)
+      ((lt '$dhash rt . rest)
+       (let ((lx (maybe-x-id lt)) (rx (maybe-x-id rt)))
+         (cons* lx rx (loop rest))))
+      (('$hash rg . rest)
+       (cons* `($string . ,(tokl->string (list (maybe-x-id rg)))) (loop rest)))
+      ((`($ident . ,id) . rest)
+       (cond
+        ((assoc-ref argd id) =>
+         (lambda (argval)
+           (call-with-values (lambda () (macro-expand argval defs used))
+             (lambda (tokl used) (append tokl (loop rest))))))
+        (else (cons (car tokl) (loop (cdr tokl))))))
+      (else (cons (car tokl) (loop (cdr tokl)))))))
+
 ;; @deffn {Procedure} expand-macro-ref ident defs sl used => repl used
 ;; This is the workhorse for expand-cpp-macro-ref.
 ;; @end deffn
 (define (expand-macro-ref ident defs sl used)
-  (define id (mkid))
-  (if DBG (sferr "~s: expand-macro-ref ident=~s used=~s\n" id ident used))
-
   (let ((rval (assoc-ref defs ident)))
     (cond
      ((member ident used) (values #f used))
@@ -632,16 +651,14 @@
           (lambda () (collect-args (car rval) defs ident))
         (lambda (argd used-no-no)
           ;;(sferr "  ~s: post collect used=~s\n" id used)
-          (sferr "  ~s: collected argd: ~s\n" id argd)
+          ;;(sferr "  ~s: collected argd: ~s\n" id argd)
           (if argd
 	      (let* ((used (cons ident used))
                      (prep (px-cpp-ftn argd (cdr rval)))
 		     (repl used (cpp-expand-text prep defs used)))
 		(if #f ;; (ident-like? repl)
                     (call-with-values
-                        (lambda ()
-                          (sferr "  ~s: ABOUT to expand-macro-ref repl=~s\n" id repl)
-                          (expand-macro-ref repl defs sl used))
+                        (lambda () (expand-macro-ref repl defs sl used))
                       (lambda (rpl used) (values (or rpl repl) used)))
 		    (values repl used)))
               (values #f used)))))
@@ -710,10 +727,11 @@
       (unread-char ch) (finish tkl))
      ((char-set-contains? c:ws ch)	; whitespace
       (loop (cons '$space tkl) lv (skip-il-ws (read-char))))
-     ((read-c-comm ch #f) =>		; comment
-      (if (and (pair? tkl) (eq? #\space (car tkl)))
-	  (loop tkl lv (skip-il-ws (read-char)))
-	  (loop (cons '$space tkl) lv (skip-il-ws (read-char)))))
+     ((read-c-comm ch #f)		; comment
+      (loop (cond ((null? tkl) tkl)
+                  ((eq? #\space (car tkl)) tkl)
+                  (else (cons '$space tkl)))
+            lv (skip-il-ws (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
 	(cond
@@ -735,7 +753,6 @@
      ((char=? #\) ch) (loop (cons ch tkl) (1- lv) (read-char)))
      (else (loop (cons ch tkl) lv (read-char))))))
 
-
 (define (tokenize-args argl) ;; => args | #f
   (and
    (let loop1 ((sp #f) (ch (read-char)))
@@ -745,21 +762,19 @@
       ((not (char=? #\( ch)) (if sp (unread-char #\space)) #f)))
    ;; found #\(
    (let loop2 ((argv '()) (ch #\() (argl argl))
-     (sferr "loop2: al=~s\n" argl)
      (cond
       ((eof-object? ch)
        (throw 'cpp-error "EOF reading args"))
       ((memq ch '(#\( #\,)) ; start of arg
        (let* ((anam (and (pair? argl) (car argl)))
-              (argl (and (pair? argl) (cdr argl)))
               (atkl (tokenize-to-mark (if (equal? anam "...") #\) #\,) #t)))
-         (sferr "  start atkl=~s\n" atkl)
          (loop2
 	  (cond
-           ((and (null? argl) (null? atkl)) argv)
+           ((and (char=? #\( ch) (null? argl) (null? atkl)) argv)
+           ((null? argl) (throw 'cpp-error "too many values"))
            ((string=? anam "...") (acons "__VA_ARGS__" atkl argv))
            (else (acons anam atkl argv)))
-          (read-char) argl)))
+          (read-char) (if (pair? argl) (cdr argl) argl))))
       ((char=? ch #\))                  ; end of args
        (if (pair? argl)
            (throw 'cpp-error "function macro arg count mismatch")
@@ -820,8 +835,8 @@
 	(otherwise
 	 (error "nyacc cpp rtokl->string, no match" tkl)))))))
 
-(define (tokl->string rtokl)
-  (rtokl->string (reverse rtokl)))
+(define (tokl->string tokl)
+  (rtokl->string (reverse tokl)))
 
 (export
  tokenize-to-mark
@@ -830,13 +845,13 @@
        
 ;; === convert to tokens and process
 
-(define (maybe-expand-macro ident defs sloc used)
+(define (maybe-expand-macro ident defs sloc used) ;; => tokl used
   (let ((rval (assoc-ref defs ident)))
     (cond
      ;;((member ident used) #f)
      ((string? rval) ;; simple macro
       (call-with-values
-          (lambda () (macro-expand `(($ident . ,ident)) used))
+          (lambda () (macro-expand `(($ident . ,ident)) defs used))
         (lambda (repl used)
           (and repl (tokl->string repl)))))
      ((pair? rval)
@@ -847,8 +862,6 @@
         (call-with-values
           (lambda () (collect-args (car rval) defs ident))
         (lambda (argd used-no-no)
-          ;;(sferr "  ~s: post collect used=~s\n" id used)
-          ;;(sferr "  ~s: collected argd: ~s\n" id argd)
           (if argd
 	      (let* ((used (cons ident used))
                      (prep (px-cpp-ftn argd (cdr rval)))
