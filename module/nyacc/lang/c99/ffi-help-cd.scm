@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help-cd.scm
 
-;; Copyright (C) 2016-2024 Matthew Wette
+;; Copyright (C) 2016-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -587,6 +587,8 @@
       (`((union-def (ident ,name) ,field-list))
        (cnvt `((union-def ,field-list))))
 
+      (`((function-returning . ,_0) . ,_1) ''*) ;; alias for ptr-to ftn
+
       (otherwise
        (fherr "mtail->ffi-decl missed:\n~A" (ppstr mtail)))))
 
@@ -640,6 +642,8 @@
                     ,mname (cpointer (cfunction ,pr ,pc))))))))
          (`((pointer-to) . ,_1)
           `(cdata-arg->pointer ,mname))))
+      (`(function-returning . _0)
+       (unwrap-mdecl (cons (md-label mdecl) (cons '(pointer-to) mtail))))
       (`(enum-def (ident ,name) ,_1)
        (cond
 	((dmem? (w/enum name) defined)
