@@ -1,9 +1,14 @@
-Copyright (C) 2017-2024 Matthew Wette
+Copyright (C) 2017-2025 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
+
+2025-01-15  V2.01.5
+	* c99/parser.scm(split-cppdefs): w/o = rhs is "1", not ""
+	* c99/ffi-help-cd.scm(unwrap-mdecl,mtail->ffi-decl): add case for 
+	  function not declared as pointer; pointer
 
 2024-11-15  V2.01.4
 	* cdata.scm(Xcdata-ref): enum-ref needs symf not numf
