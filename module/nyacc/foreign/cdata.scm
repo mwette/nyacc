@@ -98,6 +98,7 @@
             ctype->ffi
             ;;
             NULL NULL?
+            cdata-arg->number cdata-arg->pointer
             unwrap-number unwrap-pointer unwrap-array
             ;;
             ;; debug
@@ -1357,6 +1358,7 @@
   (cond ((number? arg) arg)
         ((cdata? arg) (cdata-ref arg))
         (else (error "unwrap-number: bad arg:" arg))))
+(define cdata-arg->number unwrap-number)
 
 ;; @deffn {Procedure} unwrap-pointer arg
 ;; Convert an argument to a Guile pointer for a ffi procedure call.
@@ -1383,6 +1385,7 @@
                         (else (error "not ok")))))
            ((cfunction-proc->ptr func) arg)))
         (else (error "unwrap-pointer: bad arg:" arg))))
+(define cdata-arg->pointer unwrap-pointer)
 
 ;; @deffn {Procedure} unwrap-array arg
 ;; This will convert an array to a form suitable to pass to a Guile
