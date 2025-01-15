@@ -296,7 +296,8 @@
       ($$ '(fixed-type "unsigned long long")))
      ("char" ($$ '(fixed-type "char")))
      ("signed" "char" ($$ '(fixed-type "signed char")))
-     ("unsigned" "char" ($$ '(fixed-type "unsigned char"))))
+     ("unsigned" "char" ($$ '(fixed-type "unsigned char")))
+     ("__int128" ($$ '(fixed-type "__int128"))))
 
     (float-type-specifier
      ("float" ($prec 'imp) ($$ '(float-type "float")))
