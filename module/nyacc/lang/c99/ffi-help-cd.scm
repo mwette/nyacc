@@ -547,10 +547,8 @@
       (`((enum-def . ,rest2) . ,rest1) 'ffi:int)
       (`((enum-ref . ,rest2) . ,rest1) 'ffi:int)
 
-      (`((array-of ,dim) . ,rest)
-       `(make-list ,(eval-dim dim) ,(cnvt rest)))
-      (`((array-of) . ,rest)
-       (cnvt `((array-of "0") . ,rest)))
+      (`((array-of ,dim) . ,rest) ''*)
+      (`((array-of) . ,rest) ''*)
 
       (`((struct-def (field-list . ,fields)))
        `(list ,@(map (lambda (fld)
@@ -570,6 +568,8 @@
          (clean-and-unitize-fields fields))))
       (`((union-def (ident ,name) ,field-list))
        (cnvt `((union-def ,field-list))))
+
+      (`((function-returning . ,_0) . ,_1) ''*) ;; alias for ptr-to ftn
 
       (otherwise
        (fherr "mtail->ffi-decl missed:\n~A" (ppstr mtail)))))
