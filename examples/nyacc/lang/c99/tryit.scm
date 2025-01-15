@@ -378,9 +378,9 @@ typedef struct bar { foo_t a; foo_t b[2]; } bar_t;")
          (udecl (assoc-ref udict "bar_t"))
          (udecl (sx-ref* udecl 1 2 1 2 2))
          (xdecl (expand-typerefs udecl udict)))
-         )
     (pperr udecl)
     (pperr xdecl)
     #f))
+
 
 ;; --- last line ---
