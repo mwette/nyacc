@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help-cd.scm
 
-;; Copyright (C) 2016-2024 Matthew Wette
+;; Copyright (C) 2016-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
