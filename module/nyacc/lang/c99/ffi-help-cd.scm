@@ -72,7 +72,7 @@
 (define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
 
 (define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
-(define *renamer* (make-parameter identity)) ; renamer from ffi-module
+(define *renamer* (make-parameter (lambda (n c) n))) ; renamer from ffi-module
 
 (define *udict* (make-parameter '()))	   ; udecl dict
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
@@ -1508,7 +1508,7 @@
           (use-modules (nyacc lang c99 ffi-help))
           (load-include-file \"cairo.h\" #:pkg-config \"cairo\")"
   (parameterize ((*options* '()) (*defined* '())
-		 (*renamer* identity) (*errmsgs* '())
+		 (*renamer* (lambda (n c) n)) (*errmsgs* '())
 		 (*prefix* "") (*mport* #t) (*udict* '()))
     (let* ((attrs (acons 'include (list filename) '()))
 	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
@@ -1620,7 +1620,7 @@
 ;; @end deffn
 (define* (compile-ffi-file filename #:optional (options '()))
   (parameterize ((*options* options) (*defined* '())
-		 (*renamer* identity) (*errmsgs* '()) (*prefix* "")
+		 (*renamer* (lambda (n c) n)) (*errmsgs* '()) (*prefix* "")
 		 (*mport* #t) (*udict* '()) (*ddict* '()))
     (if (not (access? filename R_OK))
 	(fherr "ERROR: not found: ~S" filename))
