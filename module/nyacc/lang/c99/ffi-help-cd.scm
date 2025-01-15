@@ -547,8 +547,10 @@
       (`((enum-def . ,rest2) . ,rest1) 'ffi:int)
       (`((enum-ref . ,rest2) . ,rest1) 'ffi:int)
 
-      (`((array-of ,dim) . ,rest) ''*)
-      (`((array-of) . ,rest) ''*)
+      (`((array-of ,dim) . ,rest)
+       `(make-list ,(eval-dim dim) ,(cnvt rest)))
+      (`((array-of) . ,rest)
+       (cnvt `((array-of "0") . ,rest)))
 
       (`((struct-def (field-list . ,fields)))
        `(list ,@(map (lambda (fld)
@@ -623,6 +625,8 @@
                   `(unwrap-pointer ,mname (cpointer (cfunction ,pr ,pc))))))))
          (`((pointer-to) . ,_1)
           `(unwrap-pointer ,mname))))
+      (`(function-returning . ,_0)
+       (unwrap-mdecl (cons (md-label mdecl) (cons '(pointer-to) mtail))))
       (`(enum-def (ident ,name) ,_1)
        (cond
 	((dmem? (w/enum name) defined)
