@@ -708,7 +708,7 @@
             (cons p-ixm1 -1))           ; prev p-rule
         (cons p-ix r-ixm1))))
 
-;; @deffn {Procedure} error-rule? gx => #t|#f
+;; @deffn {Procedure} error-rule? gx => #t | #f
 ;; Predicate to indicate if gx rule has @code{$error} as rhs member.
 ;; @end deffn
 (define (error-rule? gx)
@@ -1608,7 +1608,7 @@
 (define (lalr-match-table mach)
   (assq-ref mach 'mtab))
 
-;; @deffn {Procedure} machine-compacted? mach => #t|#f
+;; @deffn {Procedure} machine-compacted? mach => #t | #f
 ;; Indicate if the machine has been compacted.
 ;; TODO: needs update to deal with error recovery hooks.
 ;; @end deffn
@@ -1742,7 +1742,7 @@
 
 ;; NEW: need to add reduction of ERROR
 
-;; @deffn {Procedure} machine-hashed? mach => #t|#f
+;; @deffn {Procedure} machine-hashed? mach => #t | #f
 ;; Indicate if the machine has been hashed.
 ;; @end deffn
 (define (machine-hashed? mach)
