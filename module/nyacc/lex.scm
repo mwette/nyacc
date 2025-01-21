@@ -169,9 +169,11 @@
 (define (make-ident-like-p reader)
   (lambda (s) (and (string? s)
                    (positive? (string-length s))
-                   (eval-reader reader s)
+                   (with-input-from-string string
+                     (lambda ()
+                       (reader (read-char))
+                       (eof-object? (read-char))))
                    #t)))
-
 
 ;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table [tval]
 ;; Generate a procedure from an ident reader and a parser match-table
