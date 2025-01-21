@@ -336,9 +336,9 @@
 
 
 ;;(define* (maybe-expand-ref tokl defs used #:optional keep-comm)
-(define* (macro-expand tokl defs #:optional used seed keep-comm)
+(define* (macro-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
   ;; => seed, where seed is expanded token list in reverse order
-  (sferr "macro-expand tokl=~s\n" tokl)
+  ;;(sferr "macro-expand tokl=~s\n" tokl)
   (let loop ((seed seed) (tokl tokl))
     (match tokl
       (`(($ident . ,ident) . ,rest)
@@ -682,16 +682,26 @@ expand-cpp-macro-ref ident defs sl
    (and=>
     (assoc-ref defs ident)
     (lambda (rhs)
-      (cond
+      (sferr "xcmf: rhs ~s\n" rhs)
+     (cond
        ((string? rhs)
         (let* ((tokl (tokenize-string-to-mark rhs #f))
                (rtkl (macro-expand tokl defs (list ident))))
           (rtokl->string rtkl)))
        (else ;; pair
-        (let* ((argd (tokenize-args (car rhs)))
+         (let* ((argd (tokenize-args (car rhs)))
                (tokl (tokenize-string-to-mark (cdr rhs) #f))
                (pxtl (pre-expand argd tokl defs '()))
-               (rtkl (macro-expand tokl defs (list ident))))
+               (rtkl (macro-expand pxtl defs (list ident))))
+           
+           #|
+           (sferr " xcmf: argd ~s\n\n" argd)
+           (sferr " xcmf: tokl ~s\n\n" tokl)
+           (sferr " xcmf: pxtl ~s\n\n" pxtl)
+           (sferr " xcmf: rtkl ~s\n\n" rtkl)
+           (sferr " xcmf: repl ~S\n\n" (rtokl->string rtkl))
+           (sferr "QUIT\n") (quit)
+           |#
           (rtokl->string rtkl))))))))
 
 ;; may not catch strings w/ non-matching parens
