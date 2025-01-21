@@ -451,45 +451,6 @@
 
 ;; === tokenize & reverse ============
 
-;; We just scanned "defined", now need to scan the arg to inhibit expansion.
-;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
-;; return "defined(FOO)" or "defined FOO".
-(define (X-scan-defined-arg)
-  (let* ((ch (skip-il-ws (read-char))) (no-ec (not (char=? ch #\())))
-    (let loop ((chl (list ch)) (ch (skip-il-ws (read-char))))
-      (cond
-       ((eof-object? ch)
-	(if no-ec
-	    (list->string (cons #\space (reverse chl)))
-	    (cpp-err "illegal argument to `defined'")))
-       ((char-set-contains? c:ir ch)
-	(loop (cons ch chl) (read-char)))
-       (no-ec
-	(unread-char ch)
-	(list->string (cons #\space (reverse chl))))
-       ((char=? #\) (skip-il-ws ch))
-	(reverse-list->string (cons #\) chl)))
-       (else
-	(cpp-err "illegal argument to  `defined'"))))))
-
-;; must be (\s*<xxx>\s*) OR (\s*"xxx"\s*) => ("<xxx>") OR ("\"xxx\"")
-(define (X-scan-arg-literal)
-  (let ((ch (read-char)))
-    ;; if exit, then did not defined __has_include(X)=__has_include__(X)
-    (if (or (eof-object? ch) (not (char=? #\( ch)))
-	(throw 'cpp-error "expecting `('")))
-  (let loop ((chl '()) (ch (skip-il-ws (read-char))))
-    (cond
-     ((eof-object? ch) (cpp-err "illegal argument"))
-     ((char=? #\) ch)
-      (let loop2 ((res '()) (chl chl))
-	(cond
-	 ((null? chl)
-	  (string-append "(\"" (esc-c-str (list->string res)) "\")"))
-	 ((and (null? res) (char-whitespace? (car chl))) (loop2 res (cdr chl)))
-	 (else (loop2 (cons (car chl) res) (cdr chl))))))
-     (else (loop (cons ch chl) (read-char))))))
-
 ;; mark must be one of #\, #\) #f
 ;; Does not eat the mark.  If #\, or #\) remove trailing space
 (define (tokenize-to-mark mark)
@@ -716,33 +677,24 @@ expand-cpp-macro-ref ident defs sl
 ;;  (else plain))
 
 ;; lookup repl, ident args 
-(define (expand-cpp-macro-ref ident defs sl) ;; => tokl used
-  #f
-  #;(false-if-exception
+(define (expand-cpp-macro-ref ident defs sl)
+  (false-if-exception
    (and=>
-    (assoc ident defs)
-    (lambda (entry)
-      (let ((lhs (car
-                  (tokenize-args (cdr rval)))))
-        (call-with-values
-            (lambda () (expand-macro-ref  foo bar))
-          @@@
-          (cond
-           ((string? rval) ;; simple macro
-            (call-with-values
-                (lambda () (expand-macro-ref `(($ident . ,ident)) '() defs '()))
-              (lambda (head tail used)
-                (and repl (tokl->string repl)))))
-           ((pair? rval)
-            (let ((argd ))
-              (expand-macro-ref ident argd defs '())))
-           ;;((c99-std-val ident sl)) MOVE TO expand-macro-ref
-           ;;((string=? ident "_Pragma") (finish-pragma))
-           ;;^ does not work here: move here when cpp is token-based
-           (else #f))))
-      #f))))
+    (assoc-ref defs ident)
+    (lambda (rhs)
+      (cond
+       ((string? rhs)
+        (let* ((tokl (tokenize-string-to-mark rhs #f))
+               (rtkl (macro-expand tokl defs (list ident))))
+          (rtokl->string rtkl)))
+       (else ;; pair
+        (let* ((argd (tokenize-args (car rhs)))
+               (tokl (tokenize-string-to-mark (cdr rhs) #f))
+               (pxtl (pre-expand argd tokl defs '()))
+               (rtkl (macro-expand tokl defs (list ident))))
+          (rtokl->string rtkl))))))))
 
-      ;; may not catch strings w/ non-matching parens
+;; may not catch strings w/ non-matching parens
 (define (skip-cpp-macro-ref name defs)
   (let ((rval (assoc-ref defs name)))
     (and
