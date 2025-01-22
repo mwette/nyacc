@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 
-;; Copyright (C) 2015-2022 - Matthew R.Wette
+;; Copyright (C) 2015-2022,2025 - Matthew Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -169,7 +169,7 @@
 (define (make-ident-like-p reader)
   (lambda (s) (and (string? s)
                    (positive? (string-length s))
-                   (with-input-from-string string
+                   (with-input-from-string s
                      (lambda ()
                        (reader (read-char))
                        (eof-object? (read-char))))
