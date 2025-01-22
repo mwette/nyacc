@@ -199,6 +199,23 @@ De-reference a pointer.  Returns a @emph{cdata} object representing the
 contents at the address in the underlying bytevector.
 @end deffn
 
+@heading Notes
+
+@subheading Digression on Garbage Collection
+
+Before going further we remind you that the underlying datastructure
+is bytevectors.  Now, since bytevectors in Guile are not searched for
+pointers during garbage collection there is a risk that the objects
+being referenced might be collected during usage.  A systematic method
+to prevent this is work to go.  One might try to use @code{cdata&} in
+the following way keep intermediate values from being collected.
+@example
+  (let ((val (make-cdata foo_t))
+        (ptr (cdata& val)))
+     (bar ptr))
+@end example
+
+
 @heading Going Further
 
 @deffn {Procedure} cdata-sel data tag ... => cdata

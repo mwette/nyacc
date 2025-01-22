@@ -34,7 +34,7 @@
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (cdata* data) -> <cdata>
 ;; (cdata&-ref data) -> pointer
-;; (cdata*-ref data) -> value | <cdata>
+;; (cdata*-ref data tag ...) -> value | <cdata>
 ;; (Xcdata-ref bv ix ct) -> value
 ;; (Xcdata-set! bv ix ct value)
 
@@ -301,15 +301,16 @@
 ;; map of arch (from @code{(*arch*)}) -> cbase
 (define *cbase-map* (make-parameter '()))
 
-;; @deftp {Record} <cdata> bv ix ct [tn]
+;; @deftp {Record} <cdata> bv ix ct pl
 ;; Record to hold C data.  Underneath it's a bytevector, index and type.
 ;; @end deftp
 (define-record-type <cdata>
-  (%make-cdata bv ix ct)
+  (%make-cdata bv ix ct pl)
   cdata?
   (bv cdata-bv)                         ; bvec
   (ix cdata-ix)                         ; index
-  (ct cdata-ct))                        ; type
+  (ct cdata-ct)                         ; type
+  (pl cdata-pl))                        ; pointers
 
 (set-record-type-printer! <cdata>
   (lambda (data port)
@@ -822,7 +823,7 @@
      allocate storage for that many items, associating it with an array
      type of that size."
   (define (make-data type value)
-    (let* ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type)))
+    (let* ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type #f)))
       (if value (cdata-set! data value))
       data))
   (assert-ctype 'make-cdata type)
@@ -835,7 +836,7 @@
            (error "make-cdata: zero sized array type"))
          (let* ((et (carray-type ca)) (sz (ctype-size et))
                 (bv (make-bytevector (* value sz))))
-           (%make-cdata bv 0 (carray et value))))
+           (%make-cdata bv 0 (carray et value) #f)))
         (else
          (make-data type value)))))
     (else (make-data type value))))
@@ -872,7 +873,7 @@
                  (tags tags))
         (cond
          ((null? tags)
-          (%make-cdata bv ix ct))
+          (%make-cdata bv ix ct #f))
          ((eq? 'pointer (ctype-kind ct))
           (if (eq? 'void (cpointer-type (ctype-info ct)))
               (error "cdata-sel: attempt to deference void*"))
@@ -919,7 +920,7 @@
               (mtype (cenum-mtype info))
               (symf (cenum-symf info)))
          (symf (mtype-bv-ref mtype bv ix))))
-      ((array struct union) (%make-cdata bv ix ct))
+      ((array struct union) (%make-cdata bv ix ct #f))
       ((function)
        (let* ((ti (ctype-info ct))
               (mtype (cfunction-ptr-mtype ti))
@@ -1061,7 +1062,7 @@
   (assert-ctype 'make-cdata/* type)
   (let* ((size (ctype-size type))
          (bvec (pointer->bytevector pointer size))
-         (data (%make-cdata bvec 0 type)))
+         (data (%make-cdata bvec 0 type #f)))
     data))
 
 ;; @deffn {Procedure} cdata-copy src) => <cdata>
@@ -1078,7 +1079,7 @@
          (sz (ctype-size ct))
          (bvdst (make-bytevector sz)))
     (bytevector-copy! bv ix bvdst 0 (ctype-size ct))
-    (%make-cdata bvdst 0 ct)))
+    (%make-cdata bvdst 0 ct #f)))
     
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
@@ -1116,7 +1117,7 @@
     (case kind
       ((function) #f)
       (else
-       (%make-cdata (pointer->bytevector pntr (ctype-size type)) 0 type)))))
+       (%make-cdata (pointer->bytevector pntr (ctype-size type)) 0 type #f)))))
 
 ;; @deffn {Procedure} cdata-kind data
 ;; Return the kind of @var{data}: pointer, base, struct, ...
@@ -1142,11 +1143,11 @@
     (make-pointer addr)))
 
 ;; @deffn {Procedure} cdata*-ref data [tag ...] => value
-;; Shortcut for @code{(cdata-ref (cdata* data tag ...))}
+;; Shortcut for @code{(cdata-ref data '* tag ...)}
 ;; @end deffn
 (define (cdata*-ref data . tags)
-  "- Procedure: cdata*-ref data [tag ...]
-     Shortcut for ‘(cdata-ref (cdata* data tag ...))’"
+  "- Procedure: cdata*-ref data [tag ...] => value
+     Shortcut for ‘(cdata-ref data '* tag ...)’"
   (apply cdata-ref data '* tags))
 
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
@@ -1168,7 +1169,7 @@
   (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
     (case (ctype-kind ct)
       ((base) (make-cdata type (cdata-ref data)))
-      ((pointer) (%make-cdata bv ix type))
+      ((pointer) (%make-cdata bv ix type #f))
       ((array)
        (case (ctype-kind type)
          ((pointer)
@@ -1177,7 +1178,7 @@
                  (ptype (cpointer-type (ctype-info type))))
             (type-check (carray-type (ctype-info ct))
                         (cpointer-type (ctype-info type)))
-            (%make-cdata bv ix type)))
+            (%make-cdata bv ix type #f)))
          (else (type-miss))))
       (else (type-miss)))))
 

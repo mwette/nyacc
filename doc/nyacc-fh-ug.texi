@@ -295,6 +295,15 @@ $5 = #<ctype struct struct-foo 0x73af1fc95480>
 
 @c ======================================
 
+@heading Common Errors
+
+@example
+Wrong type argument in position 1 (expecting PRIMITIVE_P):
+  #<procedure 7fed1234 (_ _ _ _)>
+@end example
+This typically indicates that a lambda form passed to a ffi-data
+procedure.
+
 
 @heading The Guile Foreign Function Interface
 
