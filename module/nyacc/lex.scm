@@ -171,8 +171,8 @@
                    (positive? (string-length s))
                    (with-input-from-string s
                      (lambda ()
-                       (reader (read-char))
-                       (eof-object? (read-char))))
+                       (and (reader (read-char))
+                            (eof-object? (read-char)))))
                    #t)))
 
 ;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table [tval]
