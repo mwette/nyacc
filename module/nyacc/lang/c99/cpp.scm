@@ -113,8 +113,6 @@
     '() str)))
 
 (define ident-like? (make-ident-like-p read-c-ident))
-(export ident-like?)
-(display "cpp: ident-like? does not work how I assumed\n")
 
 ;; @deffn {Procedure} read-ellipsis ch
 ;; read ellipsis
@@ -367,23 +365,21 @@
       ((head . tail) (loop (cons head seed) tail))
       ('() seed))))
 
+
 ;; this will look through f-macro repl and stringify, paste, expand arguments
-(define (pre-expand argd repl defs used)
+(define (pre-expand argd repl defs used) ;; => tokl
+
   (define (maybe-sub mrg) ;; if mrg is an arg, do the substitution
     (match mrg
       (('$ident . id) (or (assoc-ref argd id) (list mrg)))
       (__ (list mrg))))
   
   (define (paste ltok rtok)
-    (sferr "  paste ~s ~s\n" ltok rtok)
-    (sferr "  tokl->string => ~s\n" (tokl->string (list ltok rtok)))
     (cons '$ident (tokl->string (list ltok rtok))))
 
   (let loop ((rz '()) (tokl repl)) ;; this is not tail recursive
     (match tokl
-      ('()
-       ;;(sferr " rz: ~s\n" rz)
-       (reverse rz))
+      ('() (reverse rz))
       ((lt '$space '$dhash . rest) (loop rz (cons* lt '$dhash rest)))
       ((lt '$dhash '$space . rest) (loop rz (cons* lt '$dhash rest)))
       ((lt '$dhash rt . rest)
@@ -405,49 +401,50 @@
         ((member ident used)
          (loop (cons `($idnox . ,ident) rz) rest))
         ((assoc-ref argd ident) =>
-         (lambda (aval)
-           (loop (macro-expand aval defs used rz) rest)))
+         (lambda (aval) (loop (macro-expand aval defs used rz) rest)))
         (else (loop (cons (car tokl) rz) (cdr tokl)))))
       (else (loop (cons (car tokl) rz) (cdr tokl))))))
 
+;; return alist of args, in reverse order of argl
 (define (collect-args argl tokl) ;; => argd | #f tail
-  (define (ntk tokl) (if (pair? tokl) (car tokl) #f))
-  (define (ntl tokl) (if (pair? tokl) (cdr tokl) '()))
+  ;;(sferr "\ncollect-args argl=~s\n" argl)
   (match tokl
     (`(#\( . ,rest)
      ;; ad: arg-dict av: tokens, lv: paren-level, al: argl
-     (let loop ((ad '()) (an #f) (av '()) (lv 0) (al argl) (tk #\() (tl rest))
+     (let loop ((argd '()) (tk #\() (tkl rest) (argl argl))
+       ;;(sferr "  loop: tk=~s tkl=~s\n" tk tkl)
        (match tk
          (#f
           (throw 'cpp-error "end of input collecting args"))
-         (#\(
-          (if (zero? lv)
-              (if (pair? al)
-                  (loop ad (car al) av lv (cdr al) (ntk tl) (ntl tl))
-                  (loop ad an av lv al (ntk tl) (ntl tl)))
-              (loop ad an (cons tk av) (1+ lv) al (ntk tl) (ntl tl))))
-         (#\,
+         ((or #\( #\,)                  ; start of arg
+          (let* ((anam (and (pair? argl) (car argl)))
+                 (mark (if (equal? anam "...") #\) #\,)))
+            (let lp ((atkl '()) (lv 0) (tkl tkl)) ; collect-to-mark
+              (let ((tk (and (pair? tkl) (car tkl))))
+                ;;(sferr "    lp: tk=~s tkl=~s lv=~s atkl=~s\n" tk tkl lv atkl)
+                (cond
+                 ((null? tkl)
+                  ;;(sferr "QUITTING\n") (quit)
+                  (throw 'cpp-error "yuck"))
+                 ((eq? #\( tk)
+                  (lp (cons tk atkl) (1+ lv) (cdr tkl)))
+                 ((positive? lv)
+                  (lp (cons tk atkl) (if (eqv? tk #\)) (1- lv) lv) (cdr tkl)))
+                 ((or (eqv? mark tk) (and mark (eqv? #\) tk)))
+                  (loop (acons (car argl) (reverse atkl) argd)
+                        (car tkl) (cdr tkl) (cdr argl)))
+                 (else (lp (cons tk atkl) lv (cdr tkl))))))))
+         (#\)                           ; end of args
           (cond
-           ((positive? lv) (loop ad an (cons tk av) lv al (ntk tl) (ntl tl)))
-           ((null? argl) (throw 'cpp-error "cpp mismatch collecting args"))
-           (else (if (pair? al)
-                     (loop (acons an (reverse av) ad) (car al) '()
-                           lv (cdr al) (ntk tl) (ntl tl))
-                     (loop (acons an (reverse av) ad) #f '()
-                           lv al (ntk tl) (ntl tl))))))
-         (#\)
-          (cond
-           ((positive? lv)
-            (loop ad an (cons tk av) (1- lv) al (ntk tl) (ntl tl)))
-           ((and (not an) (null? av)) (values ad tl))
-           ((not an) (throw 'cpp-error "cpp mismatch collecting args"))
-           ((null? av) (throw 'cpp-error "cpp mismatch collecting args"))
-           (else (values (acons an (reverse av) ad) tl))))
-         
-         (__ (loop ad an (cons tk av) lv al (ntk tl) (ntl tl))))))
-    
-    (`($space . ,rest) (collect-args argl (cdr tokl)))
+           ((null? argl) (values argd tkl))
+           ((equal? argl '("...")) (values (acons "__VA_ARGS__" '() argd) tkl))
+           (else (throw 'cpp-error "function macro arg count mismatch"))))
+         (__
+          (sferr "oops: tk=~s tkl=~s argl=~s\n" tk tkl argl) (quit)
+          (throw 'cpp-error "collect-args coding error")))))
+    (`($space . ,rest) (collect-args argl rest))
     (__ (values #f tokl))))
+
 
 ;; === tokenize & reverse ============
 
@@ -468,42 +465,44 @@
   ;; cx: context #\D-def #\I-inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (ch (skip-il-ws (read-char))))
     (cond
-     ((eof-object? ch) (finish tkl))
-     ((and (eqv? mark ch) (zero? lv))
-      (unread-char ch) (finish tkl))
-     ((and mark (char=? #\) ch) (zero? lv)) ;; mark is #\, see #\)
-      (unread-char ch) (finish tkl))
+     ((eof-object? ch) (if mark (throw 'cpp-error "yuck") (finish tkl)))
      ((char-set-contains? c:ws ch)	; whitespace
       (loop (cons '$space tkl) cx lv (skip-il-ws (read-char))))
-     ((char=? #\# ch)
-      (let ((ch (read-char)))
-        (if (char=? #\# ch)
-            (loop (cons '$dhash tkl) cx lv (read-char))
-            (loop (cons '$hash tkl) cx lv ch))))
      ((read-c-comm ch #f)		; comment
       (loop (cond ((null? tkl) tkl)
                   ((eq? #\space (car tkl)) tkl)
                   (else (cons '$space tkl)))
             cx lv (skip-il-ws (read-char))))
+     ((read-c-string ch) =>
+      (lambda (pair) (loop (cons pair tkl) #\nul lv (read-char))))
+     ((char=? #\# ch)
+      (let ((ch (read-char)))
+        (if (char=? #\# ch)
+            (loop (cons '$dhash tkl) cx lv (read-char))
+            (loop (cons '$hash tkl) cx lv ch))))
      ((read-c-ident ch) =>
       (lambda (ident)
         (let* ((ttype (if (char=? cx #\D) '$idnox '$ident)))
           (loop (acons ttype ident tkl) (ctx ident cx) lv (read-char)))))
-     ((read-c-string ch) =>
-      (lambda (pair) (loop (cons pair tkl) #\nul lv (read-char))))
      ((and (char=? #\I cx) (char=? #\> ch))
       (let lp ((head (list ch)) (tail tkl))
         (if (equal? #\< (car tail))
-            (loop (acons '$text (tokl->string (cons #\< head)) tail)
+            (loop (acons '$text (tokl->string (cons #\< head)) (cdr tail))
                   #\nul lv (read-char))
             (lp (cons (car tail) head) (cdr tail)))))
-     ((char=? #\( ch) (loop (cons ch tkl) cx (1+ lv) (read-char)))
-     ((char=? #\) ch) (loop (cons ch tkl) cx (1- lv) (read-char)))
-     (else (loop (cons ch tkl) cx lv (read-char))))))
+     ((char=? #\( ch)
+      (loop (cons ch tkl) cx (1+ lv) (read-char)))
+     ((positive? lv)
+      (loop (cons ch tkl) cx (if (char=? #\) ch) (1- lv) lv) (read-char)))
+     ((or (eqv? mark ch) (and mark (char=? #\) ch)))
+      (unread-char ch) (finish tkl))
+     (else 
+      (loop (cons ch tkl) cx lv (read-char))))))
 
 (define (tokenize-string-to-mark str mark)
   (with-input-from-string str (lambda () (tokenize-to-mark mark))))
 
+;; return alist of args, in reverse order of argl
 (define (tokenize-args argl) ;; => argd | #f
   (and
    (let loop1 ((sp #f) (ch (read-char)))
@@ -513,9 +512,10 @@
       ((not (char=? #\( ch)) (if sp (unread-char #\space)) #f)))
    ;; found #\(
    (let loop2 ((argd '()) (ch #\() (argl argl))
+     ;;(sferr "loop2: ch=~s argl=~s argd=~s\n" ch argl argd)
      (cond
       ((eof-object? ch)
-       (throw 'cpp-error "EOF reading args"))
+       (throw 'cpp-error "end of input collecting args"))
       ((memq ch '(#\( #\,)) ; start of arg
        (let* ((anam (and (pair? argl) (car argl)))
               (atkl (tokenize-to-mark (if (equal? anam "...") #\) #\,))))
@@ -527,9 +527,10 @@
            (else (acons anam atkl argd)))
           (read-char) (if (pair? argl) (cdr argl) argl))))
       ((char=? ch #\))                  ; end of args
-       (if (pair? argl)
-           (throw 'cpp-error "function macro arg count mismatch")
-           argd))
+       (cond
+        ((null? argl) argd)
+        ((equal? argl '("...")) (acons "__VA_ARGS__" '() argd))
+        (else (throw 'cpp-error "function macro arg count mismatch"))))
       (else
        (throw 'cpp-error "cpp.scm(tokenize-args): coding error"))))))
 
@@ -676,32 +677,33 @@ expand-cpp-macro-ref ident defs sl
 ;;  ((vector? (cadr rhs)) function)
 ;;  (else plain))
 
-;; lookup repl, ident args 
+;; lookup repl, ident args
+(display "cpp.scm: fix false if exception\n")
 (define (expand-cpp-macro-ref ident defs sl)
-  (false-if-exception
+  (identity ;;false-if-exception
    (and=>
     (assoc-ref defs ident)
     (lambda (rhs)
-      (sferr "xcmf: rhs ~s\n" rhs)
-     (cond
+      ;;(sferr "xcmf: ~s => ~s\n" ident rhs)
+      (cond
        ((string? rhs)
         (let* ((tokl (tokenize-string-to-mark rhs #f))
                (rtkl (macro-expand tokl defs (list ident))))
           (rtokl->string rtkl)))
        (else ;; pair
-         (let* ((argd (tokenize-args (car rhs)))
+        (let* ((argd (tokenize-args (car rhs)))
                (tokl (tokenize-string-to-mark (cdr rhs) #f))
                (pxtl (pre-expand argd tokl defs '()))
-               (rtkl (macro-expand pxtl defs (list ident))))
-           
-           #|
-           (sferr " xcmf: argd ~s\n\n" argd)
-           (sferr " xcmf: tokl ~s\n\n" tokl)
-           (sferr " xcmf: pxtl ~s\n\n" pxtl)
-           (sferr " xcmf: rtkl ~s\n\n" rtkl)
-           (sferr " xcmf: repl ~S\n\n" (rtokl->string rtkl))
-           (sferr "QUIT\n") (quit)
-           |#
+               (rtkl (macro-expand pxtl defs (list ident)))
+               )
+          #|
+          (sferr " xcmf: argd ~s\n\n" argd)
+          (sferr " xcmf: tokl ~s\n\n" tokl)
+          (sferr " xcmf: pxtl ~s\n\n" pxtl)
+          (sferr " xcmf: rtkl ~s\n\n" rtkl)
+          (sferr " xcmf: repl ~S\n\n" (rtokl->string rtkl))
+          (sferr "QUIT\n") (quit)
+          |#
           (rtokl->string rtkl))))))))
 
 ;; may not catch strings w/ non-matching parens
