@@ -338,7 +338,7 @@
     ;;
     (signed-char . s8) (unsigned-char . u8)
     (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
-    (signed . 32le) (signed-int . s32le)
+    (signed . s32le) (signed-int . s32le)
     (long-int . s32le) (signed-long . s32le) (signed-long-int . s32le)
     (unsigned-short-int . u16le) (unsigned-int . u32le)
     (unsigned-long-int . u32le)
