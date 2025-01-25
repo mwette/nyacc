@@ -50,7 +50,6 @@
 (define mkid (let ((id 0)) (lambda () (set! id (1+ id)) id)))
 
 (define DBG #t)
-(display "cpp.scm: please add #pragma once\n")
 
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
