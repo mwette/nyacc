@@ -64,11 +64,11 @@
      ((string=? (car defs) str) #t)
      (else (loop (cdr defs))))))
 
-(define (c99-std-val str sl)
+(define (c99-std-val str sp)
   (cond
    ((string=? str "__DATE__") "M01 01 2001")
-   ((string=? str "__FILE__") (or (assq-ref sl 'filename) "(unknown)"))
-   ((string=? str "__LINE__") (number->string (or (assq-ref sl 'line) 0)))
+   ((string=? str "__FILE__") (or (assq-ref sp 'filename) "(unknown)"))
+   ((string=? str "__LINE__") (number->string (or (assq-ref sp 'line) 0)))
    ((string=? str "__STDC__") "1")
    ((string=? str "__STDC_HOSTED__") "0")
    ((string=? str "__STDC_VERSION__") "201701")
@@ -355,12 +355,13 @@
              (call-with-values
                  (lambda () (collect-args (car rhs) rest))
                (lambda (argd tail)
+                 ;;(sferr "  mx: argd=~s \n" argd)
                  (let* ((repl (tokenize-string-to-mark (cdr rhs) #f))
                         (used (cons ident used))
                         (pxtl (pre-expand argd repl defs used)))
                    (loop (macro-expand pxtl defs used seed) tail))))))))
         (else (loop (cons (car tokl) seed) (cdr tokl)))))
-      #;(`(($cppop . ,cppop) $space ($ident . ,ident) . ,rest)
+      #;(`(($cppop . ,cppop) #\space ($ident . ,ident) . ,rest)
        (loop (cons* `($idnox . ,ident) `($idnox . ,cppop) seed) rest))
       ((head . tail) (loop (cons head seed) tail))
       ('() seed))))
@@ -380,8 +381,8 @@
   (let loop ((rz '()) (tokl repl)) ;; this is not tail recursive
     (match tokl
       ('() (reverse rz))
-      ((lt '$space '$dhash . rest) (loop rz (cons* lt '$dhash rest)))
-      ((lt '$dhash '$space . rest) (loop rz (cons* lt '$dhash rest)))
+      ((lt #\space '$dhash . rest) (loop rz (cons* lt '$dhash rest)))
+      ((lt '$dhash #\space . rest) (loop rz (cons* lt '$dhash rest)))
       ((lt '$dhash rt . rest)
        (let ((lx (maybe-sub lt)) (rx (maybe-sub rt)))
          (let lp ((rz rz) (lx lx) (rx rx))
@@ -392,7 +393,7 @@
                (if (pair? rx)
                    (lp (cons (car rx) rz) lx (cdr rx))
                    (loop rz rest))))))
-      (('$hash '$space . rest)
+      (('$hash #\space . rest)
        (loop rz (cons '$hash rest)))
       (('$hash rg . rest)
        (loop (cons `($string . ,(tokl->string (maybe-sub rg))) rz) rest))
@@ -407,6 +408,8 @@
 
 ;; return alist of args, in reverse order of argl
 (define (collect-args argl tokl) ;; => argd | #f tail
+  (define (finish atkl)
+    (reverse (if (and (pair? atkl) (eqv? (car atkl) #\space)) (cdr atkl) atkl)))
   ;;(sferr "\ncollect-args argl=~s\n" argl)
   (match tokl
     (`(#\( . ,rest)
@@ -418,7 +421,8 @@
           (throw 'cpp-error "end of input collecting args"))
          ((or #\( #\,)                  ; start of arg
           (let* ((anam (and (pair? argl) (car argl)))
-                 (mark (if (equal? anam "...") #\) #\,)))
+                 (mark (if (equal? anam "...") #\) #\,))
+                 (anam (if (equal? anam "...") "__VA_ARGS__" anam)))
             (let lp ((atkl '()) (lv 0) (tkl tkl)) ; collect-to-mark
               (let ((tk (and (pair? tkl) (car tkl))))
                 ;;(sferr "    lp: tk=~s tkl=~s lv=~s atkl=~s\n" tk tkl lv atkl)
@@ -426,12 +430,14 @@
                  ((null? tkl)
                   ;;(sferr "QUITTING\n") (quit)
                   (throw 'cpp-error "yuck"))
+                 ((and (null? atkl) (eqv? tk #\space))
+                  (lp atkl lv (cdr tkl)))
                  ((eq? #\( tk)
                   (lp (cons tk atkl) (1+ lv) (cdr tkl)))
                  ((positive? lv)
                   (lp (cons tk atkl) (if (eqv? tk #\)) (1- lv) lv) (cdr tkl)))
                  ((or (eqv? mark tk) (and mark (eqv? #\) tk)))
-                  (loop (acons (car argl) (reverse atkl) argd)
+                  (loop (acons anam (finish atkl) argd)
                         (car tkl) (cdr tkl) (cdr argl)))
                  (else (lp (cons tk atkl) lv (cdr tkl))))))))
          (#\)                           ; end of args
@@ -442,7 +448,7 @@
          (__
           (sferr "oops: tk=~s tkl=~s argl=~s\n" tk tkl argl) (quit)
           (throw 'cpp-error "collect-args coding error")))))
-    (`($space . ,rest) (collect-args argl rest))
+    (`(#\space . ,rest) (collect-args argl rest))
     (__ (values #f tokl))))
 
 
@@ -460,18 +466,18 @@
   
   (define (finish tkl)
     (reverse
-     (if (and mark (pair? tkl) (eqv? '$space (car tkl))) (cdr tkl) tkl)))
+     (if (and mark (pair? tkl) (eqv? #\space (car tkl))) (cdr tkl) tkl)))
 
   ;; cx: context #\D-def #\I-inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (ch (skip-il-ws (read-char))))
     (cond
      ((eof-object? ch) (if mark (throw 'cpp-error "yuck") (finish tkl)))
      ((char-set-contains? c:ws ch)	; whitespace
-      (loop (cons '$space tkl) cx lv (skip-il-ws (read-char))))
+      (loop (cons #\space tkl) cx lv (skip-il-ws (read-char))))
      ((read-c-comm ch #f)		; comment
       (loop (cond ((null? tkl) tkl)
                   ((eq? #\space (car tkl)) tkl)
-                  (else (cons '$space tkl)))
+                  (else (cons #\space tkl)))
             cx lv (skip-il-ws (read-char))))
      ((read-c-string ch) =>
       (lambda (pair) (loop (cons pair tkl) #\nul lv (read-char))))
@@ -572,9 +578,9 @@
 	 (loop stl (cons #\" chl) (esc-c-str val) (cons #\" rest)))
 	(`(($text . ,val) . ,rest)
 	 (loop stl chl val rest))
-	(`($space $space . ,rest)
+	(`(#\space #\space . ,rest)
 	 (loop stl chl nxt rest))
-	(`($space . ,rest)
+	(`(#\space . ,rest)
 	 (loop stl (cons #\space chl) nxt rest))
 	(`(($comm . ,val) . ,rest)
 	 (loop stl chl (string-append "/*" val "*/ ") rest))
@@ -600,7 +606,7 @@ expand-macro-ref ident tokl defs used => head tail used
   2.  tokenize/memoize REPL  via (lkup-repl defs ident) -> tokl
   3.  macro-expand
 
-expand-cpp-macro-ref ident defs sl
+expand-cpp-macro-ref ident defs sp
   calls
   1. tokenize-args
   2. macro-expand
@@ -646,7 +652,7 @@ expand-cpp-macro-ref ident defs sl
 ;; ^ TODO: move below expand-cpp-name
 
 
-;; @deffn {Procedure} expand-cpp-macro-ref ident defs sl => repl | #f
+;; @deffn {Procedure} expand-cpp-macro-ref ident defs sp => repl | #f
 ;; Given an identifier seen in the current input, this checks for associated
 ;; definition in @var{defs} (generated from CPP defines).  If found as simple
 ;; macro, the expansion is returned as a string.  If @var{ident} refers
@@ -660,7 +666,7 @@ expand-cpp-macro-ref ident defs sl
 ;; @noindent
 ;; Note that this routine will look in the current-input so if you want to
 ;; expand text, you must use (with-input-from-string "" ...)
-;; The argument @var{sl} is source location info.
+;; The argument @var{sp} is source properties (aka location info).
 ;; @end deffn
 
 ;; NEEDS work:
@@ -678,8 +684,9 @@ expand-cpp-macro-ref ident defs sl
 ;;  (else plain))
 
 ;; lookup repl, ident args
+;; @var{sp} is optional source properties
 (display "cpp.scm: fix false if exception\n")
-(define (expand-cpp-macro-ref ident defs sl)
+(define* (expand-cpp-macro-ref ident defs #:optional (sp '()))
   (identity ;;false-if-exception
    (and=>
     (assoc-ref defs ident)
@@ -722,12 +729,13 @@ expand-cpp-macro-ref ident defs sl
 	     ((char=? #\) ch) (if (zero? lv) #f (loop (1- lv) (read-char))))
 	     (else (loop lv (read-char))))))))
 
-;; @deffn {Procedure} expand-cpp-name name defs => repl | #f
+;; @deffn {Procedure} expand-cpp-name name defs [sp]=> repl | #f
 ;; Calls @code{expand-cpp-macro-ref} with null input string (w/o further
 ;; input).  If @var{name} is has a function definition @code{#f} is returned.
+;; @var{sp} is optional source properties
 ;; @end deffn
-(define (expand-cpp-name name defs sl)
+(define (expand-cpp-name name defs sp)
   (with-input-from-string ""
-    (lambda () (expand-cpp-macro-ref name defs sl))))
+    (lambda () (expand-cpp-macro-ref name defs sp))))
 
 ;;; --- last line ---
