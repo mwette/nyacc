@@ -2034,7 +2034,8 @@
       (fmt port "   (cons 'pat-v ~Apat-v)\n" prefix)
       (fmt port "   ))\n\n")
       (display ";;; end tables" port)
-      (newline port))))
+      (newline port)
+      (force-output port))))
 
 ;; @deffn {Procedure} write-lalr-actions mach filename [#:lang output-lang]
 ;; For example,
@@ -2094,6 +2095,7 @@
       (write-notice mach port)
       (write-actions mach port)
       (display ";;; end tables" port)
-      (newline port))))
+      (newline port)
+      (force-output port))))
 
 ;;; --- last line ---
