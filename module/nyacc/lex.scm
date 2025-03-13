@@ -803,6 +803,7 @@
            (match-beg ;; match start of comment, return end-string
             (lambda (cl node)
               (cond
+               ((eof-object? (car cl)) #f)
                ((assq-ref node (car cl)) => ;; shift next character
                 (lambda (n) (match-beg (cons (mc-read-char) cl) n)))
                ((assq-ref node 'else) =>
