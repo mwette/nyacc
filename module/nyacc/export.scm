@@ -128,6 +128,9 @@
        ((pair? ppl) (loop (car ppl) (cdr ppl)))))
     ;; Don't compact tables.
     (fmt port "%define lr.default-reduction accepting\n")
+    ;; Expect if exists
+    (and=> (assq-ref (assq-ref spec 'attr) 'expect)
+      (lambda (n) (fmt port "%expect ~a\n" n)))
     ;; Provide start symbol.
     (fmt port "%start ~A\n%%\n" (elt->bison (lalr-start spec) terms))
     ;;
