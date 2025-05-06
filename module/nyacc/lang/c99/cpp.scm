@@ -133,12 +133,14 @@
 	 (file-type (string-ref file 0)) ;; #\< or #\"
 	 (file-name (substring file 1 (1- (string-length file))))
 	 (dirl (if (and cid (char=? #\" file-type)) (cons cid dirl) dirl)))
-    (let loop ((dirl dirl))
-      (if (null? dirl) #f
-	  (if (and next (string=? (car dirl) cid))
-	      (loop (cdr dirl))
-	      (let ((p (string-append (car dirl) "/" file-name)))
-		(if (access? p R_OK) p (loop (cdr dirl)))))))))
+    (if (char=? #\/ (string-ref file-name 0))
+        file-name
+        (let loop ((dirl dirl))
+          (if (null? dirl) #f
+	      (if (and next (string=? (car dirl) cid))
+	          (loop (cdr dirl))
+	          (let ((p (string-append (car dirl) "/" file-name)))
+		    (if (access? p R_OK) p (loop (cdr dirl))))))))))
 
 ;; @deffn {Procedure} cpp-define
 ;; Reads CPP define from current input and generates a cooresponding sxml
