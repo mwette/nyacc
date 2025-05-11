@@ -1377,6 +1377,7 @@
   (cond ((pointer? arg) arg)
         ((string? arg) (string->pointer arg))
         ((cdata? arg) (cdata-ref arg))
+        ((equal? 0 arg) %null-pointer)
         ((and (procedure? arg) (ctype? hint))
          (let* ((info (ctype-info hint))
                 (func (case (ctype-kind hint)
