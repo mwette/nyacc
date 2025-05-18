@@ -8,6 +8,8 @@ without any warranty.
 202X-XX-XX  V2.02.0
 	* ffi-help-cd.scm: create default-renamer, was identity
 	* ffi-help-cd.scm(udecl->sexp): make defined seed optional
+	* c99/parser.scm(make-c99-lexer-generator): added support for
+	  #pragma once, using set-port-filename! to bypass open-file fail
 
 2024-11-03  V2.01.3
 	* ffi-helper: cover more cases where passing procedure (e.g.,
