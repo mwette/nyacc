@@ -1,4 +1,4 @@
-;; freetype2.ffi			-*- Scheme -*-
+;; fontconfig.ffi			-*- Scheme -*-
 
 ;; Copyright (C) 2025 Matthew Wette
 ;; 
@@ -7,11 +7,18 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(define-ffi-module (ffi freetype2)
-  #:pkg-config "freetype2"
-  #:include '("freetype/freetype.h")
+(define-ffi-module (ffi fontconfig)
+  #:pkg-config "fontconfig"
+  #:include '("fontconfig/fontconfig.h")
   #:inc-filter (lambda (file-spec path-spec)
-                 (string-contains path-spec "freetype/" 0))
+                 (string-contains path-spec "fontconfig/" 0))
   )
+
+;; FcObjectSet *FcObjectSetBuild(const char *first, ...);
+(define-public FcObjectSetBuild
+  (let ((fp (foreign-pointer-search "FcObjectSetBuild")))
+    (lambda args
+      (let ((~proc (ffi:pointer->procedure '* fp (map (lambda (a) '*) args))))
+        (apply ~proc (map cdata-arg->pointer args))))))
 
 ;; --- last line ---
