@@ -63,7 +63,7 @@
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:re-export (*nyacc-version*)
-  #:version (2 01 6))
+  #:version (2 01 5))
 
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
@@ -416,9 +416,11 @@
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        `(cpointer (cbase 'void*)))
       (`((pointer-to) (struct-ref (ident ,name)))
-       (if (dmem? (w/struct name) defined)
-           `(cpointer ,(strings->symbol "struct-" name))
-	   `(cpointer 'void)))
+       (cond
+        ((dmem? (w/struct name) defined)
+         `(cpointer ,(strings->symbol "struct-" name)))
+        (else
+	 `(cpointer 'void))))
       (`((pointer-to) . ,rest)
        `(cpointer ,(mtail->ctype rest)))
       (`((array-of ,n) . ,rest)
@@ -584,7 +586,7 @@
   (let* ((udecl (expand-typerefs
                  `(udecl (decl-spec-list (type-spec (typename ,name)))
                          (init-declr (ident ,mname))) (*udict*)
-                         '((enum . "*any*")))) ;; hack provided 
+                         '((enum . "*any*")))) ;; hack provided
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
       (`((pointer-to) . ,_0) `(unwrap-pointer ,mname ,(string->symbol name)))
@@ -653,7 +655,7 @@
   (let* ((udecl (expand-typerefs
                  `(udecl (decl-spec-list (type-spec (typename ,name)))
                          (init-declr (ident ,mname))) (*udict*)
-                         '((enum . "*any*")))) ;; hack provided 
+                         '((enum . "*any*")))) ;; hack provided
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
       (`((enum-def . ,_1)) (list (sfsym "wrap-~a" name) mname))
@@ -880,6 +882,7 @@
     (and=> (assq-ref attr 'typedef) (lambda (t) (string-split (car t) #\,))))
 
   (*defined* defined)                   ; set global for converters
+  (*udict* udict)                       ; set global for converters
 
   (define-syntax-rule (deftype name type)
     `(define-public ,name (name-ctype ',name ,type)))
@@ -927,6 +930,22 @@
                       `(define ,*type (cfunction ,pc->pr ,pr->pc))
                       (deftype type `(cpointer ,*type)))))))))
 
+          (`((pointer-to) (struct-ref (ident ,name)))
+           (values
+            (dcons name defined)
+            (let ((aggr-name (sfsym "struct-~a" name)))
+              (xcons* seed
+                `(define-public ,aggr-name 'void)
+                (deftype type `(cpointer (delay ,aggr-name)))))))
+
+          (`((pointer-to) (union-ref (ident ,name)))
+           (values
+            (dcons name defined)
+            (let ((aggr-name (sfsym "union-~a" name)))
+              (xcons* seed
+                `(define-public ,aggr-name 'void)
+                (deftype type `(cpointer (delay ,aggr-name)))))))
+
           (`((pointer-to) . ,rest)
            (values
             (case (caar rest)
@@ -937,7 +956,7 @@
 
           (__
            (sx-match (car mtail)
-             
+
              ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
               (let ((agname (rename agname 'type)))
                 (values
@@ -1082,9 +1101,9 @@
                            (cons (deftype type* atype*) seed)))
                         (values defined seed))))
 	        (else
-	         (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
+	         (let ((xdecl (expand-typerefs udecl udict defined)))
 	           (udecl->sexp xdecl udict defined seed))))))
-             
+
              (,__
               (sferr "udecl->sexp missed typedef:\n") (pperr mdecl)
               (values defined seed)))))))
@@ -1167,7 +1186,7 @@
 	    (else
              (let* ((type (sfsym "enum-~a" enum-name))
                     (defs (canize-enum-def-list
-                           enum-def-list (*udict*) (*ddict*)))
+                           enum-def-list udict (*ddict*)))
                     (enums (enum-def-list->alist defs)))
 	       (values
                 (dcons (w/enum enum-name) defined)
@@ -1186,7 +1205,7 @@
         (,__ (values #f #f))) (lambda (a b) a) => values)
 
      ((memq 'extern sspec)
-      (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
+      (let* ((udecl (expand-typerefs udecl udict defined))
              (mdecl (udecl->mdecl udecl))
              (name (md-label mdecl))
              (rname (rename name 'variable))
@@ -1207,7 +1226,7 @@
 	          ((arg) (cdata-set! (force obj) '* arg)))))))))
 
      ((memq 'const sspec)
-      (let ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
+      (let ((udecl (expand-typerefs udecl udict defined))
             (mdecl (udecl->mdecl udecl)))
         (sferr "skipping const expression: can't do this yet"))
       (values defined seed))
@@ -1474,7 +1493,7 @@
 ;; Convert a snippet of C code to list of scheme forms.
 ;; @example
 ;; > (ccode->sexp "double sqrt(doubld);")
-;; $1 = 
+;; $1 =
 ;; @end example
 ;; @end deffn
 (define* (ccode->sexp code #:optional attrs)
