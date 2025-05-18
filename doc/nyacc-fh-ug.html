@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 7.1, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.1.1, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!-- Copyright (C) 2017-2024 - Matthew Wette.
+<!-- Copyright (C) 2017-2025 - Matthew Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -45,8 +45,8 @@ ul.mark-bullet {list-style-type: disc}
 <div class="format">
 <pre class="format-preformatted">FFI Helper User Guide
 Matt Wette
-November 2024
-With NYACC Version 2.01.5
+May 2024
+With NYACC Version 2.01.6
 </pre></div>
 
 <div class="top-level-extent" id="Top">
@@ -63,6 +63,9 @@ Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previou
 </div>
 <h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
 
+<p>NOTE: Parts of this manual are obsololete: the update for version 2
+is not complete.
+</p>
 <p>The acronym FFI stands for &ldquo;Foreign Function Interface&rdquo;.  It refers
 to the Guile facility for binding functions and variables from C source
 libraries into Guile programs.  This distribution provides utilities
@@ -273,7 +276,7 @@ Let&rsquo;s generate a matrix type:
 </p>
 <div class="example">
 <pre class="example-preformatted">guile&gt; (use-modules (nyacc foreign cdata))
-guile&gt; (define m (make-cairo_matrix_t))
+guile&gt; (define m (make-cdata cairo_matrix_t))
 guile&gt; m
 $6 = #&lt;cdata cairo_matrix_t 0x7056028777a0&gt;
 guile&gt; (cdata&amp; m)

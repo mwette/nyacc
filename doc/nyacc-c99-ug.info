@@ -1,4 +1,4 @@
-This is nyacc-c99-ug.info, produced by makeinfo version 7.1 from
+This is nyacc-c99-ug.info, produced by makeinfo version 7.1.1 from
 nyacc-c99-ug.texi.
 
 Copyright (C) 2017,2019 - Matthew R. Wette.
@@ -12,7 +12,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 C99 Parser User Guide
 Matt Wette
 June 2019
-With NYACC Version 2.01.5
+With NYACC Version 2.01.6
 
 
 File: nyacc-c99-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -206,8 +206,8 @@ Manual.  It is included with the NYACC source as COPYING.DOC.
 
 
 Tag Table:
-Node: Top553
-Node: Introduction758
+Node: Top555
+Node: Introduction760
 
 End Tag Table
 

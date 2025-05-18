@@ -1,4 +1,4 @@
-This is nyacc-ug.info, produced by makeinfo version 7.1 from
+This is nyacc-ug.info, produced by makeinfo version 7.1.1 from
 nyacc-ug.texi.
 
 Copyright (C) 2015-2019 - Matthew R. Wette.
@@ -1337,29 +1337,29 @@ File: nyacc-ug.info,  Node: References,  Prev: TODOs,  Up: Top
 
 
 Tag Table:
-Node: Top626
-Node: Demonstration881
-Node: Parsing10087
-Ref: Specification10549
-Ref: Actions19854
-Ref: Recovery from Syntax Errors20532
-Ref: sublanguage21418
-Ref: Parser21747
-Ref: match table25686
-Ref: lex27509
-Ref: parser-lexer34762
-Ref: Parser Tables36360
-Ref: Hashing and Compacting37720
-Ref: Debugging39499
-Ref: Human Readable Output39610
-Node: Translation42667
-Ref: Tagged Lists45251
-Ref: SXML Parse Trees47253
-Node: Coding to the Compiler Tower49190
-Ref: Pretty Print50418
-Node: Administrative50614
-Node: TODOs51727
-Node: References52756
+Node: Top628
+Node: Demonstration883
+Node: Parsing10089
+Ref: Specification10551
+Ref: Actions19856
+Ref: Recovery from Syntax Errors20534
+Ref: sublanguage21420
+Ref: Parser21749
+Ref: match table25688
+Ref: lex27511
+Ref: parser-lexer34764
+Ref: Parser Tables36362
+Ref: Hashing and Compacting37722
+Ref: Debugging39501
+Ref: Human Readable Output39612
+Node: Translation42669
+Ref: Tagged Lists45253
+Ref: SXML Parse Trees47255
+Node: Coding to the Compiler Tower49192
+Ref: Pretty Print50420
+Node: Administrative50616
+Node: TODOs51729
+Node: References52758
 
 End Tag Table
 
