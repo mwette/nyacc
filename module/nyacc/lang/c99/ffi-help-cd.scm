@@ -882,7 +882,6 @@
     (and=> (assq-ref attr 'typedef) (lambda (t) (string-split (car t) #\,))))
 
   (*defined* defined)                   ; set global for converters
-  (*udict* udict)                       ; set global for converters
 
   (define-syntax-rule (deftype name type)
     `(define-public ,name (name-ctype ',name ,type)))
