@@ -489,7 +489,6 @@
           ((name type)                  ; non-bitfield
            (let* ((type (cond ((symbol? type) (cbase type))
                               ((ctype? type) type)
-                              ((promise? type) (force type))
                               (else (error "cstruct: bad type" type))))
                   (fsz (ctype-size type))
                   (fal (if packed? 1 (ctype-align type)))

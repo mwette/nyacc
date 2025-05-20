@@ -5,7 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-XX-XX  V2.01.6
+2025-XX-XX  V2.02.0
+	* Fixed ffi-help for 'typedef struct foo foo_t' where struct foo
+	  is not defined yet.
+
+2025-05-18  V2.01.6
 	* arch-info.scm(i686): signed should be s32le not 32le (bug 66708)
 	* fixed bug cpp.scm(find-incl-in-dirl): now works for abs pathnames
 
