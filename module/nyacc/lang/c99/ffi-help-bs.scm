@@ -1357,7 +1357,8 @@
 	    (list (string->symbol
 		   (string-append (m-path->name mod) "-symbol-val")) 'k))
 	  ext-mods)))
-    (ppscm `(define ,st-name '(,@defs)))
+    (ppscm `(define-public ,st-name '(,@defs)))
+    (sfscm "(export ~A)\n" st-name)
     (sfscm "\n")
     (ppscm `(define ,sv-name (lambda (k) (or (assq-ref ,st-name k) ,@ext-ftns))))
     (sfscm "(export ~A)\n" sv-name)

@@ -396,9 +396,8 @@
     (match mtail
       (`((pointer-to) (typename ,name))
        (let ((name (rename name 'type)))
-	 (if (dmem? (w/* name) defined)
-	     (strings->symbol name "*")
-             `(cpointer ,(mtail->ctype (cdr mtail))))))
+         ;; might be forward reference, so delay
+         `(cpointer (delay ,(string->symbol name)))))
       (`((pointer-to) (void))
        `(cpointer 'void))
       (`((pointer-to) (fixed-type "char"))
@@ -416,11 +415,15 @@
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        `(cpointer (cbase 'void*)))
       (`((pointer-to) (struct-ref (ident ,name)))
-       (cond
-        ((dmem? (w/struct name) defined)
-         `(cpointer ,(strings->symbol "struct-" name)))
-        (else
-	 `(cpointer 'void))))
+       (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
+         (cond
+          ((dmem? (w/struct name) defined) `(cpointer aggr-name))
+	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
+      (`((pointer-to) (union-ref (ident ,name)))
+       (let* ((name (rename name 'type)) (aggr-name (sfsym "union-~a" name)))
+         (cond
+          ((dmem? (w/struct name) defined) `(cpointer aggr-name))
+	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
       (`((pointer-to) . ,rest)
        `(cpointer ,(mtail->ctype rest)))
       (`((array-of ,n) . ,rest)
@@ -929,18 +932,18 @@
                       `(define ,*type (cfunction ,pc->pr ,pr->pc))
                       (deftype type `(cpointer ,*type)))))))))
 
-          (`((pointer-to) (struct-ref (ident ,name)))
+          (`((pointer-to) (struct-ref (ident ,aggr)))
            (values
             (dcons name defined)
-            (let ((aggr-name (sfsym "struct-~a" name)))
+            (let ((aggr-name (sfsym "struct-~a" aggr)))
               (xcons* seed
                 `(define-public ,aggr-name 'void)
                 (deftype type `(cpointer (delay ,aggr-name)))))))
 
-          (`((pointer-to) (union-ref (ident ,name)))
+          (`((pointer-to) (union-ref (ident ,aggr)))
            (values
             (dcons name defined)
-            (let ((aggr-name (sfsym "union-~a" name)))
+            (let ((aggr-name (sfsym "union-~a" aggr)))
               (xcons* seed
                 `(define-public ,aggr-name 'void)
                 (deftype type `(cpointer (delay ,aggr-name)))))))
@@ -1273,6 +1276,7 @@
 		   (string-append (m-path->name mod) "-symbol-val")) 'k))
 	  ext-mods)))
     (ppscm `(define ,st-name '(,@defs)))
+    (sfscm "(export ~A)\n" st-name)
     (sfscm "\n")
     (ppscm `(define ,sv-name (lambda (k) (or (assq-ref ,st-name k) ,@ext-ftns))))
     (sfscm "(export ~A)\n" sv-name)
@@ -1605,7 +1609,7 @@
 	   (member key '(#:api-code
 			 #:cpp-defs #:decl-filter #:inc-dirs #:inc-filter
 			 #:inc-help #:include #:library #:pkg-config #:renamer
-			 #:use-ffi-module #:def-keepers))))
+                         #:use-ffi-module #:def-keepers))))
     (define (module-option? key) (keyword? key))
 
     (syntax-case x ()
