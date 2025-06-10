@@ -1264,10 +1264,11 @@
 	  (fold
 	   (lambda (name seed)
 	     (let* ((repl (expand-cpp-name name ddict '()))
-		    (val (and (string? repl) (eval-code-string repl))))
+		    (val (and (string? repl)
+                              (false-if-exception (eval-code-string repl)))))
 	       (if val
-		   (acons (string->symbol name) val seed)
-		   seed)))
+                   (acons (string->symbol name) val seed)
+	           seed)))
 	   '() mod-def-names))
 	(ext-ftns			; lookup in use-ffi-modules
 	 (map
