@@ -368,8 +368,7 @@
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
-            (inc1 '())           ; pragma once list
-	    (info (*info*))      ; info shared w/ parser
+	    (info (*info*))	; info shared w/ parser
 	    (x-def? (cond ((procedure? xdef?) xdef?)
 			  ((eq? xdef? #t) (lambda (n m) #t))
 			  (else def-xdef?))))
@@ -399,7 +398,7 @@
 	  (define (inc-stmt->file-spec stmt) ;; retain <> or ""
 	    (let* ((arg (cadr stmt)))
 	      (if (ident-like? arg) ;; #include MYFILE
-		  (expand-cpp-macro-ref arg (cpi-defs info))
+		  (expand-cpp-macro-ref arg (cpi-defs info) '())
 		  arg)))
 
 	  (define (file-spec->file spec)
@@ -455,13 +454,9 @@
 	      (cond
 	       ((apply-helper file) stmt)
 	       ((not path) (c99-err "not found: ~S" file))
-               ((member path inc1) stmt)
 	       (else (set! bol #t)
-                     (let ((port (open-input-file path)))
-                       ;; bypass open-file braindamage:
-                       (set-port-filename! port path)
-		       (push-input port)
-		       (if path (sx-attr-add stmt 'path path) stmt))))))
+		     (push-input (open-input-file path))
+		     (if path (sx-attr-add stmt 'path path) stmt)))))
 
 	  (define* (eval-cpp-incl/tree stmt #:optional next) ;; => stmt
 	    ;; include file as a new tree
@@ -472,24 +467,41 @@
 	      (cond
 	       ((apply-helper file) stmt)
 	       ((not path) (c99-err "not found: ~S" file))
-               ((member path inc1) stmt)
 	       ((with-input-from-file path run-parse) =>
 		(lambda (tree) ;; add tree
 		  (for-each add-define (getdefs tree))
 		  (append (if path (sx-attr-add stmt 'path path) stmt)
 			  (list tree)))))))
-          
-          (define (eval-pragma stmt) ;; handle pragma's appl to parser
+
+          #|
+          (define (eval-pragma stmt)
+            (define wspace (list->char-set '(#\space #\tab)))
+            (define (skip-ws ch)
+              (cond
+               ((eof-object? ch) ch)
+               ((char-set-contains? wspace ch) (skip-ws (read-char)))
+               (else ch)))
+
+            (define (pop_macro key)
+              (let loop ((head '()) (tail (cpi-defs info)) (val #t))
+                (cond
+                 ((null? tail) (reverse head))
+                 ((equal? (caar tail) key)
+                  (if val
+                      (loop head (cdr tail) #f)
+                      (if (cdar tail)
+                          (set-cpi-defs! info (append-reverse head tail))
+                          (loop head (cdr tail) val))))
+                 (else (loop head (cdr tail) val)))))
+
             (with-input-from-string (cadr stmt)
               (lambda ()
                 (let ((key (read-c-ident (read-char))))
                   (when key
                     (case (string->symbol key)
-                      ((once)
-                       (let* ((path (port-filename (car (*input-stack*)))))
-                         (and path (set! inc1 (cons path inc1)))))
-                      (else #f)))
-                  stmt))))
+                      ((pop_macro) (pop_macro key))
+                      (else #f)))))))
+          |#
 
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
  	    ;;(sf "eval-cpp-stmt/code ~S\n" stmt)
@@ -507,7 +519,8 @@
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((warning) (report-error "warning: ~A" (cdr stmt)))
-		     ((pragma) (eval-pragma stmt) stmt)
+		     ((pragma) stmt)
+		     ;;((pragma) (eval-pragma stmt) stmt)
 		     ((line) stmt)
 		     (else
 		      (throw 'c99-error "eval-cpp-stmt/code: ~S" stmt)))
@@ -535,7 +548,7 @@
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((warning) (report-error "warning: ~A" (cdr stmt)) stmt)
-		     ((pragma) (eval-pragma stmt) stmt)
+		     ((pragma) stmt) ;; ignore for now
 		     ((line) stmt)
 		     (else
 		      (throw 'c99-error "eval-cpp-stmt/decl: ~S" stmt)))
@@ -552,8 +565,7 @@
 	      ((undef) (rem-define (cadr stmt)) stmt)
 	      ((error) stmt)
 	      ((warning) stmt)
-	      ((pragma) (eval-pragma stmt) stmt)
-	      ;;((pragma) stmt)
+	      ((pragma) stmt)
 	      ((line) stmt)
 	      (else
 	       (throw 'c99-error "eval-cpp-stmt/file: ~S" stmt))))
@@ -644,9 +656,9 @@
 		      (skip-cpp-macro-ref name defs)
 		      (loop (read-char) ss))
 		     ((and (not suppress) (x-def? name mode)
-			   (expand-cpp-macro-ref name defs))
+			   (expand-cpp-macro-ref name defs ss))
 		      => (lambda (repl)
-			   (set! suppress #t)
+			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
                            (set-port-filename! (current-input-port)
                                                (assq-ref ss 'filename))
