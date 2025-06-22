@@ -109,7 +109,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
              (values (acons 'debug arg opts) files)))
    (option '(#\o "output") #t #f
            (lambda (opt name arg opts files)
-             (if (assoc-ref opts 'output-file)
+             (if (assoc-ref opts 'output)
                  (fail "`-o' option cannot be specified more than once"))
              (values (acons 'output arg opts) files)))
    (option '(#\b "backend") #t #f
