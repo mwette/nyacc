@@ -1,6 +1,6 @@
 ;;; scripts/compile-ffi.scm --- NYACC's command-line FFI compiler
 
-;; Copyright (C) 2017-2021,2024 Matthew Wette
+;; Copyright (C) 2017-2021,2024-2025 Matthew Wette
 ;;
 ;; This program is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
