@@ -308,7 +308,7 @@
            (map (lambda (name)
                   (let* ((ref (nx-lookup name dict))
                          (val (if ref ref `(toplevel ,(string->symbol name)))))
-                    (unless ref (sferr "warning: ~S not defined" name))
+                    (unless ref (sferr "warning: ~S not defined\n" name))
                     (cons name val)))
                 names)))
       (let loop ((head head) (tail (append-reverse entries tail)))

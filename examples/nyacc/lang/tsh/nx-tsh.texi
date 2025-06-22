@@ -43,7 +43,33 @@ a paren-form (i.e., @code{(...)}).
 @code{[fvec 1.0 2.0]} generates a (uniform) floating point vector
 @item
 @code{[ivec 1 2.} generates a (uniform) integer vector
+@item
+nonlocals are dynamically scoped (implemented via (var), (var val))
+@item
+unless variable x is declared nonlocal or global, @code{set x 1} implies
+x is local
+@item
+@code{ref x} is same as @code{$x}
+@end itemize
 
+values are 
+@itemize
+@item 
+integers
+@item 
+floats
+@item 
+strings
+@item 
+symbols
+@item 
+arrays (of ints, of floats, of strings, of anys)
+@item 
+dicts
+@item 
+functions
+@item
+tuples
 @end itemize
 
 @bye

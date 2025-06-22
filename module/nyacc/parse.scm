@@ -79,8 +79,8 @@
          (fn (or (assq-ref sp 'filename)
                  (port-filename (current-input-port))
                  "(unknown)"))
-	 (ln (1+ (or (assq-ref sp 'line)
-                     (port-line (current-input-port))))))
+	 (ln (or (assq-ref sp 'line)
+                 (and=> (port-line (current-input-port)) 1+))))
     (throw 'nyacc-error
 	   "~A:~A: parse failed at state ~A, on input ~S"
 	   fn ln (car state) (cdr laval))))
@@ -97,14 +97,14 @@
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'er)
 	(cond
-	 ((and interactive nval 
-	       (eqv? (car nval) start)
-	       (zero? (car state)))     ; done
+	 ((and (zero? (car state))
+               interactive nval 
+	       (eqv? (car nval) start)) ; done
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
 	      (loop state stack (cons-source stack '$default #f) lval)
-	      (loop state stack nval (lexr))))		  ; reload
+	      (loop state stack nval (lexr)))) ; reload
 	 (else
 	  (let* ((laval (or nval lval))
 		 (tval (car laval))
@@ -160,14 +160,14 @@
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'r)
 	(cond
-	 ((and interactive nval
-	       (eqv? (car nval) start)
-	       (zero? (car state)))     ; done
+	 ((and (zero? (car state))
+               interactive nval
+	       (eqv? (car nval) start)) ; done
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? $default (caar (vector-ref pat-v (car state))))
 	      (loop state stack (cons-source stack $default #f) lval)
-	      (loop state stack nval (lexr))))		 ; reload
+	      (loop state stack nval (lexr)))) ; reload
 	 (else
 	  (let* ((laval (or nval lval))
 		 (tval (car laval))

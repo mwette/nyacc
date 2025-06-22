@@ -193,7 +193,7 @@
       (cdadr sx)
       '()))
 
-;; @deffn {Procedure} sx-attr-ref sx|node|tail|#f key => val
+;; @deffn {Procedure} sx-attr-ref sx|node|tail| #f key => val
 ;; Return an attribute value given the key, or @code{#f}.
 ;; Also works if passed the attribute node @code{(@ ...)}, or its tail,
 ;; or @code{#f}.
@@ -431,7 +431,7 @@
        (sxm-attr-tail va vt (p1 ...) tl kt kf)))))
 
 ;; sxm-tag val pat kt kf
-;; match tag: foo|#(foo bar baz)|,any
+;; match tag: foo| #(foo bar baz)|,any
 (define-syntax sxm-tag
   (syntax-rules (unquote)
     ((_ tv (unquote t0) kt kf)

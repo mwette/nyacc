@@ -119,6 +119,12 @@ SCM_DEFINE(scm_arch_sizeof, "arch-sizeof", 1, 0, 0,
     size = sizeof(unsigned long long);
   } else if (strcmp("unsigned-long-long-int", arg) == 0) {
     size = sizeof(unsigned long long int);
+#if 0
+  } else if (strcmp("_Float16", arg) == 0) {
+    size = sizeof(_Float16);
+  } else if (strcmp("_Float128", arg) == 0) {
+    size = sizeof(_Float128);
+#endif
   } else {
     size = 0;
   }

@@ -238,7 +238,7 @@ See the file COPYING included with the this distribution.")
 ;;; === pp ==========================
 ;; @section Pretty-Print and Other Utility Procedures
 
-;; @deffn {Procedure} make-protect-expr op-prec op-assc => side op expr => #t|#f
+;; @deffn {Procedure} make-protect-expr op-prec op-assc => side op expr => #t| #f
 ;; Generate procedure @code{protect-expr} for pretty-printers, which takes
 ;; the form @code{(protect-expr? side op expr)} and where @code{side}
 ;; is @code{'lval} or @code{'rval}, @code{op} is the operator and @code{expr}
@@ -258,7 +258,7 @@ See the file COPYING included with the this distribution.")
   (define (assc-rt? op)
     (memq op (assq-ref op-assc 'right)))
 
-  ;; @deffn {Procedure} prec a b => '>|'<|'=|#f
+  ;; @deffn {Procedure} prec a b => '>|'<|'=| #f
   ;; Returns the prececence relation of @code{a}, @code{b} as
   ;; @code{<}, @code{>}, @code{=} or @code{#f} (no relation).
   ;; @end deffn

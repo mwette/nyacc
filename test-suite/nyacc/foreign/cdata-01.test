@@ -117,19 +117,21 @@
 (define (gen-c99-test-code/struct k) (gen-c99-test-code 'struct k))
 (define (gen-c99-test-code/union k) (gen-c99-test-code 'union k))
 
+(define (try-compile name)
+  (let ((cmd (format #f "gcc -g -o ~a.so -shared -fPIC ~a.c" name name)))
+    (zero? (status:exit-val (system cmd)))))
+
 (define (gen-code/struct cases)
   (system "rm -f ctest.c ctest.so")
-  (let ((port (open-output-file (string-append c99-basename ".c"))))
-    (display "#include <stdio.h>\n\n" port)
-    (for-each (lambda (code) (display code port))
-              (map gen-c99-test-code/struct cases))
-    (display
-     "int Zmain() { struct test0 *t; printf(\"%lu\\n\", sizeof(*t)); }\n\n"
-     port)
-    (close-port port))
-  (system (simple-format #f "gcc -g -o ~a.so -shared -fPIC ~a.c"
-                         c99-basename c99-basename))
-  c99-basename)
+  (with-output-to-file (string-append c99-basename ".c")
+    (lambda ()
+      (display "#include <stdio.h>\n\n")
+      (for-each (lambda (code) (display code))
+                (map gen-c99-test-code/struct cases))
+      (display
+     "int Zmain() { struct test0 *t; printf(\"%lu\\n\", sizeof(*t)); }\n\n")
+      (force-output)))
+  (and (try-compile c99-basename) c99-basename))
 
 (define (gen-code/union cases)
   (system "rm -f ctest.c ctest.so")
@@ -141,10 +143,7 @@
       (display
        "int Zmain() { union test0 *t; printf(\"%lu\\n\", sizeof(*t)); }\n\n")
       (force-output)))
-  ;;(gc)
-  (system (simple-format #f "gcc -g -o ~a.so -shared -fPIC ~a.c"
-                         c99-basename c99-basename))
-  c99-basename)
+  (and (try-compile c99-basename) c99-basename))
 
 (define* (exec-test case-num fields testlib kind #:optional (m-count 10))
   (define (field->rand-val fld)
@@ -219,17 +218,20 @@
                      (iota n-count)))
          (basename (gen-code/struct cases))
          (testlib #f))
-    (dynamic-wind
-      (lambda ()
-        (set! testlib (load-foreign-library
-                       basename #:search-path (list (getcwd)))))
-      (lambda ()
-        (fold
-         (lambda (kase seed)
-           (and seed (exec-test (car kase) (cdr kase) testlib 'struct m-count)))
-         #t cases))
-      (lambda ()
-        (unload-foreign-library testlib)))))
+    (if basename
+        (dynamic-wind
+          (lambda ()
+            (set! testlib (load-foreign-library
+                           basename #:search-path (list (getcwd)))))
+          (lambda ()
+            (fold
+             (lambda (kase seed)
+               (and seed (exec-test (car kase) (cdr kase)
+                                    testlib 'struct m-count)))
+             #t cases))
+          (lambda ()
+            (unload-foreign-library testlib)))
+        'unresolved)))
 
 (define* (do-test/union #:optional (n-count 10) (m-count 10))
   (let* ((cases (map (lambda (ix)
@@ -237,17 +239,20 @@
                      (iota n-count)))
          (basename (gen-code/union cases))
          (testlib #f))
-    (dynamic-wind
-      (lambda ()
-        (set! testlib (load-foreign-library
-                       basename #:search-path (list (getcwd)))))
-      (lambda ()
-        (fold
-         (lambda (kase seed)
-           (and seed (exec-test (car kase) (cdr kase) testlib 'union m-count)))
-         #t cases))
-      (lambda ()
-        (unload-foreign-library testlib)))))
+    (if basename
+        (dynamic-wind
+          (lambda ()
+            (set! testlib (load-foreign-library
+                           basename #:search-path (list (getcwd)))))
+          (lambda ()
+            (fold
+             (lambda (kase seed)
+               (and seed (exec-test (car kase) (cdr kase)
+                                    testlib 'union m-count)))
+             #t cases))
+          (lambda ()
+            (unload-foreign-library testlib)))
+        'unresolved)))
 
 (with-test-prefix "nyacc/foreign/cdata-01"
 

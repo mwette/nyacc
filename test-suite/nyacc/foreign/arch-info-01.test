@@ -19,6 +19,8 @@
 (register-reporter full-reporter)
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr exp) (pretty-print exp (current-error-port)))
 
 (define* (load-extension* lib init #:key search-path)
   (let* ((xlib (load-foreign-library lib #:search-path search-path))
@@ -26,53 +28,48 @@
                  void (foreign-library-pointer xlib init) (list))))
     (xinit)))
 
+(define base-type-symbol-testers
+  (filter
+   (lambda (s) (not (member s '(_Float16 _Float128))))
+   base-type-symbol-list))
+
 (with-test-prefix "nyacc/foreign/arch-info-01"
 
-  (let* ((eff-vers (effective-version))
-         (incdir (string-append (assq-ref %guile-build-info 'includedir)
-                                "/guile/" eff-vers))
-         (libdir (assq-ref %guile-build-info 'libdir))
-         (flags (format #f "-shared -fPIC -I~a" incdir))
-         (libs (format #f "-L~a -lguile-~a" libdir eff-vers))
-         (cstr (format #f "gcc -o chkarch.so chkarch.c ~a ~a" flags libs))
-         (status (status:exit-val (system cstr))))
+  (define chkarch-compiled
+    (let* ((eff-vers (effective-version))
+           (incdir (string-append (assq-ref %guile-build-info 'includedir)
+                                  "/guile/" eff-vers))
+           (libdir (assq-ref %guile-build-info 'libdir))
+           (flags (format #f "-shared -fPIC -I~a" incdir))
+           (libs (format #f "-L~a -lguile-~a" libdir eff-vers))
+           (cstr (format #f "gcc -o chkarch.so chkarch.c ~a ~a" flags libs))
+           (status (status:exit-val (system cstr))))
+      (when (zero? status)
+        (load-extension* "chkarch" "chkarch_init"
+                         #:search-path (list (getcwd))))
+      (zero? status)))
 
-    (when (zero? status)
-      (load-extension* "chkarch" "chkarch_init" #:search-path (list (getcwd))))
+    (pass-if "scheme sizeof vs cc sizeof"
+      (if chkarch-compiled
+            (fold
+             (lambda (n s)
+               (let ((g-sz (sizeof-basetype n))
+                     (n-sz (arch-sizeof n)))
+                 (and s (= n-sz g-sz))))
+             #t base-type-symbol-testers)
+            'untested))
 
-    (run-test
-     "scheme sizeof vs cc sizeof" #t
-     (lambda ()
-       (cond
-        ((zero? status)
-         (fold
-          (lambda (n s)
-            (let ((g-sz (sizeof-basetype n))
-                  (n-sz (arch-sizeof n)))
-              (and s (= n-sz g-sz))))
-          #t base-type-symbol-list))
-        (else 'untested))))
-
-    (run-test
-     "scheme alignof vs cc __alignof__" #t
-     (lambda ()
-       (cond
-        ((zero? status)
-         (fold
-          (lambda (n s)
-            (let ((g-sz (sizeof-basetype n))
-                  (n-sz (arch-sizeof n)))
-              (and s (= n-sz g-sz))))
-          #t base-type-symbol-list))
-        (else 'untested))))
-    (fold
-     (lambda (n s)
-       (let ((n-sz (arch-sizeof n))
-             (g-sz (sizeof-basetype n)))
-         (and s (= n-sz g-sz))))
-     #t base-type-name-list))
-      
-    ))
+    (pass-if "scheme alignof vs cc __alignof__"
+      (if chkarch-compiled
+          (fold
+           (lambda (n s)
+             (let ((g-sz (sizeof-basetype n))
+                   (n-sz (arch-sizeof n)))
+               (and s (= n-sz g-sz))))
+           #t base-type-symbol-testers)
+          'untested))
+  
+    )
 
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 

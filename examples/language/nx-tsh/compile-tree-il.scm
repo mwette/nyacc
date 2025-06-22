@@ -149,6 +149,10 @@
       ((nonlocal . ,names)
        (values '() '() (nx-insert-nonlocals dict names)))
 
+      ;; since tsh has no lexical scope besides procedures, this works:
+      ((global . ,names)
+       (values '() '() (nx-insert-nonlocals dict names)))
+
       ((use . ,strpath)
        (let* ((sympath (map string->symbol strpath))
               (path (map (lambda (sym) `(const ,sym)) sympath))

@@ -24,8 +24,8 @@
 ;; conv: #\d #\x #\f #\e -- add #\o: just the (display obj)
 
 ;; Architecture:
-;; Parse format string to list of alternating {string, formatter} objects
-;; then send to output port applying formatter to objects on the way.
+;; Parse format string to list of {string, formatter} objects, then
+;; send to output port applying formatter to objects on the way.
 
 ;;; Code:
 
@@ -349,32 +349,40 @@
 ;; @deffn {Syntax} printf fmt . vals
 ;; This syntax behaves like nx-printf but if fmt is a string literal it
 ;; is compiled to a list of formatting objects.
+;; @*TODO: Add warning if fmt does not match number of vals.
 ;; @end deffn
 (define-syntax printf
   (lambda (x)
     (syntax-case x ()
       ((_ port fmt arg ...)
+       (string? (syntax->datum #'fmt))
        #`(nx-printf
           port
           #,(let ((val (syntax->datum #'fmt)))
               (if (string? val)
                   #`(quote #,(datum->syntax x (parse-format-string val)))
                   #'fmt))
-          arg ...)))))
+          arg ...))
+      ((_ port fmt arg ...)
+       #`(nx-printf port fmt arg ...)))))
 
 ;; @deffn {Syntax} printf fmt . vals
 ;; This syntax behaves like nx-sprintf but if fmt is a string literal it
 ;; is compiled to a list of formatting objects.
+;; @*TODO: Add warning if fmt does not match number of vals.
 ;; @end deffn
 (define-syntax sprintf
   (lambda (x)
     (syntax-case x ()
       ((_ fmt arg ...)
+       (string? (syntax->datum #'fmt))
        #`(nx-sprintf
           #,(let ((val (syntax->datum #'fmt)))
               (if (string? val)
                   #`(quote #,(datum->syntax x (parse-format-string val)))
                   #'fmt))
-          arg ...)))))
+          arg ...))
+      ((_ fmt arg ...)
+       #`(nx-sprintf fmt arg ...)))))
 
 ;; --- last line ---

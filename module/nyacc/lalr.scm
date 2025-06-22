@@ -172,6 +172,8 @@
     ((_ (<ex> ...) <rhs> ...)
      (cons (parse-rhs <ex> ...)
            (parse-rhs-list <rhs> ...)))
+    ((_ ex0 ex1 ...)
+     (syntax-error "illegal term in right-hand-side:" ex0))
     ((_) '())))
 
 (define-syntax parse-grammar
@@ -179,6 +181,7 @@
     ((_ (<lhs> <rhs> ...) <prod> ...)
      (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
            (parse-grammar <prod> ...)))
+    ((_ ex0 ex1 ...) (syntax-error "illegal-rule with left-hand-side:" ex0))
     ((_) '())))
 
 (define-syntax parse-precedence
@@ -705,7 +708,7 @@
             (cons p-ixm1 -1))           ; prev p-rule
         (cons p-ix r-ixm1))))
 
-;; @deffn {Procedure} error-rule? gx => #t|#f
+;; @deffn {Procedure} error-rule? gx => #t | #f
 ;; Predicate to indicate if gx rule has @code{$error} as rhs member.
 ;; @end deffn
 (define (error-rule? gx)
@@ -1605,7 +1608,7 @@
 (define (lalr-match-table mach)
   (assq-ref mach 'mtab))
 
-;; @deffn {Procedure} machine-compacted? mach => #t|#f
+;; @deffn {Procedure} machine-compacted? mach => #t | #f
 ;; Indicate if the machine has been compacted.
 ;; TODO: needs update to deal with error recovery hooks.
 ;; @end deffn
@@ -1739,7 +1742,7 @@
 
 ;; NEW: need to add reduction of ERROR
 
-;; @deffn {Procedure} machine-hashed? mach => #t|#f
+;; @deffn {Procedure} machine-hashed? mach => #t | #f
 ;; Indicate if the machine has been hashed.
 ;; @end deffn
 (define (machine-hashed? mach)
@@ -2031,7 +2034,8 @@
       (fmt port "   (cons 'pat-v ~Apat-v)\n" prefix)
       (fmt port "   ))\n\n")
       (display ";;; end tables" port)
-      (newline port))))
+      (newline port)
+      (force-output port))))
 
 ;; @deffn {Procedure} write-lalr-actions mach filename [#:lang output-lang]
 ;; For example,
@@ -2091,6 +2095,7 @@
       (write-notice mach port)
       (write-actions mach port)
       (display ";;; end tables" port)
-      (newline port))))
+      (newline port)
+      (force-output port))))
 
 ;;; --- last line ---

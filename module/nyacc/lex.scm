@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 
-;; Copyright (C) 2015-2022 - Matthew R.Wette
+;; Copyright (C) 2015-2022,2025 - Matthew Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -132,7 +132,7 @@
             #t)))
         #f)))
          
-;; @deffn {Procedure} skip-c-space ch => #f|#t
+;; @deffn {Procedure} skip-c-space ch => #f | #t
 ;; If @code{ch} is space, skip all spaces, then return @code{#t}, else
 ;; return @code{#f}.
 ;; @end deffn
@@ -169,9 +169,11 @@
 (define (make-ident-like-p reader)
   (lambda (s) (and (string? s)
                    (positive? (string-length s))
-                   (eval-reader reader s)
+                   (with-input-from-string s
+                     (lambda ()
+                       (and (reader (read-char))
+                            (eof-object? (read-char)))))
                    #t)))
-
 
 ;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table [tval]
 ;; Generate a procedure from an ident reader and a parser match-table
@@ -242,7 +244,7 @@
 ;;(export new-make-string-reader)
 ;; string-literal -> parser -> pretty-print => string-literal
 
-;; @deffn {Procedure} read-oct => 123|#f
+;; @deffn {Procedure} read-oct => 123 | #f
 ;; Read octal number, assuming @code{\0} have already been read.
 ;; Return integer.
 ;; @end deffn
@@ -257,7 +259,7 @@
           (loop (+ (* 8 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
          (else (unread-char ch) cv))))))
 
-;; @deffn {Procedure} read-hex => 123|#f
+;; @deffn {Procedure} read-hex => 123 | #f
 ;; Read hex number.  Assumes prefix (e.g., "0x" has already been read).
 ;; Returns integer.
 ;; @end deffn
@@ -759,14 +761,14 @@
           #f))))))
 
 ;; @deffn {Procedure} make-comm-reader comm-table [#:eat-newline #t] => \
-;;   ch bol -> ('$code-comm "..")|('$lone-comm "..")|#f
+;;   ch bol -> ('$code-comm "..")|('$lone-comm "..") | #f
 ;; comm-table is list of cons for (start . end) comment.
 ;; e.g. ("--" . "\n") ("/*" . "*/")
 ;; test with "/* hello **/"
 ;; If @code{eat-newline} is specified as true then for read comments 
 ;; ending with a newline a newline swallowed with the comment.
 ;; The returned procedure has signature
-;; @code{(proc ch #:optional bol #:skip-prefix #t|#f)}
+;; @code{(proc ch #:optional bol #:skip-prefix #t | #f)}
 ;; @* Note: assumes backslash is never part of the end
 ;; @end deffn
 (define* (make-comm-reader comm-table #:key eat-newline)

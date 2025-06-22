@@ -199,6 +199,23 @@ De-reference a pointer.  Returns a @emph{cdata} object representing the
 contents at the address in the underlying bytevector.
 @end deffn
 
+@heading Notes
+
+@subheading Digression on Garbage Collection
+
+Before going further we remind you that the underlying datastructure
+is bytevectors.  Now, since bytevectors in Guile are not searched for
+pointers during garbage collection there is a risk that the objects
+being referenced might be collected during usage.  A systematic method
+to prevent this is work to go.  One might try to use @code{cdata&} in
+the following way keep intermediate values from being collected.
+@example
+  (let ((val (make-cdata foo_t))
+        (ptr (cdata& val)))
+     (bar ptr))
+@end example
+
+
 @heading Going Further
 
 @deffn {Procedure} cdata-sel data tag ... => cdata
@@ -300,13 +317,15 @@ need to be able to cast array to pointer
 @end example
 @end deffn
 
-@deffn {Procedure} unwrap-number arg => number
+@deffn {Procedure} arg->number arg => number
 Convert an argument to numeric form for a ffi procedure call.
 This will reference a cdata object or pass a number through.
 @end deffn
 
+The above procedure was previously called @code{unwrap-number}.
 
-@deffn {Procedure} unwrap-pointer arg [hint] => pointer
+
+@deffn {Procedure} arg->pointer arg [hint] => pointer
 Convert an argument to a Guile pointer for a ffi procedure call.
 This will reference a cdata object or pass a number through.
 If the argument is a function, it will attempt to convert that
@@ -314,12 +333,10 @@ to a pointer via @code{procedure->pointer} if given the function
 pointer type @var{hint}.
 @end deffn
 
-@deffn {Procedure} unwrap-array arg => pointer
-This will convert an array to a form suitable to pass to a Guile
-ffi procedure.
-@end deffn
+The above procedure used to be called @code{unwrap-pointer}.  It is
+also used to implement the old @code{unwrap-array}.
 
-@deffn {Procedure} ctype->ffi ctype => ffi type
+@deffn {Procedure} ctype->ffi ctype => ffi-type
 Generate a argument spec for Guile's ffi interface.
 Example:
 @example

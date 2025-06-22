@@ -34,7 +34,7 @@
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (cdata* data) -> <cdata>
 ;; (cdata&-ref data) -> pointer
-;; (cdata*-ref data) -> value | <cdata>
+;; (cdata*-ref data tag ...) -> value | <cdata>
 ;; (Xcdata-ref bv ix ct) -> value
 ;; (Xcdata-set! bv ix ct value)
 
@@ -121,10 +121,9 @@
   #:use-module ((system foreign)
                 #:select (%null-pointer
                           make-pointer pointer? pointer-address
-                          scm->pointer string->pointer
                           pointer->bytevector bytevector->pointer
-                          int8 uint8 int16 uint16 int32 uint32 int64 uint64
-                          float double))
+                          scm->pointer string->pointer float double
+                          int8 uint8 int16 uint16 int32 uint32 int64 uint64))
   #:use-module (nyacc foreign arch-info))
 
 (use-modules (ice-9 pretty-print))
@@ -302,15 +301,16 @@
 ;; map of arch (from @code{(*arch*)}) -> cbase
 (define *cbase-map* (make-parameter '()))
 
-;; @deftp {Record} <cdata> bv ix ct [tn]
+;; @deftp {Record} <cdata> bv ix ct pl
 ;; Record to hold C data.  Underneath it's a bytevector, index and type.
 ;; @end deftp
 (define-record-type <cdata>
-  (%make-cdata bv ix ct)
+  (%make-cdata bv ix ct pl)
   cdata?
   (bv cdata-bv)                         ; bvec
   (ix cdata-ix)                         ; index
-  (ct cdata-ct))                        ; type
+  (ct cdata-ct)                         ; type
+  (pl cdata-pl))                        ; pointers
 
 (set-record-type-printer! <cdata>
   (lambda (data port)
@@ -822,7 +822,7 @@
      allocate storage for that many items, associating it with an array
      type of that size."
   (define (make-data type value)
-    (let* ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type)))
+    (let* ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type #f)))
       (if value (cdata-set! data value))
       data))
   (assert-ctype 'make-cdata type)
@@ -835,7 +835,7 @@
            (error "make-cdata: zero sized array type"))
          (let* ((et (carray-type ca)) (sz (ctype-size et))
                 (bv (make-bytevector (* value sz))))
-           (%make-cdata bv 0 (carray et value))))
+           (%make-cdata bv 0 (carray et value) #f)))
         (else
          (make-data type value)))))
     (else (make-data type value))))
@@ -872,7 +872,7 @@
                  (tags tags))
         (cond
          ((null? tags)
-          (%make-cdata bv ix ct))
+          (%make-cdata bv ix ct #f))
          ((eq? 'pointer (ctype-kind ct))
           (if (eq? 'void (cpointer-type (ctype-info ct)))
               (error "cdata-sel: attempt to deference void*"))
@@ -919,7 +919,7 @@
               (mtype (cenum-mtype info))
               (symf (cenum-symf info)))
          (symf (mtype-bv-ref mtype bv ix))))
-      ((array struct union) (%make-cdata bv ix ct))
+      ((array struct union) (%make-cdata bv ix ct #f))
       ((function)
        (let* ((ti (ctype-info ct))
               (mtype (cfunction-ptr-mtype ti))
@@ -1011,16 +1011,13 @@
 ;; object is returned.  If you always want a cdata object, use @code{cdata-sel}.
 ;; @end deffn
 (define (cdata-ref data . tags)
-  "- Procedure: cdata-ref data [tag ...]
+  "- Procedure: cdata-ref data [tag ...] => value
      Return the Scheme (scalar) slot value for selected TAG ... with
      respect to the cdata object DATA.
           (cdata-ref my-struct-value 'a 'b 'c))
-     This procedure returns XXX for cdata kinds _base_, _pointer_ and
-     (in the future) _function_.  Attempting to obtain values for C-type
-     kinds _struct_, _union_, _array_ will result in ‘#f’.  If, in those
-     cases, you would like a cdata then use this:
-          (or (cdata-ref data tag ...) (cdata-sel data tag ...))
-     (Or should we just make this the default behavior?)"
+     This procedure returns Guile values for cdata kinds _base_,
+     _pointer_ and _procedure_.  For other cases, a _cdata_ object is
+     returned.  If you always want a cdata object, use ‘cdata-sel’."
   (assert-cdata 'cdata-ref data)
   (let ((data (apply cdata-sel data tags)))
     (Xcdata-ref (cdata-bv data) (cdata-ix data) (cdata-ct data))))
@@ -1043,7 +1040,14 @@
           (cdata-set! my-struct-data 42 'a 'b 'c))"
   (assert-cdata 'cdata-set! data)
   (let ((data (apply cdata-sel data tags)))
-    (Xcdata-set! (cdata-bv data) (cdata-ix data) (cdata-ct data) value)))
+    (case (cdata-kind data)
+      ((struct union)
+       (unless (pair? value) (error "cdata-set!: bad arg:" value))
+       (for-each
+        (lambda (field) (cdata-set! data (cadr field) (car field)))
+        value))
+      (else
+       (Xcdata-set! (cdata-bv data) (cdata-ix data) (cdata-ct data) value)))))
 
 ;; @deffn {Procedure} make-cdata/* type pointer
 ;; Make a cdata object from a pointer.   That is, instead of creating a
@@ -1055,7 +1059,7 @@
   (assert-ctype 'make-cdata/* type)
   (let* ((size (ctype-size type))
          (bvec (pointer->bytevector pointer size))
-         (data (%make-cdata bvec 0 type)))
+         (data (%make-cdata bvec 0 type #f)))
     data))
 
 ;; @deffn {Procedure} cdata-copy src) => <cdata>
@@ -1072,7 +1076,7 @@
          (sz (ctype-size ct))
          (bvdst (make-bytevector sz)))
     (bytevector-copy! bv ix bvdst 0 (ctype-size ct))
-    (%make-cdata bvdst 0 ct)))
+    (%make-cdata bvdst 0 ct #f)))
     
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
@@ -1110,7 +1114,7 @@
     (case kind
       ((function) #f)
       (else
-       (%make-cdata (pointer->bytevector pntr (ctype-size type)) 0 type)))))
+       (%make-cdata (pointer->bytevector pntr (ctype-size type)) 0 type #f)))))
 
 ;; @deffn {Procedure} cdata-kind data
 ;; Return the kind of @var{data}: pointer, base, struct, ...
@@ -1149,6 +1153,14 @@
          (addr (+ (pointer-address bptr) (cdata-ix data))))
     (make-pointer addr)))
 
+;; @deffn {Procedure} cdata*-ref data [tag ...] => value
+;; Shortcut for @code{(cdata-ref data '* tag ...)}
+;; @end deffn
+(define (cdata*-ref data . tags)
+  "- Procedure: cdata*-ref data [tag ...] => value
+     Shortcut for ‘(cdata-ref data '* tag ...)’"
+  (apply cdata-ref data '* tags))
+
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
 ;; need to be able to cast array to pointer
 ;; @example
@@ -1168,7 +1180,7 @@
   (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
     (case (ctype-kind ct)
       ((base) (make-cdata type (cdata-ref data)))
-      ((pointer) (%make-cdata bv ix type))
+      ((pointer) (%make-cdata bv ix type #f))
       ((array)
        (case (ctype-kind type)
          ((pointer)
@@ -1177,7 +1189,7 @@
                  (ptype (cpointer-type (ctype-info type))))
             (type-check (carray-type (ctype-info ct))
                         (cpointer-type (ctype-info type)))
-            (%make-cdata bv ix type)))
+            (%make-cdata bv ix type #f)))
          (else (type-miss))))
       (else (type-miss)))))
 
@@ -1350,28 +1362,28 @@
       ((pointer array function) '*)
       (else (error "ctype->ffi: unsupported:" (ctype-kind type))))))
 
-;; @deffn {Procedure} unwrap-number arg
+;; @deffn {Procedure} cdata-arg->number arg
 ;; Convert an argument to numeric form for a ffi procedure call.
 ;; This will reference a cdata object or pass a number through.
 ;; @end deffn
-(define (unwrap-number arg)
-  "- Procedure: unwrap-number arg
+(define (cdata-arg->number arg)
+  "- Procedure: arg->number arg
      Convert an argument to numeric form for a ffi procedure call.  This
      will reference a cdata object or pass a number through."
   (cond ((number? arg) arg)
         ((cdata? arg) (cdata-ref arg))
-        (else (error "unwrap-number: bad arg:" arg))))
-(define cdata-arg->number unwrap-number)
+        (else (error "cdata-arg->number: bad arg:" arg))))
+(define unwrap-number cdata-arg->number)
 
-;; @deffn {Procedure} unwrap-pointer arg
+;; @deffn {Procedure} cdata-arg->pointer arg
 ;; Convert an argument to a Guile pointer for a ffi procedure call.
 ;; This will reference a cdata object or pass a number through.
 ;; If the argument is a function, it will attempt to convert that
 ;; to a pointer via @code{procedure->pointer} if given the function
 ;; pointer type @var{hint}.
 ;; @end deffn
-(define* (unwrap-pointer arg #:optional hint)
-  "- Procedure: unwrap-pointer arg
+(define* (cdata-arg->pointer arg #:optional hint)
+  "- Procedure: arg->pointer arg
      Convert an argument to a Guile pointer for a ffi procedure call.
      This will reference a cdata object or pass a number through.  If
      the argument is a function, it will attempt to convert that to a
@@ -1379,8 +1391,12 @@
      HINT."
   (cond ((pointer? arg) arg)
         ((string? arg) (string->pointer arg))
-        ((cdata? arg) (cdata-ref arg))
         ((equal? 0 arg) %null-pointer)
+        ((cdata? arg)
+         (case (cdata-kind arg)
+           ((pointer) (cdata-ref arg))
+           ((array struct union) (cdata&-ref arg))
+           (else (error "cdata-arg->pointer; bad arg:" arg))))
         ((and (procedure? arg) (ctype? hint))
          (let* ((info (ctype-info hint))
                 (func (case (ctype-kind hint)
@@ -1388,24 +1404,9 @@
                         ((pointer) (ctype-info (cpointer-type info)))
                         (else (error "not ok")))))
            ((cfunction-proc->ptr func) arg)))
-        (else (error "unwrap-pointer: bad arg:" arg))))
-(define cdata-arg->pointer unwrap-pointer)
-
-;; @deffn {Procedure} unwrap-array arg
-;; This will convert an array to a form suitable to pass to a Guile
-;; ffi procedure.
-;; @end deffn
-(define (unwrap-array arg)
-  "- Procedure: unwrap-array arg
-     This will convert an array to a form suitable to pass to a Guile
-     ffi procedure."
-  (unless
-    (cdata? arg)
-    (error "unwrap-array: bad arg:" arg))
-  (case (cdata-kind arg)
-    ((pointer) (cdata-ref arg))
-    ((array) (cdata&-ref arg))
-    (else (error "unwrap-array: bad arg:" arg))))
+        (else (error "cdata-arg->pointer: bad arg:" arg))))
+(define unwrap-pointer cdata-arg->pointer)
+(define unwrap-array cdata-arg->pointer)
 
 (define NULL %null-pointer)
 

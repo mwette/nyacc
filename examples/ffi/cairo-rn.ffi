@@ -2,51 +2,28 @@
 
 ;; Copyright (C) 2018,2024 Matthew Wette
 ;;
-;; This library is free software; you can redistribute it and/or
-;; modify it under the terms of the GNU Lesser General Public
-;; License as published by the Free Software Foundation; either
-;; version 3 of the License, or (at your option) any later version.
-;;
-;; This library is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;; Lesser General Public License for more details.
-;;
-;; You should have received a copy of the GNU Lesser General Public License
-;; along with this library; if not, see <http://www.gnu.org/licenses/>
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
 
 (define-ffi-module (ffi cairo-rn)
   #:pkg-config "cairo"
-  #:include '("cairo.h"
-	      ;;"cairo-ft.h"
-	      ;;"cairo-gobject.h"
-	      ;;"cairo-pdf.h"
-	      ;;"cairo-ps.h"
-	      ;;"cairo-quartz.h"
-	      ;;"cairo-quartz-image.h"
-	      ;;"cairo-script.h"
-	      ;;"cairo-script-interpreter.h"
-	      "cairo-svg.h"
-	      ;;"cairo-tee.h"
-	      ;;"cairo-xcb.h"
-	      ;;"cairo-xlib.h"
-	      ;;"cairo-xml.h"
-	      )
-  #:renamer (lambda (name)
-              (string-map (lambda (c) (if (char=? c #\_) #\- c)) name))
-  #:export (M_PI M_2PI make-cairo-unit-matrix)
-  )
+  #:include '("cairo.h")
+  #:renamer (lambda (name ctxt)
+              (define (cnvt name) 
+                (string-map (lambda (c) (if (char=? c #\_) #\- c)) name))
+              (case ctxt
+                ((enum) name)
+                ((field) (cnvt name))
+                ((function) (cnvt name))
+                ((type) name)
+                (else name)))
+  #:export (M_PI M_2PI make-cairo-unit-matrix))
 
-(define-public cairo-raster-source-acquire-func-t*
-  (cpointer  cairo-raster-source-acquire-func-t))
-
-(define-public cairo-raster-source-release-func-t*
-  (cpointer  cairo-raster-source-release-func-t))
-
-#|
 (define (make-cairo-unit-matrix)
-  (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
-|#
+  (make-cdata cairo_matrix_t
+              `((xx 1.0) (yx 0.0) (xy 0.0) (yy 1.0) (x0 0.0) (y0 0.0))))
 
 (define M_PI 3.14159265358979323846)
 (define M_2PI 6.28318530717958647692)

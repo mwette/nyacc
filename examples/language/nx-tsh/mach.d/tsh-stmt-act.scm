@@ -114,15 +114,18 @@
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; exec-stmt => "set" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(set ,$2 ,$3))
-   ;; exec-stmt => "set" '$deref/ix "(" expr-list ")" unit-expr
+   ;; exec-stmt => "set" '$deref/ix "(" expr-or-tuple ")" unit-expr
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(set-indexed (deref (ident ,$2)) ,$4 ,$6))
+     `(set-indexed
+        (ident ,$2)
+        ,(if (eq? 'expr (sx-tag $4)) `(expr-list ,$4) $4)
+        ,$6))
    ;; exec-stmt => ident expr-seq
    (lambda ($2 $1 . $rest) `(call ,$1 ,@(cdr $2)))
    ;; exec-stmt => "lambda" "{" arg-list "}" "{" proc-stmt-list "}"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(lambda ,$3 ,$6))
-   ;; exec-stmt => "(" expr-list ")"
+   ;; exec-stmt => "(" expr-or-tuple ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; exec-stmt => if-stmt
    (lambda ($1 . $rest) $1)
@@ -272,7 +275,7 @@
    (lambda ($2 $1 . $rest) `(bitwise-not ,$2))
    ;; primary-expression => '$deref
    (lambda ($1 . $rest) `(deref ,$1))
-   ;; primary-expression => '$deref/ix "(" expr-list ")"
+   ;; primary-expression => '$deref/ix "(" expr-or-tuple ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(deref-indexed ,$1 ,$3))
    ;; primary-expression => fixed
@@ -287,15 +290,25 @@
    (lambda ($1 . $rest) $1)
    ;; primary-expression => keyword
    (lambda ($1 . $rest) $1)
-   ;; primary-expression => "(" expr-list ")"
+   ;; primary-expression => "(" expr-or-tuple ")"
    (lambda ($3 $2 $1 . $rest) `(last ,$2))
    ;; primary-expression => "[" exec-stmt "]"
    (lambda ($3 $2 $1 . $rest) `(eval ,$2))
-   ;; expr-list => expr-list-1
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; expr-list-1 => expression
+   ;; expr-or-tuple => expression
+   (lambda ($1 . $rest) `(expr ,$1))
+   ;; expr-or-tuple => expression ","
+   (lambda ($2 $1 . $rest) `(expr-list ,$1))
+   ;; expr-or-tuple => expression "," expr-list
+   (lambda ($3 $2 $1 . $rest)
+     (tl-insert $3 $1)
+     (tl->list $3))
+   ;; expr-or-tuple => expression "," expr-list ","
+   (lambda ($4 $3 $2 $1 . $rest)
+     (tl-insert $3 $1)
+     (tl->list $3))
+   ;; expr-list => expression
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
-   ;; expr-list-1 => expr-list-1 "," expression
+   ;; expr-list => expr-list "," expression
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; expr-seq => expr-seq-1
    (lambda ($1 . $rest) (tl->list $1))

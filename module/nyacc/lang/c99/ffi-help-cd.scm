@@ -65,6 +65,8 @@
   #:re-export (*nyacc-version*)
   #:version (2 02 0))
 
+(define default-renamer (lambda (name ctxt) name))
+
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
 (define *debug-parse* (make-parameter #f)) ; parse debug mode
@@ -72,7 +74,7 @@
 (define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
 
 (define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
-(define *renamer* (make-parameter (lambda (n c) n))) ; renamer from ffi-module
+(define *renamer* (make-parameter default-renamer)) ; renamer from ffi-module
 
 (define *udict* (make-parameter '()))	   ; udecl dict
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
@@ -219,6 +221,17 @@
       ((string=? "-lm" s) l) ;; workaround for ubuntu libm issue
       ((string=? "-l" (substring/shared s 0 2))
        (cons (string-append "lib" (substring/shared s 2)) l))
+      (else l)))
+   '()
+   (pkg-config name "--libs")))
+
+(define (pkg-config-dirs name)
+  (fold-right
+   (lambda (s l)
+     (cond
+      ((< (string-length s) 3) l)
+      ((string=? "-L" (substring/shared s 0 2))
+       (cons (substring/shared s 2) l))
       (else l)))
    '()
    (pkg-config name "--libs")))
@@ -412,7 +425,7 @@
                         (function*-wraps return params)))
          (lambda (pc->pr pr->pc)
            `(cpointer (cfunction ,pc->pr ,pr->pc)))))
-      (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
+      (`((pointer-to) (pointer-to) (function-returning . ,_1) . ,_2)
        `(cpointer (cbase 'void*)))
       (`((pointer-to) (struct-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
@@ -495,7 +508,9 @@
 	 (pkg-config (assq-ref attrs 'pkg-config))
          (libs (resolve-attr-val (assq-ref attrs 'library)))
          (libs (if pkg-config (append (pkg-config-libs pkg-config) libs) libs))
- 	 (libs (delete "libm" libs)))
+ 	 (libs (delete "libm" libs))
+         (dirs (resolve-attr-val (assq-ref attrs 'lib-dirs)))
+         (dirs (if pkg-config (append (pkg-config-dirs pkg-config) dirs) dirs)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
 	   (m-path->f-path path))
     (nlscm)
@@ -515,10 +530,11 @@
     (sfscm "\n")
     (ppscm
      `(define (foreign-pointer-search name)
+        (define (flc l) (load-foreign-library (car l) #:search-path ,dirs))
         (let loop ((libs (list #f ,@libs)))
           (cond
            ((null? libs) (error "no library for ~s" name))
-           ((false-if-exception (foreign-library-pointer (car libs) name)))
+           ((false-if-exception (foreign-library-pointer (flc libs) name)))
            (else (loop (cdr libs)))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
@@ -538,19 +554,19 @@
 
   (define (cnvt mtail)
     (match mtail
-      (`((pointer-to) . ,rest) ''*)
+      (`((pointer-to) . ,_1) ''*)
       (`((fixed-type ,name))
        (or (assoc-ref ffi-typemap name)
 	   (fherr/once "no FFI type for ~A" name)))
       (`((float-type ,name))
        (or (assoc-ref ffi-typemap name)
 	   (fherr/once "no FFI type for ~S" name)))
-      (`((typename ,name) . ,rest)
+      (`((typename ,name) . ,_1)
        (or (assoc-ref ffi-typemap name)
 	   (fherr "no FFI type for ~S" name)))
       (`((void)) 'ffi:void)
-      (`((enum-def . ,rest2) . ,rest1) 'ffi:int)
-      (`((enum-ref . ,rest2) . ,rest1) 'ffi:int)
+      (`((enum-def . ,_1) . ,_2) 'ffi:int)
+      (`((enum-ref . ,_1) . ,_2) 'ffi:int)
 
       (`((array-of ,dim) . ,rest)
        `(make-list ,(eval-dim dim) ,(cnvt rest)))
@@ -592,11 +608,12 @@
                          '((enum . "*any*")))) ;; hack provided
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
-      (`((pointer-to) . ,_0) `(unwrap-pointer ,mname ,(string->symbol name)))
-      (`((fixed ,name)) `(unwrap-number ,mname))
-      (`((float ,name)) `(unwrap-number ,mname))
-      (`((enum-def . ,_1)) `(unwrap~enum  ,mname))
-      (`((enum-ref . ,_1)) `(unwrap~enum  ,mname))
+      (`((pointer-to) . ,_1)
+       `(cdata-arg->pointer ,mname ,(string->symbol name)))
+      (`((fixed ,name)) `(cdata-arg->number ,mname))
+      (`((float ,name)) `(cdata-arg->number ,mname))
+      (`((enum-def . ,_1)) `(unwrap~enum ,mname))
+      (`((enum-ref . ,_1)) `(unwrap~enum ,mname))
       (__ #f))))
 
 (define (unwrap-mdecl mdecl)
@@ -604,33 +621,34 @@
         (mname (string->symbol (md-label mdecl)))
         (mtail (md-tail mdecl)))
     (match (car mtail)
-      (`(fixed-type ,name) `(unwrap-number ,mname))
-      (`(float-type ,name) `(unwrap-number ,mname))
+      (`(fixed-type ,name) `(cdata-arg->number ,mname))
+      (`(float-type ,name) `(cdata-arg->number ,mname))
       (`(typename ,name)
        (cond
-	((dmem? name def-defined) `(unwrap-number ,mname))
+	((dmem? name def-defined) `(cdata-arg->number ,mname))
 	((dmem? name defined) (defined-type-unwrapper name mname))
 	(else #f)))
       (`(pointer-to)
        (match mtail
          (`((pointer-to) (typename ,name))
           (cond
-           ((dmem? name def-defined) `(unwrap-pointer ,mname))
+           ((dmem? name def-defined) `(cdata-arg->pointer ,mname))
            ((dmem? (w/* name) defined)
-            `(unwrap-pointer ,mname ,(strings->symbol name "*")))
+            `(cdata-arg->pointer ,mname ,(strings->symbol name "*")))
            ((dmem? name defined)
-            `(unwrap-pointer ,mname (cpointer ,(string->symbol name))))
-           (else `(unwrap-pointer ,mname))))
+            `(cdata-arg->pointer ,mname (cpointer ,(string->symbol name))))
+           (else `(cdata-arg->pointer ,mname))))
          (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
           (let ((return (mdecl->udecl (cons "~ret" rest))))
             (call-with-values
                 (lambda () (function*-wraps return params))
               (lambda (pr pc)
                 (let ((pc '(lambda (p) 'unused))) ; only proc->ptr is used
-                  `(unwrap-pointer ,mname (cpointer (cfunction ,pr ,pc))))))))
+                  `(cdata-arg->pointer
+                    ,mname (cpointer (cfunction ,pr ,pc))))))))
          (`((pointer-to) . ,_1)
-          `(unwrap-pointer ,mname))))
-      (`(function-returning . ,_0)
+          `(cdata-arg->pointer ,mname))))
+      (`(function-returning . _0)
        (unwrap-mdecl (cons (md-label mdecl) (cons '(pointer-to) mtail))))
       (`(enum-def (ident ,name) ,_1)
        (cond
@@ -645,8 +663,8 @@
 	(else `(unwrap~enum ,mname))))
       (`(struct-ref (ident ,name)) `(cdata&-ref ,mname))
       (`(union-ref (ident ,name)) `(cdata&-ref ,mname))
-      (`(array-of ,size) `(unwrap-array ,mname))
-      (`(array-of) `(unwrap-array ,mname))
+      (`(array-of ,size) `(cdata-arg->pointer ,mname))
+      (`(array-of) `(cdata-arg->pointer ,mname))
       ;; not expected
       (`(void) #f)
       (`(struct-def . ,_1) `(cdata&-ref ,mname))
@@ -847,7 +865,7 @@
 	     (cons (expand-typerefs udecl udict defined) seed))
 	   '() (clean-and-unitize-fields (sx-tail field-list))))))
 
-;; @deffn {Procedure} udecl->sexp udecl udict defined seed)
+;; @deffn {Procedure} udecl->sexp udecl udict [defined [seed]])
 ;; Given @var{udecl} produce scheme FFI wrappers for C types, C functions,
 ;; and C variables. Return updated @var{defined}, a string based vhash of
 ;; types defined. The list is used used in the conversion subroutines.
@@ -884,13 +902,15 @@
   (define (bkref-getall attr)
     (and=> (assq-ref attr 'typedef) (lambda (t) (string-split (car t) #\,))))
 
-  (*defined* defined)                   ; set global for converters
-
   (define-syntax-rule (deftype name type)
     `(define-public ,name (name-ctype ',name ,type)))
 
-  (let* ((tag attr specl declr (split-udecl udecl))
+  (let* ((defined (or defined (list->vlist '())))
+         (seed (or seed '()))
+         (tag attr specl declr (split-udecl udecl))
          (sspec tqual tspec (specl-props specl)))
+
+    (*defined* defined)                 ; set global for converters
 
     (cond
 
@@ -1207,13 +1227,15 @@
         (,__ (values #f #f))) (lambda (a b) a) => values)
 
      ((memq 'extern sspec)
-      (let* ((udecl (expand-typerefs udecl udict defined))
+      (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
              (mdecl (udecl->mdecl udecl))
              (name (md-label mdecl))
              (rname (rename name 'variable))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
-             (mtail* `((pointer-to) . ,mtail))
-             (type* (mtail->ctype mtail*))
+             ;;(mtail* `((pointer-to) . ,mtail))
+             ;;(type* (mtail->ctype mtail*))
+             (ctype (mtail->ctype mtail))
+             (type* `(cpointer ,ctype))
              (name* (strings->symbol name "*")))
         (values
          defined
@@ -1538,7 +1560,7 @@
           (use-modules (nyacc lang c99 ffi-help))
           (load-include-file \"cairo.h\" #:pkg-config \"cairo\")"
   (parameterize ((*options* '()) (*defined* '())
-		 (*renamer* (lambda (n c) n)) (*errmsgs* '())
+		 (*renamer* default-renamer) (*errmsgs* '())
 		 (*prefix* "") (*mport* #t) (*udict* '()))
     (let* ((attrs (acons 'include (list filename) '()))
 	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
@@ -1557,10 +1579,13 @@
       (ppscm '(use-modules (nyacc foreign cdata)))
       (ppscm
        `(define (foreign-pointer-search name)
+          (define (flc l)
+            (load-foreign-library (car l)
+                                  #:search-path=,(pkg-config-dirs pkg-config)))
           (let loop ((libs (list #f ,@(pkg-config-libs pkg-config))))
             (cond
              ((null? libs) (fherr "not found: ~s" name))
-             ((false-if-exception (foreign-library-pointer (car libs) name)))
+             ((false-if-exception (foreign-library-pointer (flc libs) name)))
              (else (loop (cdr libs)))))))
       (process-decls decls udict def-defined)
       (close (*mport*))
@@ -1610,7 +1635,7 @@
 	   (member key '(#:api-code
 			 #:cpp-defs #:decl-filter #:inc-dirs #:inc-filter
 			 #:inc-help #:include #:library #:pkg-config #:renamer
-                         #:use-ffi-module #:def-keepers))))
+			 #:use-ffi-module #:def-keepers #:lib-dirs))))
     (define (module-option? key) (keyword? key))
 
     (syntax-case x ()
@@ -1650,7 +1675,7 @@
 ;; @end deffn
 (define* (compile-ffi-file filename #:optional (options '()))
   (parameterize ((*options* options) (*defined* '())
-		 (*renamer* (lambda (n c) n)) (*errmsgs* '()) (*prefix* "")
+		 (*renamer* default-renamer) (*errmsgs* '()) (*prefix* "")
 		 (*mport* #t) (*udict* '()) (*ddict* '()))
     (if (not (access? filename R_OK))
 	(fherr "ERROR: not found: ~S" filename))
