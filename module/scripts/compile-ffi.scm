@@ -250,7 +250,8 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   (define (check-ffi-vs-scm ffis seed)
     (fold
      (lambda (ffi seed)
-       (let ((scm (scm-for-ffi ffi)))
+       (let ((scm (or (assq-ref opts 'output)
+                      (scm-for-ffi ffi))))
          (cond
           ((not (access? scm R_OK)) (cons ffi seed))
           ((more-recent? ffi scm) (cons ffi seed))
@@ -283,7 +284,8 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 ;; -----------------------------------------------------------------------------
 
 (define (compile-ffi ffi-file opts)
-  (let* ((scm-file (scm-for-ffi ffi-file))
+  (let* ((scm-file (or (assq-ref opts 'output)
+                       (scm-for-ffi ffi-file)))
          (mod (case (assq-ref opts 'backend)
                 ((bytestructures bs) '(nyacc lang c99 ffi-help-bs))
                 ((cdata cd) '(nyacc lang c99 ffi-help-cd))
