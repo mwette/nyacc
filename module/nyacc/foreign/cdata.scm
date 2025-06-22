@@ -93,7 +93,7 @@
 
             Xcdata-ref Xcdata-set!
             
-            cdata-kind cdata& cdata* cdata-sel cdata*-ref
+            cdata-kind cdata& cdata* cdata-sel cdata*-sel cdata*-ref
             ctype-sel make-cdata-getter make-cdata-setter
             ctype->ffi
             ;;
@@ -991,10 +991,8 @@
                       (eq? 'base (ctype-kind at))
                       (= (array-length value) al))
                  (let* ((mt (ctype-info at)) (sz (sizeof-mtype mt)))
-                   (sferr "do loop\n")
                    (do ((i 0 (1+ i)) (ix ix (+ ix sz)))
                        ((>= i al) (if #f #f))
-                     (sferr "i=~s\n" i)
                      (mtype-bv-set! mt bv ix (array-ref value i))))
                  (error "cdata-set!: can't set! this array value"))))
           ((function) (error "cdata-set!: can't set! function value"))
@@ -1123,27 +1121,33 @@
   (assert-cdata 'cdata-kind data)
   (ctype-kind (cdata-ct data)))
 
+;; @deffn {Procedure} cdata*-sel data [tag ...] => value
+;; Shortcut for @code{(cdata-sel (cdata* data) tag ...)}
+;; @end deffn
+(define (cdata*-sel data . tags)
+  "- Procedure: cdata*-sel data [tag ...] => value
+     Shortcut for ‘(cdata-sel (cdata* data) tag ...)’"
+  (apply cdata-sel data '* tags))
+
+;; @deffn {Procedure} cdata*-ref data [tag ...] => value
+;; Shortcut for @code{(cdata-ref (cdata* data) tag ...)}
+;; @end deffn
+(define (cdata*-ref data . tags)
+  "- Procedure: cdata*-ref data [tag ...] => value
+     Shortcut for ‘(cdata-ref (cdata* data) tag ...)’"
+  (apply cdata-ref data '* tags))
+
 ;; @deffn {Procedure} cdata&-ref data [tag ...] => value
-;; Shortcut for @code{(cdata-ref (cdata& data tag ...))}
-;; This always returns a Guile @emph{pointer}.
+;; Provide a (Guile) pointer to the selected value.
 ;; @end deffn
 (define (cdata&-ref data . tags)
-  "- Procedure: cdata&-ref data [tag ...]
-     Shortcut for ‘(cdata-ref (cdata& data tag ...))’ This always
-     returns a Guile _pointer_."
+  "- Procedure: cdata&-ref data [tag ...] => value
+     Provide a (Guile) pointer to the selected value."
   (assert-cdata 'cdata&-ref data)
   (let* ((data (apply cdata-sel data tags))
          (bptr (bytevector->pointer (cdata-bv data)))
          (addr (+ (pointer-address bptr) (cdata-ix data))))
     (make-pointer addr)))
-
-;; @deffn {Procedure} cdata*-ref data [tag ...] => value
-;; Shortcut for @code{(cdata-ref (cdata* data tag ...))}
-;; @end deffn
-(define (cdata*-ref data . tags)
-  "- Procedure: cdata*-ref data [tag ...]
-     Shortcut for ‘(cdata-ref (cdata* data tag ...))’"
-  (apply cdata-ref data '* tags))
 
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
 ;; need to be able to cast array to pointer
@@ -1413,6 +1417,9 @@
      Check if argument is null Guile pointer, or a cdata form of the
      same."
   (equal? (if (cdata? arg) (cdata-ref arg) arg) %null-pointer))
+
+
+;; --- deprecated --------------------------------------------------------------
 
 ;; --- c99 support -------------------------------------------------------------
 
