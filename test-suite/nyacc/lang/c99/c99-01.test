@@ -320,7 +320,7 @@
                 (type-spec (float-type "double")))
                (init-declr-list (init-declr (ident "xy")))))))))
 
-  (pass-if "bug 66626"
+  #;(pass-if "bug 66626"
     (let* ((code
             (string-append
              "struct { struct { int value; } elements; } global;\n"
