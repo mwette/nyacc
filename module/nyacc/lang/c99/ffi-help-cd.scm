@@ -530,7 +530,8 @@
     (sfscm "\n")
     (ppscm
      `(define (foreign-pointer-search name)
-        (define (flc l) (load-foreign-library (car l) #:search-path ,dirs))
+        (define (flc l)
+          (load-foreign-library (car l) #:search-path (list ,@dirs)))
         (let loop ((libs (list #f ,@libs)))
           (cond
            ((null? libs) (error "no library for ~s" name))
@@ -1580,8 +1581,8 @@
       (ppscm
        `(define (foreign-pointer-search name)
           (define (flc l)
-            (load-foreign-library (car l)
-                                  #:search-path=,(pkg-config-dirs pkg-config)))
+            (load-foreign-library
+             (car l) #:search-path (list ,@(pkg-config-dirs pkg-config))))
           (let loop ((libs (list #f ,@(pkg-config-libs pkg-config))))
             (cond
              ((null? libs) (fherr "not found: ~s" name))

@@ -1153,14 +1153,6 @@
          (addr (+ (pointer-address bptr) (cdata-ix data))))
     (make-pointer addr)))
 
-;; @deffn {Procedure} cdata*-ref data [tag ...] => value
-;; Shortcut for @code{(cdata-ref data '* tag ...)}
-;; @end deffn
-(define (cdata*-ref data . tags)
-  "- Procedure: cdata*-ref data [tag ...] => value
-     Shortcut for ‘(cdata-ref data '* tag ...)’"
-  (apply cdata-ref data '* tags))
-
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
 ;; need to be able to cast array to pointer
 ;; @example
