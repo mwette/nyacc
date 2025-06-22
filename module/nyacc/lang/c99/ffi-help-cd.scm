@@ -1656,7 +1656,7 @@
 	(fherr "ERROR: not found: ~S" filename))
     (call-with-input-file filename
       (lambda (iport)
-	(let ((output (or (assq-ref 'output options)
+	(let ((output (or (assq-ref options 'output)
 			  (string-append (dirname filename) "/"
 					 (basename filename ".ffi") ".scm"))))
 	  (call-with-output-file/atomic output
