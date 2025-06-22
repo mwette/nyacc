@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-XX-XX  V2.02.0
+2025-06-22  V2.02.0
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
 	  is not defined yet.  If a struct field has decl' "foo_t x;"
 	  where foo_t was declared "typedef struct foo *foo_t;" then the
