@@ -6,8 +6,12 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2025-XX-XX  V2.02.0
-	* Fixed ffi-help for 'typedef struct foo foo_t' where struct foo
-	  is not defined yet.
+	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
+	  is not defined yet.  If a struct field has decl' "foo_t x;"
+	  where foo_t was declared "typedef struct foo *foo_t;" then the
+	  decl will be `(x ,foo_t) instead of previous `(x ,(cpointer 'void))
+	* Similar fix for fields of the decl "foo_t *x;"
+	* Fixed ffi-help --output option (thanks to F. Lechner)
 
 2025-05-18  V2.01.6
 	* arch-info.scm(i686): signed should be s32le not 32le (bug 66708)
