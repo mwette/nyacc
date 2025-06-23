@@ -409,8 +409,9 @@
     (match mtail
       (`((pointer-to) (typename ,name))
        (let ((name (rename name 'type)))
-         ;; might be forward reference, so delay
-         `(cpointer (delay ,(string->symbol name)))))
+         (if (dmem? (w/* name) defined)
+             (strings->symbol name "*")
+             `(cpointer (delay ,(string->symbol name))))))
       (`((pointer-to) (void))
        `(cpointer 'void))
       (`((pointer-to) (fixed-type "char"))
@@ -866,7 +867,7 @@
 	     (cons (expand-typerefs udecl udict defined) seed))
 	   '() (clean-and-unitize-fields (sx-tail field-list))))))
 
-;; @deffn {Procedure} udecl->sexp udecl udict [defined [seed]])
+;; @deffn {Procedure} udecl->sexp udecl udict defined seed)
 ;; Given @var{udecl} produce scheme FFI wrappers for C types, C functions,
 ;; and C variables. Return updated @var{defined}, a string based vhash of
 ;; types defined. The list is used used in the conversion subroutines.
@@ -888,7 +889,9 @@
             ((type-qual)
              (loop ss (cons (sx-tag (sx-ref (car tl) 1)) tq) ts (cdr tl)))
             ((type-spec)
-             (loop ss tq (sx-ref (car tl) 1) (cdr tl)))))))
+             (loop ss tq (sx-ref (car tl) 1) (cdr tl)))
+            ((fctn-spec)
+             (loop ss tq ts (cdr tl)))))))
 
   (define ftn-declr?
     (let ((ff (node-closure
@@ -906,12 +909,10 @@
   (define-syntax-rule (deftype name type)
     `(define-public ,name (name-ctype ',name ,type)))
 
-  (let* ((defined (or defined (list->vlist '())))
-         (seed (or seed '()))
-         (tag attr specl declr (split-udecl udecl))
-         (sspec tqual tspec (specl-props specl)))
+  (*defined* defined)                 ; set global for converters
 
-    (*defined* defined)                 ; set global for converters
+  (let* ((tag attr specl declr (split-udecl udecl))
+         (sspec tqual tspec (specl-props specl)))
 
     (cond
 
@@ -953,6 +954,7 @@
                       `(define ,*type (cfunction ,pc->pr ,pr->pc))
                       (deftype type `(cpointer ,*type)))))))))
 
+          ;;; CHECK
           (`((pointer-to) (struct-ref (ident ,aggr)))
            (values
             (dcons name defined)
@@ -1059,7 +1061,8 @@
                      (deftype type* `(cpointer 'void))))))))
 
              (((fixed-type float-type) ,basename)
-              (values defined (cons (deftype type (mtail->ctype mtail)) seed)))
+              (values (dcons name defined)
+                      (cons (deftype type (mtail->ctype mtail)) seed)))
 
              ((enum-def ,enum-def-list)
               (values
@@ -1123,9 +1126,9 @@
                            (dcons (w/* name) defined)
                            (cons (deftype type* atype*) seed)))
                         (values defined seed))))
-	        (else
-	         (let ((xdecl (expand-typerefs udecl udict defined)))
-	           (udecl->sexp xdecl udict defined seed))))))
+	         (else
+	          (let ((xdecl (expand-typerefs udecl udict defined)))
+	            (udecl->sexp xdecl udict defined seed))))))
 
              (,__
               (sferr "udecl->sexp missed typedef:\n") (pperr mdecl)
