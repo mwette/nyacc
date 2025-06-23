@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-;;; Author: Matt Wette <mwette@alumni.caltech.edu>
+;;; Author: Matt Wette <matt.wette@gmail.com>
 
 ;;; Commentary:
 ;; Usage: compile-ffi [ARGS]
@@ -84,6 +84,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -L, --load-path=DIR   add DIR to the front of the module load path
   -I, --inc-dir=DIR     add DIR to list of dir's to search for C headers
   -o, --output=OFILE    write output to OFILE
+  -y, --output-dir=ODIR write files to directory ODIR
   -d, --debug=x,y       set debug flags: echo-decl, parse
   -s, --show-incs       show includes during parsing
   -m, --machine=MACHINE target machine, if non-native (e.g., i686)
@@ -112,6 +113,11 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
              (if (assoc-ref opts 'output)
                  (fail "`-o' option cannot be specified more than once"))
              (values (acons 'output arg opts) files)))
+   (option '(#\y "output-dir") #t #f
+           (lambda (opt name arg opts files)
+             (if (assoc-ref opts 'output-dir)
+                 (fail "`-y' option cannot be specified more than once"))
+             (values (acons 'output-dir arg opts) files)))
    (option '(#\b "backend") #t #f
            (lambda (opt name arg opts files)
              (values (acons 'backend (string->symbol arg) opts) files)))
@@ -241,8 +247,12 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
                      '() depd)))
        all))
 
-(define (scm-for-ffi ffi-file)
-  (string-append (string-drop-right ffi-file 4) ".scm"))
+(define (scm-for-ffi ffi-file opts)
+  (cond
+   ((assq-ref opts 'output))
+   ((assq-ref opts 'output-dir) =>
+    (lambda (dir) (string-append dir "/" (basename ffi-file ".ffi") ".scm")))
+   (else (string-append (string-drop-right ffi-file 4) ".scm"))))
 
 ;; from list of all files and depd, return supplier-for dict
 (define (ensure-ffi-deps file opts)
@@ -250,8 +260,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   (define (check-ffi-vs-scm ffis seed)
     (fold
      (lambda (ffi seed)
-       (let ((scm (or (assq-ref opts 'output)
-                      (scm-for-ffi ffi))))
+       (let ((scm (scm-for-ffi ffi opts)))
          (cond
           ((not (access? scm R_OK)) (cons ffi seed))
           ((more-recent? ffi scm) (cons ffi seed))
@@ -277,15 +286,14 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
     (for-each
      (lambda (ffi)
        (when (and (member ffi todo) (not (string=? ffi file)))
-         (compile-ffi ffi opts)))
+         (compile-ffi ffi (acons 'output #f opts))))
      tord)))
 
 
 ;; -----------------------------------------------------------------------------
 
 (define (compile-ffi ffi-file opts)
-  (let* ((scm-file (or (assq-ref opts 'output)
-                       (scm-for-ffi ffi-file)))
+  (let* ((scm-file (scm-for-ffi ffi-file opts))
          (mod (case (assq-ref opts 'backend)
                 ((bytestructures bs) '(nyacc lang c99 ffi-help-bs))
                 ((cdata cd) '(nyacc lang c99 ffi-help-cd))
@@ -301,7 +309,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
         (catch 'c99-error
           (lambda ()
             (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
-            (compile-ffi-file ffi-file opts)
+            (compile-ffi-file ffi-file (acons 'output scm-file opts))
             (sfmt "... wrote `~A'\n" (fix-path scm-file)))
           (lambda (key fmt . args)
             (apply throw 'ffi-help-error fmt args))))
