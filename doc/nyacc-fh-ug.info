@@ -12,7 +12,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 FFI Helper User Guide
 Matt Wette
 May 2024
-With NYACC Version 2.02.0
+With NYACC Version 2.02.1
 
 
 File: nyacc-fh-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -240,7 +240,7 @@ functionality is still under development.
    The following example shows how to convert to scheme code using the
 procedure ‘ccode->sexp’:
 
-     guile> (use-modules (nyacc lang c99 ffi-help-cd))
+     guile> (use-modules (nyacc lang c99 ffi-help))
      guile> (define sx (ccode->sexp "struct foo { int x; };"))
      guile> ,pp sx
      $4 = (begin
@@ -253,6 +253,14 @@ procedure ‘ccode->sexp’:
      guile> (eval sx (current-module))
      guile> struct-foo
      $5 = #<ctype struct struct-foo 0x73af1fc95480>
+
+Common Errors
+=============
+
+     Wrong type argument in position 1 (expecting PRIMITIVE_P):
+       #<procedure 7fed1234 (_ _ _ _)>
+   This typically indicates that a lambda form passed to a ffi-data
+procedure.
 
 The Guile Foreign Function Interface
 ====================================
@@ -478,7 +486,19 @@ Creating FFI Modules with ‘(nyacc lang c99 ffi-help)’
      libraries need to be loaded.  The formmat of each string in the
      list should be as provided to the ‘dynamic-link’ form in Guile.
 ‘#:renamer’
-     todo
+     The argument is a procedure of the form ‘proc name ctxt)’ where
+     NAME is a string for the name being translated and CTXT is the
+     context.  The context can be
+     ‘field’
+          field in a struct or union
+     ‘enum’
+          name of an enum
+     ‘type’
+          name of a typedef, struct, union or enum definition
+     ‘function’
+          name of a function
+     ‘variable’
+          name of an extern variable
 ‘#:cpp-defs’
      This form, with a list of strings, provides extra C preprodessor
      definitions to be used in processing the header files.  The defines
@@ -764,7 +784,7 @@ Notes
 Copyright
 ---------
 
-Copyright (C) 2017-2019 - Matthew R. Wette.
+Copyright (C) 2017-2024 - Matthew Wette.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or

@@ -63,7 +63,7 @@
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:re-export (*nyacc-version*)
-  #:version (2 02 0))
+  #:version (2 02 1))
 
 (define default-renamer (lambda (name ctxt) name))
 

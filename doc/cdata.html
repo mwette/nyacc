@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 7.1, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.1.1, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2024 - Matthew Wette
@@ -228,6 +228,23 @@ bytevector.
 contents at the address in the underlying bytevector.
 </p></dd></dl>
 
+<h3 class="heading" id="Notes"><span>Notes<a class="copiable-link" href="#Notes"> &para;</a></span></h3>
+
+<h4 class="subheading" id="Digression-on-Garbage-Collection"><span>Digression on Garbage Collection<a class="copiable-link" href="#Digression-on-Garbage-Collection"> &para;</a></span></h4>
+
+<p>Before going further we remind you that the underlying datastructure
+is bytevectors.  Now, since bytevectors in Guile are not searched for
+pointers during garbage collection there is a risk that the objects
+being referenced might be collected during usage.  A systematic method
+to prevent this is work to go.  One might try to use <code class="code">cdata&amp;</code> in
+the following way keep intermediate values from being collected.
+</p><div class="example">
+<pre class="example-preformatted">  (let ((val (make-cdata foo_t))
+        (ptr (cdata&amp; val)))
+     (bar ptr))
+</pre></div>
+
+
 <h3 class="heading" id="Going-Further"><span>Going Further<a class="copiable-link" href="#Going-Further"> &para;</a></span></h3>
 
 <dl class="first-deffn">
@@ -341,14 +358,16 @@ target use: it is the offset of the address in the host context.
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-unwrap_002dnumber"><span class="category-def">Procedure: </span><span><strong class="def-name">unwrap-number</strong> <var class="def-var-arguments">arg =&gt; number</var><a class="copiable-link" href="#index-unwrap_002dnumber"> &para;</a></span></dt>
+<dt class="deffn" id="index-arg_002d_003enumber"><span class="category-def">Procedure: </span><span><strong class="def-name">arg-&gt;number</strong> <var class="def-var-arguments">arg =&gt; number</var><a class="copiable-link" href="#index-arg_002d_003enumber"> &para;</a></span></dt>
 <dd><p>Convert an argument to numeric form for a ffi procedure call.
 This will reference a cdata object or pass a number through.
 </p></dd></dl>
 
+<p>The above procedure was previously called <code class="code">unwrap-number</code>.
+</p>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-unwrap_002dpointer"><span class="category-def">Procedure: </span><span><strong class="def-name">unwrap-pointer</strong> <var class="def-var-arguments">arg [hint] =&gt; pointer</var><a class="copiable-link" href="#index-unwrap_002dpointer"> &para;</a></span></dt>
+<dt class="deffn" id="index-arg_002d_003epointer"><span class="category-def">Procedure: </span><span><strong class="def-name">arg-&gt;pointer</strong> <var class="def-var-arguments">arg [hint] =&gt; pointer</var><a class="copiable-link" href="#index-arg_002d_003epointer"> &para;</a></span></dt>
 <dd><p>Convert an argument to a Guile pointer for a ffi procedure call.
 This will reference a cdata object or pass a number through.
 If the argument is a function, it will attempt to convert that
@@ -356,14 +375,11 @@ to a pointer via <code class="code">procedure-&gt;pointer</code> if given the fu
 pointer type <var class="var">hint</var>.
 </p></dd></dl>
 
+<p>The above procedure used to be called <code class="code">unwrap-pointer</code>.  It is
+also used to implement the old <code class="code">unwrap-array</code>.
+</p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-unwrap_002darray"><span class="category-def">Procedure: </span><span><strong class="def-name">unwrap-array</strong> <var class="def-var-arguments">arg =&gt; pointer</var><a class="copiable-link" href="#index-unwrap_002darray"> &para;</a></span></dt>
-<dd><p>This will convert an array to a form suitable to pass to a Guile
-ffi procedure.
-</p></dd></dl>
-
-<dl class="first-deffn">
-<dt class="deffn" id="index-ctype_002d_003effi"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi</strong> <var class="def-var-arguments">ctype =&gt; ffi type</var><a class="copiable-link" href="#index-ctype_002d_003effi"> &para;</a></span></dt>
+<dt class="deffn" id="index-ctype_002d_003effi"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi</strong> <var class="def-var-arguments">ctype =&gt; ffi-type</var><a class="copiable-link" href="#index-ctype_002d_003effi"> &para;</a></span></dt>
 <dd><p>Generate a argument spec for Guile&rsquo;s ffi interface.
 Example:
 </p><div class="example">

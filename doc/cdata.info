@@ -1,4 +1,4 @@
-This is cdata.info, produced by makeinfo version 7.1 from cdata.texi.
+This is cdata.info, produced by makeinfo version 7.1.1 from cdata.texi.
 
 Copyright (C) 2024 - Matthew Wette
 
@@ -158,6 +158,22 @@ want on your first approach.
      De-reference a pointer.  Returns a _cdata_ object representing the
      contents at the address in the underlying bytevector.
 
+Notes
+=====
+
+Digression on Garbage Collection
+--------------------------------
+
+Before going further we remind you that the underlying datastructure is
+bytevectors.  Now, since bytevectors in Guile are not searched for
+pointers during garbage collection there is a risk that the objects
+being referenced might be collected during usage.  A systematic method
+to prevent this is work to go.  One might try to use ‘cdata&’ in the
+following way keep intermediate values from being collected.
+       (let ((val (make-cdata foo_t))
+             (ptr (cdata& val)))
+          (bar ptr))
+
 Going Further
 =============
 
@@ -241,22 +257,23 @@ _pointer->procedure_.
      need to be able to cast array to pointer
           (ccast Target* val)
 
- -- Procedure: unwrap-number arg => number
+ -- Procedure: arg->number arg => number
      Convert an argument to numeric form for a ffi procedure call.  This
      will reference a cdata object or pass a number through.
 
- -- Procedure: unwrap-pointer arg [hint] => pointer
+   The above procedure was previously called ‘unwrap-number’.
+
+ -- Procedure: arg->pointer arg [hint] => pointer
      Convert an argument to a Guile pointer for a ffi procedure call.
      This will reference a cdata object or pass a number through.  If
      the argument is a function, it will attempt to convert that to a
      pointer via ‘procedure->pointer’ if given the function pointer type
      HINT.
 
- -- Procedure: unwrap-array arg => pointer
-     This will convert an array to a form suitable to pass to a Guile
-     ffi procedure.
+   The above procedure used to be called ‘unwrap-pointer’.  It is also
+used to implement the old ‘unwrap-array’.
 
- -- Procedure: ctype->ffi ctype => ffi type
+ -- Procedure: ctype->ffi ctype => ffi-type
      Generate a argument spec for Guile's ffi interface.  Example:
           (ctype->ffi (cpointer (cbase int))) => '*
 
@@ -476,8 +493,8 @@ References
 
 
 Tag Table:
-Node: Top460
-Node: Introduction700
+Node: Top462
+Node: Introduction702
 
 End Tag Table
 

@@ -46,7 +46,7 @@ ul.mark-bullet {list-style-type: disc}
 <pre class="format-preformatted">FFI Helper User Guide
 Matt Wette
 May 2024
-With NYACC Version 2.02.0
+With NYACC Version 2.02.1
 </pre></div>
 
 <div class="top-level-extent" id="Top">
@@ -301,7 +301,7 @@ functionality is still under development.
 the procedure <code class="code">ccode-&gt;sexp</code>:
 </p>
 <div class="example">
-<pre class="example-preformatted">guile&gt; (use-modules (nyacc lang c99 ffi-help-cd))
+<pre class="example-preformatted">guile&gt; (use-modules (nyacc lang c99 ffi-help))
 guile&gt; (define sx (ccode-&gt;sexp &quot;struct foo { int x; };&quot;))
 guile&gt; ,pp sx
 $4 = (begin
@@ -317,6 +317,15 @@ $5 = #&lt;ctype struct struct-foo 0x73af1fc95480&gt;
 </pre></div>
 
 
+<h3 class="heading" id="Common-Errors"><span>Common Errors<a class="copiable-link" href="#Common-Errors"> &para;</a></span></h3>
+
+<div class="example">
+<pre class="example-preformatted">Wrong type argument in position 1 (expecting PRIMITIVE_P):
+  #&lt;procedure 7fed1234 (_ _ _ _)&gt;
+</pre></div>
+<p>This typically indicates that a lambda form passed to a ffi-data
+procedure.
+</p>
 
 <h3 class="heading" id="The-Guile-Foreign-Function-Interface"><span>The Guile Foreign Function Interface<a class="copiable-link" href="#The-Guile-Foreign-Function-Interface"> &para;</a></span></h3>
 
@@ -582,8 +591,27 @@ libraries need to be loaded.  The formmat of each string in the list
 should be as provided to the <code class="code">dynamic-link</code> form in Guile.
 </p></dd>
 <dt><code class="code">#:renamer</code></dt>
-<dd><p>todo
+<dd><p>The argument is a procedure of the form <code class="code">proc name ctxt)</code> where
+<var class="var">name</var> is a string for the name being translated and <var class="var">ctxt</var> is
+the context.  The context can be
+</p><dl class="table">
+<dt><code class="code">field</code></dt>
+<dd><p>field in a struct or union
 </p></dd>
+<dt><code class="code">enum</code></dt>
+<dd><p>name of an enum
+</p></dd>
+<dt><code class="code">type</code></dt>
+<dd><p>name of a typedef, struct, union or enum definition
+</p></dd>
+<dt><code class="code">function</code></dt>
+<dd><p>name of a function
+</p></dd>
+<dt><code class="code">variable</code></dt>
+<dd><p>name of an extern variable
+</p></dd>
+</dl>
+</dd>
 <dt><code class="code">#:cpp-defs</code></dt>
 <dd><p>This form, with a list of strings, provides extra C preprodessor
 definitions to be used in processing the header files.  The defines
@@ -924,7 +952,7 @@ a compound type, and it&rsquo;s pointer type (missed this first time).
 
 <h4 class="subheading" id="Copyright"><span>Copyright<a class="copiable-link" href="#Copyright"> &para;</a></span></h4>
 
-<p>Copyright (C) 2017-2019 &ndash; Matthew R. Wette.
+<p>Copyright (C) 2017-2024 &ndash; Matthew Wette.
 </p>
 <p>Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
