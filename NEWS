@@ -5,13 +5,30 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-06-22  V2.02.0
+2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
 	  is not defined yet.  If a struct field has decl' "foo_t x;"
 	  where foo_t was declared "typedef struct foo *foo_t;" then the
 	  decl will be `(x ,foo_t) instead of previous `(x ,(cpointer 'void))
 	* Similar fix for fields of the decl "foo_t *x;"
 	* Fixed ffi-help --output option (thanks to F. Lechner)
+	* ffi-help-cd: fix search-path
+	* nx-tsh/parser.scm: catch [] not () for l,r brack
+	* cdata.scm: removed old print stmts
+	* ffi-help-{bs,cd}.scm(compile-ffi-file): fix arg order using 'output
+	* compile-ffi.scm(options): use output not output-file
+	* ffi-help-cd.scm(gen-lookup-proc): skip entry if exception
+          e.g. __LDBL_MAX__ 1.18973149535723176502126385303097021e+4932L
+	* export symbol-tab; see sr #111253
+	* cdata.scm(cstruct): remove check for promise: will never happen
+	* Added fix for pointer typedef to struct-ref or union-ref
+	* ffi-help-cd.scm(udecl->sexp): use double define-public to deal with
+	    typedef struct foo foo_t;
+	  where struct foo is not yet defined.
+	* ffi-help-cd.scm(udecl->sexp): fix struct forward ref
+
+2025-06-22  V2.02.0
+	not released
 
 2025-05-18  V2.01.6
 	* arch-info.scm(i686): signed should be s32le not 32le (bug 66708)
