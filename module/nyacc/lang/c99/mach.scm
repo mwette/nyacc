@@ -50,12 +50,14 @@
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2015-2021 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2015-2021,2025 Matthew Wette"
 			  license-lgpl3+))
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< (left 'imp)	       ; "implied type" SR-conflict resolution
-	  (left "char" "short" "int" "long" "_Fract" "_Accum" "_Sat")
+	  (left "char" "short" "int" "long"
+                "signed" "unsigned"
+                "_Fract" "_Accum" "_Sat")
 	  (left "float" "double" "_Complex"))
    (prec< 'shift-on-attr		; living on the edge ...
 	  (nonassoc "__attribute__" "__packed__" "__aligned__" "__alignof__")
@@ -99,9 +101,9 @@
      (arg-expr-hack ($$ (make-tl 'expr-list $1)))
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3))))
     (arg-expr-hack
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       abstract-declarator ($$ `(param-decl ,1 ,$2)))
-     (declaration-specifiers ($$ `(param-decl ,$1))))
+     (Ndeclaration-specifiers ($$ `(param-decl ,$1))))
 
     (unary-expression
      (postfix-expression)		; S 6.5.3
@@ -209,10 +211,10 @@
      (declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
 
     (declaration-no-comment
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       init-declarator-list
       ($$ (save-typenames `(decl ,$1 ,$2))))
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       ($$ `(decl ,$1))))
 
     ;; --- declaration specifiers
@@ -240,6 +242,29 @@
      (attribute-specifier
       ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
      (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
+
+
+    ;; NEW
+    (Ndeclaration-specifiers		; S 6.7
+     (Ndeclaration-specifiers-1
+      type-specifier ($$ #t)
+      Ndeclaration-specifiers-1
+      ($$ (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
+    (Ndeclaration-specifiers-1
+     ($empty)
+     ;; storage-class-specifiers
+     ;;(storage-class-specifier ($prec 'shift-on-attr) ($$ (list $1)))
+     (storage-class-specifier Ndeclaration-specifiers-1 ($$ (cons $1 $2)))
+     ;; type-qualifiers
+     ;;(type-qualifier ($prec 'shift-on-attr) ($$ (list $1)))
+     (type-qualifier Ndeclaration-specifiers-1 ($$ (cons $1 $2)))
+     ;; function-specifiers
+     ;;(function-specifier ($prec 'reduce-on-attr) ($$ (list $1)))
+     (function-specifier Ndeclaration-specifiers-1 ($$ (cons $1 $2)))
+     ;; attribute-specifiers
+     ;;(attribute-specifier ($prec 'reduce-on-semi) ($$ (list $1)))
+     (attribute-specifier Ndeclaration-specifiers-1 ($$ (cons $1 $2))))
+
 
     (storage-class-specifier		; S 6.7.1
      ("auto" ($$ '(stor-spec (auto))))
@@ -281,8 +306,7 @@
      ("signed" "long" "int" ($$ '(fixed-type "signed long int")))
      ("long" "long" ($prec 'imp) ($$ '(fixed-type "long long")))
      ("long" "long" "int" ($$ '(fixed-type "long long int")))
-     ("signed" "long" "long" ($prec 'imp)
-      ($$ '(fixed-type "signed long long")))
+     ("signed" "long" "long" ($prec 'imp) ($$ '(fixed-type "signed long long")))
      ("signed" "long" "long" "int" ($$ '(fixed-type "signed long long int")))
      ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
      ("unsigned" "short" ($prec 'imp) ($$ '(fixed-type "unsigned short")))
@@ -290,21 +314,32 @@
      ("unsigned" ($prec 'imp) ($$ '(fixed-type "unsigned")))
      ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
      ("unsigned" "long" ($prec 'imp) ($$ '(fixed-type "unsigned long")))
-     ("unsigned" "long" "long" "int"
-      ($$ '(fixed-type "unsigned long long int")))
+     ("unsigned" "long" "long" "int" ($$ '(fixed-type "unsigned long long int")))
      ("unsigned" "long" "long" ($prec 'imp)
       ($$ '(fixed-type "unsigned long long")))
      ("char" ($$ '(fixed-type "char")))
      ("signed" "char" ($$ '(fixed-type "signed char")))
      ("unsigned" "char" ($$ '(fixed-type "unsigned char")))
-     ("__int128" ($$ '(fixed-type "__int128"))))
+     ("__int128" ($$ '(fixed-type "__int128")))
+     ;; fixes 250627
+     ("short" "signed" "int" ($$ '(fixed-type "signed short int")))
+     ("short" "signed" ($prec 'imp) ($$ '(fixed-type "signed short")))
+     ("long" "signed" "int" ($$ '(fixed-type "signed long int")))
+     ("long" "long" "signed" "int" ($$ '(fixed-type "signed long long int")))
+     ("short" "unsigned" "int" ($$ '(fixed-type "unsigned short int")))
+     ("long" "unsigned" "int" ($$ '(fixed-type "unsigned long")))
+     ("long" "long" "unsigned" "int" ($$ '(fixed-type "unsigned long long int")))
+     )
 
     (float-type-specifier
      ("float" ($prec 'imp) ($$ '(float-type "float")))
      ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double")))
      ("_Float16" ($$ '(float-type "_Float16")))
-     ("_Float128" ($$ '(float-type "_Float128"))))
+     ("_Float128" ($$ '(float-type "_Float128")))
+     ;;("_float16" ($$ '(float-type "_Float16")))
+     ;;("_float128" ($$ '(float-type "_Float128")))
+     )
 
     (complex-type-specifier
      ("_Complex" ($$ '(complex-type "_Complex")))
@@ -317,7 +352,7 @@
      ("short" "_Fract" ($$ '(fixpt-type "short _Fract")))
      ("_Fract" ($$ '(fixpt-type "_Fract")))
      ("long" "_Fract" ($$ '(fixpt-type "long _Fract")))
-     ("signed" "short" "_Fract" ($$ '(fixpt-type "signd short _Fract")))
+     ("signed" "short" "_Fract" ($$ '(fixpt-type "signed short _Fract")))
      ("signed" "_Fract" ($$ '(fixpt-type "signed _Fract")))
      ("signed" "long" "_Fract" ($$ '(fixpt-type "signed long _Fract")))
      ("unsigned" "short" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
@@ -357,7 +392,17 @@
       ($$ '(fixpt-type "_Sat unsigned short _Accum")))
      ("_Sat" "unsigned" "_Accum" ($$ '(fixpt-type "_Sat unsigned _Accum")))
      ("_Sat" "unsigned" "long" "_Accum"
-      ($$ '(fixpt-type "_Sat unsigned long _Accum"))))
+      ($$ '(fixpt-type "_Sat unsigned long _Accum")))
+     ;; fixes 250627
+     ("short" "signed" "_Fract" ($$ '(fixpt-type "signed short _Fract")))
+     ("short" "signed" "_Accum" ($$ '(fixpt-type "signd short _Accum")))
+     ("long" "signed" "_Fract" ($$ '(fixpt-type "signed long _Fract")))
+     ("short" "unsigned" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
+     ("long" "unsigned" "_Fract" ($$ '(fixpt-type "unsigned long _Fract")))
+     ("long" "signed" "_Accum" ($$ '(fixpt-type "signed long _Accum")))
+     ("short" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned short _Accum")))
+     ("long" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned long _Accum")))
+     )
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier
@@ -387,9 +432,9 @@
     (struct-declaration-list		; S 6.7.2.1
      (struct-declaration ($$ (make-tl 'field-list $1)))
      (lone-comment ($$ (make-tl 'field-list $1)))
-     ;;(cpp-statement ($$ (make-tl 'field-list $1)))
      (struct-declaration-list struct-declaration ($$ (tl-append $1 $2)))
      (struct-declaration-list lone-comment ($$ (tl-append $1 $2)))
+     ;;(cpp-statement ($$ (make-tl 'field-list $1)))
      ;;(struct-declaration-list cpp-statement ($$ (tl-append $1 $2)))
      ;; Not in C99, but allowed by GNU, I believe:
      (";" ($$ (make-tl 'field-list)))
@@ -399,9 +444,9 @@
      (struct-declaration-no-comment ";")
      (struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
     (struct-declaration-no-comment
-     (specifier-qualifier-list
+     (Nspecifier-qualifier-list
       struct-declarator-list ($$ `(comp-decl ,$1 ,(tl->list $2))))
-     (specifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
+     (Nspecifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
 
     (specifier-qualifier-list		; S 6.7.2.1
      (specifier-qualifier-list-1 ($$ (process-specs (tl->list $1)))))
@@ -420,6 +465,28 @@
      (type-specifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1)))
      (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
      (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1))))
+
+
+    ;; new
+    (Nspecifier-qualifier-list		; S 6.7.2.1
+     (Nspecifier-qualifier-list-1
+      type-specifier ($$ #t)
+      Nspecifier-qualifier-list-1
+      ($$ (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
+    (Nspecifier-qualifier-list-1
+     ($empty)
+     (type-qualifier Nspecifier-qualifier-list-1 ($$ (cons $1 $2)))
+     (attribute-specifier Nspecifier-qualifier-list-1 ($$ (cons $1 $2))))
+
+    (Nspecifier-qualifier-list/no-attr
+     (Nspecifier-qualifier-list/no-attr-1
+      type-specifier ($$ #t)
+      Nspecifier-qualifier-list/no-attr-1
+      ($$ (cons 'decl-spec-list (append $1 (list $2) $4)))))
+    (Nspecifier-qualifier-list/no-attr-1
+     ($empty)
+     (type-qualifier Nspecifier-qualifier-list/no-attr-1 ($$ (cons $1 $2))))
+
 
     (struct-declarator-list		; S 6.7.2.1
      (struct-declarator ($$ (make-tl 'comp-declr-list $1)))
@@ -605,15 +672,15 @@
      (parameter-list "," parameter-declaration ($$ (tl-append $1 $3))))
 
     (parameter-declaration
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       ;;($$ `(param-decl ,$1 (param-declr))))
       ($$ `(param-decl ,$1)))
      ;; adding attribute specifiers:
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       declarator attribute-specifiers ($$ `(param-decl ,$1 (param-declr ,$2)))))
 
     (identifier-list
@@ -623,9 +690,9 @@
      (identifier-list-1 "," identifier ($$ (tl-append $1 $3))))
 
     (type-name				; S 6.7.6
-     (specifier-qualifier-list/no-attr abstract-declarator
+     (Nspecifier-qualifier-list/no-attr abstract-declarator
 				       ($$ `(type-name ,$1 ,$2)))
-     (specifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
+     (Nspecifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
      ;;(declaration-specifiers ($$ `(type-name ,$1))) ; why did I have this?
      )
 
@@ -857,7 +924,7 @@
      (";" ($$ `(decl (@ (extension "GNUC"))))))
 
     (function-definition
-     (declaration-specifiers
+     (Ndeclaration-specifiers
       declarator compound-statement
       ($$ `(fctn-defn ,$1 ,$2 ,$3)))
      ;; K&R function definitions are not compatible with attribute-specifiers.
