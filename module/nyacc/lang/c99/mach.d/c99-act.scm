@@ -1,6 +1,6 @@
 ;; c99-act.scm
 
-;; Copyright (C) 2015-2021 Matthew R. Wette
+;; Copyright (C) 2015-2021,2025 Matthew Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -61,7 +61,7 @@
    ;; argument-expression-list => argument-expression-list "," arg-expr-hack
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; arg-expr-hack => declaration-specifiers abstract-declarator
-   (lambda ($2 $1 . $rest) `(param-decl ,1 ,$2))
+   (lambda ($2 $1 . $rest) `(param-decl ,1 ,$3))
    ;; arg-expr-hack => declaration-specifiers
    (lambda ($1 . $rest) `(param-decl ,$1))
    ;; unary-expression => postfix-expression
@@ -206,34 +206,23 @@
      (save-typenames `(decl ,$1 ,$2)))
    ;; declaration-no-comment => declaration-specifiers
    (lambda ($1 . $rest) `(decl ,$1))
-   ;; declaration-specifiers => declaration-specifiers-1
-   (lambda ($1 . $rest)
-     (process-specs (tl->list $1)))
-   ;; declaration-specifiers-1 => storage-class-specifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+   ;; declaration-specifiers => declaration-specifiers-1 type-specifier $P3...
+   (lambda ($4 $3 $2 $1 . $rest)
+     (allow-typename)
+     (process-specs
+       (cons 'decl-spec-list (append $1 (list $2) $4))))
+   ;; $P3 => 
+   (lambda ($2 $1 . $rest) (inhibit-typename))
+   ;; declaration-specifiers-1 => 
+   (lambda $rest (list))
    ;; declaration-specifiers-1 => storage-class-specifier declaration-speci...
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; declaration-specifiers-1 => type-specifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
-   ;; declaration-specifiers-1 => type-specifier declaration-specifiers-1
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; declaration-specifiers-1 => type-qualifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+   (lambda ($2 $1 . $rest) (cons $1 $2))
    ;; declaration-specifiers-1 => type-qualifier declaration-specifiers-1
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; declaration-specifiers-1 => function-specifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+   (lambda ($2 $1 . $rest) (cons $1 $2))
    ;; declaration-specifiers-1 => function-specifier declaration-specifiers-1
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; declaration-specifiers-1 => attribute-specifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+   (lambda ($2 $1 . $rest) (cons $1 $2))
    ;; declaration-specifiers-1 => attribute-specifier declaration-specifiers-1
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   (lambda ($2 $1 . $rest) (cons $1 $2))
    ;; storage-class-specifier => "auto"
    (lambda ($1 . $rest) '(stor-spec (auto)))
    ;; storage-class-specifier => "extern"
@@ -348,6 +337,27 @@
      '(fixed-type "unsigned char"))
    ;; fixed-type-specifier => "__int128"
    (lambda ($1 . $rest) '(fixed-type "__int128"))
+   ;; fixed-type-specifier => "short" "signed" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "signed short int"))
+   ;; fixed-type-specifier => "short" "signed"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed short"))
+   ;; fixed-type-specifier => "long" "signed" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "signed long int"))
+   ;; fixed-type-specifier => "long" "long" "signed" "int"
+   (lambda ($4 $3 $2 $1 . $rest)
+     '(fixed-type "signed long long int"))
+   ;; fixed-type-specifier => "short" "unsigned" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "unsigned short int"))
+   ;; fixed-type-specifier => "long" "unsigned" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "unsigned long"))
+   ;; fixed-type-specifier => "long" "long" "unsigned" "int"
+   (lambda ($4 $3 $2 $1 . $rest)
+     '(fixed-type "unsigned long long int"))
    ;; float-type-specifier => "float"
    (lambda ($1 . $rest) '(float-type "float"))
    ;; float-type-specifier => "double"
@@ -358,6 +368,10 @@
    ;; float-type-specifier => "_Float16"
    (lambda ($1 . $rest) '(float-type "_Float16"))
    ;; float-type-specifier => "_Float128"
+   (lambda ($1 . $rest) '(float-type "_Float128"))
+   ;; float-type-specifier => "_float16"
+   (lambda ($1 . $rest) '(float-type "_Float16"))
+   ;; float-type-specifier => "_float128"
    (lambda ($1 . $rest) '(float-type "_Float128"))
    ;; complex-type-specifier => "_Complex"
    (lambda ($1 . $rest) '(complex-type "_Complex"))
@@ -380,7 +394,7 @@
      '(fixpt-type "long _Fract"))
    ;; fixpt-type-specifier => "signed" "short" "_Fract"
    (lambda ($3 $2 $1 . $rest)
-     '(fixpt-type "signd short _Fract"))
+     '(fixpt-type "signed short _Fract"))
    ;; fixpt-type-specifier => "signed" "_Fract"
    (lambda ($2 $1 . $rest)
      '(fixpt-type "signed _Fract"))
@@ -476,6 +490,30 @@
    ;; fixpt-type-specifier => "_Sat" "unsigned" "long" "_Accum"
    (lambda ($4 $3 $2 $1 . $rest)
      '(fixpt-type "_Sat unsigned long _Accum"))
+   ;; fixpt-type-specifier => "short" "signed" "_Fract"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "signed short _Fract"))
+   ;; fixpt-type-specifier => "short" "signed" "_Accum"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "signd short _Accum"))
+   ;; fixpt-type-specifier => "long" "signed" "_Fract"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "signed long _Fract"))
+   ;; fixpt-type-specifier => "short" "unsigned" "_Fract"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "unsigned short _Fract"))
+   ;; fixpt-type-specifier => "long" "unsigned" "_Fract"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "unsigned long _Fract"))
+   ;; fixpt-type-specifier => "long" "signed" "_Accum"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "signed long _Accum"))
+   ;; fixpt-type-specifier => "short" "unsigned" "_Accum"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "unsigned short _Accum"))
+   ;; fixpt-type-specifier => "long" "unsigned" "_Accum"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixpt-type "unsigned long _Accum"))
    ;; struct-or-union-specifier => "struct" opt-attr-specs ident-like "{" s...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (sx-list 'struct-def $2 $3 (tl->list $5)))
@@ -523,36 +561,29 @@
      `(comp-decl ,$1 ,(tl->list $2)))
    ;; struct-declaration-no-comment => specifier-qualifier-list
    (lambda ($1 . $rest) `(comp-decl ,$1))
-   ;; specifier-qualifier-list => specifier-qualifier-list-1
-   (lambda ($1 . $rest)
-     (process-specs (tl->list $1)))
-   ;; specifier-qualifier-list-1 => type-specifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
-   ;; specifier-qualifier-list-1 => type-specifier specifier-qualifier-list-1
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; specifier-qualifier-list-1 => type-qualifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+   ;; specifier-qualifier-list => specifier-qualifier-list-1 type-specifier...
+   (lambda ($4 $3 $2 $1 . $rest)
+     (allow-typename)
+     (process-specs
+       (cons 'decl-spec-list (append $1 (list $2) $4))))
+   ;; $P4 => 
+   (lambda ($2 $1 . $rest) (inhibit-typename))
+   ;; specifier-qualifier-list-1 => 
+   (lambda $rest (list))
    ;; specifier-qualifier-list-1 => type-qualifier specifier-qualifier-list-1
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; specifier-qualifier-list-1 => attribute-specifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+   (lambda ($2 $1 . $rest) (cons $1 $2))
    ;; specifier-qualifier-list-1 => attribute-specifier specifier-qualifier...
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; specifier-qualifier-list/no-attr => specifier-qualifier-list/no-attr-1
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; specifier-qualifier-list/no-attr-1 => type-specifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
-   ;; specifier-qualifier-list/no-attr-1 => type-specifier specifier-qualif...
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; specifier-qualifier-list/no-attr-1 => type-qualifier
-   (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+   (lambda ($2 $1 . $rest) (cons $1 $2))
+   ;; specifier-qualifier-list/no-attr => specifier-qualifier-list/no-attr-...
+   (lambda ($4 $3 $2 $1 . $rest)
+     (allow-typename)
+     (cons 'decl-spec-list (append $1 (list $2) $4)))
+   ;; $P5 => 
+   (lambda ($2 $1 . $rest) (inhibit-typename))
+   ;; specifier-qualifier-list/no-attr-1 => 
+   (lambda $rest (list))
    ;; specifier-qualifier-list/no-attr-1 => type-qualifier specifier-qualif...
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   (lambda ($2 $1 . $rest) (cons $1 $2))
    ;; struct-declarator-list => struct-declarator
    (lambda ($1 . $rest)
      (make-tl 'comp-declr-list $1))
@@ -920,15 +951,15 @@
    (lambda ($4 $3 $2 $1 . $rest) `(case ,$2 ,$4))
    ;; labeled-statement => "default" ":" statement
    (lambda ($3 $2 $1 . $rest) `(default ,$3))
-   ;; compound-statement => "{" $P3 block-item-list $P4 "}"
+   ;; compound-statement => "{" $P6 block-item-list $P7 "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(compd-stmt ,(tl->list $3)))
    ;; compound-statement => "{" "}"
    (lambda ($2 $1 . $rest)
      `(compd-stmt (block-item-list)))
-   ;; $P3 => 
+   ;; $P6 => 
    (lambda ($1 . $rest) (cpi-push))
-   ;; $P4 => 
+   ;; $P7 => 
    (lambda ($3 $2 $1 . $rest) (cpi-pop))
    ;; block-item-list => block-item
    (lambda ($1 . $rest)
@@ -1087,7 +1118,7 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => pragma
    (lambda ($1 . $rest) $1)
-   ;; external-declaration => "extern" '$string "{" $P5 external-declaratio...
+   ;; external-declaration => "extern" '$string "{" $P8 external-declaratio...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(extern-block
         (extern-begin ,$2)
@@ -1096,13 +1127,16 @@
    ;; external-declaration => ";"
    (lambda ($1 . $rest)
      `(decl (@ (extension "GNUC"))))
-   ;; $P5 => 
+   ;; $P8 => 
    (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
-   ;; $P6 => 
+   ;; $P9 => 
    (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
-   ;; function-definition => declaration-specifiers declarator compound-sta...
-   (lambda ($3 $2 $1 . $rest)
-     `(fctn-defn ,$1 ,$2 ,$3))
+   ;; function-definition => declaration-specifiers declarator $P10 compoun...
+   (lambda ($4 $3 $2 $1 . $rest)
+     (cpi-pop)
+     `(fctn-defn ,$1 ,$2 ,$4))
+   ;; $P10 => 
+   (lambda ($2 $1 . $rest) (cpi-push))
    ;; identifier => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
    ;; constant => '$fixed

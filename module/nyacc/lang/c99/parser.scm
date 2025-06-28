@@ -174,6 +174,12 @@
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
 
+(define (inhibit-typename)
+  (set-cpi-itn! (*info*) #t)
+
+(define (allow-typename)
+  (set-cpi-itn! (*info*) #f)
+
 ;; @deffn {Procedure} typename? name
 ;; Called by lexer to determine if symbol is a typename.
 ;; Check current sibling for each generation.

@@ -220,9 +220,9 @@
 
     (declaration-specifiers		; S 6.7
      (declaration-specifiers-1
-      type-specifier ($$ (set-cpi-itn! #t))
+      type-specifier ($$ (inhibit-typename))
       declaration-specifiers-1
-      ($$ (set-cpi-itn! #f)
+      ($$ (allow-typename)
           (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
     (declaration-specifiers-1
      ($empty)
@@ -416,9 +416,9 @@
     ;; new
     (specifier-qualifier-list		; S 6.7.2.1
      (specifier-qualifier-list-1
-      type-specifier ($$ (set-cpi-itn! #t))
+      type-specifier ($$ (inhibit-typename))
       specifier-qualifier-list-1
-      ($$ (set-cpi-itn! #f)
+      ($$ (allow-typename)
           (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
     (specifier-qualifier-list-1
      ($empty)
@@ -427,9 +427,9 @@
 
     (specifier-qualifier-list/no-attr
      (specifier-qualifier-list/no-attr-1
-      type-specifier ($$ (set-cpi-itn! #t))
+      type-specifier ($$ (inhibit-typename))
       specifier-qualifier-list/no-attr-1
-      ($$ (set-cpi-itn! #f) (cons 'decl-spec-list (append $1 (list $2) $4)))))
+      ($$ (allow-typename) (cons 'decl-spec-list (append $1 (list $2) $4)))))
     (specifier-qualifier-list/no-attr-1
      ($empty)
      (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (cons $1 $2))))
