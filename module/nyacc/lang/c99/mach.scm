@@ -101,9 +101,8 @@
      (arg-expr-hack ($$ (make-tl 'expr-list $1)))
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3))))
     (arg-expr-hack
-     (Ndeclaration-specifiers
-      abstract-declarator ($$ `(param-decl ,1 ,$2)))
-     (Ndeclaration-specifiers ($$ `(param-decl ,$1))))
+     (declaration-specifiers abstract-declarator ($$ `(param-decl ,1 ,$3)))
+     (declaration-specifiers ($$ `(param-decl ,$1))))
 
     (unary-expression
      (postfix-expression)		; S 6.5.3
@@ -211,59 +210,26 @@
      (declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
 
     (declaration-no-comment
-     (Ndeclaration-specifiers
+     (declaration-specifiers
       init-declarator-list
       ($$ (save-typenames `(decl ,$1 ,$2))))
-     (Ndeclaration-specifiers
+     (declaration-specifiers
       ($$ `(decl ,$1))))
 
     ;; --- declaration specifiers
 
     (declaration-specifiers		; S 6.7
-     (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
+     (declaration-specifiers-1
+      type-specifier ($$ (set-cpi-itn! #t))
+      declaration-specifiers-1
+      ($$ (set-cpi-itn! #f)
+          (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
     (declaration-specifiers-1
-     ;; storage-class-specifiers
-     (storage-class-specifier
-      ($prec 'shift-on-attr) ($$ (make-tl 'decl-spec-list $1)))
-     (storage-class-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
-     ;; type-specifiers
-     (type-specifier
-      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
-     (type-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
-     ;; type-qualifiers
-     (type-qualifier
-      ($prec 'shift-on-attr) ($$ (make-tl 'decl-spec-list $1)))
-     (type-qualifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
-     ;; function-specifiers
-     (function-specifier
-      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
-     (function-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
-     ;; attribute-specifiers
-     (attribute-specifier
-      ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
-     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
-
-
-    ;; NEW
-    (Ndeclaration-specifiers		; S 6.7
-     (Ndeclaration-specifiers-1
-      type-specifier ($$ #t)
-      Ndeclaration-specifiers-1
-      ($$ (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
-    (Ndeclaration-specifiers-1
      ($empty)
-     ;; storage-class-specifiers
-     ;;(storage-class-specifier ($prec 'shift-on-attr) ($$ (list $1)))
-     (storage-class-specifier Ndeclaration-specifiers-1 ($$ (cons $1 $2)))
-     ;; type-qualifiers
-     ;;(type-qualifier ($prec 'shift-on-attr) ($$ (list $1)))
-     (type-qualifier Ndeclaration-specifiers-1 ($$ (cons $1 $2)))
-     ;; function-specifiers
-     ;;(function-specifier ($prec 'reduce-on-attr) ($$ (list $1)))
-     (function-specifier Ndeclaration-specifiers-1 ($$ (cons $1 $2)))
-     ;; attribute-specifiers
-     ;;(attribute-specifier ($prec 'reduce-on-semi) ($$ (list $1)))
-     (attribute-specifier Ndeclaration-specifiers-1 ($$ (cons $1 $2))))
+     (storage-class-specifier declaration-specifiers-1 ($$ (cons $1 $2)))
+     (type-qualifier declaration-specifiers-1 ($$ (cons $1 $2)))
+     (function-specifier declaration-specifiers-1 ($$ (cons $1 $2)))
+     (attribute-specifier declaration-specifiers-1 ($$ (cons $1 $2))))
 
 
     (storage-class-specifier		; S 6.7.1
@@ -443,48 +409,30 @@
      (struct-declaration-no-comment ";")
      (struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
     (struct-declaration-no-comment
-     (Nspecifier-qualifier-list
+     (specifier-qualifier-list
       struct-declarator-list ($$ `(comp-decl ,$1 ,(tl->list $2))))
-     (Nspecifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
-
-    (specifier-qualifier-list		; S 6.7.2.1
-     (specifier-qualifier-list-1 ($$ (process-specs (tl->list $1)))))
-    (specifier-qualifier-list-1
-     (type-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-specifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1)))
-     (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-qualifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1)))
-     (attribute-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (attribute-specifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1))))
-
-    (specifier-qualifier-list/no-attr
-     (specifier-qualifier-list/no-attr-1 ($$ (tl->list $1))))
-    (specifier-qualifier-list/no-attr-1
-     (type-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-specifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1)))
-     (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1))))
-
+     (specifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
 
     ;; new
-    (Nspecifier-qualifier-list		; S 6.7.2.1
-     (Nspecifier-qualifier-list-1
-      type-specifier ($$ #t)
-      Nspecifier-qualifier-list-1
-      ($$ (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
-    (Nspecifier-qualifier-list-1
+    (specifier-qualifier-list		; S 6.7.2.1
+     (specifier-qualifier-list-1
+      type-specifier ($$ (set-cpi-itn! #t))
+      specifier-qualifier-list-1
+      ($$ (set-cpi-itn! #f)
+          (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
+    (specifier-qualifier-list-1
      ($empty)
-     (type-qualifier Nspecifier-qualifier-list-1 ($$ (cons $1 $2)))
-     (attribute-specifier Nspecifier-qualifier-list-1 ($$ (cons $1 $2))))
+     (type-qualifier specifier-qualifier-list-1 ($$ (cons $1 $2)))
+     (attribute-specifier specifier-qualifier-list-1 ($$ (cons $1 $2))))
 
-    (Nspecifier-qualifier-list/no-attr
-     (Nspecifier-qualifier-list/no-attr-1
-      type-specifier ($$ #t)
-      Nspecifier-qualifier-list/no-attr-1
-      ($$ (cons 'decl-spec-list (append $1 (list $2) $4)))))
-    (Nspecifier-qualifier-list/no-attr-1
+    (specifier-qualifier-list/no-attr
+     (specifier-qualifier-list/no-attr-1
+      type-specifier ($$ (set-cpi-itn! #t))
+      specifier-qualifier-list/no-attr-1
+      ($$ (set-cpi-itn! #f) (cons 'decl-spec-list (append $1 (list $2) $4)))))
+    (specifier-qualifier-list/no-attr-1
      ($empty)
-     (type-qualifier Nspecifier-qualifier-list/no-attr-1 ($$ (cons $1 $2))))
+     (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (cons $1 $2))))
 
 
     (struct-declarator-list		; S 6.7.2.1
@@ -671,15 +619,15 @@
      (parameter-list "," parameter-declaration ($$ (tl-append $1 $3))))
 
     (parameter-declaration
-     (Ndeclaration-specifiers
+     (declaration-specifiers
       declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
-     (Ndeclaration-specifiers
+     (declaration-specifiers
       abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
-     (Ndeclaration-specifiers
+     (declaration-specifiers
       ;;($$ `(param-decl ,$1 (param-declr))))
       ($$ `(param-decl ,$1)))
      ;; adding attribute specifiers:
-     (Ndeclaration-specifiers
+     (declaration-specifiers
       declarator attribute-specifiers ($$ `(param-decl ,$1 (param-declr ,$2)))))
 
     (identifier-list
@@ -689,9 +637,9 @@
      (identifier-list-1 "," identifier ($$ (tl-append $1 $3))))
 
     (type-name				; S 6.7.6
-     (Nspecifier-qualifier-list/no-attr abstract-declarator
+     (specifier-qualifier-list/no-attr abstract-declarator
 				       ($$ `(type-name ,$1 ,$2)))
-     (Nspecifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
+     (specifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
      ;;(declaration-specifiers ($$ `(type-name ,$1))) ; why did I have this?
      )
 
@@ -922,7 +870,7 @@
 	    (extern-begin ,$2) ,@(sx-tail (tl->list $5) 1) (extern-end))))
      (";" ($$ `(decl (@ (extension "GNUC"))))))
 
-    (function-definition
+    #;(function-definition
      (Ndeclaration-specifiers
       declarator compound-statement
       ($$ `(fctn-defn ,$1 ,$2 ,$3)))
@@ -931,6 +879,12 @@
      ;; declarator declaration-list compound-statement
      ;; ($$ `(knr-fctn-defn ,$1 ,$2 ,$3 ,$4)))
      )
+
+    (function-definition
+     (declaration-specifiers
+      declarator ($$ (cpi-push)) compound-statement
+      ($$ (cpi-pop) `(fctn-defn ,$1 ,$2 ,$4))))
+    ;; ^ K&R forms removed to acccomodate attributes
 
     ;; K&R function-definition parameter list
     ;;(declaration-list (declaration-list-1 ($$ (tl->list $1))))

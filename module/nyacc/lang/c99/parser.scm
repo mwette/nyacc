@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2024 Matthew Wette
+;; Copyright (C) 2015-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -36,7 +36,7 @@
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define pp pretty-print)
 
-;; C parser info (?)
+;; C parser info
 (define-record-type cpi
   (make-cpi-1)
   cpi?
@@ -44,10 +44,11 @@
   (shinc cpi-shinc set-cpi-shinc!)	; show includes
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
-  (inc-tynd cpi-itynd set-cpi-itynd!)	; a-l of incfile => typenames
-  (inc-defd cpi-idefd set-cpi-idefd!)	; a-l of incfile => defines
   (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
   (ctl cpi-ctl set-cpi-ctl!)		; current typename list
+  (tna cpi-itn set-cpi-itn!)            ; inhibit typename
+  (inc-tynd cpi-itynd set-cpi-itynd!)	; a-l of incfile => typenames
+  (inc-defd cpi-idefd set-cpi-idefd!)	; a-l of incfile => defines
   (blev cpi-blev set-cpi-blev!)		; curr brace/block level
   )
 
@@ -107,6 +108,7 @@
     (set-cpi-incs! cpi incdirs)         ; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
     (set-cpi-ctl! cpi '())		; list of current typenames
+    (set-cpi-itn! cpi #f)               ; don't inhibit typename
     (set-cpi-blev! cpi 0)		; brace/block level
     ;; Break up the helpers into typenames and defines.
     (let loop ((itynd '()) (idefd '()) (helpers inchelp))
@@ -668,7 +670,7 @@
 		      ;; try (and (not (assoc-ref name defs))
 		      ;;          (assq-ref keytab symb))
 		      => (lambda (t) (w/ ss (cons t name))))
-		     ((typename? name)  ; move this
+		     ((and (typename? name) (not (cpi-itn)))
 		      (w/ ss (cons t-typename name)))
 		     ((string=? name "_Pragma")
 		      (w/ ss (assc-$ (finish-pragma))))
