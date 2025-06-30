@@ -367,7 +367,8 @@
    ;; float-type-specifier => "_float128"
    (lambda ($1 . $rest) '(float-type "_Float128"))
    ;; complex-type-specifier => "_Complex"
-   (lambda ($1 . $rest) '(complex-type "_Complex"))
+   (lambda ($1 . $rest)
+     '(complex-type "float _Complex"))
    ;; complex-type-specifier => "float" "_Complex"
    (lambda ($2 $1 . $rest)
      '(complex-type "float _Complex"))

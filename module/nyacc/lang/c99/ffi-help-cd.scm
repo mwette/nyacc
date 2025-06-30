@@ -305,16 +305,29 @@
        (sx-tail enum-def-list)))
 
 (define def-def-list
-  '("void" "float" "double" "short" "short int" "signed short"
-    "signed short int" "int" "signed" "signed int" "long" "long int"
-    "signed long" "signed long int" "long long" "long long int"
-    "signed long long" "signed long long int" "unsigned short int"
-    "unsigned short" "unsigned int" "unsigned" "unsigned long int"
-    "unsigned long" "unsigned long long int" "unsigned long long"
-    "intptr_t" "uintptr_t" "size_t" "ssize_t" "ptrdiff_t" "int8_t"
-    "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t" "int64_t"
-    "uint64_t" "float _Complex" "double _Complex" "char" "signed char"
-    "unsigned char" "wchar_t" "char16_t" "char32_t" "_Bool" "bool"))
+  '("void"
+    "char" "signed char" "unsigned char"
+    "short" "unsigned short"
+    "int" "unsigned"
+    "long" "unsigned long"
+    "long long" "unsigned long long"
+    "float" "double"
+    "int8_t" "uint8_t" "int16_t" "uint16_t"
+    "int32_t" "uint32_t" "int64_t" "uint64_t"
+    "size_t" "ssize_t" "ptrdiff_t"
+    "intptr_t" "uintptr_t"
+    "_Bool" "bool"
+    "wchar_t" "char16_t" "char32_t"
+    "long double" "_Float16" "_Float128"
+    "float _Complex" "double _Complex" "long double _Complex"
+    ;; deprecated
+    "short int" "signed short" "signed short int" "unsigned short int"
+    "signed" "signed int" "unsigned int"
+    "long int" "signed long" "signed long int" "unsigned long int"
+    "long long int" "signed long long"
+    "signed long long int" "unsigned long long int"
+    "float _Complex" "double _Complex"
+    ))
 
 (define def-defined (alist->vhash (map (lambda (n) (cons n #t)) def-def-list)))
 
@@ -331,37 +344,37 @@
     (else (fherr "can't make unsigned-long-long FFI type\n"))))
 
 (define ffi-typemap
-  ;; see system/foreign.scm
-  `(("void" . ffi:void) ("float" . ffi:float) ("double" . ffi:double)
-    ("complex float" . ffi:complex-float)
-    ("complex double" . ffi:complex-double)
+  ;; see system/foreign.scm and nyacc/foreign/arch-info.scm
+  `(("void" . ffi:void)
     ;;
-    ("short" . ffi:short) ("short int" . ffi:short) ("signed short" . ffi:short)
-    ("signed short int" . ffi:short) ("int" . ffi:int) ("signed" . ffi:int)
-    ("signed int" . ffi:int) ("long" . ffi:long) ("long int" . ffi:long)
-    ("signed long" . ffi:long) ("signed long int" . ffi:long)
-    ("unsigned short int" . ffi:unsigned-short)
-    ("unsigned short" . ffi:unsigned-short) ("unsigned int" . ffi:unsigned-int)
-    ("unsigned" . ffi:unsigned-int) ("unsigned long int" . ffi:unsigned-long)
-    ("unsigned long" . ffi:unsigned-long)
-    ;;
-    ("size_t" . ffi:size_t)
-    ;;
-    ("ssize_t" . ffi:ssize_t) ("ptrdiff_t" . ffi:ptrdiff_t)
+    ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
+    ("short" . ffi:short) ("unsigned short" . ffi:unsigned-short)
+    ("int" . ffi:int) ("unsigned" . ffi:unsigned-int)
+    ("long" . ffi:long) ("unsigned long" . ffi:unsigned-long)
+    ("long long" . ,ffi-long-long)
+    ("unsigned long long" . ,ffi-unsigned-long-long)
+    ("float" . ffi:float) ("double" . ffi:double)
     ("int8_t" . ffi:int8) ("uint8_t" . ffi:uint8)
     ("int16_t" . ffi:int16) ("uint16_t" . ffi:uint16)
     ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32)
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
-    ;; hacks
+    ("size_t" . ffi:size_t) ("ssize_t" . ffi:ssize_t)
+    ("ptrdiff_t" . ffi:ptrdiff_t)
     ("intptr_t" . ffi:intptr_t) ("uintptr_t" . ffi:uintptr_t)
-    ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
+    ("_Bool" . ffi:int8) ("bool" . ffi:int8)
     ("wchar_t" . ffi:int) ("char16_t" . ffi:int16) ("char32_t" . ffi:int32)
-    ("long long" . ,ffi-long-long) ("long long int" . ,ffi-long-long)
-    ("signed long long" . ,ffi-long-long)
+    ("float _Complex" . ffi:complex-float)
+    ("double _Complex" . ffi:complex-double)
+    ;; deprecated:
+    ("short int" . ffi:short) ("signed short" . ffi:short)
+    ("signed short int" . ffi:short) ("unsigned short int" . ffi:unsigned-short)
+    ("signed" . ffi:int) ("signed int" . ffi:int)
+    ("unsigned int" . ffi:unsigned-int)
+    ("long int" . ffi:long) ("signed long" . ffi:long)
+    ("signed long int" . ffi:long) ("unsigned long int" . ffi:unsigned-long)
+    ("long long int" . ,ffi-long-long) ("signed long long" . ,ffi-long-long)
     ("signed long long int" . ,ffi-long-long)
-    ("unsigned long long" . ,ffi-unsigned-long-long)
-    ("unsigned long long int" . ,ffi-unsigned-long-long)
-    ("_Bool" . ffi:int8) ("bool" . ffi:int8)))
+    ("unsigned long long int" . ,ffi-unsigned-long-long)))
 
 (define ffi-defined
   (alist->vhash (map (lambda (p) (cons (car p) #t)) ffi-typemap)))
@@ -389,17 +402,21 @@
 		  (loop mtail sz (max al mxal) (cdr flds))
 		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
 
-(define cfix-dict
-  '(("signed char" . "char") ("signed short" . "short") ("short int" . "short")
-    ("signed short int" . "short") ("unsigned short int" . "unsigned short")
-    ("signed" . "int") ("signed int" . "int") ("unsigned" . "unsigned int")
-    ("long int" . "long") ("signed long" . "long") ("signed long int" . "long")
-    ("unsigned long int" . "unsigned long") ("long long int" . "long long")
-    ("signed long long" . "long long") ("signed long long int" . "long long")
-    ("unsigned long long int" . "unsigned long long")))
-
-(define (cfix name)
-  (or (assoc-ref cfix-dict name) name))
+;; I think this can be deprecated.  It's only used once here.
+;; The nyacc C parser now outputs the fixed forms.
+(define cfix
+  (let ((cfix-dict
+         '(("signed char" . "char") ("signed short" . "short")
+           ("short int" . "short") ("signed short int" . "short")
+           ("unsigned short int" . "unsigned short") ("signed" . "int")
+           ("signed int" . "int") ("unsigned" . "unsigned int")
+           ("long int" . "long") ("signed long" . "long")
+           ("signed long int" . "long") ("unsigned long int" . "unsigned long")
+           ("long long int" . "long long") ("signed long long" . "long long")
+           ("signed long long int" . "long long")
+           ("unsigned long long int" . "unsigned long long"))))
+    (lambda (name)
+      (or (assoc-ref cfix-dict name) name))))
 
 
 ;; === cdata/ctype support =====================================================
