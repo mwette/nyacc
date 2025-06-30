@@ -101,7 +101,7 @@
      (arg-expr-hack ($$ (make-tl 'expr-list $1)))
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3))))
     (arg-expr-hack
-     (declaration-specifiers abstract-declarator ($$ `(param-decl ,1 ,$3)))
+     (declaration-specifiers abstract-declarator ($$ `(param-decl ,$1 ,$2)))
      (declaration-specifiers ($$ `(param-decl ,$1))))
 
     (unary-expression
@@ -218,12 +218,16 @@
 
     ;; --- declaration specifiers
 
+    ;; We're being a bit tricky with call to inhibit-typename here,
+    ;; using the knowledge that the parser has to have read the next
+    ;; token before the call is made.
     (declaration-specifiers		; S 6.7
      (declaration-specifiers-1
-      type-specifier ($$ (inhibit-typename))
+      ($$ (inhibit-typename))
+      type-specifier
       declaration-specifiers-1
       ($$ (allow-typename)
-          (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
+          (process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
     (declaration-specifiers-1
      ($empty)
      (storage-class-specifier declaration-specifiers-1 ($$ (cons $1 $2)))
@@ -239,8 +243,8 @@
      ("static" ($$ '(stor-spec (static))))
      ("typedef" ($$ '(stor-spec (typedef)))))
 
-    ;; I have created fixed-, float- and complex- type specifiers to capture
-    ;; combinations like "short int" "long long" etc.
+    ;; I have created fixed-, float- and complex- type specifiers
+    ;; to capture combinations like "short int" "long long" etc.
     (type-specifier			; S 6.7.2
      ("void" ($$ '(type-spec (void))))
      (fixed-type-specifier ($$ `(type-spec ,$1)))
@@ -260,42 +264,42 @@
 
     (fixed-type-specifier
      ("short" ($prec 'imp) ($$ '(fixed-type "short")))
-     ("short" "int" ($$ '(fixed-type "short int")))
-     ("signed" "short" ($prec 'imp) ($$ '(fixed-type "signed short")))
-     ("signed" "short" "int" ($$ '(fixed-type "signed short int")))
+     ("short" "int" ($$ '(fixed-type "short")))
+     ("signed" "short" ($prec 'imp) ($$ '(fixed-type "short")))
+     ("signed" "short" "int" ($$ '(fixed-type "short")))
      ("int" ($$ '(fixed-type "int")))
-     ("signed" ($prec 'imp) ($$ '(fixed-type "signed")))
-     ("signed" "int" ($$ '(fixed-type "signed int")))
+     ("signed" ($prec 'imp) ($$ '(fixed-type "int")))
+     ("signed" "int" ($$ '(fixed-type "int")))
      ("long" ($prec 'imp) ($$ '(fixed-type "long")))
-     ("long" "int" ($$ '(fixed-type "long int")))
-     ("signed" "long" ($prec 'imp) ($$ '(fixed-type "signed long")))
-     ("signed" "long" "int" ($$ '(fixed-type "signed long int")))
+     ("long" "int" ($$ '(fixed-type "long")))
+     ("signed" "long" ($prec 'imp) ($$ '(fixed-type "long")))
+     ("signed" "long" "int" ($$ '(fixed-type "long")))
      ("long" "long" ($prec 'imp) ($$ '(fixed-type "long long")))
-     ("long" "long" "int" ($$ '(fixed-type "long long int")))
-     ("signed" "long" "long" ($prec 'imp) ($$ '(fixed-type "signed long long")))
-     ("signed" "long" "long" "int" ($$ '(fixed-type "signed long long int")))
-     ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
+     ("long" "long" "int" ($$ '(fixed-type "long long")))
+     ("signed" "long" "long" ($prec 'imp) ($$ '(fixed-type "long long")))
+     ("signed" "long" "long" "int" ($$ '(fixed-type "long long")))
+     ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short")))
      ("unsigned" "short" ($prec 'imp) ($$ '(fixed-type "unsigned short")))
-     ("unsigned" "int" ($$ '(fixed-type "unsigned int")))
+     ("unsigned" "int" ($$ '(fixed-type "unsigned")))
      ("unsigned" ($prec 'imp) ($$ '(fixed-type "unsigned")))
      ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
      ("unsigned" "long" ($prec 'imp) ($$ '(fixed-type "unsigned long")))
-     ("unsigned" "long" "long" "int" ($$ '(fixed-type "unsigned long long int")))
+     ("unsigned" "long" "long" "int" ($$ '(fixed-type "unsigned long long")))
      ("unsigned" "long" "long" ($prec 'imp)
       ($$ '(fixed-type "unsigned long long")))
      ("char" ($$ '(fixed-type "char")))
      ("signed" "char" ($$ '(fixed-type "signed char")))
      ("unsigned" "char" ($$ '(fixed-type "unsigned char")))
      ("__int128" ($$ '(fixed-type "__int128")))
+     ("unsigned" "__int128" ($$ '(fixed-type "unsigned __int128")))
      ;; fixes 250627
-     ("short" "signed" "int" ($$ '(fixed-type "signed short int")))
-     ("short" "signed" ($prec 'imp) ($$ '(fixed-type "signed short")))
-     ("long" "signed" "int" ($$ '(fixed-type "signed long int")))
-     ("long" "long" "signed" "int" ($$ '(fixed-type "signed long long int")))
-     ("short" "unsigned" "int" ($$ '(fixed-type "unsigned short int")))
+     ("short" "signed" "int" ($$ '(fixed-type "short")))
+     ("short" "signed" ($prec 'imp) ($$ '(fixed-type "short")))
+     ("long" "signed" "int" ($$ '(fixed-type "long")))
+     ("long" "long" "signed" "int" ($$ '(fixed-type "long long")))
+     ("short" "unsigned" "int" ($$ '(fixed-type "unsigned short")))
      ("long" "unsigned" "int" ($$ '(fixed-type "unsigned long")))
-     ("long" "long" "unsigned" "int" ($$ '(fixed-type "unsigned long long int")))
-     )
+     ("long" "long" "unsigned" "int" ($$ '(fixed-type "unsigned long long"))))
 
     (float-type-specifier
      ("float" ($prec 'imp) ($$ '(float-type "float")))
@@ -359,15 +363,14 @@
      ("_Sat" "unsigned" "long" "_Accum"
       ($$ '(fixpt-type "_Sat unsigned long _Accum")))
      ;; fixes 250627
-     ("short" "signed" "_Fract" ($$ '(fixpt-type "signed short _Fract")))
-     ("short" "signed" "_Accum" ($$ '(fixpt-type "signd short _Accum")))
-     ("long" "signed" "_Fract" ($$ '(fixpt-type "signed long _Fract")))
+     ("short" "signed" "_Fract" ($$ '(fixpt-type "short _Fract")))
+     ("short" "signed" "_Accum" ($$ '(fixpt-type "short _Accum")))
+     ("long" "signed" "_Fract" ($$ '(fixpt-type "long _Fract")))
      ("short" "unsigned" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
      ("long" "unsigned" "_Fract" ($$ '(fixpt-type "unsigned long _Fract")))
-     ("long" "signed" "_Accum" ($$ '(fixpt-type "signed long _Accum")))
+     ("long" "signed" "_Accum" ($$ '(fixpt-type "long _Accum")))
      ("short" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned short _Accum")))
-     ("long" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned long _Accum")))
-     )
+     ("long" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned long _Accum"))))
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier
@@ -416,10 +419,11 @@
     ;; new
     (specifier-qualifier-list		; S 6.7.2.1
      (specifier-qualifier-list-1
-      type-specifier ($$ (inhibit-typename))
+      ($$ (inhibit-typename))
+      type-specifier
       specifier-qualifier-list-1
       ($$ (allow-typename)
-          (process-specs (cons 'decl-spec-list (append $1 (list $2) $4))))))
+          (process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
     (specifier-qualifier-list-1
      ($empty)
      (type-qualifier specifier-qualifier-list-1 ($$ (cons $1 $2)))
@@ -427,9 +431,9 @@
 
     (specifier-qualifier-list/no-attr
      (specifier-qualifier-list/no-attr-1
-      type-specifier ($$ (inhibit-typename))
+      type-specifier
       specifier-qualifier-list/no-attr-1
-      ($$ (allow-typename) (cons 'decl-spec-list (append $1 (list $2) $4)))))
+      ($$ (allow-typename) (cons 'decl-spec-list (append $1 (list $2) $3)))))
     (specifier-qualifier-list/no-attr-1
      ($empty)
      (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (cons $1 $2))))
@@ -475,7 +479,8 @@
     (type-qualifier
      ("const" ($$ `(type-qual (const))))
      ("volatile" ($$ `(type-qual (volatile))))
-     ("restrict" ($$ `(type-qual (restrict)))))
+     ("restrict" ($$ `(type-qual (restrict))))
+     ("_Atomic" ($$ `(type-qual (atomic)))))
 
     (function-specifier
      ("inline" ($$ `(fctn-spec ,$1)))
@@ -696,6 +701,7 @@
      )
 
     ;; typedef-name is generated by the lexical analyzer
+    ;;(typedef-name ('typename ($$ (inhibit-typename) `(typename ,$1))))
     (typedef-name ('typename ($$ `(typename ,$1))))
 
     ;; --------------------------------
@@ -870,27 +876,11 @@
 	    (extern-begin ,$2) ,@(sx-tail (tl->list $5) 1) (extern-end))))
      (";" ($$ `(decl (@ (extension "GNUC"))))))
 
-    #;(function-definition
-     (Ndeclaration-specifiers
-      declarator compound-statement
-      ($$ `(fctn-defn ,$1 ,$2 ,$3)))
-     ;; K&R function definitions are not compatible with attribute-specifiers.
-     ;;(declaration-specifiers
-     ;; declarator declaration-list compound-statement
-     ;; ($$ `(knr-fctn-defn ,$1 ,$2 ,$3 ,$4)))
-     )
-
     (function-definition
      (declaration-specifiers
-      declarator ($$ (cpi-push)) compound-statement
-      ($$ (cpi-pop) `(fctn-defn ,$1 ,$2 ,$4))))
+      declarator compound-statement
+      ($$ `(fctn-defn ,$1 ,$2 ,$3))))
     ;; ^ K&R forms removed to acccomodate attributes
-
-    ;; K&R function-definition parameter list
-    ;;(declaration-list (declaration-list-1 ($$ (tl->list $1))))
-    ;;(declaration-list-1
-    ;; (declaration ($$ (make-tl 'decl-list $1)))
-    ;; (declaration-list-1 declaration ($$ (tl-append $1 $2))))
 
     ;; non-terminal leaves
     (identifier ($ident ($$ `(ident ,$1))))

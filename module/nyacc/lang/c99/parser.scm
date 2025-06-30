@@ -148,7 +148,8 @@
      (set-cpi-ptl! info (cons (cpi-ctl info) (cpi-ptl info)))
      (set-cpi-ctl! info '())
      #t)
-    (() (cpi-push (*info*)))))
+    (()
+     (cpi-push (*info*)))))
 
 (define cpi-pop
   (case-lambda
@@ -156,16 +157,15 @@
      (set-cpi-ctl! info (car (cpi-ptl info)))
      (set-cpi-ptl! info (cdr (cpi-ptl info)))
      #t)
-    (() (cpi-pop (*info*)))))
+    (()
+     (cpi-pop (*info*)))))
 
 (define (cpi-push-x)	;; on #if
-  ;;(sf "\ncpi-push-x:\n") (pp (*info*))
   (let ((cpi (*info*)))
     (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
     (set-cpi-ctl! cpi '())))
 
 (define (cpi-shift-x)	;; on #elif #else
-  ;;(sf "\ncpi-shift-x:\n") (pp (*info*))
   (set-cpi-ctl! (*info*) '()))
 
 (define (cpi-pop-x)	;; on #endif
@@ -175,10 +175,13 @@
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
 
 (define (inhibit-typename)
-  (set-cpi-itn! (*info*) #t)
+  (set-cpi-itn! (*info*) #t))
 
 (define (allow-typename)
-  (set-cpi-itn! (*info*) #f)
+  (set-cpi-itn! (*info*) #f))
+
+(define (typename-allowed?)
+  (not (cpi-itn (*info*))))
 
 ;; @deffn {Procedure} typename? name
 ;; Called by lexer to determine if symbol is a typename.
@@ -676,7 +679,7 @@
 		      ;; try (and (not (assoc-ref name defs))
 		      ;;          (assq-ref keytab symb))
 		      => (lambda (t) (w/ ss (cons t name))))
-		     ((and (typename? name) (not (cpi-itn)))
+		     ((and (typename-allowed?) (typename? name))
 		      (w/ ss (cons t-typename name)))
 		     ((string=? name "_Pragma")
 		      (w/ ss (assc-$ (finish-pragma))))
