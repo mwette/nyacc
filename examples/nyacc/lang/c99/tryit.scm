@@ -1,6 +1,6 @@
 ;; examples/nyacc/lang/c99/tryit.scm
 
-;; Copyright (C) 2020-2024 Matthew Wette
+;; Copyright (C) 2020-2025 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -381,6 +381,36 @@ typedef struct bar { foo_t a; foo_t b[2]; } bar_t;")
     (pperr udecl)
     (pperr xdecl)
     #f))
+
+(when #f
+  (let* (
+         ;; ugh: "typedef unsigned uint32_t;"
+         ;;(code "extern int version(void);")
+         ;;(code "typedef long unsigned int size_t;")
+         ;;(code "long long x = (long long) 1;")
+         #|
+         (code "typedef int foo; int f(foo foo);")
+         |#
+         (code (string-append
+                "typedef unsigned bar;"
+                "float f2(int x) {"
+                " typedef float bar;"
+                " bar y = 1.0;"
+                " return x + y;"
+                " }"
+                ))
+         ;;(code "typedef unsigned uint32_t;")
+         ;;(code "typedef int foo; int f(foo foo);")
+         (tree (parse-string code #:debug #t))
+         ;;(udict (c99-trans-unit->udict tree))
+         ;;(udecl (sx-ref* tree 2))
+         ;;(xdecl (expand-typerefs udecl udict '((enum . "foo"))))
+         )
+    (pp tree)
+    ;;(pp udict)
+    ;;(pp udecl)
+    ;;(pp xdecl)
+    ))
 
 
 ;; --- last line ---
