@@ -1,6 +1,6 @@
 ;;; nyacc/foreign/arch-info.scm - map c types to machine arch' types
 
-;; Copyright (C) 2020-2024 Matthew Wette
+;; Copyright (C) 2020-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -101,26 +101,51 @@
 
 (define base-type-name-list
   '("void*"
-    "char" "short" "int" "long" "float" "double" "unsigned short" "unsigned"
-    "unsigned long" "size_t" "ssize_t" "ptrdiff_t" "int8_t" "uint8_t"
-    "int16_t" "uint16_t" "int32_t" "uint32_t" "int64_t" "uint64_t"
-    "signed char" "unsigned char" "short int" "signed short" "signed short int"
-    "signed" "signed int" "long int" "signed long" "signed long int"
-    "unsigned short int" "unsigned int" "unsigned long int" "_Bool" "bool"
-    "intptr_t" "uintptr_t" "wchar_t" "char16_t" "char32_t" "long double"
-    "long long" "long long int" "signed long long" "signed long long int"
-    "unsigned long long" "unsigned long long int" "_Float16" "_Float128"))
+    "char" "signed char" "unsigned char" "short" "unsigned short"
+    "int" "unsigned" "long" "unsigned long" "long long" "unsigned long long"
+    "float" "double"
+
+    "int8_t" "uint8_t" "int16_t" "uint16_t"
+    "int32_t" "uint32_t" "int64_t" "uint64_t"
+
+    "size_t" "ssize_t" "ptrdiff_t"
+    "intptr_t" "uintptr_t"
+    "_Bool" "bool"
+    "wchar_t" "char16_t" "char32_t"
+    "long double" "_Float16" "_Float128"
+
+    ;; deprecated
+    "short int" "signed short" "signed short int" "unsigned short int"
+    "signed" "signed int" "unsigned int"
+    "long int" "signed long" "signed long int" "unsigned long int"
+    "long long int" "signed long long" "signed long long int"
+    "unsigned long long int"
+    ))
 
 (define base-type-symbol-list
   '(void*
-    char short int long float double unsigned-short unsigned unsigned-long
-    size_t ssize_t ptrdiff_t int8_t uint8_t int16_t uint16_t int32_t
-    uint32_t int64_t uint64_t signed-char unsigned-char short-int
-    signed-short signed-short-int signed signed-int long-int signed-long
-    signed-long-int unsigned-short-int unsigned-int unsigned-long-int
-    _Bool bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
-    long-long long-long-int signed-long-long signed-long-long-int
-    unsigned-long-long unsigned-long-long-int _Float16 _Float128))
+    char signed-char unsigned-char
+    short unsigned-short
+    int unsigned
+    long unsigned-long
+    long-long unsigned-long-long
+    float double
+    int8_t uint8_t int16_t uint16_t
+    int32_t uint32_t int64_t uint64_t
+    size_t ssize_t ptrdiff_t
+    intptr_t uintptr_t
+    _Bool bool
+    wchar_t char16_t char32_t
+    long-double _Float16 _Float128
+    ;; deprecated:
+    short-int signed-short
+    signed-short-int unsigned-short-int
+    signed signed-int unsigned-int
+    long-int signed-long
+    signed-long-int unsigned-long-int
+    long-long-int signed-long-long
+    signed-long-long-int unsigned-long-long-int
+    ))
 
 (define *arch-map* (make-parameter '()))
 
@@ -259,29 +284,27 @@
 ;; ARM 64bit (little-endian)
 (define mtype-map/aarch64
   '((void* . u64le)
-    (char . s8) (short . s16le) (int . s32le) (long . s64le)
-    (float . f32le) (double . f64le) (unsigned-short . u16le)
-    (unsigned . u32le) (unsigned-long . u64le)
-    ;;
-    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le) (int8_t . s8)
-    (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le) (int32_t . s32le)
-    (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
-    (signed . s32le) (signed-int . s32le) (long-int . s64le)
-    (signed-long . s64le) (signed-long-int . s64le)
-    (unsigned-short-int . u16le) (unsigned-int . u32le)
-    (unsigned-long-int . u64le)
-    ;;
-    (_Bool . s8) (bool . s8)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s64le) (unsigned-long . u64le)
+    (long-long . s64le) (unsigned-long-long . u64le)
+    (float . f32le) (double . f64le)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
     (intptr_t . s64le) (uintptr_t . u64le)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
-    ;;
     (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
-    (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long . u64le)
-    (unsigned-long-long-int . u64le)))
+    ;; deprecated
+    (short-int . s16le) (signed-short . s16le)
+    (signed-short-int . s16le) (unsigned-short-int . u16le)
+    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (long-int . s64le) (signed-long . s64le)
+    (signed-long-int . s64le) (unsigned-long-int . u64le)
+    (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
 
 (define arch/aarch64
   (make-arch-info "aarch64" 'little mtype-map/aarch64 alignof-mtype-map/natural))
@@ -291,30 +314,27 @@
 
 (define mtype-map/avr
   '((void* . u16le)
-    (char . s8) (short . s16le) (int . s16le) (long . s32le)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s16le) (unsigned . u16le)
+    (long . s32le) (unsigned-long . u32le)
+    (long-long . s64le) (unsigned-long-long . u64le)
     (float . f32le) (double . f32le)
-    (unsigned-short . u16le) (unsigned . u16le) (unsigned-long . u32le)
-    ;;
-    (size_t . u16le) (ssize_t . #f) (ptrdiff_t . s16le)
     (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
-    (int32_t . s32le) (uint32_t . iu32le)
-    (int64_t . s64le) ("uint64_t" . u64le)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
-    (signed . s16le) (signed-int . s16le)
-    (long-int . s32le) (signed-long . s32le) (signed-long-int . s32le)
-    (unsigned-short-int . u8) (unsigned-int . u16le)
-    (unsigned-long-int . u32le)
-    ;;
-    (_Bool . s8) (bool . s8)
+    (int32_t . s32le) (uint32_t . iu32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u16le) (ssize_t . #f) (ptrdiff_t . s16le)
     (intptr_t . s16le) (uintptr_t . u16le)
+    (_Bool . s8) (bool . s8)
     (wchar_t . #f) (char16_t . #f) (char32_t . #f)
-    ;;
-    (long-double . f32le) (_Float128 . f64le) (_Float16 . f16le)
-    (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long . u64le)
-    (unsigned-long-long-int . u64le)))
+    (long-double . f32le) (_Float16 . f16le) (_Float128 . f64le)
+    ;; deprecated:
+    (short-int . s16le) (signed-short . s16le)
+    (signed-short-int . s16le) (unsigned-short-int . u8)
+    (signed . s16le) (signed-int . s16le) (unsigned-int . u16le)
+    (long-int . s32le) (signed-long . s32le)
+    (signed-long-int . s32le) (unsigned-long-int . u32le)
+    (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
 
 (define alignof-mtype-map/avr
   (map (lambda (pair) (cons (car pair) 1)) sizeof-mtype-map))
@@ -327,30 +347,27 @@
 
 (define mtype-map/i686
   '((void* . u32le)
-    (char . s8) (short . s16le) (int . s32le) (long . s32le)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s32le) (unsigned-long . u32le)
+    (long-long . s64le) (unsigned-long-long . u64le)
     (float . f32le) (double . f64le)
-    (unsigned-short . u16le) (unsigned . u32le) (unsigned-long . u32le)
-    ;;
-    (size_t . s32le) (ssize_t . s32le) (ptrdiff_t . s32le)
     (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
-    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le)
-    (uint64_t . u64le)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s32le) (signed-long . s32le) (signed-long-int . s32le)
-    (unsigned-short-int . u16le) (unsigned-int . u32le)
-    (unsigned-long-int . u32le)
-    ;;
-    (_Bool . s8) (bool . s8)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . s32le) (ssize_t . s32le) (ptrdiff_t . s32le)
     (intptr_t . s32le) (uintptr_t . u32le)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
-    ;;
-    (long-double . f128) (_Float128 . f128le) (_Float16 . f16le)
-    (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long . u64le)
-    (unsigned-long-long-int . u64le)))
+    (long-double . f128) (_Float16 . f16le) (_Float128 . f128le)
+    ;; deprecated
+    (short-int . s16le) (signed-short . s16le)
+    (signed-short-int . s16le) (unsigned-short-int . u16le)
+    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (long-int . s32le) (signed-long . s32le)
+    (signed-long-int . s32le) (unsigned-long-int . u32le)
+    (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
 
 (define arch/i686
   (make-arch-info 'i686 'little mtype-map/i686 alignof-mtype-map/natural))
@@ -362,27 +379,27 @@
 ;; 32 bit powerpc aka ppc32, big endian
 (define mtype-map/powerpc32
   '((void* . u32be)
-    (char . s8) (short . s16be) (int . s32be) (long . s64be)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16be) (unsigned-short . u16be)
+    (int . s32be) (unsigned . u32be)
+    (long . s64be) (unsigned-long . u64be)
+    (long-long . s64be) (unsigned-long-long . u64be)
     (float . f32be) (double . f64be)
-    (unsigned-short . u16be) (unsigned . u32be) (unsigned-long . u64be)
-    ;;
-    (size_t . s64be) (ssize_t . s64be) (ptrdiff_t . s64be) (int8_t . s8)
-    (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be) (int32_t . s32be)
-    (uint32_t . u32be) (int64_t . s64le) (uint64_t . u64le)
-    ;;
-    (signed-char . s8) (unsigned-char . u8) (short-int . s16be)
-    (signed-short . s16be) (signed-short-int . s16be) (signed . s32be)
-    (signed-int . s32be) (long-int . s64be) (signed-long . s64be)
-    (signed-long-int . s64le) (unsigned-short-int . u16be)
-    (unsigned-int . u32be) (unsigned-long-int . u64be)
-    ;;
-    (_Bool . s8) (bool . s8)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . s64be) (ssize_t . s64be) (ptrdiff_t . s64be)
     (intptr_t . s32be) (uintptr_t . u32be)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
-    ;;
-    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
-    (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be) (unsigned-long-long . u64be)
+    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
+    ;; deprecated:
+    (short-int . s16be) (signed-short . s16be)
+    (signed-short-int . s16be) (unsigned-short-int . u16be)
+    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (long-int . s64be) (signed-long . s64be)
+    (signed-long-int . s64le) (unsigned-long-int . u64be)
+    (long-long-int . s64be) (signed-long-long . s64be)
+    (signed-long-long-int . s64be)
     (unsigned-long-long-int . u64be)))
 
 (define arch/powerpc32
@@ -395,28 +412,27 @@
 ;; 64 bit powerpc, aka ppc64 (big endian)
 (define mtype-map/powerpc64
   '((void* . u32be)
-    (char . s8) (short . s16be) (int . s32be) (long . s64be)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16be) (unsigned-short . u16be)
+    (int . s32be) (unsigned . u32be)
+    (long . s64be) (unsigned-long . u64be)
+    (long-long . s64be) (unsigned-long-long . u64be)
     (float . f32be) (double . f64be)
-    (unsigned-short . u16be) (unsigned . u32be) (unsigned-long . u64be)
-    ;;
-    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be) (int8_t . s8)
-    (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be) (int32_t . s32be)
-    (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16be) (signed-short . s16be) (signed-short-int . s16be)
-    (signed . s32be) (signed-int . s32be) (long-int . s64be)
-    (signed-long . s64be) (signed-long-int . s64be)
-    (unsigned-short-int . u16be) (unsigned-int . u32be)
-    (unsigned-long-int . u64be)
-    ;;
-    (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+    (int32_t . s32be)z (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
+    (intptr_t . s32be) (uintptr_t . u32be)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
-    ;;
-    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
-    (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be) (unsigned-long-long . u64be)
-    (unsigned-long-long-int . u64be)))
+    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
+    ;; deprecatedz:
+    (short-int . s16be) (signed-short . s16be)
+    (signed-short-int . s16be) (unsigned-short-int . u16be)
+    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (long-int . s64be) (signed-long . s64be)
+    (signed-long-int . s64be) (unsigned-long-int . u64be)
+    (long-long-int . s64be) (signed-long-long . s64be)
+    (signed-long-long-int . s64be) (unsigned-long-long-int . u64be)))
 
 (define arch/powerpc64
   (make-arch-info 'powerpc64 'big mtype-map/powerpc64 alignof-mtype-map/natural))
@@ -429,28 +445,27 @@
 ;; riscv-gcc -march=rv32gc -dM -E - </dev/null
 (define mtype-map/riscv32
   '((void* . u32le)
-    (char . s8) (short . s16le) (int . s32le) (long . s32le)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s32le) (unsigned-long . u32le)
+    (long-long . s64le) (unsigned-long-long . u64le)
     (float . f32le) (double . f64le)
-    (unsigned-short . u16le) (unsigned . u32le) (unsigned-long . u32le)
-    ;;
-    (size_t . u32le) (ssize_t . s32le) (ptrdiff_t . s32le) (int8_t . s8)
-    (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le) (int32_t . s32le)
-    (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
-    (signed . s32le) (signed-int . s32le) (long-int . s32le)
-    (signed-long . s32le) (signed-long-int . s32le)
-    (unsigned-short-int . u16le) (unsigned-int . u32le)
-    (unsigned-long-int . u32le)
-    ;;
-    (_Bool . s8) (bool . s8) (intptr_t . s32le) (uintptr_t . u32le)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u32le) (ssize_t . s32le) (ptrdiff_t . s32le)
+    (intptr_t . s32le) (uintptr_t . u32le)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
-    ;;
-    (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
-    (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long . u64le)
-    (unsigned-long-long-int . u64le)))
+    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
+    ;; deprecated:
+    (short-int . s16le) (signed-short . s16le)
+    (signed-short-int . s16le) (unsigned-short-int . u16le)
+    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (long-int . s32le) (signed-long . s32le)
+    (signed-long-int . s32le) (unsigned-long-int . u32le)
+    (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
 
 (define arch/riscv32
   (make-arch-info 'riscv32 'little mtype-map/riscv32 alignof-mtype-map/natural))
@@ -462,29 +477,27 @@
 ;; riscv-gcc -march=rv64g -mabi=lp64d -dM -E - </dev/null
 (define mtype-map/riscv64
   '((void* . u64le)
-    (char . s8) (short . s16le) (int . s32le) (long . s64le)
-    (float . f32le) (double . f64le) (unsigned-short . u16le)
-    (unsigned . u32le) (unsigned-long . u64le)
-    ;;
-    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le) (int8_t . s8)
-    (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le) (int32_t . s32le)
-    (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
-    (signed . s32le) (signed-int . s32le) (long-int . s64le)
-    (signed-long . s64le) (signed-long-int . s64le)
-    (unsigned-short-int . u16le) (unsigned-int . u32le)
-    (unsigned-long-int . u64le)
-    ;;
-    (_Bool . s8) (bool . s8)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s64le) (unsigned-long . u64le)
+    (long-long . s64le) (unsigned-long-long . u64le)
+    (float . f32le) (double . f64le)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
     (intptr_t . s64le) (uintptr_t . u64le)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
-    ;;
-    (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
-    (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long . u64le)
-    (unsigned-long-long-int . u64le)))
+    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
+    ;; deprecated:
+    (short-int . s16le) (signed-short . s16le)
+    (signed-short-int . s16le) (unsigned-short-int . u16le)
+    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (long-int . s64le) (signed-long . s64le)
+    (signed-long-int . s64le) (unsigned-long-int . u64le)
+    (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
 
 (define arch/riscv64
   (make-arch-info "riscv64" 'little mtype-map/riscv64 alignof-mtype-map/natural))
@@ -495,28 +508,27 @@
 ;; sparc 32 bit (big endian)
 (define mtype-map/sparc32
   '((void* . u32be)
-    (char . s8) (short . s16be) (int . s32be) (long . s32be)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16be) (unsigned-short . u16be)
+    (int . s32be) (unsigned . u32be)
+    (long . s32be) (unsigned-long . u32be)
+    (long-long . s64be) (unsigned-long-long . u64be)
     (float . f32be) (double . f64be)
-    (unsigned-short . u16be) (unsigned . u32be) (unsigned-long . u32be)
-    ;;
-    (size_t . u32be) (ssize_t . s32be) (ptrdiff_t . s32be) (int8_t . s8)
-    (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be) (int32_t . s32be)
-    (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16be) (signed-short . s16be) (signed-short-int . s16be)
-    (signed . s32be) (signed-int . s32be) (long-int . s32be)
-    (signed-long . s32be) (signed-long-int . s32be)
-    (unsigned-short-int . u16be) (unsigned-int . u32be)
-    (unsigned-long-int . u32be)
-    ;;
-    (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    (size_t . u32be) (ssize_t . s32be) (ptrdiff_t . s32be)
+    (intptr_t . s32be) (uintptr_t . u32be)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
-    ;;
-    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
-    (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be) (unsigned-long-long . u64be)
-    (unsigned-long-long-int . u64be)))
+    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
+    ;; deprecated:
+    (short-int . s16be) (signed-short . s16be)
+    (signed-short-int . s16be) (unsigned-short-int . u16be)
+    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (long-int . s32be) (signed-long . s32be)
+    (signed-long-int . s32be) (unsigned-long-int . u32be)
+    (long-long-int . s64be) (signed-long-long . s64be)
+    (signed-long-long-int . s64be) (unsigned-long-long-int . u64be)))
 
 (define arch/sparc32
   (make-arch-info 'sparc32 'big mtype-map/sparc32 alignof-mtype-map/natural))
@@ -527,28 +539,27 @@
 ;; sparc 64 bit (big endian)
 (define mtype-map/sparc64
   '((void* . u32be)
-    (char . s8) (short . s16be) (int . s32be) (long . s64be)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16be) (unsigned-short . u16be)
+    (int . s32be) (unsigned . u32be)
+    (long . s64be) (unsigned-long . u64be)
+    (long-long . s64be) (unsigned-long-long . u64be)
     (float . f32be) (double . f64be)
-    (unsigned-short . u16be) (unsigned . u32be) (unsigned-long . u64be)
-    ;;
-    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be) (int8_t . s8)
-    (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be) (int32_t . s32be)
-    (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16be) (signed-short . s16be) (signed-short-int . s16be)
-    (signed . s32be) (signed-int . s32be) (long-int . s64be)
-    (signed-long . s64be) (signed-long-int . s64be)
-    (unsigned-short-int . u16be) (unsigned-int . u32be)
-    (unsigned-long-int . u64be)
-    ;;
-    (_Bool . s8) (bool . s8) (intptr_t . s32be) (uintptr_t . u32be)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
+    (intptr_t . s32be) (uintptr_t . u32be)
+    (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
-    ;;
-    (long-double . f128be) (_Float128 . f128be) (_Float16 . f16be)
-    (long-long . s64be) (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be) (unsigned-long-long . u64be)
-    (unsigned-long-long-int . u64be)))
+    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
+    ;; deprecated:
+    (short-int . s16be) (signed-short . s16be)
+    (signed-short-int . s16be) (unsigned-short-int . u16be)
+    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (long-int . s64be) (signed-long . s64be)
+    (signed-long-int . s64be) (unsigned-long-int . u64be)
+    (long-long-int . s64be) (signed-long-long . s64be)
+    (signed-long-long-int . s64be) (unsigned-long-long-int . u64be)))
 
 (define arch/sparc64
   (make-arch-info 'sparc64 'big mtype-map/sparc64 alignof-mtype-map/natural))
@@ -559,29 +570,27 @@
 ;; intel amd x86_64
 (define mtype-map/x86_64
   '((void* . u64le)
-    (char . s8) (short . s16le) (int . s32le) (long . s64le)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s64le) (unsigned-long . u64le)
+    (long-long . s64le) (unsigned-long-long . u64le)
     (float . f32le) (double . f64le)
-    (unsigned-short . u16le) (unsigned . u32le) (unsigned-long . u64le)
-    ;;
-    (size_t . u64le) (ssize_t . u64le) (ptrdiff_t . s64le)
     (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
-    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le)
-    (uint64_t . u64le)
-    ;;
-    (signed-char . s8) (unsigned-char . u8)
-    (short-int . s16le) (signed-short . s16le) (signed-short-int . s16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s64le) (signed-long . s64le) (signed-long-int . s64le)
-    (unsigned-short-int . u16le) (unsigned-int . u32le)
-    (unsigned-long-int . u64le)
-    ;;
-    (_Bool . u8) (bool . s8) (intptr_t . s64le) (uintptr_t . u64le)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u64le) (ssize_t . u64le) (ptrdiff_t . s64le)
+    (intptr_t . s64le) (uintptr_t . u64le)
+    (_Bool . u8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
-    ;;
-    (long-double . f128) (_Float128 . f128le) (_Float16 . f16le)
-    (long-long . s64le) (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long . u64le)
-    (unsigned-long-long-int . u64le)))
+    (long-double . f128) (_Float16 . f16le) (_Float128 . f128le)
+    ;; deprecated:
+    (short-int . s16le) (signed-short . s16le)
+    (signed-short-int . s16le) (unsigned-short-int . u16le)
+    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (long-int . s64le) (signed-long . s64le)
+    (signed-long-int . s64le)z (unsigned-long-int . u64le)
+    (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
 
 (define arch/x86_64
   (make-arch-info "x86_64" 'little mtype-map/x86_64 sizeof-mtype-map))
