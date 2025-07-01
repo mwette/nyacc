@@ -43,7 +43,7 @@
 (define (pperr exp) (pretty-print exp (current-error-port)))
 (define (sferr fmt . args) (apply simple-format #t fmt args))
 
-b(define (c-strname->symname strname)
+(define (c-strname->symname strname)
   (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c))
                               strname)))
 
@@ -243,20 +243,20 @@ b(define (c-strname->symname strname)
   (and (member mtype '(s8 s16 s32 s64 s16le s32le s64le s16be s32be s64be)) #t))
 
 (define (bv-z32-ref bv ix en)
-  (make-rectangular (bytevector-f32-ref bv ix en)
-                    (bytevector-f32-ref bv (+ ix 4) en)))
+  (make-rectangular (bytevector-ieee-single-ref bv ix en)
+                    (bytevector-ieee-single-ref bv (+ ix 4) en)))
 
 (define (bv-z32-set! bv ix value en)
-  (bytevector-f32-set! bv ix (real-part value) en)
-  (bytevector-f32-set! bv (+ ix 4) (imag-part value) en))
+  (bytevector-ieee-single-set! bv ix (real-part value) en)
+  (bytevector-ieee-single-set! bv (+ ix 4) (imag-part value) en))
 
 (define (bv-z64-ref bv ix en)
-  (make-rectangular (bytevector-f64-ref bv ix en)
-                    (bytevector-f64-ref bv (+ ix 8) en)))
+  (make-rectangular (bytevector-ieee-double-ref bv ix en)
+                    (bytevector-ieee-double-ref bv (+ ix 8) en)))
 
 (define (bv-z64-set! bv ix value en)
-  (bytevector-f64-set! bv ix (real-part value) en)
-  (bytevector-f64-set! bv (+ ix 8) (imag-part value) en))
+  (bytevector-ieee-double-set! bv ix (real-part value) en)
+  (bytevector-ieee-double-set! bv (+ ix 8) (imag-part value) en))
 
 ;;(define-syntax be (identifier-syntax (endianness big)))
 ;;(define-syntax le (identifier-syntax (endianness little)))
@@ -315,7 +315,7 @@ b(define (c-strname->symname strname)
 
 ;; === maps ====================================================================
 
-n;; ARM 64bit (little-endian)
+;; ARM 64bit (little-endian)
 (define mtype-map/aarch64
   '((void* . u64le)
     (char . s8) (signed-char . s8) (unsigned-char . u8)

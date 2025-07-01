@@ -508,24 +508,28 @@
    ;; fixpt-type-specifier => "long" "unsigned" "_Accum"
    (lambda ($3 $2 $1 . $rest)
      '(fixpt-type "unsigned long _Accum"))
-   ;; struct-or-union-specifier => "struct" opt-attr-specs ident-like "{" s...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (sx-list 'struct-def $2 $3 (tl->list $5)))
-   ;; struct-or-union-specifier => "struct" opt-attr-specs "{" struct-decla...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     (sx-list 'struct-def $2 (tl->list $4)))
+   ;; struct-or-union-specifier => "struct" opt-attr-specs ident-like aggr-...
+   (lambda ($4 $3 $2 $1 . $rest)
+     (sx-list 'struct-def $2 $3 $4))
+   ;; struct-or-union-specifier => "struct" opt-attr-specs aggr-body
+   (lambda ($3 $2 $1 . $rest)
+     (sx-list 'struct-def $2 $3))
    ;; struct-or-union-specifier => "struct" opt-attr-specs ident-like
    (lambda ($3 $2 $1 . $rest)
      (sx-list 'struct-ref $2 $3))
-   ;; struct-or-union-specifier => "union" opt-attr-specs ident-like "{" st...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (sx-list 'union-def $2 $3 (tl->list $5)))
-   ;; struct-or-union-specifier => "union" opt-attr-specs "{" struct-declar...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     (sx-list 'union-def $2 (tl->list $4)))
+   ;; struct-or-union-specifier => "union" opt-attr-specs ident-like aggr-body
+   (lambda ($4 $3 $2 $1 . $rest)
+     (sx-list 'union-def $2 $3 $4))
+   ;; struct-or-union-specifier => "union" opt-attr-specs aggr-body
+   (lambda ($3 $2 $1 . $rest)
+     (sx-list 'union-def $2 $3))
    ;; struct-or-union-specifier => "union" opt-attr-specs ident-like
    (lambda ($3 $2 $1 . $rest)
      (sx-list 'union-ref $2 $3))
+   ;; aggr-body => $P4 "{" struct-declaration-list "}"
+   (lambda ($4 $3 $2 $1 . $rest) (tl->list $3))
+   ;; $P4 => 
+   (lambda $rest (allow-typename))
    ;; ident-like => identifier
    (lambda ($1 . $rest) $1)
    ;; ident-like => typedef-name
@@ -555,12 +559,12 @@
      `(comp-decl ,$1 ,(tl->list $2)))
    ;; struct-declaration-no-comment => specifier-qualifier-list
    (lambda ($1 . $rest) `(comp-decl ,$1))
-   ;; specifier-qualifier-list => specifier-qualifier-list-1 $P4 type-speci...
+   ;; specifier-qualifier-list => specifier-qualifier-list-1 $P5 type-speci...
    (lambda ($4 $3 $2 $1 . $rest)
      (allow-typename)
      (process-specs
        (cons 'decl-spec-list (append $1 (list $3) $4))))
-   ;; $P4 => 
+   ;; $P5 => 
    (lambda ($1 . $rest) (inhibit-typename))
    ;; specifier-qualifier-list-1 => 
    (lambda $rest (list))
@@ -945,15 +949,15 @@
    (lambda ($4 $3 $2 $1 . $rest) `(case ,$2 ,$4))
    ;; labeled-statement => "default" ":" statement
    (lambda ($3 $2 $1 . $rest) `(default ,$3))
-   ;; compound-statement => "{" $P5 block-item-list $P6 "}"
+   ;; compound-statement => "{" $P6 block-item-list $P7 "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(compd-stmt ,(tl->list $3)))
    ;; compound-statement => "{" "}"
    (lambda ($2 $1 . $rest)
      `(compd-stmt (block-item-list)))
-   ;; $P5 => 
-   (lambda ($1 . $rest) (cpi-push))
    ;; $P6 => 
+   (lambda ($1 . $rest) (cpi-push))
+   ;; $P7 => 
    (lambda ($3 $2 $1 . $rest) (cpi-pop))
    ;; block-item-list => block-item
    (lambda ($1 . $rest)
@@ -1112,7 +1116,7 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => pragma
    (lambda ($1 . $rest) $1)
-   ;; external-declaration => "extern" '$string "{" $P7 external-declaratio...
+   ;; external-declaration => "extern" '$string "{" $P8 external-declaratio...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(extern-block
         (extern-begin ,$2)
@@ -1121,13 +1125,17 @@
    ;; external-declaration => ";"
    (lambda ($1 . $rest)
      `(decl (@ (extension "GNUC"))))
-   ;; $P7 => 
-   (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
    ;; $P8 => 
+   (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
+   ;; $P9 => 
    (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
-   ;; function-definition => declaration-specifiers declarator compound-sta...
-   (lambda ($3 $2 $1 . $rest)
-     `(fctn-defn ,$1 ,$2 ,$3))
+   ;; function-definition => declaration-specifiers declarator "{" $P10 blo...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(fctn-defn ,$1 ,$2 (compd-stmt ,(tl->list $5))))
+   ;; $P10 => 
+   (lambda ($3 $2 $1 . $rest) (cpi-push))
+   ;; $P11 => 
+   (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-pop))
    ;; identifier => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
    ;; constant => '$fixed

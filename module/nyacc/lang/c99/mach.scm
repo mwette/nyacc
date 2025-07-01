@@ -372,20 +372,24 @@
      ("short" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned short _Accum")))
      ("long" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned long _Accum"))))
 
-    ;; This one modified: split out struct-or-union = "struct"|"union"
+    ;; More kludging to handle typenames as declarators.
     (struct-or-union-specifier
-     ("struct" opt-attr-specs ident-like "{" struct-declaration-list "}"
-      ($$ (sx-list 'struct-def $2 $3 (tl->list $5))))
-     ("struct" opt-attr-specs "{" struct-declaration-list "}"
-      ($$ (sx-list 'struct-def $2 (tl->list $4))))
+     ("struct" opt-attr-specs ident-like aggr-body
+      ($$ (sx-list 'struct-def $2 $3 $4)))
+     ("struct" opt-attr-specs aggr-body
+      ($$ (sx-list 'struct-def $2 $3)))
      ("struct" opt-attr-specs ident-like
       ($$ (sx-list 'struct-ref $2 $3)))
-     ("union" opt-attr-specs ident-like "{" struct-declaration-list "}"
-      ($$ (sx-list 'union-def $2 $3 (tl->list $5))))
-     ("union" opt-attr-specs "{" struct-declaration-list "}"
-      ($$ (sx-list 'union-def $2 (tl->list $4))))
+     ("union" opt-attr-specs ident-like aggr-body
+      ($$ (sx-list 'union-def $2 $3 $4)))
+     ("union" opt-attr-specs aggr-body
+      ($$ (sx-list 'union-def $2 $3)))
      ("union" opt-attr-specs ident-like
       ($$ (sx-list 'union-ref $2 $3))))
+    (aggr-body
+     (($$ (allow-typename)) "{" struct-declaration-list "}"
+      ($$ (tl->list $3))))
+      
 
     ;; because name following struct/union can be identifier or typeref:
     (ident-like
@@ -878,8 +882,10 @@
 
     (function-definition
      (declaration-specifiers
-      declarator compound-statement
-      ($$ `(fctn-defn ,$1 ,$2 ,$3))))
+      declarator
+      ;;compound-statement
+      "{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}"
+      ($$ `(fctn-defn ,$1 ,$2 (compd-stmt ,(tl->list $5))))))
     ;; ^ K&R forms removed to acccomodate attributes
 
     ;; non-terminal leaves
