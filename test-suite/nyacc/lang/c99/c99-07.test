@@ -34,7 +34,7 @@
 (with-test-prefix "nyacc/c99-07, fixed bugs"
 
   ;; parse with include file
-  (pass-if "unterminated #if (bug a63283)"
+  (pass-if "unterminated #if (bug #63283)"
     (not
      (catch 'c99-error
        (lambda ()
@@ -43,6 +43,36 @@
              (with-input-from-file "exam.d/ex22.c"
                (lambda () (parse-c99 #:inc-dirs incs #:mode 'code))))))
        (lambda args #f))))
+
+  ;; typedef as ident
+  (pass-if "typedef as ident (bug #67201)"
+    (and
+     (let* ((code "typedef struct S S; struct S { S* S; } s;"))
+       (with-input-from-string code parse-c99))
+     #t))
+
+  (pass-if "typedef as ident in function arg" 
+    (and
+     (let* ((code "typedef int foo; int f(foo foo);"))
+       (with-input-from-string code parse-c99))
+     #t))
+  (pass-if "typedef scope w/ enum" 
+    (and
+     (let* ((code "typedef enum foo { FOO } foo_t; foo_t x;"))
+       (with-input-from-string code parse-c99))
+     #t))
+  
+  ;; typedef as ident
+  (pass-if "typedef in function"
+    (and
+     (let* ((code (string-append "typedef unsigned bar;"
+                                 "float f2(int x) {"
+                                 " typedef float bar;"
+                                 " bar y = 1.0;"
+                                 " return x + y;"
+                                 " }")))
+       (with-input-from-string code parse-c99))
+     #t))
 
   )
 
