@@ -64,6 +64,7 @@
 	  'reduce-on-attr
 	  'reduce-on-semi
 	  (nonassoc "*" "(" '$ident))
+   (prec> 'param-list ")")
 
    (start translation-unit)
    (grammar
@@ -212,9 +213,9 @@
     (declaration-no-comment
      (declaration-specifiers
       init-declarator-list
-      ($$ (save-typenames `(decl ,$1 ,$2))))
+      ($$ (allow-typename) (save-typenames `(decl ,$1 ,$2))))
      (declaration-specifiers
-      ($$ `(decl ,$1))))
+      ($$ (allow-typename) `(decl ,$1))))
 
     ;; --- declaration specifiers
 
@@ -226,15 +227,13 @@
       ($$ (inhibit-typename))
       type-specifier
       declaration-specifiers-1
-      ($$ (allow-typename)
-          (process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
+      ($$(process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
     (declaration-specifiers-1
      ($empty)
      (storage-class-specifier declaration-specifiers-1 ($$ (cons $1 $2)))
      (type-qualifier declaration-specifiers-1 ($$ (cons $1 $2)))
      (function-specifier declaration-specifiers-1 ($$ (cons $1 $2)))
      (attribute-specifier declaration-specifiers-1 ($$ (cons $1 $2))))
-
 
     (storage-class-specifier		; S 6.7.1
      ("auto" ($$ '(stor-spec (auto))))
@@ -252,7 +251,8 @@
      (fixpt-type-specifier ($$ `(type-spec ,$1)))
      ("_Bool" ($$/ref 's5.1.5-01 '(type-spec (fixed-type "_Bool"))))
      (complex-type-specifier ($$ `(type-spec ,$1)))
-     (struct-or-union-specifier ($$ `(type-spec ,$1)))
+     ;;(struct-or-union-specifier ($$ `(type-spec ,$1)))
+     (($$ (allow-typename)) struct-or-union-specifier ($$ `(type-spec ,$2)))
      (enum-specifier ($$ `(type-spec ,$1)))
      (typedef-name ($$ `(type-spec ,$1)))
      ("typeof" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
@@ -390,7 +390,6 @@
      (($$ (allow-typename)) "{" struct-declaration-list "}"
       ($$ (tl->list $3))))
       
-
     ;; because name following struct/union can be identifier or typeref:
     (ident-like
      (identifier)
@@ -417,8 +416,11 @@
      (struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
     (struct-declaration-no-comment
      (specifier-qualifier-list
-      struct-declarator-list ($$ `(comp-decl ,$1 ,(tl->list $2))))
-     (specifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
+      ($$ (inhibit-typename))
+      struct-declarator-list
+      ($$ (allow-typename) `(comp-decl ,$1 ,(tl->list $3))))
+     (specifier-qualifier-list          ; <= anonymous
+      ($$ (allow-typename) `(comp-decl ,$1))))
 
     ;; new
     (specifier-qualifier-list		; S 6.7.2.1
@@ -426,8 +428,7 @@
       ($$ (inhibit-typename))
       type-specifier
       specifier-qualifier-list-1
-      ($$ (allow-typename)
-          (process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
+      ($$ (process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
     (specifier-qualifier-list-1
      ($empty)
      (type-qualifier specifier-qualifier-list-1 ($$ (cons $1 $2)))
@@ -435,13 +436,13 @@
 
     (specifier-qualifier-list/no-attr
      (specifier-qualifier-list/no-attr-1
+      ($$ (inhibit-typename))
       type-specifier
       specifier-qualifier-list/no-attr-1
-      ($$ (allow-typename) (cons 'decl-spec-list (append $1 (list $2) $3)))))
+      ($$ (cons 'decl-spec-list (append $1 (list $3) $4)))))
     (specifier-qualifier-list/no-attr-1
      ($empty)
      (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (cons $1 $2))))
-
 
     (struct-declarator-list		; S 6.7.2.1
      (struct-declarator ($$ (make-tl 'comp-declr-list $1)))
@@ -499,7 +500,7 @@
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Function-Attributes.html
 
     (attribute-specifiers
-     (attribute-specifier ($prec 'reduce-on-attr))
+     (attribute-specifier ($prec 'reduce-on-attr) ($$ $1))
      (attribute-specifiers attribute-specifier ($$ (append $1 (cdr $2)))))
 
     ;; (attributes (attribute "__static__") (attribute aligned(8)" ...)
@@ -582,6 +583,7 @@
      ;;("(" declarator ")" ($$ `(scope ,$2)))
      ("(" declarator ")" ($$ $2))
      ("(" attribute-specifier declarator ")" ($$ $3))
+     ;;
      (direct-declarator
       "[" type-qualifier-list assignment-expression "]"
       ($$ `(ary-declr ,$1 ,$3 ,$4)))
@@ -606,12 +608,14 @@
      (direct-declarator
       "[" "*" "]"			; variable length array
       ($$ `(ary-declr ,$1 (var-len))))
-     (direct-declarator
-      "(" parameter-type-list ")" ($$ `(ftn-declr ,$1 ,$3)))
-     (direct-declarator
+     (direct-declarator ($$ (allow-typename))
+      "(" parameter-type-list ")" ($$ `(ftn-declr ,$1 ,$4)))
+     #|
+     (direct-declarator                 ; ??? is this K&R remnant?
       "(" identifier-list ")" ($$ `(ftn-declr ,$1 ,$3)))
-     (direct-declarator
-      "(" ")" ($$ `(ftn-declr ,$1 (param-list)))))
+     |#
+     ;;(direct-declarator "(" ")" ($$ `(ftn-declr ,$1 (param-list))))
+     )
 
     (type-qualifier-list
      (type-qualifier-list-1 ($$ (tl->list $1))))
@@ -620,6 +624,7 @@
      (type-qualifier-list-1 type-qualifier ($$ (tl-append $1 $2))))
 
     (parameter-type-list
+     ($empty ($prec 'param-list) ($$ '(param-list)))
      (parameter-list ($$ (tl->list $1)))
      (parameter-list "," "..." ($$ (tl->list (tl-append $1 '(ellipsis))))))
 
@@ -629,27 +634,33 @@
 
     (parameter-declaration
      (declaration-specifiers
-      declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
+      declarator
+      ($$ (allow-typename) `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
+      abstract-declarator
+      ($$ (allow-typename) `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      ;;($$ `(param-decl ,$1 (param-declr))))
-      ($$ `(param-decl ,$1)))
+      ($$  (allow-typename) `(param-decl ,$1)))
      ;; adding attribute specifiers:
      (declaration-specifiers
-      declarator attribute-specifiers ($$ `(param-decl ,$1 (param-declr ,$2)))))
+      declarator
+      attribute-specifiers
+      ($$ (allow-typename) `(param-decl ,$1 (param-declr ,$2)))))
 
+    #|
     (identifier-list
      (identifier-list-1 ($$ (tl->list $1))))
     (identifier-list-1
      (identifier ($$ (make-tl 'ident-list $1)))
      (identifier-list-1 "," identifier ($$ (tl-append $1 $3))))
+    |#
 
     (type-name				; S 6.7.6
      (specifier-qualifier-list/no-attr abstract-declarator
 				       ($$ `(type-name ,$1 ,$2)))
      (specifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
-     ;;(declaration-specifiers ($$ `(type-name ,$1))) ; why did I have this?
+     ;;(declaration-specifiers ($$ `(type-name ,$1))) ;
+     ;;^ this is more general: maybe removed because former not accepted?
      )
 
     (abstract-declarator		; S 6.7.6
