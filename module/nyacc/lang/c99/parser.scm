@@ -169,7 +169,6 @@
   (set-cpi-ctl! (*info*) '()))
 
 (define (cpi-pop-x)	;; on #endif
-  ;;(sf "\ncpi-pop-x:\n") (pp (*info*))
   (let ((cpi (*info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
@@ -219,8 +218,6 @@
       (else
        (pp (car declr))
        (throw 'c99-error "parser.scm: find-new-typenames: ~S" declr))))
-
-  ;;(sf "\ndecl:\n") (pp decl)
 
   (let* ((spec (sx-ref decl 1))
 	 (stor (sx-find 'stor-spec spec))
@@ -515,7 +512,6 @@
           |#
 
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
- 	    ;;(sf "eval-cpp-stmt/code ~S\n" stmt)
 	    (case (car stmt)
 	      ((if) (code-if stmt))
 	      ((elif) (code-elif stmt))
@@ -538,7 +534,6 @@
 		   stmt))))
 
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
-	    ;;(sf "eval-cpp-stmt/decl ~S\n" stmt)
 	    (case (car stmt)
 	      ((if) (code-if stmt))
 	      ((elif) (code-elif stmt))
@@ -566,7 +561,6 @@
 		   stmt))))
 
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
-	    ;;(sf "eval-cpp-stmt/file ~S\n" stmt)
 	    (case (car stmt)
 	      ((if) (cpi-push-x) stmt)
 	      ((elif else) (cpi-shift-x) stmt)
