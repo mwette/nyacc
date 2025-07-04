@@ -152,7 +152,7 @@
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (xct-v (make-xct (assq-ref mach 'act-v) env))
-	 (ntab (assq-ref mach 'ntab))
+	 (ntab (acons 1 '$default (assq-ref mach 'ntab)))
 	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
     (lambda* (lexr #:key debug)
       (let loop ((state (list 0))	; state stack
