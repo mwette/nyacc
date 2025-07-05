@@ -74,6 +74,16 @@
        (with-input-from-string code parse-c99))
      #t))
 
+  (pass-if "typedef w/ cast"
+    (and
+     (let* ((code (string-append "typedef int foo_t;"
+                                 "foo_t foo(foo_t x) {"
+                                 "  foo_t *y = (foo_t *)x;"
+                                 "  return *x;"
+                                 "}")))
+       (with-input-from-string code parse-c99))
+     #t))
+
   )
 
 ;;(with-input-from-file "exam.d/ex22.c"

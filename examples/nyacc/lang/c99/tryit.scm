@@ -401,17 +401,33 @@ typedef struct bar { foo_t a; foo_t b[2]; } bar_t;")
                 ))
          ;;(code "typedef unsigned uint32_t;")
          ;;(code "typedef int foo; int f(foo foo);")
-         (code "typedef enum foo { FOO } foo_t; foo_t x;")
+         ;;(code "typedef enum foo { FOO } foo_t; foo_t x;")
+         (code "typedef struct S S; struct S { S* S; } s;")
+         (x (sferr "~s\n" code))
          (tree (parse-string code #:debug #t))
          ;;(udict (c99-trans-unit->udict tree))
          ;;(udecl (sx-ref* tree 2))
          ;;(xdecl (expand-typerefs udecl udict '((enum . "foo"))))
          )
-    (pp tree)
+    (pperr tree)
     ;;(pp udict)
     ;;(pp udecl)
     ;;(pp xdecl)
     ))
 
+(when #f                                ; bug 63502
+  (let* (
+         (code "
+#include <glib.h>
+typedef GHashTable MyHashTable;
+int foo(MyHashTable *mht);
+")
+         (tree (parse-string
+                code
+                #:inc-dirs (cons* "/usr/include/glib-2.0"
+                                  "/usr/lib/x86_64-linux-gnu/glib-2.0/include"
+                                  "/usr/include/sysprof-6"
+                                  (get-sys-inc-dirs)))))
+    (pperr tree)))
 
 ;; --- last line ---
