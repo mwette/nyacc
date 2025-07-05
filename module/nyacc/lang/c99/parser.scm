@@ -20,8 +20,8 @@
 (define-module (nyacc lang c99 parser)
   #:export (parse-c99 parse-c99x gen-c99-lexer gen-c99x-lexer gen-c-lexer)
   #:use-module (nyacc lex)
-  #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
+  #:use-module (nyacc lang c99 parse)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 util)
   #:re-export (c99-def-help c99-std-help))
@@ -172,15 +172,6 @@
   (let ((cpi (*info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
-
-(define (inhibit-typename)
-  (set-cpi-itn! (*info*) #t))
-
-(define (allow-typename)
-  (set-cpi-itn! (*info*) #f))
-
-(define (typename-allowed?)
-  (not (cpi-itn (*info*))))
 
 ;; @deffn {Procedure} typename? name
 ;; Called by lexer to determine if symbol is a typename.
@@ -673,7 +664,7 @@
 		      ;; try (and (not (assoc-ref name defs))
 		      ;;          (assq-ref keytab symb))
 		      => (lambda (t) (w/ ss (cons t name))))
-		     ((and (typename-allowed?) (typename? name))
+		     ((typename? name)
 		      (w/ ss (cons t-typename name)))
 		     ((string=? name "_Pragma")
 		      (w/ ss (assc-$ (finish-pragma))))
@@ -729,10 +720,11 @@
 (include-from-path "nyacc/lang/c99/mach.d/c99-tab.scm")
 
 (define c99-raw-parser
-  (make-lalr-parser
+  (make-lalr-parser/c99
    (acons 'act-v c99-act-v c99-tables)
    ;; These must also appear in #:keepers arg to hashify in mach.scm.
-   #:skip-if-unexp '($lone-comm $code-comm $pragma cpp-stmt)))
+   #:skip-if-unexp (map (lambda (n) (assoc-ref c99-mtab n))
+                        '($lone-comm $code-comm $pragma cpp-stmt))))
 
 
 (define gen-c99-lexer
@@ -806,9 +798,10 @@
 (include-from-path "nyacc/lang/c99/mach.d/c99x-tab.scm")
 
 (define c99x-raw-parser
-  (make-lalr-parser
+  (make-lalr-parser/c99
    (acons 'act-v c99x-act-v c99x-tables)
-   #:skip-if-unexp '($lone-comm $code-comm $pragma)))
+   #:skip-if-unexp (map (lambda (n) (assoc-ref c99x-mtab n))
+                        '($lone-comm $code-comm $pragma))))
 
 (define gen-c99x-lexer
   (make-c99-lexer-generator c99x-mtab c99x-raw-parser))

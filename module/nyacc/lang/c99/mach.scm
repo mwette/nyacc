@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2023 Matthew Wette
+;; Copyright (C) 2015-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -32,10 +32,10 @@
 
 (define-module (nyacc lang c99 mach)
   #:export (c99-spec c99-mach c99x-spec c99x-mach gen-c99-files)
+  #:use-module (nyacc lang c99 parse)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
-  #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util))
 
@@ -50,12 +50,12 @@
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2015-2021,2025 Matthew Wette"
+   (notice (string-append "Copyright (C) 2015-2025 Matthew Wette"
 			  license-lgpl3+))
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< (left 'imp)	       ; "implied type" SR-conflict resolution
-	  (left "char" "short" "int" "long"
+	  (left "char" "short" "int" "long" "__int128"
                 "signed" "unsigned"
                 "_Fract" "_Accum" "_Sat")
 	  (left "float" "double" "_Complex"))
@@ -64,7 +64,6 @@
 	  'reduce-on-attr
 	  'reduce-on-semi
 	  (nonassoc "*" "(" '$ident))
-   (prec> 'param-list ")")
 
    (start translation-unit)
    (grammar
@@ -213,27 +212,35 @@
     (declaration-no-comment
      (declaration-specifiers
       init-declarator-list
-      ($$ (allow-typename) (save-typenames `(decl ,$1 ,$2))))
+      ($$ (save-typenames `(decl ,$1 ,$2))))
      (declaration-specifiers
-      ($$ (allow-typename) `(decl ,$1))))
+      ($$ `(decl ,$1))))
 
     ;; --- declaration specifiers
 
-    ;; We're being a bit tricky with call to inhibit-typename here,
-    ;; using the knowledge that the parser has to have read the next
-    ;; token before the call is made.
     (declaration-specifiers		; S 6.7
-     (declaration-specifiers-1
-      ($$ (inhibit-typename))
-      type-specifier
-      declaration-specifiers-1
-      ($$(process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
+     (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
     (declaration-specifiers-1
-     ($empty)
-     (storage-class-specifier declaration-specifiers-1 ($$ (cons $1 $2)))
-     (type-qualifier declaration-specifiers-1 ($$ (cons $1 $2)))
-     (function-specifier declaration-specifiers-1 ($$ (cons $1 $2)))
-     (attribute-specifier declaration-specifiers-1 ($$ (cons $1 $2))))
+     ;; storage-class-specifiers
+     (storage-class-specifier
+      ($prec 'shift-on-attr) ($$ (make-tl 'decl-spec-list $1)))
+     (storage-class-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
+     ;; type-specifiers
+     (type-specifier
+      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
+     (type-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
+     ;; type-qualifiers
+     (type-qualifier
+      ($prec 'shift-on-attr) ($$ (make-tl 'decl-spec-list $1)))
+     (type-qualifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
+     ;; function-specifiers
+     (function-specifier
+      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
+     (function-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
+     ;; attribute-specifiers
+     (attribute-specifier
+      ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
+     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
 
     (storage-class-specifier		; S 6.7.1
      ("auto" ($$ '(stor-spec (auto))))
@@ -242,17 +249,17 @@
      ("static" ($$ '(stor-spec (static))))
      ("typedef" ($$ '(stor-spec (typedef)))))
 
-    ;; I have created fixed-, float- and complex- type specifiers
-    ;; to capture combinations like "short int" "long long" etc.
+    ;; I have created fixed-, float- and complex- type specifiers to capture
+    ;; combinations like "short int" "long long" etc.
     (type-specifier			; S 6.7.2
      ("void" ($$ '(type-spec (void))))
      (fixed-type-specifier ($$ `(type-spec ,$1)))
      (float-type-specifier ($$ `(type-spec ,$1)))
      (fixpt-type-specifier ($$ `(type-spec ,$1)))
+     ("_Sat" fixpt-type-specifier ($$ `(type-spec ,(string-append "_Sat " $2))))
      ("_Bool" ($$/ref 's5.1.5-01 '(type-spec (fixed-type "_Bool"))))
      (complex-type-specifier ($$ `(type-spec ,$1)))
-     ;;(struct-or-union-specifier ($$ `(type-spec ,$1)))
-     (($$ (allow-typename)) struct-or-union-specifier ($$ `(type-spec ,$2)))
+     (struct-or-union-specifier ($$ `(type-spec ,$1)))
      (enum-specifier ($$ `(type-spec ,$1)))
      (typedef-name ($$ `(type-spec ,$1)))
      ("typeof" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
@@ -268,8 +275,8 @@
      ("signed" "short" ($prec 'imp) ($$ '(fixed-type "short")))
      ("signed" "short" "int" ($$ '(fixed-type "short")))
      ("int" ($$ '(fixed-type "int")))
-     ("signed" ($prec 'imp) ($$ '(fixed-type "int")))
-     ("signed" "int" ($$ '(fixed-type "int")))
+     ("signed" ($prec 'imp) ($$ '(fixed-type "signed")))
+     ("signed" "int" ($$ '(fixed-type "signed")))
      ("long" ($prec 'imp) ($$ '(fixed-type "long")))
      ("long" "int" ($$ '(fixed-type "long")))
      ("signed" "long" ($prec 'imp) ($$ '(fixed-type "long")))
@@ -278,14 +285,15 @@
      ("long" "long" "int" ($$ '(fixed-type "long long")))
      ("signed" "long" "long" ($prec 'imp) ($$ '(fixed-type "long long")))
      ("signed" "long" "long" "int" ($$ '(fixed-type "long long")))
-     ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short")))
      ("unsigned" "short" ($prec 'imp) ($$ '(fixed-type "unsigned short")))
-     ("unsigned" "int" ($$ '(fixed-type "unsigned")))
+     ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short")))
      ("unsigned" ($prec 'imp) ($$ '(fixed-type "unsigned")))
-     ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "int" ($$ '(fixed-type "unsigned")))
      ("unsigned" "long" ($prec 'imp) ($$ '(fixed-type "unsigned long")))
-     ("unsigned" "long" "long" "int" ($$ '(fixed-type "unsigned long long")))
+     ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
      ("unsigned" "long" "long" ($prec 'imp)
+      ($$ '(fixed-type "unsigned long long")))
+     ("unsigned" "long" "long" "int"
       ($$ '(fixed-type "unsigned long long")))
      ("char" ($$ '(fixed-type "char")))
      ("signed" "char" ($$ '(fixed-type "signed char")))
@@ -293,10 +301,13 @@
      ("__int128" ($$ '(fixed-type "__int128")))
      ("unsigned" "__int128" ($$ '(fixed-type "unsigned __int128")))
      ;; fixes 250627
-     ("short" "signed" "int" ($$ '(fixed-type "short")))
      ("short" "signed" ($prec 'imp) ($$ '(fixed-type "short")))
+     ("short" "signed" "int" ($$ '(fixed-type "short")))
+     ("long" "signed" ($prec 'imp) ($$ '(fixed-type "long")))
      ("long" "signed" "int" ($$ '(fixed-type "long")))
+     ("long" "long" "signed" ($prec 'imp) ($$ '(fixed-type "long long")))
      ("long" "long" "signed" "int" ($$ '(fixed-type "long long")))
+     ("short" "unsigned" ($prec 'imp) ($$ '(fixed-type "unsigned short")))
      ("short" "unsigned" "int" ($$ '(fixed-type "unsigned short")))
      ("long" "unsigned" "int" ($$ '(fixed-type "unsigned long")))
      ("long" "long" "unsigned" "int" ($$ '(fixed-type "unsigned long long"))))
@@ -319,77 +330,39 @@
     (fixpt-type-specifier
      ;; http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2001/n1290.pdf
      ("short" "_Fract" ($$ '(fixpt-type "short _Fract")))
+     ("signed" "short" "_Fract" ($$ '(fixpt-type "short _Fract")))
      ("_Fract" ($$ '(fixpt-type "_Fract")))
+     ("signed" "_Fract" ($$ '(fixpt-type "_Fract")))
      ("long" "_Fract" ($$ '(fixpt-type "long _Fract")))
-     ("signed" "short" "_Fract" ($$ '(fixpt-type "signed short _Fract")))
-     ("signed" "_Fract" ($$ '(fixpt-type "signed _Fract")))
-     ("signed" "long" "_Fract" ($$ '(fixpt-type "signed long _Fract")))
+     ("signed" "long" "_Fract" ($$ '(fixpt-type "long _Fract")))
      ("unsigned" "short" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
      ("unsigned" "_Fract" ($$ '(fixpt-type "unsigned _Fract")))
      ("unsigned" "long" "_Fract" ($$ '(fixpt-type "unsigned long _Fract")))
      ("short" "_Accum" ($$ '(fixpt-type "short _Accum")))
+     ("signed" "short" "_Accum" ($$ '(fixpt-type "short _Accum")))
      ("_Accum" ($$ '(fixpt-type "_Accum")))
+     ("signed" "_Accum" ($$ '(fixpt-type "_Accum")))
      ("long" "_Accum" ($$ '(fixpt-type "long _Accum")))
-     ("signed" "short" "_Accum" ($$ '(fixpt-type "signd short _Accum")))
-     ("signed" "_Accum" ($$ '(fixpt-type "signed _Accum")))
-     ("signed" "long" "_Accum" ($$ '(fixpt-type "signed long _Accum")))
+     ("signed" "long" "_Accum" ($$ '(fixpt-type "long _Accum")))
      ("unsigned" "short" "_Accum" ($$ '(fixpt-type "unsigned short _Accum")))
      ("unsigned" "_Accum" ($$ '(fixpt-type "unsigned _Accum")))
-     ("unsigned" "long" "_Accum" ($$ '(fixpt-type "unsigned long _Accum")))
-     ("_Sat" "short" "_Fract" ($$ '(fixpt-type "_Sat short _Fract")))
-     ("_Sat" "_Fract" ($$ '(fixpt-type "_Sat _Fract")))
-     ("_Sat" "long" "_Fract" ($$ '(fixpt-type "_Sat long _Fract")))
-     ("_Sat" "signed" "short" "_Fract"
-      ($$ '(fixpt-type "_Sat signd short _Fract")))
-     ("_Sat" "signed" "_Fract" ($$ '(fixpt-type "_Sat signed _Fract")))
-     ("_Sat" "signed" "long" "_Fract"
-      ($$ '(fixpt-type "_Sat signed long _Fract")))
-     ("_Sat" "unsigned" "short" "_Fract"
-      ($$ '(fixpt-type "_Sat unsigned short _Fract")))
-     ("_Sat" "unsigned" "_Fract" ($$ '(fixpt-type "_Sat unsigned _Fract")))
-     ("_Sat" "unsigned" "long" "_Fract"
-      ($$ '(fixpt-type "_Sat unsigned long _Fract")))
-     ("_Sat" "short" "_Accum" ($$ '(fixpt-type "_Sat short _Accum")))
-     ("_Sat" "_Accum" ($$ '(fixpt-type "_Sat _Accum")))
-     ("_Sat" "long" "_Accum" ($$ '(fixpt-type "_Sat long _Accum")))
-     ("_Sat" "signed" "short" "_Accum"
-      ($$ '(fixpt-type "_Sat signd short _Accum")))
-     ("_Sat" "signed" "_Accum" ($$ '(fixpt-type "_Sat signed _Accum")))
-     ("_Sat" "signed" "long" "_Accum"
-      ($$ '(fixpt-type "_Sat signed long _Accum")))
-     ("_Sat" "unsigned" "short" "_Accum"
-      ($$ '(fixpt-type "_Sat unsigned short _Accum")))
-     ("_Sat" "unsigned" "_Accum" ($$ '(fixpt-type "_Sat unsigned _Accum")))
-     ("_Sat" "unsigned" "long" "_Accum"
-      ($$ '(fixpt-type "_Sat unsigned long _Accum")))
-     ;; fixes 250627
-     ("short" "signed" "_Fract" ($$ '(fixpt-type "short _Fract")))
-     ("short" "signed" "_Accum" ($$ '(fixpt-type "short _Accum")))
-     ("long" "signed" "_Fract" ($$ '(fixpt-type "long _Fract")))
-     ("short" "unsigned" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
-     ("long" "unsigned" "_Fract" ($$ '(fixpt-type "unsigned long _Fract")))
-     ("long" "signed" "_Accum" ($$ '(fixpt-type "long _Accum")))
-     ("short" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned short _Accum")))
-     ("long" "unsigned" "_Accum" ($$ '(fixpt-type "unsigned long _Accum"))))
+     ("unsigned" "long" "_Accum" ($$ '(fixpt-type "unsigned long _Accum"))))
 
-    ;; More kludging to handle typenames as declarators.
+    ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier
-     ("struct" opt-attr-specs ident-like aggr-body
-      ($$ (sx-list 'struct-def $2 $3 $4)))
-     ("struct" opt-attr-specs aggr-body
-      ($$ (sx-list 'struct-def $2 $3)))
+     ("struct" opt-attr-specs ident-like "{" struct-declaration-list "}"
+      ($$ (sx-list 'struct-def $2 $3 (tl->list $5))))
+     ("struct" opt-attr-specs "{" struct-declaration-list "}"
+      ($$ (sx-list 'struct-def $2 (tl->list $4))))
      ("struct" opt-attr-specs ident-like
       ($$ (sx-list 'struct-ref $2 $3)))
-     ("union" opt-attr-specs ident-like aggr-body
-      ($$ (sx-list 'union-def $2 $3 $4)))
-     ("union" opt-attr-specs aggr-body
-      ($$ (sx-list 'union-def $2 $3)))
+     ("union" opt-attr-specs ident-like "{" struct-declaration-list "}"
+      ($$ (sx-list 'union-def $2 $3 (tl->list $5))))
+     ("union" opt-attr-specs "{" struct-declaration-list "}"
+      ($$ (sx-list 'union-def $2 (tl->list $4))))
      ("union" opt-attr-specs ident-like
       ($$ (sx-list 'union-ref $2 $3))))
-    (aggr-body
-     (($$ (allow-typename)) "{" struct-declaration-list "}"
-      ($$ (tl->list $3))))
-      
+
     ;; because name following struct/union can be identifier or typeref:
     (ident-like
      (identifier)
@@ -416,33 +389,26 @@
      (struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
     (struct-declaration-no-comment
      (specifier-qualifier-list
-      ($$ (inhibit-typename))
-      struct-declarator-list
-      ($$ (allow-typename) `(comp-decl ,$1 ,(tl->list $3))))
-     (specifier-qualifier-list          ; <= anonymous
-      ($$ (allow-typename) `(comp-decl ,$1))))
+      struct-declarator-list ($$ `(comp-decl ,$1 ,(tl->list $2))))
+     (specifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
 
-    ;; new
     (specifier-qualifier-list		; S 6.7.2.1
-     (specifier-qualifier-list-1
-      ($$ (inhibit-typename))
-      type-specifier
-      specifier-qualifier-list-1
-      ($$ (process-specs (cons 'decl-spec-list (append $1 (list $3) $4))))))
+     (specifier-qualifier-list-1 ($$ (process-specs (tl->list $1)))))
     (specifier-qualifier-list-1
-     ($empty)
-     (type-qualifier specifier-qualifier-list-1 ($$ (cons $1 $2)))
-     (attribute-specifier specifier-qualifier-list-1 ($$ (cons $1 $2))))
+     (type-specifier ($$ (make-tl 'decl-spec-list $1)))
+     (type-specifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1)))
+     (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
+     (type-qualifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1)))
+     (attribute-specifier ($$ (make-tl 'decl-spec-list $1)))
+     (attribute-specifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1))))
 
     (specifier-qualifier-list/no-attr
-     (specifier-qualifier-list/no-attr-1
-      ($$ (inhibit-typename))
-      type-specifier
-      specifier-qualifier-list/no-attr-1
-      ($$ (cons 'decl-spec-list (append $1 (list $3) $4)))))
+     (specifier-qualifier-list/no-attr-1 ($$ (tl->list $1))))
     (specifier-qualifier-list/no-attr-1
-     ($empty)
-     (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (cons $1 $2))))
+     (type-specifier ($$ (make-tl 'decl-spec-list $1)))
+     (type-specifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1)))
+     (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
+     (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1))))
 
     (struct-declarator-list		; S 6.7.2.1
      (struct-declarator ($$ (make-tl 'comp-declr-list $1)))
@@ -500,7 +466,7 @@
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Function-Attributes.html
 
     (attribute-specifiers
-     (attribute-specifier ($prec 'reduce-on-attr) ($$ $1))
+     (attribute-specifier ($prec 'reduce-on-attr))
      (attribute-specifiers attribute-specifier ($$ (append $1 (cdr $2)))))
 
     ;; (attributes (attribute "__static__") (attribute aligned(8)" ...)
@@ -579,9 +545,8 @@
 
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
-     ;;(ident-like ($$ $1)) ;; generates many SR RR conflicts
      ;;("(" declarator ")" ($$ `(scope ,$2)))
-     ("(" declarator ")" ($$ $2))
+     ("(" declarator ")" ($$ $2)) ;; was `(scope ,$2)
      ("(" attribute-specifier declarator ")" ($$ $3))
      ;;
      (direct-declarator
@@ -608,14 +573,12 @@
      (direct-declarator
       "[" "*" "]"			; variable length array
       ($$ `(ary-declr ,$1 (var-len))))
-     (direct-declarator ($$ (allow-typename))
-      "(" parameter-type-list ")" ($$ `(ftn-declr ,$1 ,$4)))
-     #|
-     (direct-declarator                 ; ??? is this K&R remnant?
+     (direct-declarator
+      "(" parameter-type-list ")" ($$ `(ftn-declr ,$1 ,$3)))
+     (direct-declarator
       "(" identifier-list ")" ($$ `(ftn-declr ,$1 ,$3)))
-     |#
-     ;;(direct-declarator "(" ")" ($$ `(ftn-declr ,$1 (param-list))))
-     )
+     (direct-declarator
+      "(" ")" ($$ `(ftn-declr ,$1 (param-list)))))
 
     (type-qualifier-list
      (type-qualifier-list-1 ($$ (tl->list $1))))
@@ -624,7 +587,6 @@
      (type-qualifier-list-1 type-qualifier ($$ (tl-append $1 $2))))
 
     (parameter-type-list
-     ($empty ($prec 'param-list) ($$ '(param-list)))
      (parameter-list ($$ (tl->list $1)))
      (parameter-list "," "..." ($$ (tl->list (tl-append $1 '(ellipsis))))))
 
@@ -634,33 +596,27 @@
 
     (parameter-declaration
      (declaration-specifiers
-      declarator
-      ($$ (allow-typename) `(param-decl ,$1 (param-declr ,$2))))
+      declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      abstract-declarator
-      ($$ (allow-typename) `(param-decl ,$1 (param-declr ,$2))))
+      abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      ($$  (allow-typename) `(param-decl ,$1)))
+      ;;($$ `(param-decl ,$1 (param-declr))))
+      ($$ `(param-decl ,$1)))
      ;; adding attribute specifiers:
      (declaration-specifiers
-      declarator
-      attribute-specifiers
-      ($$ (allow-typename) `(param-decl ,$1 (param-declr ,$2)))))
+      declarator attribute-specifiers ($$ `(param-decl ,$1 (param-declr ,$2)))))
 
-    #|
     (identifier-list
      (identifier-list-1 ($$ (tl->list $1))))
     (identifier-list-1
      (identifier ($$ (make-tl 'ident-list $1)))
      (identifier-list-1 "," identifier ($$ (tl-append $1 $3))))
-    |#
 
     (type-name				; S 6.7.6
      (specifier-qualifier-list/no-attr abstract-declarator
 				       ($$ `(type-name ,$1 ,$2)))
      (specifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
-     ;;(declaration-specifiers ($$ `(type-name ,$1))) ;
-     ;;^ this is more general: maybe removed because former not accepted?
+     ;;(declaration-specifiers ($$ `(type-name ,$1))) ; why did I have this?
      )
 
     (abstract-declarator		; S 6.7.6
@@ -716,7 +672,6 @@
      )
 
     ;; typedef-name is generated by the lexical analyzer
-    ;;(typedef-name ('typename ($$ (inhibit-typename) `(typename ,$1))))
     (typedef-name ('typename ($$ `(typename ,$1))))
 
     ;; --------------------------------
@@ -893,11 +848,19 @@
 
     (function-definition
      (declaration-specifiers
-      declarator
-      ;;compound-statement
-      "{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}"
-      ($$ `(fctn-defn ,$1 ,$2 (compd-stmt ,(tl->list $5))))))
-    ;; ^ K&R forms removed to acccomodate attributes
+      declarator compound-statement
+      ($$ `(fctn-defn ,$1 ,$2 ,$3)))
+     ;; K&R function definitions are not compatible with attribute-specifiers.
+     ;;(declaration-specifiers
+     ;; declarator declaration-list compound-statement
+     ;; ($$ `(knr-fctn-defn ,$1 ,$2 ,$3 ,$4)))
+     )
+
+    ;; K&R function-definition parameter list
+    ;;(declaration-list (declaration-list-1 ($$ (tl->list $1))))
+    ;;(declaration-list-1
+    ;; (declaration ($$ (make-tl 'decl-list $1)))
+    ;; (declaration-list-1 declaration ($$ (tl-append $1 $2))))
 
     ;; non-terminal leaves
     (identifier ($ident ($$ `(ident ,$1))))
@@ -933,7 +896,7 @@
    (hashify-machine
     (make-lalr-machine c99-spec))
    #:keep 2
-   #:keepers '($code-comm $lone-comm $pragma cpp-stmt)))
+   #:keepers '($code-comm $lone-comm $pragma cpp-stmt typename $ident)))
 
 (define c99x-spec (restart-spec c99-spec 'expression))
 
@@ -943,7 +906,7 @@
     (make-lalr-machine c99x-spec))
    #:keep 2
    ;; Sync w/ #:skip-if-unexp arg to make-lalr-parser in parser.scm.
-   #:keepers '($code-comm $lone-comm $pragma cpp-stmt)))
+   #:keepers '($code-comm $lone-comm $pragma cpp-stmt typename $ident)))
 
 ;;; =====================================
 

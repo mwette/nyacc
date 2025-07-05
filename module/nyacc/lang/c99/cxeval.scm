@@ -34,7 +34,7 @@
             cx-incr-bit-size
             cx-maxi-size)
   #:use-module (nyacc lalr)
-  #:use-module (nyacc parse)
+  #:use-module (nyacc parse)            ; may need to convert to c99/parse
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))

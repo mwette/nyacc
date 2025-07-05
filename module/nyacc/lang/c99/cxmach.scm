@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/cxmach.scm - constant expression grammar
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -20,7 +20,7 @@
 (define-module (nyacc lang c99 cxmach)
   #:export (c99cx-spec c99cx-mach gen-c99cx-files)
   #:use-module (nyacc lalr)
-  #:use-module (nyacc parse)
+  ;;#:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module (nyacc lang util)
@@ -29,7 +29,7 @@
 
 (define c99cx-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2018 Matthew R. Wette" license-lgpl3+))
+   (notice (string-append "Copyright (C) 2025 Matthew Wette" license-lgpl3+))
    (expect 0)
    (start constant-expression)
    (grammar
@@ -127,7 +127,8 @@
 (define c99cx-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine c99cx-spec))))
+    (make-lalr-machine c99cx-spec))
+   #:keepers '(typename $ident)))
 
 ;;; =====================================
 
