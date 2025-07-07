@@ -177,7 +177,8 @@
 ;; Run pkg-config
 (define (pkg-config name . args)
   (if name
-      (let* ((cmdstr (string-append "pkg-config" " "
+      (let* ((pkg-config (or (getenv "PKG_CONFIG") "pkg-config"))
+             (cmdstr (string-append pkg-config " "
 				    (string-join args) " " name))
 	     (port (open-input-pipe cmdstr))
 	     (ostr (read-line port))
@@ -700,6 +701,8 @@
     (match (md-tail mdecl)
       (`((enum-def . ,_1)) (list (sfsym "wrap-~a" name) mname))
       (`((enum-ref . ,_1)) (list (sfsym "wrap-~a" name) mname))
+      ;;(`((fixed-type . ,_1)) ,mname)
+      ;;(`((float-type . ,_1)) ,mname)
       (__ `(make-cdata ,(string->symbol name) ,mname)))))
 
 (define (wrap-mdecl mdecl)
@@ -764,7 +767,7 @@
   (wrap-mdecl
    (udecl->mdecl
     (udecl-rem-type-qual
-     (expand-typerefs udecl (*udict*) (*defined*))))))
+     (expand-typerefs udecl (*udict*) keepers)))))
 
 
 ;; === function types =========================================================
