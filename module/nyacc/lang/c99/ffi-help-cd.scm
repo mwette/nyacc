@@ -699,10 +699,10 @@
                          '((enum . "*any*")))) ;; hack provided
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
+      (`((fixed-type . ,_1)) #f)
+      (`((float-type . ,_1)) #f)
       (`((enum-def . ,_1)) (list (sfsym "wrap-~a" name) mname))
       (`((enum-ref . ,_1)) (list (sfsym "wrap-~a" name) mname))
-      (`((fixed-type . ,_1)) ,mname)
-      (`((float-type . ,_1)) ,mname)
       (__ `(make-cdata ,(string->symbol name) ,mname)))))
 
 (define (wrap-mdecl mdecl)
