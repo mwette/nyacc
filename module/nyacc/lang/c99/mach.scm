@@ -322,7 +322,6 @@
      ("_float128" ($$ '(float-type "_Float128"))))
 
     (complex-type-specifier
-     ("_Complex" ($$ '(complex-type "float _Complex")))
      ("float" "_Complex" ($$ '(complex-type "float _Complex")))
      ("double" "_Complex" ($$ '(complex-type "double _Complex")))
      ("long" "double" "_Complex" ($$ '(complex-type "long double _Complex"))))
