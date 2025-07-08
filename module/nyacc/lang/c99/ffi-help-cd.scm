@@ -431,12 +431,12 @@
       (`((pointer-to) (struct-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
          (cond
-          ((dmem? (w/struct name) defined) `(cpointer aggr-name))
+          ((dmem? (w/struct name) defined) `(cpointer ,aggr-name))
 	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
       (`((pointer-to) (union-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "union-~a" name)))
          (cond
-          ((dmem? (w/struct name) defined) `(cpointer aggr-name))
+          ((dmem? (w/struct name) defined) `(cpointer ,aggr-name))
 	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
       (`((pointer-to) . ,rest)
        `(cpointer ,(mtail->ctype rest)))
