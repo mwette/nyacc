@@ -26,8 +26,7 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 ffi-help-cd)
-  #:export (*ffi-help-version*
-	    define-ffi-module
+  #:export (define-ffi-module
 	    compile-ffi-file
 	    load-include-file
 	    ccode->sexp
@@ -449,12 +448,12 @@
       (`((pointer-to) (struct-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
          (cond
-          ((dmem? (w/struct name) defined) `(cpointer aggr-name))
+          ((dmem? (w/struct name) defined) `(cpointer ,aggr-name))
 	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
       (`((pointer-to) (union-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "union-~a" name)))
          (cond
-          ((dmem? (w/struct name) defined) `(cpointer aggr-name))
+          ((dmem? (w/struct name) defined) `(cpointer ,aggr-name))
 	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
       (`((pointer-to) . ,rest)
        `(cpointer ,(mtail->ctype rest)))
@@ -531,7 +530,8 @@
          (dirs (resolve-attr-val (assq-ref attrs 'lib-dirs)))
          (dirs (if pkg-config (append (pkg-config-dirs pkg-config) dirs) dirs)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
-	   (m-path->f-path path))
+           (m-path->f-path path))
+    (sfscm ";; using nyacc version ~s\n" *nyacc-version*)
     (nlscm)
     (sfscm "(define-module ~S\n" path)
     (for-each ;; ffi-modules

@@ -19,7 +19,7 @@
 
 (define-module (nyacc lang c99 ffi-help)
   #:use-module (nyacc lang c99 ffi-help-cd)
-  #:re-export (*ffi-help-version*
+  #:re-export (*nyacc-version*
                define-ffi-module
                compile-ffi-file
                load-include-file
