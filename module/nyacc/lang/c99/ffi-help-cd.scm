@@ -531,7 +531,7 @@
          (dirs (if pkg-config (append (pkg-config-dirs pkg-config) dirs) dirs)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
            (m-path->f-path path))
-    (sfscm ";; using nyacc version ~s\n" *nyacc-version*)
+    (sfscm ";; using nyacc version ~a\n" *nyacc-version*)
     (nlscm)
     (sfscm "(define-module ~S\n" path)
     (for-each ;; ffi-modules

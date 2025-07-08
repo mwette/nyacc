@@ -12,10 +12,14 @@ without any warranty.
 	    typedef int foo; int bar() { typedef short foo; ... }
 	  This amounted to updating a custom make-lalr-parser procedure
 	  which converts unexpected typename tokens to $ident.
-	* C parser now outputs canonical fixed (aka integer) types.
+	* The C parser handles more integer type combinations correctly.
+	* The C parser now outputs canonical fixed (aka integer) types.
 	  on parsing "short int" it used to output "short int" but now "short".
 	* Updated nyacc/foreign/arch-info.scm to handle complex types.  This
 	  includes new mtypes z32le, z64le, z32be and z64be.
+	* Added support of PKG_CONFIG env var to provide path to pkg-config.
+	* ffi functions returing in or float will not be converted to cdata;
+	  This "feature" had been introduced in one of the earlier 2.0 series.
 
 2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo

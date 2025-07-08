@@ -9,7 +9,10 @@
 
 (define-ffi-module (ffi freetype2)
   #:pkg-config "freetype2"
-  #:include '("freetype/freetype.h")
+  #:include '("freetype/freetype.h"
+              "freetype/ftglyph.h"
+              "freetype/ftoutln.h"
+              )
   #:inc-filter (lambda (file-spec path-spec)
                  (string-contains path-spec "freetype/" 0))
   )
