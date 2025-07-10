@@ -482,7 +482,9 @@
     ;; cfl: C field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl)
-        (let* ((ral (reverse ral)) (lkup (lambda (sym) (assq-ref ral sym))))
+        (let* ((ral (reverse ral))
+               (lkup (case-lambda ((sym) (assq-ref ral sym))
+                                  (() (map car ral)))))
           (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
                        (%make-cstruct (reverse cfl) lkup) #f))
         (match (car sfl)
