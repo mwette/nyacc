@@ -5,8 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-XX-XX  V2.02.2
+2025-07-10  V2.02.2
 	* ffi-help-cd.scm(wrap-mdecl): add comma for aggr-name in qquote
+	* cdata.scm(cstruct): select procedure w/no args returns keys
 
 2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
