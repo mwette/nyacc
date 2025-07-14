@@ -125,6 +125,7 @@
     "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
+    "__int128" "unsigned __128"
     ;; deprecated
     "short int" "signed short" "signed short int" "unsigned short int"
     "signed" "signed int" "unsigned int"
@@ -148,6 +149,7 @@
     wchar_t char16_t char32_t
     long-double _Float16 _Float128
     float-_Complex double-_Complex long-double-_Complex
+    __int128 unsigned-__128
     ;; deprecated:
     short-int signed-short
     signed-short-int unsigned-short-int
@@ -258,8 +260,37 @@
   (bytevector-ieee-double-set! bv ix (real-part value) en)
   (bytevector-ieee-double-set! bv (+ ix 8) (imag-part value) en))
 
-;;(define-syntax be (identifier-syntax (endianness big)))
-;;(define-syntax le (identifier-syntax (endianness little)))
+(define (bv-s128-ref bv ix en)
+  (cond
+   ((eq? en (endianness little))
+    #f)
+   ((eq? en (endianness big))
+    #f)
+   (else (error "bad endianness"))))
+
+(define (bv-s128-set! bv ix value en)
+  (cond
+   ((eq? en (endianness little))
+    #f)
+   ((eq? en (endianness big))
+    #f)
+   (else (error "bad endianness"))))
+
+(define (bv-u128-ref bv ix en)
+  (cond
+   ((eq? en (endianness little))
+    #f)
+   ((eq? en (endianness big))
+    #f)
+   (else (error "bad endianness"))))
+
+(define (bv-u128-set! bv ix value en)
+  (cond
+   ((eq? en (endianness little))
+    #f)
+   ((eq? en (endianness big))
+    #f)
+   (else (error "bad endianness"))))
 
 ;; => arch-info
 (define (mtype-bv-ref mtype bv ix)
@@ -284,6 +315,12 @@
       ((s64be) (bytevector-s64-ref bv ix be))
       ((f32be) (bytevector-ieee-single-ref bv ix be))
       ((f64be) (bytevector-ieee-double-ref bv ix be))
+      ((s128le) (bv-s128-ref bv ix le))
+      ((u128le) (bv-u128-ref bv ix le))
+      ((s128be) (bv-s128-ref bv ix be))
+      ((u128be) (bv-u128-ref bv ix be))
+      ((z32le) (bv-z32-ref bv ix le))
+      ((z64le) (bv-z64-ref bv ix le))
       ((z32be) (bv-z32-ref bv ix be))
       ((z64be) (bv-z64-ref bv ix be)))))
 
@@ -310,6 +347,12 @@
       ((s64be) (bytevector-s64-set! bv ix value be))
       ((f32be) (bytevector-ieee-single-set! bv ix value be))
       ((f64be) (bytevector-ieee-double-set! bv ix value be))
+      ((s128le) (bv-s128-set! bv ix value le))
+      ((u128le) (bv-u128-set! bv ix value le))
+      ((s128be) (bv-s128-set! bv ix value be))
+      ((u128be) (bv-u128-set! bv ix value be))
+      ((z32le) (bv-z32-set! bv ix value le))
+      ((z64le) (bv-z64-set! bv ix value le))
       ((z32be) (bv-z32-set! bv ix value be))
       ((z64be) (bv-z64-set! bv ix value be)))))
 
@@ -332,6 +375,7 @@
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
     (float-_Complex . z32le) (double-_Complex . z64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
@@ -363,6 +407,7 @@
     (wchar_t . #f) (char16_t . #f) (char32_t . #f)
     (long-double . f32le) (_Float16 . f16le) (_Float128 . f64le)
     (float-_Complex . z32le) (double-_Complex . z32le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u8)
@@ -397,6 +442,7 @@
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
     (float-_Complex . z32le) (double-_Complex . z64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
@@ -430,6 +476,7 @@
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
     (float-_Complex . z32be) (double-_Complex . z64be)
+    (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
@@ -464,6 +511,7 @@
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
     (float-_Complex . z32be) (double-_Complex . z64be)
+    (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecatedz:
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
@@ -498,6 +546,7 @@
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
     (float-_Complex . z32le) (double-_Complex . z64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
@@ -531,6 +580,7 @@
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
     (float-_Complex . z32le) (double-_Complex . z64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
@@ -563,6 +613,7 @@
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
     (float-_Complex . z32be) (double-_Complex . z64be)
+    (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
@@ -595,6 +646,7 @@
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
     (float-_Complex . z32be) (double-_Complex . z64be)
+    (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
@@ -627,12 +679,13 @@
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128) (_Float16 . f16le) (_Float128 . f128le)
     (float-_Complex . z32le) (double-_Complex . z64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
     (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
     (long-int . s64le) (signed-long . s64le)
-    (signed-long-int . s64le)z (unsigned-long-int . u64le)
+    (signed-long-int . s64le) (unsigned-long-int . u64le)
     (long-long-int . s64le) (signed-long-long . s64le)
     (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
 
