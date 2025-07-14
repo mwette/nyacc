@@ -431,3 +431,33 @@ int foo(MyHashTable *mht);
     (pperr tree)))
 
 ;; --- last line ---
+#|
+  ((array-of)
+   (struct-def
+     (field-list
+       (comp-decl
+         (@ (comment " in - destination file "))
+         (decl-spec-list
+           (type-spec (fixed-type "signed long long")))
+         (comp-declr-list (comp-declr (ident "dest_fd"))))
+       (comp-decl
+         (decl-spec-list
+           (type-spec (fixed-type "unsigned long long")))
+         (comp-declr-list
+           (comp-declr (ident "dest_offset"))))
+       (comp-decl
+         (decl-spec-list
+           (type-spec (fixed-type "unsigned long long")))
+         (comp-declr-list
+           (comp-declr (ident "bytes_deduped"))))
+       (comment "status ...")
+       (comp-decl
+         (decl-spec-list
+           (type-spec (fixed-type "signed int")))
+         (comp-declr-list (comp-declr (ident "status"))))
+       (comp-decl
+         (@ (comment " must be zero "))
+         (decl-spec-list
+           (type-spec (fixed-type "unsigned int")))
+         (comp-declr-list (comp-declr (ident "reserved"))))))
+|#
