@@ -599,7 +599,6 @@
      (declaration-specifiers
       abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      ;;($$ `(param-decl ,$1 (param-declr))))
       ($$ `(param-decl ,$1)))
      ;; adding attribute specifiers:
      (declaration-specifiers
