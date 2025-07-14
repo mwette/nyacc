@@ -171,6 +171,8 @@
      (let ((mult (eval-c99-cx dim udict)))
        (call-with-values (lambda () (sizeof-mtail rest udict))
          (lambda (size align) (values (* mult size) align)))))
+    (`((array-of) . ,rest)              ; need to detect this later
+     (sizeof-mtail `((array-of "0") . ,rest) udict))
     (`((struct-def (field-list . ,fields)))
      (do-aggr fields incr-size))
     (`((struct-def (ident ,name) (field-list . ,fields)))
