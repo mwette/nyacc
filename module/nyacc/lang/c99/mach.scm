@@ -100,7 +100,7 @@
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3))))
     (arg-expr-hack
      (declaration-specifiers
-      abstract-declarator ($$ `(param-decl ,1 ,$2)))
+      abstract-declarator ($$ `(param-decl ,$1 ,$2)))
      (declaration-specifiers ($$ `(param-decl ,$1))))
 
     (unary-expression

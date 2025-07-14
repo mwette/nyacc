@@ -61,7 +61,7 @@
    ;; argument-expression-list => argument-expression-list "," arg-expr-hack
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; arg-expr-hack => declaration-specifiers abstract-declarator
-   (lambda ($2 $1 . $rest) `(param-decl ,1 ,$2))
+   (lambda ($2 $1 . $rest) `(param-decl ,$1 ,$2))
    ;; arg-expr-hack => declaration-specifiers
    (lambda ($1 . $rest) `(param-decl ,$1))
    ;; unary-expression => postfix-expression
