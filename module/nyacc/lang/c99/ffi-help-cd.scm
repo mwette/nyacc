@@ -327,7 +327,6 @@
     "long int" "signed long" "signed long int" "unsigned long int"
     "long long int" "signed long long"
     "signed long long int" "unsigned long long int"
-    "float _Complex" "double _Complex"
     ))
 
 (define def-defined (alist->vhash (map (lambda (n) (cons n #t)) def-def-list)))
