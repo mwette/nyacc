@@ -185,10 +185,12 @@ Here is an example:
 </dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value] =&gt; &lt;cdata&gt;</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
+<dt class="deffn" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value]</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
 <dd><p>Generate a <em class="emph">cdata</em> object of type <var class="var">type</var> with optional <var class="var">value</var>.
-As a special case, an integer arg to a zero-sized array type will allocate
-storage for that many items, associating it with an array type of that size.
+If <var class="var">value</var> is not provided, the object is zeroed.
+As a special case, a positive integer arg to a zero-sized array type will
+allocate storage for that many items, associating it with an array type of
+that size.
 </p></dd></dl>
 
 <dl class="first-deffn">

@@ -160,10 +160,12 @@ Here is an example:
 @end example
 @end deffn
 
-@deffn {Procedure} make-cdata type [value] => <cdata>
+@deffn {Procedure} make-cdata type [value]
 Generate a @emph{cdata} object of type @var{type} with optional @var{value}.
-As a special case, an integer arg to a zero-sized array type will allocate
-storage for that many items, associating it with an array type of that size.
+If @var{value} is not provided, the object is zeroed.
+As a special case, a positive integer arg to a zero-sized array type will
+allocate storage for that many items, associating it with an array type of
+that size.
 @end deffn
 
 @deffn {Procedure} cdata-ref data [tag ...] => value

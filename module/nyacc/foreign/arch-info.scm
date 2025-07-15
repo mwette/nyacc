@@ -273,12 +273,15 @@
    (else (error "bv-s128-ref: bad endianness"))))
 
 (define (bv-s128-set! bv ix value en)
-  (cond
-   ((eq? en le)
-    #f)
-   ((eq? en be)
-    #f)
-   (else (error "bv-s128-set!: bad endianness"))))
+  (let ((hi (ash value -64)) (lo (logand value #xFFFFFFFFFFFFFFFF)))
+    (cond
+     ((eq? en le)
+      (bytevector-s64-set! bv ix lo le)
+      (bytevector-s64-set! bv (+ ix 2) hi le))
+     ((eq? en be)
+      (bytevector-s64-set! bv (+ ix 2) lo be)
+      (bytevector-s64-set! bv ix hi be))
+     (else (error "bv-s128-set!: bad endianness")))))
 
 (define (bv-u128-ref bv ix en)
   (cond
@@ -291,12 +294,39 @@
    (else (error "bv-u128-ref: bad endianness"))))
 
 (define (bv-u128-set! bv ix value en)
+  (let ((hi (ash value -64)) (lo (logand value #xFFFFFFFFFFFFFFFF)))
+    (cond
+     ((eq? en le)
+      (bytevector-u64-set! bv ix lo le)
+      (bytevector-u64-set! bv (+ ix 2) hi le))
+     ((eq? en be)
+      (bytevector-u64-set! bv (+ ix 2) lo be)
+      (bytevector-u64-set! bv ix hi be))
+     (else (error "bv-u128-set!: bad endianness")))))
+
+;; test
+(define-public (bv-s32-ref bv ix en)
   (cond
    ((eq? en le)
-    #f)
+    (+ (ash (bytevector-s16-ref bv (+ ix 2) le) 16)
+       (bytevector-u16-ref bv ix le)))
    ((eq? en be)
-    #f)
-   (else (error "bv-u128-set!: bad endianness"))))
+    (+ (ash (bytevector-s16-ref bv ix be) 16)
+       (bytevector-u16-ref bv (+ ix 2) be)))
+   (else (error "bv-s16-ref: bad endianness"))))
+
+(define-public (bv-s32-set! bv ix value en)
+  (let ((hi (ash value -16)) (lo (logand value #xFFFF)))
+    (cond
+     ((eq? en le)
+      (bytevector-s16-set! bv ix lo le)
+      (bytevector-s16-set! bv (+ ix 2) hi le))
+     ((eq? en be)
+      (bytevector-s16-set! bv (+ ix 2) lo be)
+      (bytevector-s16-set! bv ix hi be))
+     (else (error "bv-s32-set!: bad endianness")))))
+#|
+|#
 
 ;; => arch-info
 (define (mtype-bv-ref mtype bv ix)

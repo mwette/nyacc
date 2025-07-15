@@ -129,11 +129,12 @@ want on your first approach.
             (ffi:pointer->procedure ffi:void fptr (list)))
           (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))
 
- -- Procedure: make-cdata type [value] => <cdata>
-     Generate a _cdata_ object of type TYPE with optional VALUE.  As a
-     special case, an integer arg to a zero-sized array type will
-     allocate storage for that many items, associating it with an array
-     type of that size.
+ -- Procedure: make-cdata type [value]
+     Generate a _cdata_ object of type TYPE with optional VALUE.  If
+     VALUE is not provided, the object is zeroed.  As a special case, a
+     positive integer arg to a zero-sized array type will allocate
+     storage for that many items, associating it with an array type of
+     that size.
 
  -- Procedure: cdata-ref data [tag ...] => value
      Return the Scheme (scalar) slot value for selected TAG ... with

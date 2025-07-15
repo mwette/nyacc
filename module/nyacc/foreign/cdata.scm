@@ -815,17 +815,20 @@
 
 ;; @deffn {Procedure} make-cdata type [value]
 ;; Generate a @emph{cdata} object of type @var{type} with optional @var{value}.
-;; As a special case, an integer arg to a zero-sized array type will allocate
-;; storage for that many items, associating it with an array type of that size.
+;; If @var{value} is not provided, the object is zeroed.
+;; As a special case, a positive integer arg to a zero-sized array type will
+;; allocate storage for that many items, associating it with an array type of
+;; that size.
 ;; @end deffn
 (define* (make-cdata type #:optional value)
   "- Procedure: make-cdata type [value]
-     Generate a _cdata_ object of type TYPE with optional VALUE.  As a
-     special case, an integer arg to a zero-sized array type will
-     allocate storage for that many items, associating it with an array
-     type of that size."
+     Generate a _cdata_ object of type TYPE with optional VALUE.  If
+     VALUE is not provided, the object is zeroed.  As a special case, a
+     positive integer arg to a zero-sized array type will allocate
+     storage for that many items, associating it with an array type of
+     that size."
   (define (make-data type value)
-    (let* ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type #f)))
+    (let* ((data (%make-cdata (make-bytevector (ctype-size type) 0) 0 type #f)))
       (if value (cdata-set! data value))
       data))
   (assert-ctype 'make-cdata type)
@@ -834,10 +837,10 @@
      (let* ((ca (ctype-info type)) (ln (carray-length ca)))
        (cond
         ((zero? ln)
-         (unless (integer? value)
+         (unless (and (integer? value) (positive? value))
            (error "make-cdata: zero sized array type"))
          (let* ((et (carray-type ca)) (sz (ctype-size et))
-                (bv (make-bytevector (* value sz))))
+                (bv (make-bytevector (* value sz) 0)))
            (%make-cdata bv 0 (carray et value) #f)))
         (else
          (make-data type value)))))
