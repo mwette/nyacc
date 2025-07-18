@@ -21,6 +21,7 @@ without any warranty.
 	* ffi functions returing in or float will not be converted to cdata;
 	  This "feature" had been introduced in one of the earlier 2.0 series.
 	* Added support for __int128; fixed type: i128 -> s128
+	* c99(cxeval.scm): fix alignof-type expr in eval-c99-cx
 
 2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
