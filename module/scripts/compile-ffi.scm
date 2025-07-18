@@ -90,7 +90,8 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -m, --machine=MACHINE target machine, if non-native (e.g., i686)
   -D, --list-deps       list dependencies and quit
   -X, --no-exec         don't generate .go file(s)
-  -R, --no-recurse      don't do recursive compile on dep's
+  -R, --dont-recurse    don't do recursive compile on dep's
+  -a, --any-suffix      allow any suffix (if not, must be .ffi)
 
 See the FFI-Helper User's Manual for help generating a .ffi file.
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
@@ -142,9 +143,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
    (option '(#\X "no-exec") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'no-exec #t opts) files)))
-   (option '("any-suffix") #f #f
+   (option '(#\a "any-suffix") #f #f
            (lambda (opt name arg opts files)
-             (values (acons 'any-sufffix #t opts) files)))))
+             (values (acons 'any-suffix #t opts) files)))))
 
 ;; from scripts/compile.scm
 (define (parse-args args)
