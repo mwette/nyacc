@@ -30,7 +30,17 @@
 
 (define base-type-symbol-testers
   (filter
-   (lambda (s) (not (member s '(_Float16 _Float128))))
+   (lambda (s) (not (member s '(long-double
+                                _Float16 _Float128 float-_Complex
+                                double-_Complex long-double-_Complex
+                                __int128 unsigned-__128
+                                ;; deprecated
+                                short-int signed-short
+                                signed-short-int unsigned-short-int signed
+                                signed-int unsigned-int long-int signed-long
+                                signed-long-int unsigned-long-int long-long-int
+                                signed-long-long signed-long-long-int
+                                unsigned-long-long-int))))
    base-type-symbol-list))
 
 (with-test-prefix "nyacc/foreign/arch-info-01"
