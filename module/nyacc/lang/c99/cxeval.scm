@@ -609,7 +609,7 @@
              (catch 'c99-error
                (lambda () (eval-sizeof-expr tree udict))
                (lambda (key fmt . args) (apply fail fmt args))))
-            ((alignof)
+            ((alignof-type)
              (catch 'c99-error
                (lambda () (eval-alignof-type tree udict))
                (lambda (key fmt . args) (apply fail fmt args))))
