@@ -73,6 +73,7 @@
   (endianness arch-endianness)          ; 'little or 'big
   (mtype-map arch-mtype-map)            ; c-ish name => f32l3, u8, ...
   (align-map arch-align-map))           ; f32, u8 => alignment
+(export <arch-info>)
 
 (define (make-arch-info name endianness mtype-map align-map)
   (unless (eq? 'void* (caar mtype-map)) (error "expecting void*"))
