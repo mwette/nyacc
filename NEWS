@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-XX-XX  V2.03.0
+2025-XX-XX  V3.00.0
 	* Updated C parser to handle typedefs better.
 	    typedef int foo; int bar(foo foo) { ... }
             typedef int foo; struct { foo foo; } x;
