@@ -5,8 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-XX-XX  V2.02.3
+2025-08-24  V2.02.3
 	* c99(mach.scm): fix arg-expr-hack action; unquote $1 not 1
+	* c99(cxeval.scm): fix alignof-type expr in eval-c99-cx
 
 2025-07-10  V2.02.2
 	* ffi-help-cd.scm(wrap-mdecl): add comma for aggr-name in qquote
