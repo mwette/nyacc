@@ -147,9 +147,6 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
    (option '(#\a "any-suffix") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'any-suffix #t opts) files)))
-   (option '(#\a "any-suffix") #f #f
-           (lambda (opt name arg opts files)
-             (values (acons 'any-suffix #t opts) files)))
    (option '(#\w "no-foreign-library") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'no-foreign-library #t opts) files)))))
