@@ -80,7 +80,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -h, --help            print this help message
   --version             print version number
 
-  -b, --backend=BACKEND back end target: bytestructures or cdata
+  -b, --backend=BACKEND back end target: only cdata for now
   -L, --load-path=DIR   add DIR to the front of the module load path
   -I, --inc-dir=DIR     add DIR to list of dir's to search for C headers
   -o, --output=OFILE    write output to OFILE
@@ -300,7 +300,6 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 (define (compile-ffi ffi-file opts)
   (let* ((scm-file (scm-for-ffi ffi-file opts))
          (mod (case (assq-ref opts 'backend)
-                ((bytestructures bs) '(nyacc lang c99 ffi-help-bs))
                 ((cdata cd) '(nyacc lang c99 ffi-help-cd))
                 (else (fail "bad backend: ~s" (assq-ref opts 'backend)))))
          (compile-ffi-file (module-ref (resolve-module mod) 'compile-ffi-file)))

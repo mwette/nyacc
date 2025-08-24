@@ -92,17 +92,9 @@ NYACC_C99_SRCS =				\
 	nyacc/foreign/cdata.scm			\
 	scripts/compile-ffi.scm
 
-NYACC_FH_BS_BINS =				\
-	nyacc/lang/c99/ffi-help-bs.go		\
-	system/ffi-help-rt.go
+BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 
-NYACC_FH_BS_SRCS = 				\
-	nyacc/lang/c99/ffi-help-bs.scm		\
-	system/ffi-help-rt.scm
-
-BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS) @NYACC_FH_BS_BINS@
-
-SOURCES = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS) $(NYACC_FH_BS_SRCS)
+SOURCES = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 
 %.go: %.scm
 	GUILE_LOAD_PATH=$(SCMDIR):$(GUILE_LOAD_PATH) \
@@ -150,7 +142,6 @@ clean:
 	(cd nyacc/lang; rm -f *.go)
 	(cd nyacc/lang/c99; rm -f *.go)
 	(cd scripts; rm -f *.go)
-	(cd system/foreign; rm -f *.go)
 
 .PHONY: dist-files
 dist-files:

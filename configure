@@ -609,7 +609,6 @@ ac_unique_file="module/nyacc/version.scm"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 installed_guile
-NYACC_FH_BS_BINS
 GUILE_LOAD_COMPILED_PATH
 GUILE_LOAD_PATH
 GUILE_DATA
@@ -1861,20 +1860,6 @@ fi
 
 
 
-
-
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if (bytestructures guile) is available" >&5
-printf %s "checking if (bytestructures guile) is available... " >&6; }
-if $GUILE -c "(use-modules (bytestructures guile)) (exit ((lambda () 0)))" \
-	>/dev/null 2>&1; then
-  res=yes;
-  NYACC_FH_BS_BINS='$(NYACC_FH_BS_BINS)'
-else
-  res=no;
-  NYACC_FH_BS_BINS=''
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $res" >&5
-printf "%s\n" "$res" >&6; }
 
 
 installed_guile=$GUILE

@@ -1,8 +1,0 @@
-(define-ffi-module (ffi-bs bug59374)
-  #:api-code "
-typedef struct {
-  int narg;
-  void *args[];
-} SignatureBlob;
-")
- 

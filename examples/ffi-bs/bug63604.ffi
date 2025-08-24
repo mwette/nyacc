@@ -1,3 +1,0 @@
-(define-ffi-module (bug63604)
-  #:api-code "int foo(const float color[static 4]);")
-

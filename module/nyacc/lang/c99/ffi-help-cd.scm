@@ -278,7 +278,7 @@
        #t))
 
 ;; @deffn {Procedure} cnvt-fields fields expand-tail
-;; Convert field list for a struct or union bytestructure descriptor.
+;; Convert field list for a struct or union type.
 ;; The @var{fields} is the tail of the form @code{(field-list field ...)}
 ;; The procedure @var{expand-tail} will expand the type in the field.
 ;; @end deffn

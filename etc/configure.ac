@@ -63,18 +63,6 @@ AC_SUBST([GUILE_DATA])
 AC_SUBST([GUILE_LOAD_PATH])
 AC_SUBST([GUILE_LOAD_COMPILED_PATH])
 
-AC_MSG_CHECKING([if (bytestructures guile) is available])
-if $GUILE -c "(use-modules (bytestructures guile)) (exit ((lambda () 0)))" \
-	>/dev/null 2>&1; then
-  res=yes;
-  NYACC_FH_BS_BINS='$(NYACC_FH_BS_BINS)'
-else
-  res=no;
-  NYACC_FH_BS_BINS=''
-fi
-AC_MSG_RESULT($res)
-AC_SUBST([NYACC_FH_BS_BINS])
-
 dnl needed by etc/guild:
 AC_SUBST([installed_guile],$GUILE)
 
