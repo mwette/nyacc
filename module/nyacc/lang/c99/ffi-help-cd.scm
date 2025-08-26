@@ -426,9 +426,12 @@
     (match mtail
       (`((pointer-to) (typename ,name))
        (let ((name (rename name 'type)))
-         (if (dmem? (w/* name) defined)
-             (strings->symbol name "*")
-             `(cpointer (delay ,(string->symbol name))))))
+         (cond
+          ((member name def-def-list)
+           `(cpointer (cbase ',(string->symbol name))))
+          ((dmem? (w/* name) defined)
+           (strings->symbol name "*"))
+          (else `(cpointer (delay ,(string->symbol name)))))))
       (`((pointer-to) (void))
        `(cpointer 'void))
       (`((pointer-to) (fixed-type "char"))
