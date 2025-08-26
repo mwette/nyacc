@@ -288,7 +288,8 @@
   (map
    (lambda (dent)
      (let* ((name (rename (car dent) 'field)) (udecl (cdr dent))
-	    (mdecl (udecl->mdecl (udecl-rem-type-qual udecl)))
+            (xdecl (expand-typerefs udecl (*udict*) (*defined*)))
+	    (mdecl (udecl->mdecl (udecl-rem-type-qual xdecl)))
 	    (type (expand-tail (md-tail mdecl))))
        (if (and (pair? type) (eq? 'cbitfield (car type)))
            `(,qq (,(and=> name string->symbol) (,uq ,(cadr type)) ,(caddr type)))
