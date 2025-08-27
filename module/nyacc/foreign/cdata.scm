@@ -33,8 +33,10 @@
 ;; going further
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (cdata* data) -> <cdata>
-;; (cdata&-ref data) -> pointer
+;; (cdata*-sel data tag ...) -> <cdata>
 ;; (cdata*-ref data tag ...) -> value | <cdata>
+;; (cdata&-sel data) -> <cdata>
+;; (cdata&-ref data) -> <pointer>
 ;; (Xcdata-ref bv ix ct) -> value
 ;; (Xcdata-set! bv ix ct value)
 
@@ -93,7 +95,8 @@
 
             Xcdata-ref Xcdata-set!
             
-            cdata-kind cdata& cdata* cdata-sel cdata*-sel cdata*-ref
+            cdata-kind cdata& cdata* cdata-sel 
+            cdata*-sel cdata*-ref cdata&-sel cdata&-ref
             ctype-sel make-cdata-getter make-cdata-setter
             ctype->ffi
             ;;
@@ -1146,6 +1149,19 @@
   "- Procedure: cdata*-ref data [tag ...] => value
      Shortcut for ‘(cdata-ref (cdata* data) tag ...)’"
   (apply cdata-ref data '* tags))
+
+;; @deffn {Procedure} cdata&-sel data [tag ...] => value
+;; Provide a pointer ctype for the address of the selected value.
+;; @end deffn
+(define (cdata&-sel data . tags)
+  "- Procedure: cdata&-sel data [tag ...] => value
+     Provide a pointer ctype for the address of the selected value."
+  (assert-cdata 'cdata&-sel data)
+  (let* ((data (apply cdata-sel data tags))
+         (bptr (bytevector->pointer (cdata-bv data)))
+         (addr (+ (pointer-address bptr) (cdata-ix data)))
+         (type (cpointer (cdata-ct data))))
+    (make-cdata type addr)))
 
 ;; @deffn {Procedure} cdata&-ref data [tag ...] => value
 ;; Provide a (Guile) pointer to the selected value.
