@@ -46,12 +46,16 @@
    (lambda ($2 $1 . $rest) `(post-inc ,$1))
    ;; postfix-expression => postfix-expression "--"
    (lambda ($2 $1 . $rest) `(post-dec ,$1))
-   ;; postfix-expression => "(" type-name ")" "{" initializer-list "}"
+   ;; postfix-expression => "(" type-name ")" "{" literal-list "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(comp-lit ,$2 ,(tl->list $5)))
-   ;; postfix-expression => "(" type-name ")" "{" initializer-list "," "}"
+     `(comp-lit ,$2 ,$5))
+   ;; postfix-expression => "(" attribute-specifier type-name ")" "{" liter...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(comp-lit ,$2 ,(tl->list $5)))
+     `(comp-lit (@ ,(attrl->attrs $2) ,$3 ,$6)))
+   ;; literal-list => initializer-list
+   (lambda ($1 . $rest) $1)
+   ;; literal-list => initializer-list ","
+   (lambda ($2 $1 . $rest) $1)
    ;; argument-expression-list => assignment-expression
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
    ;; argument-expression-list => argument-expression-list "," assignment-e...
@@ -98,9 +102,6 @@
    (lambda ($1 . $rest) $1)
    ;; cast-expression => "(" type-name ")" cast-expression
    (lambda ($4 $3 $2 $1 . $rest) `(cast ,$2 ,$4))
-   ;; cast-expression => "(" attribute-specifier type-name ")" cast-expression
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(cast (@ ,(attrl->attrs $2)) ,$3 ,$5))
    ;; multiplicative-expression => cast-expression
    (lambda ($1 . $rest) $1)
    ;; multiplicative-expression => multiplicative-expression "*" cast-expre...

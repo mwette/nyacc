@@ -88,10 +88,13 @@
      (postfix-expression "->" identifier ($$ `(i-sel ,$3 ,$1)))
      (postfix-expression "++" ($$ `(post-inc ,$1)))
      (postfix-expression "--" ($$ `(post-dec ,$1)))
-     ("(" type-name ")" "{" initializer-list "}"
-      ($$ `(comp-lit ,$2 ,(tl->list $5))))
-     ("(" type-name ")" "{" initializer-list "," "}"
-      ($$ `(comp-lit ,$2 ,(tl->list $5)))))
+     ("(" type-name ")" "{" literal-list "}" ($$ `(comp-lit ,$2 ,$5)))
+     ("(" attribute-specifier type-name ")" "{" literal-list "}"
+      ($$ `(comp-lit (@ ,(attrl->attrs $2) ,$3 ,$6)))))
+
+    (literal-list
+     (initializer-list)
+     (initializer-list ","))
 
     (argument-expression-list
      (assignment-expression ($$ (make-tl 'expr-list $1)))
@@ -122,9 +125,7 @@
 
     (cast-expression			; S 6.5.4
      (unary-expression)
-     ("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4)))
-     ("(" attribute-specifier type-name ")" cast-expression
-      ($$ `(cast (@ ,(attrl->attrs $2)) ,$3 ,$5))))
+     ("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4))))
 
     (multiplicative-expression		; S 6.5.5
      (cast-expression)

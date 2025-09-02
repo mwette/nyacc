@@ -23,7 +23,7 @@ without any warranty.
 	  This "feature" had been introduced in one of the earlier 2.0 series.
 	* Added support for __int128; fixed type: i128 -> s128
 	* c99(cxeval.scm): fix alignof-type expr in eval-c99-cx
-	* c99(mach.scm): added attribute-specifier for cast (for xmmintrin.h)
+	* c99(mach.scm): allow attribute-specifier for compound literal
 
 2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
