@@ -49,9 +49,9 @@
   (call-with-output-string (lambda (port) (pretty-print-c99 exp port))))
 
 
-(define *cpp-defs* (get-gcc-cpp-defs))
-(define *inc-dirs* (get-gcc-inc-dirs))
-(define *inc-help* c99-def-help)
+(define *cpp-defs* (make-parameter (get-gcc-cpp-defs)))
+(define *inc-dirs* (make-parameter (get-gcc-inc-dirs)))
+(define *inc-help* (make-parameter c99-def-help))
 
 (define *mode* (make-parameter 'code))
 (define *debug* (make-parameter #f))
@@ -60,9 +60,9 @@
 (define* (parse-file file #:key cpp-defs inc-dirs mode debug)
   (with-input-from-file file
     (lambda ()
-      (parse-c99 #:cpp-defs (or cpp-defs *cpp-defs*)
-                 #:inc-dirs (or inc-dirs *inc-dirs*)
-                 #:inc-help *inc-help*
+      (parse-c99 #:cpp-defs (or cpp-defs (*cpp-defs*))
+                 #:inc-dirs (or inc-dirs (*inc-dirs*))
+                 #:inc-help (*inc-help*)
                  #:mode (or mode (*mode*))
                  #:debug (or debug (*debug*))
                  #:show-incs #f
@@ -74,9 +74,9 @@
   (with-input-from-string str
     (lambda ()
       (parse-c99 tyns
-                 #:cpp-defs (or cpp-defs *cpp-defs*)
-                 #:inc-dirs (or inc-dirs *inc-dirs*)
-                 #:inc-help *inc-help*
+                 #:cpp-defs (or cpp-defs (*cpp-defs*))
+                 #:inc-dirs (or inc-dirs (*inc-dirs*))
+                 #:inc-help (*inc-help*)
                  #:mode (or mode (*mode*))
                  #:debug (or debug (*debug*))
                  #:show-incs #f
@@ -430,34 +430,16 @@ int foo(MyHashTable *mht);
                                   (get-sys-inc-dirs)))))
     (pperr tree)))
 
+(when #f
+  (let* (
+         (code "
+int foo() {
+  return bar( __extension__ (__attribute__((__vector_size__ (16))) int) 3);
+}")
+         (tree (parse-string
+                code
+                #:debug #f
+                )))
+    (pperr tree)))
+
 ;; --- last line ---
-#|
-  ((array-of)
-   (struct-def
-     (field-list
-       (comp-decl
-         (@ (comment " in - destination file "))
-         (decl-spec-list
-           (type-spec (fixed-type "signed long long")))
-         (comp-declr-list (comp-declr (ident "dest_fd"))))
-       (comp-decl
-         (decl-spec-list
-           (type-spec (fixed-type "unsigned long long")))
-         (comp-declr-list
-           (comp-declr (ident "dest_offset"))))
-       (comp-decl
-         (decl-spec-list
-           (type-spec (fixed-type "unsigned long long")))
-         (comp-declr-list
-           (comp-declr (ident "bytes_deduped"))))
-       (comment "status ...")
-       (comp-decl
-         (decl-spec-list
-           (type-spec (fixed-type "signed int")))
-         (comp-declr-list (comp-declr (ident "status"))))
-       (comp-decl
-         (@ (comment " must be zero "))
-         (decl-spec-list
-           (type-spec (fixed-type "unsigned int")))
-         (comp-declr-list (comp-declr (ident "reserved"))))))
-|#

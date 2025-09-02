@@ -113,7 +113,8 @@
      ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
      ("_Alignof" "(" type-name ")" ($$ `(alignof-type ,$3)))
      ("__builtin_offsetof" "(" type-name "," constant-expression ")"
-      ($$ `(offsetof-type ,$3 ,$5))))
+      ($$ `(offsetof-type ,$3 ,$5)))
+     )
 
     (unary-operator ("&" ($$ 'ref-to)) ("*" ($$ 'de-ref))
 		    ("+" ($$ 'pos)) ("-" ($$ 'neg))
@@ -121,7 +122,9 @@
 
     (cast-expression			; S 6.5.4
      (unary-expression)
-     ("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4))))
+     ("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4)))
+     ("(" attribute-specifier type-name ")" cast-expression
+      ($$ `(cast (@ ,(attrl->attrs $2)) ,$3 ,$5))))
 
     (multiplicative-expression		; S 6.5.5
      (cast-expression)

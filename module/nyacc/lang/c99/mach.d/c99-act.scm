@@ -98,6 +98,9 @@
    (lambda ($1 . $rest) $1)
    ;; cast-expression => "(" type-name ")" cast-expression
    (lambda ($4 $3 $2 $1 . $rest) `(cast ,$2 ,$4))
+   ;; cast-expression => "(" attribute-specifier type-name ")" cast-expression
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(cast (@ ,(attrl->attrs $2)) ,$3 ,$5))
    ;; multiplicative-expression => cast-expression
    (lambda ($1 . $rest) $1)
    ;; multiplicative-expression => multiplicative-expression "*" cast-expre...

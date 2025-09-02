@@ -6,6 +6,7 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2025-XX-XX  V3.00.0
+	* Removed support for bytestructures.
 	* Updated C parser to handle typedefs better.
 	    typedef int foo; int bar(foo foo) { ... }
             typedef int foo; struct { foo foo; } x;
@@ -22,6 +23,7 @@ without any warranty.
 	  This "feature" had been introduced in one of the earlier 2.0 series.
 	* Added support for __int128; fixed type: i128 -> s128
 	* c99(cxeval.scm): fix alignof-type expr in eval-c99-cx
+	* c99(mach.scm): added attribute-specifier for cast (for xmmintrin.h)
 
 2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
