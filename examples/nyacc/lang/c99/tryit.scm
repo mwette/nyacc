@@ -442,4 +442,10 @@ int foo() {
                 )))
     (pperr tree)))
 
+(when #f
+  ;;(pperr (get-sys-inc-dirs #:CC "clang"))
+  ;;(pperr (get-sys-inc-dirs #:CC "clang"))
+  (pperr (get-sys-inc-dirs))
+  )
+
 ;; --- last line ---
