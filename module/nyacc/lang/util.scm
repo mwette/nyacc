@@ -36,13 +36,15 @@
   #:use-module ((srfi srfi-1) #:select (find fold fold-right))
   #:use-module (ice-9 pretty-print))
 (cond-expand
-  (mes)
-  (guile-2)
-  (guile-3)
-  (guile
-   (use-modules (ice-9 optargs))
-   (use-modules (srfi srfi-16)))
-  (else))
+ (mes
+  (define (string-every chr str)
+    (let loop ((k 0))
+      (if (>= k (string-length str))
+          #t
+          (if (char=? (string-ref str k) chr)
+              (loop (+ k 1))
+              #f)))))
+ (else))
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
@@ -447,8 +449,8 @@ See the file COPYING included with the this distribution.")
   (define (doit)
     (let ((sav-file (if (pair? rest) (car rest) #f)))
       (if (and sav-file (access? sav-file W_OK))
-          (system (simple-format #f "mv ~A ~A" dst-file sav-file)))
-      (system (simple-format #f "mv ~A ~A" src-file dst-file))
+          (system* "mv" dst-file sav-file))
+      (system* "mv" src-file dst-file)
       #t))
 
   (cond
@@ -457,12 +459,11 @@ See the file COPYING included with the this distribution.")
 
    ;; dst-file does not exist, update anyhow
    ((not (access? dst-file F_OK))
-    (system (simple-format #f "mv ~A ~A" src-file dst-file)) #t)
+    (system* "mv" src-file dst-file) #t)
 
    ;; both exist, but no changes
-   ((zero? (system
-            (simple-format #f "cmp ~A ~A >/dev/null" src-file dst-file)))
-    (system (simple-format #f "rm ~A" src-file)) #f)
+   ((zero? (system* "cmp" src-file dst-file))
+    (system* "rm" src-file) #f)
 
    ;; both exist, update
    ((access? dst-file W_OK)
