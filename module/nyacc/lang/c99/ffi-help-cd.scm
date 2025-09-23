@@ -904,8 +904,8 @@
 ;; Given @var{udecl} produce scheme FFI wrappers for C types, C functions,
 ;; and C variables. Return updated @var{defined}, a string based vhash of
 ;; types defined. The list is used used in the conversion subroutines.
-;; Returns (values wrapped defined), where defined is a list of defined
-;; types, and wrapped is the same, not used.
+;; Returns (values defined term), where defined is a list of defined
+;; types, and wrapped is the same, not used. FIXME
 ;; @end deffn
 ;; this used to be cnvt-udecl
 (define (udecl->sexp udecl udict defined-lz seed)
@@ -987,22 +987,31 @@
                       `(define ,*type (cfunction ,pc->pr ,pr->pc))
                       (deftype type `(cpointer ,*type)))))))))
 
-          ;;; CHECK
           (`((pointer-to) (struct-ref (ident ,aggr)))
            (values
             (dcons name defined)
             (let ((aggr-name (sfsym "struct-~a" aggr)))
-              (xcons* seed
-                `(define-public ,aggr-name 'void)
-                (deftype type `(cpointer (delay ,aggr-name)))))))
+              (cond
+               ((dmem? (w/struct aggr) defined)
+                (xcons* seed
+                  (deftype type `(cpointer (delay ,aggr-name)))))
+               (else
+                (xcons* seed
+                  `(define-public ,aggr-name 'void)
+                  (deftype type `(cpointer (delay ,aggr-name)))))))))
 
           (`((pointer-to) (union-ref (ident ,aggr)))
            (values
             (dcons name defined)
             (let ((aggr-name (sfsym "union-~a" aggr)))
-              (xcons* seed
-                `(define-public ,aggr-name 'void)
-                (deftype type `(cpointer (delay ,aggr-name)))))))
+              (cond
+               ((dmem? (w/union aggr) defined)
+                (xcons* seed
+                  (deftype type `(cpointer (delay ,aggr-name)))))
+               (else
+                (xcons* seed
+                  `(define-public ,aggr-name 'void)
+                  (deftype type `(cpointer (delay ,aggr-name)))))))))
 
           (`((pointer-to) . ,rest)
            (values
