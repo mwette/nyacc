@@ -1,6 +1,6 @@
 ;;; nyacc/lalr.scm
 
-;; Copyright (C) 2014-2019 Matthew R. Wette
+;; Copyright (C) 2014-2019,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -124,48 +124,50 @@
 ;; @code{process-grammar}.
 ;; @end deffn
 
-(define-syntax parse-rhs
-  (lambda (x)
-    ;; The following is syntax-case because we use a fender.
-    (syntax-case x (quote $$ $$/ref $$-ref $prec $empty $? $* $+)
-      ;; action specifications
-      ((_ ($$ <guts> ...) <e2> ...)
-       (syntax (cons '(action #f #f <guts> ...) (parse-rhs <e2> ...))))
-      ((_ ($$-ref <ref>) <e2> ...)
-       (syntax (cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...))))
-      ((_ ($$/ref <ref> <guts> ...) <e2> ...)
-       (syntax (cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...))))
+(define-macro (parse-rhs-list-helper e1 . rest)
+  (if (symbol? e1)
+      (if (reserved? e1)
+          `(cons '(terminal . ,e1) (parse-rhs ,@rest))
+          `(cons '(non-terminal . ,e1) (parse-rhs ,@rest)))
+      `(cons '(terminal . ,e1) (parse-rhs ,@rest))))
 
-      ;; other internal $-syntax
-      ((_ ($prec <tok>) <e2> ...)
-       (syntax (cons (cons 'prec <tok>) (parse-rhs <e2> ...))))
-      ((_ $empty <e2> ...)      ; TODO: propagate to processor
-       (syntax (parse-rhs <e2> ...)))
-      
-      ;; (experimental) proxies
-      ((_ ($? <s1> <s2> ...) <e2> ...)
-       (syntax (cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
-                     (parse-rhs <e2> ...))))
-      ((_ ($+ <s1> <s2> ...) <e2> ...)
-       (syntax (cons (cons* 'proxy proxy-+ (parse-rhs <s1> <s2> ...))
-                     (parse-rhs <e2> ...))))
-      ((_ ($* <s1> <s2> ...) <e2> ...)
-       (syntax (cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
-                     (parse-rhs <e2> ...))))
-      
-      ;; terminals and non-terminals
-      ((_ (quote <e1>) <e2> ...)
-       (syntax (cons '(terminal . <e1>) (parse-rhs <e2> ...))))
-      ((_ (<f> ...) <e2> ...)
-       (syntax (cons (<f> ...) (parse-rhs <e2> ...))))
-      ((_ <e1> <e2> ...)
-       (identifier? (syntax <e1>)) ; fender to trap non-term's
-       (if (reserved? (syntax <e1>))
-           (syntax (cons '(terminal . <e1>) (parse-rhs <e2> ...)))
-           (syntax (cons '(non-terminal . <e1>) (parse-rhs <e2> ...)))))
-      ((_ <e1> <e2> ...)
-       (syntax (cons '(terminal . <e1>) (parse-rhs <e2> ...))))
-      ((_) (syntax (list))))))
+(define-syntax parse-rhs
+  (syntax-rules (quote $$ $$/ref $$-ref $prec $empty $? $* $+)
+    ;; action specifications
+    ((_ ($$ <guts> ...) <e2> ...)
+     (cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
+    ((_ ($$-ref <ref>) <e2> ...)
+     (cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...)))
+    ((_ ($$/ref <ref> <guts> ...) <e2> ...)
+     (cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...)))
+
+    ;; other internal $-syntax
+    ((_ ($prec <tok>) <e2> ...)
+     (cons (cons 'prec <tok>) (parse-rhs <e2> ...)))
+    ((_ $empty <e2> ...)      ; TODO: propagate to processor
+     (parse-rhs <e2> ...))
+    
+    ;; (experimental) proxies
+    ((_ ($? <s1> <s2> ...) <e2> ...)
+     (cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
+           (parse-rhs <e2> ...)))
+    ((_ ($+ <s1> <s2> ...) <e2> ...)
+     (cons (cons* 'proxy proxy-+ (parse-rhs <s1> <s2> ...))
+           (parse-rhs <e2> ...)))
+    ((_ ($* <s1> <s2> ...) <e2> ...)
+     (cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
+                   (parse-rhs <e2> ...)))
+    
+    ;; terminals and non-terminals
+    ((_ (quote <e1>) <e2> ...)
+     (cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+    ((_ (<f> ...) <e2> ...)
+     (cons (<f> ...) (parse-rhs <e2> ...)))
+    ((_ <e1> <e2> ...)
+     (parse-rhs-list-helper <e1> <e2> ...))
+    ((_ <e1> <e2> ...)
+     (cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+    ((_) (list))))
 
 (define-syntax parse-rhs-list
   (syntax-rules ()
