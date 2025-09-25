@@ -124,12 +124,27 @@
 ;; @code{process-grammar}.
 ;; @end deffn
 
-(define-macro (parse-rhs-list-helper e1 . rest)
-  (if (symbol? e1)
-      (if (reserved? e1)
-          `(cons '(terminal . ,e1) (parse-rhs ,@rest))
-          `(cons '(non-terminal . ,e1) (parse-rhs ,@rest)))
-      `(cons '(terminal . ,e1) (parse-rhs ,@rest))))
+(cond-expand
+ (mes
+  ;; MES does not have syntax-case.
+  (define-macro (wrap-term term)
+    `(cons (quote ,(if (symbol? term)
+                       (if (reserved? term)
+                           'terminal
+                           'non-terminal)
+                       'non-terminal))
+           (quote ,term))))
+ (else
+  (define-syntax wrap-term
+    (lambda (x)
+      (syntax-case x ()
+        ((_ term)
+         (identifier? (syntax term))
+         (if (reserved? (syntax term))
+             (syntax '(terminal . term))
+             (syntax '(non-terminal . term))))
+        ((_ term)
+         (syntax '(terminal . term))))))))
 
 (define-syntax parse-rhs
   (syntax-rules (quote $$ $$/ref $$-ref $prec $empty $? $* $+)
@@ -164,9 +179,7 @@
     ((_ (<f> ...) <e2> ...)
      (cons (<f> ...) (parse-rhs <e2> ...)))
     ((_ <e1> <e2> ...)
-     (parse-rhs-list-helper <e1> <e2> ...))
-    ((_ <e1> <e2> ...)
-     (cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+     (cons (wrap-term <e1>) (parse-rhs <e2> ...)))
     ((_) (list))))
 
 (define-syntax parse-rhs-list
