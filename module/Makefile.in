@@ -53,6 +53,7 @@ NYACC_BASE_SRCS =				\
 NYACC_C99_BINS =				\
 	nyacc/lang/c99/cpp.go			\
 	nyacc/lang/c99/cppmach.go		\
+	nyacc/lang/c99/parse.go			\
 	nyacc/lang/c99/parser.go		\
 	nyacc/lang/c99/mach.go			\
 	nyacc/lang/c99/pprint.go		\
@@ -70,6 +71,7 @@ NYACC_C99_BINS =				\
 NYACC_C99_SRCS =				\
 	nyacc/lang/c99/cpp.scm			\
 	nyacc/lang/c99/cppmach.scm		\
+	nyacc/lang/c99/parse.scm		\
 	nyacc/lang/c99/parser.scm		\
 	nyacc/lang/c99/mach.scm			\
 	nyacc/lang/c99/pprint.scm		\
