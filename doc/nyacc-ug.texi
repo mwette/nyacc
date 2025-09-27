@@ -17,19 +17,17 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @end macro
 @c @alias NYACC = @sc{NYACC}
 
-@clear skip
+@headings off
+@everyfooting @| @thispage @|
 
-@dircategory The Algorithmic Language Scheme
-@direntry
-* NYACC User Guide: (nyacc).    The NYACC user's guide.
-@end direntry
+@format
+NYACC User's Guide
+Matt Wette
+May 2024
+With NYACC Version 3.00.0
+@end format
 
-@titlepage
-@title Not Yet Another Compiler-Compiler
-@subtitle A LALR(1) Parser Generator Implemented in Guile
-@subtitle User's manual for NYACC version 2.03.0
-@author Matt Wette
-@end titlepage
+@c @clear skip
 
 @ifnottex
 @node Top, Demonstration, (dir), (dir)
@@ -46,10 +44,8 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 * References::
 @end menu
 
-@contents
-
 @node Demonstration,, Parsing, Top
-@chapter Demonstration
+@heading Demonstration
 
 A LALR(1) parser is a pushdown automata for parsing
 computer languages.  LALR parser generators like @nyacc{} have been
@@ -62,7 +58,7 @@ output, or error, is the @emph{parser}.
 A more detailed explantion of how to use an LALR parser generator
 can be found in the Bison manual (see @ref{References}).
 
-@section A Simple Batch Calculator
+@subheading A Simple Batch Calculator
 
 An easy way to introduce you to @nyacc{} is to work through a simple
 example.  Consider the following.  A similar example is in the file
@@ -219,7 +215,7 @@ $ guile calc1.scm
 $
 @end example
 
-@section Generating a Language to Run in Guile
+@subheading Generating a Language to Run in Guile
 
 One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.
@@ -244,7 +240,7 @@ in the directory @file{examples/language/javascript} and
 @file{examples/nyacc/lang/javascript} directories.  For details on the
 Guile backend see
 
-@section Debugging Output
+@subheading Debugging Output
 
 The parser can provide debugging output with the appropriate keyword
 argument.  In @file{calc1.scm} there is a modified version of
@@ -274,7 +270,7 @@ state 4, token #<eof>   => (accept . 0)
 
 @c ==================================
 @node Parsing
-@chapter Parsing
+@heading Parsing
 
 Most of the syntax and procecures for generating skelton parsers
 exported from the module @code{(nyacc lalr)}.  Other modules include
@@ -286,7 +282,7 @@ This module provides utilities used by the other modules.
 @end table
 
 
-@section The Specification
+@subheading The Specification
 @anchor{Specification}
 
 The syntax for generating specifications is @code{lalr-spec}.  As
@@ -515,6 +511,7 @@ have the forms
 In an action, @emph{body} is a Scheme expression, which can refer to
 the semantic values via the special variables @code{$1}, @code{$2},
 @dots{}  See @ref{Actions} for more details on how @emph{body} is evaluated.
+
 @noindent
 The @code{ref} forms are used to provide references for future use to
 support other (non-Scheme) languages, where the parser will be
@@ -616,7 +613,7 @@ To provide a user-defined handler just add an action for the rule:
 Note that if the action is not at the end of the rule then the default
 recovery action (@emph{"syntax error"}) will be executed.
 
-@section Parsing a Sublanguage of a Specification
+@subheading Parsing a Sublanguage of a Specification
 @anchor{sublanguage}
 
 Say you have a @nyacc{} specification @code{cspec} for the C language
@@ -627,7 +624,7 @@ do this using @code{restart-spec}:
 (define cxmach (make-lalr-machine cxspec))
 @end example
 
-@section Generating the Machine
+@subheading Generating the Machine
 @anchor{Parser}
 
 @deffn {Procedure} make-lalr-machine spec => a-list
@@ -753,7 +750,7 @@ unaccounted comments are skipped).
 @end deffn
 
 
-@section The Match Table
+@subheading The Match Table
 @anchor{match table}
 
 In some parser generators one declares terminals in the grammar file
@@ -791,7 +788,7 @@ pairs of the form (internal form, natural form).
 The symbol for the default transition is @code{'$default}.  For
 hashified machines this is translated to the integer @code{1}.
 
-@section Constructing Lexical Analyzers
+@subheading Constructing Lexical Analyzers
 @anchor{lex}
 
 The @code{lex} module provides a set of procedures to build lexical
@@ -1002,7 +999,7 @@ last matched character.
 @end deffn
 
 
-@section The Parser-Lex'er Interface
+@subheading The Parser-Lex'er Interface
 @anchor{parser-lexer}
 
 Sometimes LALR(1) parsers must be equipped with methods to parse
@@ -1049,7 +1046,7 @@ and the newline reader in the lex'er acts as follows:
   @dots{}
 @end example
 
-@section Parser Tables
+@subheading Parser Tables
 @anchor{Parser Tables}
 
 Note that generating a parser requires a machine argument.  It is
@@ -1089,7 +1086,7 @@ following code:
 See the example code in @file{examples/nyacc/lang/calc/parser.scm} for
 more detail.
 
-@section Hashing and Compacting
+@subheading Hashing and Compacting
 @anchor{Hashing and Compacting}
 
 The @nyacc{} procedure @code{compact-machine} will compact the parse
@@ -1110,7 +1107,7 @@ analyzer.  To use integers instead, use the procedure
 Indicate if the machine has been compacted.
 @end deffn
 
-@section Exporting Parsers
+@subheading Exporting Parsers
 @nyacc{} provides routines for exporting @nyacc{} grammar
 specifications to other LALR parser generators.
 
@@ -1139,7 +1136,7 @@ are replaced with @code{_}.
 This functionality has not been worked for a while so I suspect there
 is a chance it does not work anymore.
 
-@section Debugging
+@subheading Debugging
 @anchor {Debugging}
 
 The provided parsers are able to generate debugging information.
@@ -1249,7 +1246,7 @@ non-terminals (e.g., @code{expr} above) are reported as integers.
 
 @c ==================================
 @node Translation
-@chapter Translation
+@heading Translation
 
 In this chapter we present procedures for generating syntax trees in a
 uniform form.  This format, based on SXML, may use more cons cells
@@ -1327,7 +1324,7 @@ And by the way, put through our tree-il compiler, which uses
 
 @c attributed grammars
 
-@section Tagged Lists
+@subheading Tagged Lists
 @anchor{Tagged Lists}
 
 Paring actions in @nyacc{} can use tagged-lists from the module
@@ -1401,7 +1398,7 @@ Merge guts of phony-tl @code{tl1} into @code{tl}.
 @end deffn
 
 
-@section Working with SXML Based Parse Trees
+@subheading Working with SXML Based Parse Trees
 @anchor{SXML Parse Trees}
 
 To work with the trees described in the last section use
@@ -1479,7 +1476,7 @@ This illustrates translation with @code{foldts*-values} and
 @code{sxml-match}.
 
 @node Coding to the Compiler Tower
-@chapter Coding to the Compiler Tower
+@heading Coding to the Compiler Tower
 
 @example
 (define-module (language javascript spec)
@@ -1513,7 +1510,7 @@ This illustrates translation with @code{foldts*-values} and
     (values code env env)))
 @end example
 
-@section Pretty Print
+@subheading Pretty Print
 @anchor{Pretty Print}
 
 @deffn {Procedure} make-pp-formatter [port] [#:per-line-prefix ""] => fmtr
@@ -1527,9 +1524,9 @@ This illustrates translation with @code{foldts*-values} and
 
 
 @node Administrative
-@chapter Administrative Notes
+@heading Administrative Notes
 
-@section Installation
+@subheading Installation
 Installation instructions are included in the top-level file
 @file{INSTALL} of the source distribution.  If you have an installed
 Guile then the basic steps are
@@ -1549,19 +1546,19 @@ $ ./configure --site-scm-dir=/path/to/dest --site-scm-go-dir=/dummy
 $ make install-srcs
 @end example
 
-@section Reporting Bugs
+@subheading Reporting Bugs
 Please report bugs by navigating with your browser to
 @indicateurl{https://savannah.nongnu.org/projects/nyacc} and select
 the ``Submit New'' item under the ``Bugs'' menu.  Alternatively,
 ask on the Guile user's mailing list @email{guile-user@@gnu.org}.
 
-@section The Free Documentation License
+@subheading The Free Documentation License
 The Free Documentation License is included in the Guile Reference
 Manual.  It is included with the @nyacc{} source as the file
 @file{COPYING.DOC}.
 
 @node TODOs
-@chapter TODOs, Notes, Ideas
+@heading TODOs, Notes, Ideas
 Todo/Notes/Ideas:
 @table @asis
 @item 16
@@ -1593,7 +1590,7 @@ instead of @code{cons}.  This will then allow support of location info.
 
 
 @node References
-@chapter References
+@heading References
 
 @table @asis
 @item [bison]

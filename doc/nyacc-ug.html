@@ -20,7 +20,6 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <link href="#Top" rel="start" title="Top">
-<link href="#SEC_Contents" rel="contents" title="Table of Contents">
 <link href="dir.html#Top" rel="up" title="(dir)">
 <link href="#Demonstration" rel="next" title="Demonstration">
 <link href="dir.html#Top" rel="prev" title="(dir)">
@@ -28,10 +27,10 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <!--
 a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
 div.example {margin-left: 3.2em}
+pre.format-preformatted {font-family: inherit}
 span:hover a.copiable-link {visibility: visible}
 strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
 ul.mark-bullet {list-style-type: disc}
-ul.toc-numbered-mark {list-style: none}
 -->
 </style>
 
@@ -43,69 +42,28 @@ ul.toc-numbered-mark {list-style: none}
 
 
 
+<div class="format">
+<pre class="format-preformatted">NYACC User&rsquo;s Guide
+Matt Wette
+May 2024
+With NYACC Version 3.00.0
+</pre></div>
 
 
 <div class="top-level-extent" id="Top">
 <div class="nav-panel">
 <p>
-Next: <a href="#Demonstration" accesskey="n" rel="next">Demonstration</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+Next: <a href="#Demonstration" accesskey="n" rel="next">Demonstration</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
 </div>
 <h1 class="top" id="NYACC-User_0027s-Guide"><span>NYACC User&rsquo;s Guide<a class="copiable-link" href="#NYACC-User_0027s-Guide"> &para;</a></span></h1>
 
 
-
-<div class="element-contents" id="SEC_Contents">
-<h2 class="contents-heading">Table of Contents</h2>
-
-<div class="contents">
-
-<ul class="toc-numbered-mark">
-  <li><a id="toc-Demonstration-1" href="#Demonstration">1 Demonstration</a>
-  <ul class="toc-numbered-mark">
-    <li><a id="toc-A-Simple-Batch-Calculator" href="#A-Simple-Batch-Calculator">1.1 A Simple Batch Calculator</a></li>
-    <li><a id="toc-Generating-a-Language-to-Run-in-Guile" href="#Generating-a-Language-to-Run-in-Guile">1.2 Generating a Language to Run in Guile</a></li>
-    <li><a id="toc-Debugging-Output" href="#Debugging-Output">1.3 Debugging Output</a></li>
-  </ul></li>
-  <li><a id="toc-Parsing-1" href="#Parsing">2 Parsing</a>
-  <ul class="toc-numbered-mark">
-    <li><a id="toc-The-Specification" href="#The-Specification">2.1 The Specification</a></li>
-    <li><a id="toc-Parsing-a-Sublanguage-of-a-Specification" href="#Parsing-a-Sublanguage-of-a-Specification">2.2 Parsing a Sublanguage of a Specification</a></li>
-    <li><a id="toc-Generating-the-Machine" href="#Generating-the-Machine">2.3 Generating the Machine</a></li>
-    <li><a id="toc-The-Match-Table" href="#The-Match-Table">2.4 The Match Table</a></li>
-    <li><a id="toc-Constructing-Lexical-Analyzers" href="#Constructing-Lexical-Analyzers">2.5 Constructing Lexical Analyzers</a></li>
-    <li><a id="toc-The-Parser_002dLex_0027er-Interface" href="#The-Parser_002dLex_0027er-Interface">2.6 The Parser-Lex&rsquo;er Interface</a></li>
-    <li><a id="toc-Parser-Tables-1" href="#Parser-Tables-1">2.7 Parser Tables</a></li>
-    <li><a id="toc-Hashing-and-Compacting-1" href="#Hashing-and-Compacting-1">2.8 Hashing and Compacting</a></li>
-    <li><a id="toc-Exporting-Parsers" href="#Exporting-Parsers">2.9 Exporting Parsers</a></li>
-    <li><a id="toc-Debugging-1" href="#Debugging-1">2.10 Debugging</a></li>
-  </ul></li>
-  <li><a id="toc-Translation-1" href="#Translation">3 Translation</a>
-  <ul class="toc-numbered-mark">
-    <li><a id="toc-Tagged-Lists-1" href="#Tagged-Lists-1">3.1 Tagged Lists</a></li>
-    <li><a id="toc-Working-with-SXML-Based-Parse-Trees" href="#Working-with-SXML-Based-Parse-Trees">3.2 Working with SXML Based Parse Trees</a></li>
-  </ul></li>
-  <li><a id="toc-Coding-to-the-Compiler-Tower-1" href="#Coding-to-the-Compiler-Tower">4 Coding to the Compiler Tower</a>
-  <ul class="toc-numbered-mark">
-    <li><a id="toc-Pretty-Print-1" href="#Pretty-Print-1">4.1 Pretty Print</a></li>
-  </ul></li>
-  <li><a id="toc-Administrative-Notes" href="#Administrative">5 Administrative Notes</a>
-  <ul class="toc-numbered-mark">
-    <li><a id="toc-Installation" href="#Installation">5.1 Installation</a></li>
-    <li><a id="toc-Reporting-Bugs" href="#Reporting-Bugs">5.2 Reporting Bugs</a></li>
-    <li><a id="toc-The-Free-Documentation-License" href="#The-Free-Documentation-License">5.3 The Free Documentation License</a></li>
-  </ul></li>
-  <li><a id="toc-TODOs_002c-Notes_002c-Ideas" href="#TODOs">6 TODOs, Notes, Ideas</a></li>
-  <li><a id="toc-References-1" href="#References">7 References</a></li>
-</ul>
-</div>
-</div>
 <hr>
-<div class="chapter-level-extent" id="Demonstration">
-<div class="nav-panel">
+<a class="node" id="Demonstration"></a><div class="nav-panel">
 <p>
-Previous: <a href="#Parsing" accesskey="p" rel="prev">Parsing</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+Previous: <a href="#Parsing" accesskey="p" rel="prev">Parsing</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; </p>
 </div>
-<h2 class="chapter" id="Demonstration-1"><span>1 Demonstration<a class="copiable-link" href="#Demonstration-1"> &para;</a></span></h2>
+<h3 class="heading" id="Demonstration-1"><span>Demonstration<a class="copiable-link" href="#Demonstration-1"> &para;</a></span></h3>
 
 <p>A LALR(1) parser is a pushdown automata for parsing
 computer languages.  LALR parser generators like <small class="sc">NYACC</small> have been
@@ -118,13 +76,7 @@ output, or error, is the <em class="emph">parser</em>.
 <p>A more detailed explantion of how to use an LALR parser generator
 can be found in the Bison manual (see <a class="ref" href="#References">References</a>).
 </p>
-<ul class="mini-toc">
-<li><a href="#A-Simple-Batch-Calculator" accesskey="1">A Simple Batch Calculator</a></li>
-<li><a href="#Generating-a-Language-to-Run-in-Guile" accesskey="2">Generating a Language to Run in Guile</a></li>
-<li><a href="#Debugging-Output" accesskey="3">Debugging Output</a></li>
-</ul>
-<div class="section-level-extent" id="A-Simple-Batch-Calculator">
-<h3 class="section"><span>1.1 A Simple Batch Calculator<a class="copiable-link" href="#A-Simple-Batch-Calculator"> &para;</a></span></h3>
+<h4 class="subheading" id="A-Simple-Batch-Calculator"><span>A Simple Batch Calculator<a class="copiable-link" href="#A-Simple-Batch-Calculator"> &para;</a></span></h4>
 
 <p>An easy way to introduce you to <small class="sc">NYACC</small> is to work through a simple
 example.  Consider the following.  A similar example is in the file
@@ -263,9 +215,7 @@ See <a data-manual="guile" href="https://www.gnu.org/software/guile/manual/guile
 $
 </pre></div>
 
-</div>
-<div class="section-level-extent" id="Generating-a-Language-to-Run-in-Guile">
-<h3 class="section"><span>1.2 Generating a Language to Run in Guile<a class="copiable-link" href="#Generating-a-Language-to-Run-in-Guile"> &para;</a></span></h3>
+<h4 class="subheading" id="Generating-a-Language-to-Run-in-Guile"><span>Generating a Language to Run in Guile<a class="copiable-link" href="#Generating-a-Language-to-Run-in-Guile"> &para;</a></span></h4>
 
 <p>One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.
@@ -290,9 +240,7 @@ in the directory <samp class="file">examples/language/javascript</samp> and
 <samp class="file">examples/nyacc/lang/javascript</samp> directories.  For details on the
 Guile backend see
 </p>
-</div>
-<div class="section-level-extent" id="Debugging-Output">
-<h3 class="section"><span>1.3 Debugging Output<a class="copiable-link" href="#Debugging-Output"> &para;</a></span></h3>
+<h4 class="subheading" id="Debugging-Output"><span>Debugging Output<a class="copiable-link" href="#Debugging-Output"> &para;</a></span></h4>
 
 <p>The parser can provide debugging output with the appropriate keyword
 argument.  In <samp class="file">calc1.scm</samp> there is a modified version of
@@ -320,14 +268,9 @@ state 4, token #&lt;eof&gt;   =&gt; (accept . 0)
 </pre></div>
 
 <hr>
+<a class="node" id="Parsing"></a><div class="nav-panel">
 </div>
-</div>
-<div class="chapter-level-extent" id="Parsing">
-<div class="nav-panel">
-<p>
-Next: <a href="#Translation" accesskey="n" rel="next">Translation</a>, Previous: <a href="#Demonstration" accesskey="p" rel="prev">Demonstration</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
-</div>
-<h2 class="chapter" id="Parsing-1"><span>2 Parsing<a class="copiable-link" href="#Parsing-1"> &para;</a></span></h2>
+<h3 class="heading" id="Parsing-1"><span>Parsing<a class="copiable-link" href="#Parsing-1"> &para;</a></span></h3>
 
 <p>Most of the syntax and procecures for generating skelton parsers
 exported from the module <code class="code">(nyacc lalr)</code>.  Other modules include
@@ -341,20 +284,7 @@ exported from the module <code class="code">(nyacc lalr)</code>.  Other modules 
 </dl>
 
 
-<ul class="mini-toc">
-<li><a href="#The-Specification" accesskey="1">The Specification</a></li>
-<li><a href="#Parsing-a-Sublanguage-of-a-Specification" accesskey="2">Parsing a Sublanguage of a Specification</a></li>
-<li><a href="#Generating-the-Machine" accesskey="3">Generating the Machine</a></li>
-<li><a href="#The-Match-Table" accesskey="4">The Match Table</a></li>
-<li><a href="#Constructing-Lexical-Analyzers" accesskey="5">Constructing Lexical Analyzers</a></li>
-<li><a href="#The-Parser_002dLex_0027er-Interface" accesskey="6">The Parser-Lex&rsquo;er Interface</a></li>
-<li><a href="#Parser-Tables-1" accesskey="7">Parser Tables</a></li>
-<li><a href="#Hashing-and-Compacting-1" accesskey="8">Hashing and Compacting</a></li>
-<li><a href="#Exporting-Parsers" accesskey="9">Exporting Parsers</a></li>
-<li><a href="#Debugging-1">Debugging</a></li>
-</ul>
-<div class="section-level-extent" id="The-Specification">
-<h3 class="section"><span>2.1 The Specification<a class="copiable-link" href="#The-Specification"> &para;</a></span></h3>
+<h4 class="subheading" id="The-Specification"><span>The Specification<a class="copiable-link" href="#The-Specification"> &para;</a></span></h4>
 <a class="anchor" id="Specification"></a>
 <p>The syntax for generating specifications is <code class="code">lalr-spec</code>.  As
 mentioned in the  previous chapter, the syntax generates an
@@ -589,7 +519,8 @@ have the forms
 <p>In an action, <em class="emph">body</em> is a Scheme expression, which can refer to
 the semantic values via the special variables <code class="code">$1</code>, <code class="code">$2</code>,
 &hellip;  See <a class="ref" href="#Actions">Actions</a> for more details on how <em class="emph">body</em> is evaluated.
-The <code class="code">ref</code> forms are used to provide references for future use to
+</p>
+<p>The <code class="code">ref</code> forms are used to provide references for future use to
 support other (non-Scheme) languages, where the parser will be
 equipped to execute reduce-actions by reference (e.g. an associative array).
 </p></dd>
@@ -689,9 +620,7 @@ To provide a user-defined handler just add an action for the rule:
 <p>Note that if the action is not at the end of the rule then the default
 recovery action (<em class="emph">&quot;syntax error&quot;</em>) will be executed.
 </p>
-</div>
-<div class="section-level-extent" id="Parsing-a-Sublanguage-of-a-Specification">
-<h3 class="section"><span>2.2 Parsing a Sublanguage of a Specification<a class="copiable-link" href="#Parsing-a-Sublanguage-of-a-Specification"> &para;</a></span></h3>
+<h4 class="subheading" id="Parsing-a-Sublanguage-of-a-Specification"><span>Parsing a Sublanguage of a Specification<a class="copiable-link" href="#Parsing-a-Sublanguage-of-a-Specification"> &para;</a></span></h4>
 <a class="anchor" id="sublanguage"></a>
 <p>Say you have a <small class="sc">NYACC</small> specification <code class="code">cspec</code> for the C language
 and you want to generate a machine for parsing C expressions.  You can
@@ -701,9 +630,7 @@ do this using <code class="code">restart-spec</code>:
 (define cxmach (make-lalr-machine cxspec))
 </pre></div>
 
-</div>
-<div class="section-level-extent" id="Generating-the-Machine">
-<h3 class="section"><span>2.3 Generating the Machine<a class="copiable-link" href="#Generating-the-Machine"> &para;</a></span></h3>
+<h4 class="subheading" id="Generating-the-Machine"><span>Generating the Machine<a class="copiable-link" href="#Generating-the-Machine"> &para;</a></span></h4>
 <a class="anchor" id="Parser"></a>
 <dl class="first-deffn">
 <dt class="deffn" id="index-make_002dlalr_002dmachine"><span class="category-def">Procedure: </span><span><strong class="def-name">make-lalr-machine</strong> <var class="def-var-arguments">spec =&gt; a-list</var><a class="copiable-link" href="#index-make_002dlalr_002dmachine"> &para;</a></span></dt>
@@ -829,9 +756,7 @@ unaccounted comments are skipped).
 </p></dd></dl>
 
 
-</div>
-<div class="section-level-extent" id="The-Match-Table">
-<h3 class="section"><span>2.4 The Match Table<a class="copiable-link" href="#The-Match-Table"> &para;</a></span></h3>
+<h4 class="subheading" id="The-Match-Table"><span>The Match Table<a class="copiable-link" href="#The-Match-Table"> &para;</a></span></h4>
 <a class="anchor" id="match-table"></a>
 <p>In some parser generators one declares terminals in the grammar file
 and the generator will provide an include file providing the list of
@@ -863,9 +788,7 @@ pairs of the form (internal form, natural form).
 <p>The symbol for the default transition is <code class="code">'$default</code>.  For
 hashified machines this is translated to the integer <code class="code">1</code>.
 </p>
-</div>
-<div class="section-level-extent" id="Constructing-Lexical-Analyzers">
-<h3 class="section"><span>2.5 Constructing Lexical Analyzers<a class="copiable-link" href="#Constructing-Lexical-Analyzers"> &para;</a></span></h3>
+<h4 class="subheading" id="Constructing-Lexical-Analyzers"><span>Constructing Lexical Analyzers<a class="copiable-link" href="#Constructing-Lexical-Analyzers"> &para;</a></span></h4>
 <a class="anchor" id="lex"></a>
 <p>The <code class="code">lex</code> module provides a set of procedures to build lexical
 analyzers.  The approach is to first build a set of <em class="dfn">readers</em> for
@@ -1109,9 +1032,7 @@ last matched character.
 </p></dd></dl>
 
 
-</div>
-<div class="section-level-extent" id="The-Parser_002dLex_0027er-Interface">
-<h3 class="section"><span>2.6 The Parser-Lex&rsquo;er Interface<a class="copiable-link" href="#The-Parser_002dLex_0027er-Interface"> &para;</a></span></h3>
+<h4 class="subheading" id="The-Parser_002dLex_0027er-Interface"><span>The Parser-Lex&rsquo;er Interface<a class="copiable-link" href="#The-Parser_002dLex_0027er-Interface"> &para;</a></span></h4>
 <a class="anchor" id="parser_002dlexer"></a>
 <p>Sometimes LALR(1) parsers must be equipped with methods to parse
 non-context free grammars.  With respect to typenames, C is not
@@ -1154,9 +1075,7 @@ next token.
   ...
 </pre></div>
 
-</div>
-<div class="section-level-extent" id="Parser-Tables-1">
-<h3 class="section"><span>2.7 Parser Tables<a class="copiable-link" href="#Parser-Tables-1"> &para;</a></span></h3>
+<h4 class="subheading" id="Parser-Tables-1"><span>Parser Tables<a class="copiable-link" href="#Parser-Tables-1"> &para;</a></span></h4>
 <a class="anchor" id="Parser-Tables"></a>
 <p>Note that generating a parser requires a machine argument.  It is
 possible to export the machine to a pair of files and later regenerate
@@ -1194,9 +1113,7 @@ following code:
 <p>See the example code in <samp class="file">examples/nyacc/lang/calc/parser.scm</samp> for
 more detail.
 </p>
-</div>
-<div class="section-level-extent" id="Hashing-and-Compacting-1">
-<h3 class="section"><span>2.8 Hashing and Compacting<a class="copiable-link" href="#Hashing-and-Compacting-1"> &para;</a></span></h3>
+<h4 class="subheading" id="Hashing-and-Compacting-1"><span>Hashing and Compacting<a class="copiable-link" href="#Hashing-and-Compacting-1"> &para;</a></span></h4>
 <a class="anchor" id="Hashing-and-Compacting"></a>
 <p>The <small class="sc">NYACC</small> procedure <code class="code">compact-machine</code> will compact the parse
 tables generated by <code class="code">make-lalr-machine</code>.
@@ -1217,9 +1134,7 @@ analyzer.  To use integers instead, use the procedure
 <dd><p>Indicate if the machine has been compacted.
 </p></dd></dl>
 
-</div>
-<div class="section-level-extent" id="Exporting-Parsers">
-<h3 class="section"><span>2.9 Exporting Parsers<a class="copiable-link" href="#Exporting-Parsers"> &para;</a></span></h3>
+<h4 class="subheading" id="Exporting-Parsers"><span>Exporting Parsers<a class="copiable-link" href="#Exporting-Parsers"> &para;</a></span></h4>
 <p><small class="sc">NYACC</small> provides routines for exporting <small class="sc">NYACC</small> grammar
 specifications to other LALR parser generators.
 </p>
@@ -1243,9 +1158,7 @@ are replaced with <code class="code">_</code>.
 <p>This functionality has not been worked for a while so I suspect there
 is a chance it does not work anymore.
 </p>
-</div>
-<div class="section-level-extent" id="Debugging-1">
-<h3 class="section"><span>2.10 Debugging<a class="copiable-link" href="#Debugging-1"> &para;</a></span></h3>
+<h4 class="subheading" id="Debugging-1"><span>Debugging<a class="copiable-link" href="#Debugging-1"> &para;</a></span></h4>
 <a class="anchor" id="Debugging"></a>
 <p>The provided parsers are able to generate debugging information.
 </p>
@@ -1352,14 +1265,9 @@ state 8, token &quot;\n&quot;	=&gt; shift, goto 10
 non-terminals (e.g., <code class="code">expr</code> above) are reported as integers.
 </p>
 <hr>
+<a class="node" id="Translation"></a><div class="nav-panel">
 </div>
-</div>
-<div class="chapter-level-extent" id="Translation">
-<div class="nav-panel">
-<p>
-Next: <a href="#Coding-to-the-Compiler-Tower" accesskey="n" rel="next">Coding to the Compiler Tower</a>, Previous: <a href="#Parsing" accesskey="p" rel="prev">Parsing</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
-</div>
-<h2 class="chapter" id="Translation-1"><span>3 Translation<a class="copiable-link" href="#Translation-1"> &para;</a></span></h2>
+<h3 class="heading" id="Translation-1"><span>Translation<a class="copiable-link" href="#Translation-1"> &para;</a></span></h3>
 
 <p>In this chapter we present procedures for generating syntax trees in a
 uniform form.  This format, based on SXML, may use more cons cells
@@ -1432,12 +1340,7 @@ attr =&gt; (tag . string)
 </pre></div>
 
 
-<ul class="mini-toc">
-<li><a href="#Tagged-Lists-1" accesskey="1">Tagged Lists</a></li>
-<li><a href="#Working-with-SXML-Based-Parse-Trees" accesskey="2">Working with SXML Based Parse Trees</a></li>
-</ul>
-<div class="section-level-extent" id="Tagged-Lists-1">
-<h3 class="section"><span>3.1 Tagged Lists<a class="copiable-link" href="#Tagged-Lists-1"> &para;</a></span></h3>
+<h4 class="subheading" id="Tagged-Lists-1"><span>Tagged Lists<a class="copiable-link" href="#Tagged-Lists-1"> &para;</a></span></h4>
 <a class="anchor" id="Tagged-Lists"></a>
 <p>Paring actions in <small class="sc">NYACC</small> can use tagged-lists from the module
 <code class="code">(nyacc lang util)</code> to help build SXML trees efficiently.
@@ -1519,9 +1422,7 @@ and puts them right after the (leading) tag, resulting in something like
 </p></dd></dl>
 
 
-</div>
-<div class="section-level-extent" id="Working-with-SXML-Based-Parse-Trees">
-<h3 class="section"><span>3.2 Working with SXML Based Parse Trees<a class="copiable-link" href="#Working-with-SXML-Based-Parse-Trees"> &para;</a></span></h3>
+<h4 class="subheading" id="Working-with-SXML-Based-Parse-Trees"><span>Working with SXML Based Parse Trees<a class="copiable-link" href="#Working-with-SXML-Based-Parse-Trees"> &para;</a></span></h4>
 <a class="anchor" id="SXML-Parse-Trees"></a>
 <p>To work with the trees described in the last section use
 </p><div class="example">
@@ -1609,14 +1510,9 @@ a string.  Return a new <em class="emph">sx</em>.
 <code class="code">sxml-match</code>.
 </p>
 <hr>
+<a class="node" id="Coding-to-the-Compiler-Tower"></a><div class="nav-panel">
 </div>
-</div>
-<div class="chapter-level-extent" id="Coding-to-the-Compiler-Tower">
-<div class="nav-panel">
-<p>
-Next: <a href="#Administrative" accesskey="n" rel="next">Administrative Notes</a>, Previous: <a href="#Translation" accesskey="p" rel="prev">Translation</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
-</div>
-<h2 class="chapter" id="Coding-to-the-Compiler-Tower-1"><span>4 Coding to the Compiler Tower<a class="copiable-link" href="#Coding-to-the-Compiler-Tower-1"> &para;</a></span></h2>
+<h3 class="heading" id="Coding-to-the-Compiler-Tower-1"><span>Coding to the Compiler Tower<a class="copiable-link" href="#Coding-to-the-Compiler-Tower-1"> &para;</a></span></h3>
 
 <div class="example">
 <pre class="example-preformatted">(define-module (language javascript spec)
@@ -1650,11 +1546,7 @@ Next: <a href="#Administrative" accesskey="n" rel="next">Administrative Notes</a
     (values code env env)))
 </pre></div>
 
-<ul class="mini-toc">
-<li><a href="#Pretty-Print-1" accesskey="1">Pretty Print</a></li>
-</ul>
-<div class="section-level-extent" id="Pretty-Print-1">
-<h3 class="section"><span>4.1 Pretty Print<a class="copiable-link" href="#Pretty-Print-1"> &para;</a></span></h3>
+<h4 class="subheading" id="Pretty-Print-1"><span>Pretty Print<a class="copiable-link" href="#Pretty-Print-1"> &para;</a></span></h4>
 <a class="anchor" id="Pretty-Print"></a>
 <dl class="first-deffn">
 <dt class="deffn" id="index-make_002dpp_002dformatter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-pp-formatter</strong> <var class="def-var-arguments">[port] [#:per-line-prefix &quot;&quot;] =&gt; fmtr</var><a class="copiable-link" href="#index-make_002dpp_002dformatter"> &para;</a></span></dt>
@@ -1668,22 +1560,11 @@ Next: <a href="#Administrative" accesskey="n" rel="next">Administrative Notes</a
 
 
 <hr>
+<a class="node" id="Administrative"></a><div class="nav-panel">
 </div>
-</div>
-<div class="chapter-level-extent" id="Administrative">
-<div class="nav-panel">
-<p>
-Next: <a href="#TODOs" accesskey="n" rel="next">TODOs, Notes, Ideas</a>, Previous: <a href="#Coding-to-the-Compiler-Tower" accesskey="p" rel="prev">Coding to the Compiler Tower</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
-</div>
-<h2 class="chapter" id="Administrative-Notes"><span>5 Administrative Notes<a class="copiable-link" href="#Administrative-Notes"> &para;</a></span></h2>
+<h3 class="heading" id="Administrative-Notes"><span>Administrative Notes<a class="copiable-link" href="#Administrative-Notes"> &para;</a></span></h3>
 
-<ul class="mini-toc">
-<li><a href="#Installation" accesskey="1">Installation</a></li>
-<li><a href="#Reporting-Bugs" accesskey="2">Reporting Bugs</a></li>
-<li><a href="#The-Free-Documentation-License" accesskey="3">The Free Documentation License</a></li>
-</ul>
-<div class="section-level-extent" id="Installation">
-<h3 class="section"><span>5.1 Installation<a class="copiable-link" href="#Installation"> &para;</a></span></h3>
+<h4 class="subheading" id="Installation"><span>Installation<a class="copiable-link" href="#Installation"> &para;</a></span></h4>
 <p>Installation instructions are included in the top-level file
 <samp class="file">INSTALL</samp> of the source distribution.  If you have an installed
 Guile then the basic steps are
@@ -1701,30 +1582,21 @@ $ make install
 $ make install-srcs
 </pre></div>
 
-</div>
-<div class="section-level-extent" id="Reporting-Bugs">
-<h3 class="section"><span>5.2 Reporting Bugs<a class="copiable-link" href="#Reporting-Bugs"> &para;</a></span></h3>
+<h4 class="subheading" id="Reporting-Bugs"><span>Reporting Bugs<a class="copiable-link" href="#Reporting-Bugs"> &para;</a></span></h4>
 <p>Please report bugs by navigating with your browser to
 &lsquo;<code class="indicateurl">https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
 the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively,
 ask on the Guile user&rsquo;s mailing list <a class="email" href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
 </p>
-</div>
-<div class="section-level-extent" id="The-Free-Documentation-License">
-<h3 class="section"><span>5.3 The Free Documentation License<a class="copiable-link" href="#The-Free-Documentation-License"> &para;</a></span></h3>
+<h4 class="subheading" id="The-Free-Documentation-License"><span>The Free Documentation License<a class="copiable-link" href="#The-Free-Documentation-License"> &para;</a></span></h4>
 <p>The Free Documentation License is included in the Guile Reference
 Manual.  It is included with the <small class="sc">NYACC</small> source as the file
 <samp class="file">COPYING.DOC</samp>.
 </p>
 <hr>
+<a class="node" id="TODOs"></a><div class="nav-panel">
 </div>
-</div>
-<div class="chapter-level-extent" id="TODOs">
-<div class="nav-panel">
-<p>
-Next: <a href="#References" accesskey="n" rel="next">References</a>, Previous: <a href="#Administrative" accesskey="p" rel="prev">Administrative Notes</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
-</div>
-<h2 class="chapter" id="TODOs_002c-Notes_002c-Ideas"><span>6 TODOs, Notes, Ideas<a class="copiable-link" href="#TODOs_002c-Notes_002c-Ideas"> &para;</a></span></h2>
+<h3 class="heading" id="TODOs_002c-Notes_002c-Ideas"><span>TODOs, Notes, Ideas<a class="copiable-link" href="#TODOs_002c-Notes_002c-Ideas"> &para;</a></span></h3>
 <p>Todo/Notes/Ideas:
 </p><dl class="table">
 <dt>16</dt>
@@ -1764,13 +1636,9 @@ instead of <code class="code">cons</code>.  This will then allow support of loca
 
 
 <hr>
+<a class="node" id="References"></a><div class="nav-panel">
 </div>
-<div class="chapter-level-extent" id="References">
-<div class="nav-panel">
-<p>
-Previous: <a href="#TODOs" accesskey="p" rel="prev">TODOs, Notes, Ideas</a>, Up: <a href="#Top" accesskey="u" rel="up">NYACC User&rsquo;s Guide</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
-</div>
-<h2 class="chapter" id="References-1"><span>7 References<a class="copiable-link" href="#References-1"> &para;</a></span></h2>
+<h3 class="heading" id="References-1"><span>References<a class="copiable-link" href="#References-1"> &para;</a></span></h3>
 
 <dl class="table">
 <dt>[bison]</dt>
@@ -1797,7 +1665,6 @@ Ph.D. Thesis, UC Berkeley, 1985.
 
 
 
-</div>
 </div>
 
 
