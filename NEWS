@@ -31,6 +31,14 @@ without any warranty.
 	* c99/mach.scm(parse-rhs): changed to syntax-rules from syntax-case 
 	  with aid from new macro wrap-term which detects ident's, for MEs
 
+2025-08-24  V2.02.3
+	* c99(mach.scm): fix arg-expr-hack action; unquote $1 not 1
+	* c99(cxeval.scm): fix alignof-type expr in eval-c99-cx
+
+2025-07-10  V2.02.2
+	* ffi-help-cd.scm(wrap-mdecl): add comma for aggr-name in qquote
+	* cdata.scm(cstruct): select procedure w/no args returns keys
+
 2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
 	  is not defined yet.  If a struct field has decl' "foo_t x;"

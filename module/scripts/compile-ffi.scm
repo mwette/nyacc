@@ -92,7 +92,10 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -X, --no-exec         don't generate .go file(s)
   -R, --dont-recurse    don't do recursive compile on dep's
   -a, --any-suffix      allow any suffix (if not, must be .ffi)
+<<<<<<< HEAD
   -w, --no-foreign-library  guile has no (system foreign-library) module
+=======
+>>>>>>> fadb39ca83393bb4281d0a61e43a73ba27c2b144
 
 See the FFI-Helper User's Manual for help generating a .ffi file.
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
@@ -146,10 +149,14 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
              (values (acons 'no-exec #t opts) files)))
    (option '(#\a "any-suffix") #f #f
            (lambda (opt name arg opts files)
+<<<<<<< HEAD
              (values (acons 'any-suffix #t opts) files)))
    (option '(#\w "no-foreign-library") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'no-foreign-library #t opts) files)))))
+=======
+             (values (acons 'any-suffix #t opts) files)))))
+>>>>>>> fadb39ca83393bb4281d0a61e43a73ba27c2b144
 
 ;; from scripts/compile.scm
 (define (parse-args args)
