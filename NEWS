@@ -5,8 +5,8 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-XX-XX  V3.00.0
-	* Removed support for bytestructures.
+2025-09-27  V3.00.0
+	* Removed support for bytestructures
 	* Updated C parser to handle typedefs better.
 	    typedef int foo; int bar(foo foo) { ... }
             typedef int foo; struct { foo foo; } x;
@@ -24,6 +24,12 @@ without any warranty.
 	* Added support for __int128; fixed type: i128 -> s128
 	* c99(cxeval.scm): fix alignof-type expr in eval-c99-cx
 	* c99(mach.scm): allow attribute-specifier for compound literal
+ 	* ffi-help-cd(udecl->sexp): for typedef struct ref, if struct def was
+	  previously defined use it instead of 'void
+	* lang/util.scm(move-if-changed): use system* instead of system, for MES
+	* lang/util.scm: add def of string-every, for MES
+	* c99/mach.scm(parse-rhs): changed to syntax-rules from syntax-case 
+	  with aid from new macro wrap-term which detects ident's, for MEs
 
 2025-06-24  V2.02.1
 	* Fixed ffi-help for "typedef struct foo foo_t" where struct foo
