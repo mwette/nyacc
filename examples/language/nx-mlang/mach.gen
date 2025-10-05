@@ -2,7 +2,7 @@
 # -*- scheme -*-
 exec guile $0
 !#
-(use-modules (nyacc lang mlang mach))
+(use-modules (language nx-mlang mach))
 (use-modules (nyacc lalr))
 
 (when (gen-mlang-files)
