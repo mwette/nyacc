@@ -18,12 +18,18 @@
    ;; translation-unit => triv-stmt-list function-defn mlang-item-list
    (lambda ($3 $2 $1 . $rest)
      `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3)))
+   ;; translation-unit => triv-stmt-list class-defn mlang-item-list
+   (lambda ($3 $2 $1 . $rest)
+     `(classdef-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3)))
    ;; translation-unit => nontrivial-statement mlang-item-list
    (lambda ($2 $1 . $rest)
      `(script ,$1 ,@(sx-tail $2)))
    ;; translation-unit => function-defn mlang-item-list
    (lambda ($2 $1 . $rest)
      `(function-file ,$1 ,@(sx-tail $2)))
+   ;; translation-unit => class-defn mlang-item-list
+   (lambda ($2 $1 . $rest)
+     `(classdef-file ,$1 ,@(sx-tail $2)))
    ;; mlang-item-list => mlang-item-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; mlang-item-list-1 => 
@@ -34,6 +40,44 @@
    (lambda ($1 . $rest) $1)
    ;; mlang-item => statement
    (lambda ($1 . $rest) $1)
+   ;; class-defn => "classdef" "(" attr-list ")" ident "<" supers class-par...
+   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(class-defn ,$5 ,$7 ,$3 ,@(cdr (tl->list $8))))
+   ;; class-defn => "classdef" "(" attr-list ")" ident class-parts "end"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(class-defn ,$5 ,$3 ,@(cdr (tl->list $6))))
+   ;; class-defn => "classdef" ident "<" supers class-parts "end"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(class-defn ,$2 ,$4 ,@(cdr (tl->list $5))))
+   ;; class-defn => "classdef" ident class-parts "end"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(class-defn ,$2 ,@(cdr (tl->list $3))))
+   ;; supers => ident
+   (lambda ($1 . $rest) (make-tl 'supers $1))
+   ;; supers => supers "&" ident
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; class-parts => 
+   (lambda $rest (make-tl 'seq))
+   ;; class-parts => class-parts "methods" "(" attr-list ")" function-list ...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     (tl-append $1 `(methods ,$4 ,$6)))
+   ;; class-parts => class-parts "methods" function-list "end"
+   (lambda ($4 $3 $2 $1 . $rest)
+     (tl-append $1 `(methods ,$3)))
+   ;; attr-list => attr-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; attr-list-1 => attr
+   (lambda ($1 . $rest) (make-tl 'attr $1))
+   ;; attr-list-1 => attr-list-1 "," attr
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; attr => ident "=" expr
+   (lambda ($3 $2 $1 . $rest) `(attr ,$1 ,$3))
+   ;; function-list => function-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; function-list-1 => function-defn
+   (lambda ($1 . $rest) (make-tl 'functions $1))
+   ;; function-list-1 => function-list-1 function-defn
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; function-defn => function-decl non-comment-statement stmt-list the-end
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn

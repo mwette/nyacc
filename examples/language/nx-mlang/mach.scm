@@ -1,6 +1,6 @@
 ;; lang/mlang/mach.scm
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -54,11 +54,16 @@
                      ($$ `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (triv-stmt-list function-defn mlang-item-list
                      ($$ `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
+     (triv-stmt-list class-defn mlang-item-list
+                     ($$ `(classdef-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (nontrivial-statement mlang-item-list
                             ($$ `(script ,$1 ,@(sx-tail $2))))
      (function-defn mlang-item-list
-                            ($$ `(function-file ,$1 ,@(sx-tail $2)))))
-
+                    ($$ `(function-file ,$1 ,@(sx-tail $2))))
+     (class-defn mlang-item-list
+                 ($$ `(classdef-file ,$1 ,@(sx-tail $2))))
+     )
+ 
     (mlang-item-list
      (mlang-item-list-1 ($$ (tl->list $1))))
     (mlang-item-list-1
@@ -68,6 +73,54 @@
     (mlang-item
      (function-defn)
      (statement))
+
+    (class-defn
+     ("classdef" "(" attr-list ")" ident "<" supers class-parts "end"
+      ($$ `(class-defn ,$5 ,$7 ,$3 ,@(cdr (tl->list $8)))))
+     ("classdef" "(" attr-list ")" ident class-parts "end"
+      ($$ `(class-defn ,$5 ,$3 ,@(cdr (tl->list $6)))))
+     ("classdef" ident "<" supers  class-parts "end"
+      ($$ `(class-defn ,$2 ,$4 ,@(cdr (tl->list $5)))))
+     ("classdef" ident class-parts "end"
+      ($$ `(class-defn ,$2 ,@(cdr (tl->list $3))))))
+
+    (supers
+     (ident ($$ (make-tl 'supers $1)))
+     (supers "&" ident ($$ (tl-append $1 $3))))
+
+    (class-parts
+     ($empty ($$ (make-tl 'seq)))
+     #|
+     (class-parts "properties" "(" attr-list ")" prop-list "end"
+                 ($$ (tl-append $1 `(properties ,$4 ,$6))))
+     (class-parts "properties" prop-list "end"
+                 ($$ (tl-append $1 `(properties ,$3))))
+     |#
+     (class-parts "methods" "(" attr-list ")" function-list "end"
+                 ($$ (tl-append $1 `(methods ,$4 ,$6))))
+     (class-parts "methods" function-list "end"
+                 ($$ (tl-append $1 `(methods ,$3))))
+     #|
+     (class-parts "events"  "(" attr-list ")" prop-decl "end"
+                 ($$ (tl-append $1 `(events $4 $6))))
+     (class-parts "enumeration" xxx "end"
+                 ($$ (tl-append $1 `(enumeration $3))))
+     |#
+     )
+
+    (attr-list
+     (attr-list-1 ($$ (tl->list $1))))
+    (attr-list-1
+     (attr ($$ (make-tl 'attr $1)))
+     (attr-list-1 "," attr ($$ (tl-append $1 $3))))
+    (attr
+     (ident "=" expr ($$ `(attr ,$1 ,$3))))
+
+    (function-list
+     (function-list-1 ($$ (tl->list $1))))
+    (function-list-1
+     (function-defn ($$ (make-tl 'functions $1)))
+     (function-list-1 function-defn ($$ (tl-append $1 $2))))
 
     (function-defn
      (function-decl non-comment-statement stmt-list the-end
@@ -291,9 +344,10 @@
 ;; === parsers ==========================
 
 (define mlang-mach
-  (hashify-machine
-   (compact-machine
-    (make-lalr-machine mlang-spec))))
+  (compact-machine
+   (hashify-machine
+    (make-lalr-machine mlang-spec))
+   #:keep 0 #:keepers '($code-comm $lone-comm "\n")))
 
 (define mlang-ia-spec (restart-spec mlang-spec 'mlang-item))
 

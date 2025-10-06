@@ -1,6 +1,6 @@
-;;; nyacc/lang/mlang/parser.scm - parsing 
+;;; language/nx-mlang/parser.scm - parsing 
 
-;; Copyright (C) 2016,2018 Matthew R. Wette
+;; Copyright (C) 2016,2018,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -249,7 +249,8 @@
 ;; Parse given a token generator.
 (define raw-parser
   (make-lalr-parser
-   (acons 'act-v mlang-act-v mlang-tables)))
+   (acons 'act-v mlang-act-v mlang-tables)
+   #:skip-if-unexp '($code-comm $lone-comm "\n")))
 
 (define* (parse-mlang #:key debug)
   (catch
@@ -268,7 +269,7 @@
     (lambda ()
       (if (eof-object? (peek-char port))
           (read-char port)
-          (parse-mlang #:debug #f)))))
+          (parse-mlang #:debug #t)))))
 
 ;; === interactive parser
 
