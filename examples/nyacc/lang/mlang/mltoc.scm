@@ -18,9 +18,10 @@
 ;;; Code:
 
 (define-module (nyacc lang mlang mltoc)
-  #:export (mlang-to-c99))
+  #:export (mlang-to-c99 mlang-to-tree))
 
-(use-modules (nyacc lang mlang parser))
+(use-modules (language nx-mlang parser))
+
 (use-modules (nyacc lang c99 munge))
 (use-modules (nyacc lang sx-util))
 
@@ -722,5 +723,13 @@ n              (sx-match (car elts)
           (pretty-print-c99 ct oport)
           (simple-format #t "wrote ~S\n" dstfile))))
     0))
+
+(define (mlang-to-tree srcfile opts)
+  (let* ((base (basename srcfile))
+         (dstfile (string-append (basename srcfile ".m") "_m.c"))
+         (tree (call-with-input-file srcfile
+                 (lambda (iport) (read-mlang-file iport '())))))
+    tree))
+ 
 
 ;; --- last line ---
