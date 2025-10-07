@@ -16,8 +16,8 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 (define-module (nyacc lang lua mach)
-  #:export (lua-spec
-            )
+  #:export (lua-spec lua-mach
+	    gen-lua-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   )
@@ -31,7 +31,7 @@
 
     (opt-semi ($empty) (";"))
 
-    (opt-finish ("finish" opt-semi))
+    (opt-finish (finish opt-semi))
 
     (stmt
      (var-list "=" exprs)
@@ -66,14 +66,17 @@
     (func-name
      (name)
      (name ":" key)
-     (name key-list)
-     (name key-list ":" key)
+     (name keys)
+     (name keys ":" key)
      )
-    (key (name))
+
+    (keys
+     ("." key)
+     (keys "." key)
+     )
 
     (var-list
-     (var)
-     (var-list "," var)
+     (exprs)
      )
 
     (params
@@ -84,9 +87,54 @@
 
     (exprs
      (expr)
-     (expr "," expr)
+     (exprs "," expr)
      )
 
+    (expr
+     (or-expr)
+     )
+    (or-expr
+     (and-expr)
+     (or-expr "or" and-expr))
+    (and-expr
+     (equ-expr)
+     (and-expr "and" equ-expr))
+    (equ-expr
+     (rel-expr)
+     (equ-expr "==" rel-expr)
+     (equ-expr "~=" rel-expr))
+    (rel-expr
+     (add-expr)
+     (rel-expr "<" add-expr)
+     (rel-expr "<=" add-expr)
+     (rel-expr ">" add-expr)
+     (rel-expr ">=" add-expr))
+    (add-expr
+     (mul-expr)
+     (mul-expr "+" add-expr)
+     (mul-expr "-" add-expr))
+    (mul-expr
+     (una-expr)
+     (mul-expr "*" una-expr)
+     (mul-expr "/" una-expr))
+    (una-expr
+     (prim-expr)
+     ("+" una-expr)
+     ("-" una-expr))
+    (prim-expr
+     ("nil")
+     (literal)
+     ("%" name)
+     (table-cons)
+     ("function" "(" ")" block "end")
+     ("function" "(" params ")" block "end")
+     ("(" expr ")"))
+
+    (primary (prim-expr))
+    
+    ;; todo: .. <= string-cat
+     
+    #|
     (expr
      (primary)
      (var)
@@ -98,7 +146,7 @@
     (primary
      ("nil")
      (number)
-     (literal)
+     (string)
      ("%" name)
      (table-cons)
      ("function" "(" ")" block "end")
@@ -106,13 +154,25 @@
      ("(" expr ")")
      )
 
+    (binop
+     ("+") ;; ("-") ("*") ("/")
+     ("^") ("..")
+     ("and") ("or")
+     ("<") ("<=") (">") (">=") ("==") ("~=")
+     )
+
+    (unop
+     ("-") ("not")
+     )
+    |#
+
     (var
      (name)
      (primary index)
      (var index)
      (call index)
      )
-
+    
     (index
      ("[" expr "]")
      ("." key)
@@ -151,7 +211,7 @@
      )
 
     (expr-fields
-     (exprs ",")
+     ;;(exprs ",")
      (exprs)
      )
 
@@ -166,23 +226,45 @@
      (key "=" expr)
      )
 
-    (binop
-     ("+") ("-") ("*") ("/")
-     ("^") ("..")
-     ("and") ("or")
-     ("<") ("<=") (">") (">=") ("==") ("~=")
-     )
+    (literal
+     (number)
+     (string))
 
-    (unop
-     ("-") ("not")
-     )
+    (name ($ident))
+    (number ($fixed) ($float))
+    (string ($string))
     
-    (key-hack
+    (key (name))
+    #;(key
      (name) ("and") ("break") ("do") ("end") ("else") ("elseif") ("for")
      ("function") ("global") ("if") ("in") ("local") ("nil") ("not") ("or")
      ("return") ("repeat") ("then") ("until") ("while")
      )
       
     )))
+
+;; === parsers ==========================
+
+(define lua-mach
+  (hashify-machine
+   (compact-machine
+    (make-lalr-machine lua-spec))))
+
+(define luaia-spec (restart-spec lua-spec 'stmt))
+
+(define luaia-mach
+  (hashify-machine
+   (compact-machine
+    (make-lalr-machine luaia-spec))))
+
+;; === automaton file generators =========
+
+(define* (gen-lua-files #:optional (path "."))
+  (define (mdir file) (mach-dir path file))
+  (write-lalr-actions lua-mach (mdir "lua-act.scm.new") #:prefix "lua-")
+  (write-lalr-tables lua-mach (mdir "lua-tab.scm.new") #:prefix "lua-")
+  (let ((a (move-if-changed (mdir "lua-act.scm.new") (mdir "lua-act.scm")))
+        (b (move-if-changed (mdir "lua-tab.scm.new") (mdir "lua-tab.scm"))))
+    (or a b)))
 
 ;; --- last line ---
