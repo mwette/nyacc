@@ -40,17 +40,17 @@
    (lambda ($1 . $rest) $1)
    ;; mlang-item => statement
    (lambda ($1 . $rest) $1)
-   ;; class-defn => "classdef" "(" attr-list ")" ident "<" supers class-par...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; class-defn => "classdef" "(" attr-list ")" ident "<" supers term clas...
+   (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(class-defn ,$5 ,$7 ,$3 ,@(cdr (tl->list $8))))
-   ;; class-defn => "classdef" "(" attr-list ")" ident class-parts "end"
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; class-defn => "classdef" "(" attr-list ")" ident term class-parts "end"
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(class-defn ,$5 ,$3 ,@(cdr (tl->list $6))))
-   ;; class-defn => "classdef" ident "<" supers class-parts "end"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+   ;; class-defn => "classdef" ident "<" supers term class-parts "end"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(class-defn ,$2 ,$4 ,@(cdr (tl->list $5))))
-   ;; class-defn => "classdef" ident class-parts "end"
-   (lambda ($4 $3 $2 $1 . $rest)
+   ;; class-defn => "classdef" ident term class-parts "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
      `(class-defn ,$2 ,@(cdr (tl->list $3))))
    ;; supers => ident
    (lambda ($1 . $rest) (make-tl 'supers $1))
@@ -58,6 +58,12 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; class-parts => 
    (lambda $rest (make-tl 'seq))
+   ;; class-parts => class-parts "properties" "(" attr-list ")" prop-list "...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     (tl-append $1 `(properties ,$4 ,$6)))
+   ;; class-parts => class-parts "properties" prop-list "end"
+   (lambda ($4 $3 $2 $1 . $rest)
+     (tl-append $1 `(properties ,$3)))
    ;; class-parts => class-parts "methods" "(" attr-list ")" function-list ...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(methods ,$4 ,$6)))
@@ -72,6 +78,14 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; attr => ident "=" expr
    (lambda ($3 $2 $1 . $rest) `(attr ,$1 ,$3))
+   ;; prop-list => prop-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; prop-list-1 => 
+   (lambda $rest (make-tl 'properties))
+   ;; prop-list-1 => prop-list-1 prop
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; prop => ident term
+   (lambda ($2 $1 . $rest) `(property ,$1))
    ;; function-list => function-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; function-list-1 => function-defn
@@ -252,10 +266,14 @@
    (lambda ($1 . $rest) $1)
    ;; or-expr => or-expr "|" and-expr
    (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
+   ;; or-expr => or-expr "||" and-expr
+   (lambda ($3 $2 $1 . $rest) `(ss-or ,$1 ,$3))
    ;; and-expr => equality-expr
    (lambda ($1 . $rest) $1)
    ;; and-expr => and-expr "&" equality-expr
    (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
+   ;; and-expr => and-expr "&&" equality-expr
+   (lambda ($3 $2 $1 . $rest) `(ss-and ,$1 ,$3))
    ;; equality-expr => rel-expr
    (lambda ($1 . $rest) $1)
    ;; equality-expr => equality-expr "==" rel-expr

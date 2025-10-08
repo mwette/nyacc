@@ -46,8 +46,8 @@
     (bitwise-and)
     (bitwise-xor)
     (bitwise-or)
-    (and)
-    (or)
+    (and ss-and)
+    (or ss-or)
     (cond-expr)
     (assn-expr)
     (comma)))
@@ -213,6 +213,11 @@
            (else (ppx item) #t)))
         #f
         items))
+
+      ((or ,lex ,rex) (binary 'or " | " lex rex))
+      ((ss-or ,lex ,rex) (binary 'ss-or " || " lex rex))
+      ((and ,lex ,rex) (binary 'and " & " lex rex))
+      ((ss-and ,lex ,rex) (binary 'ss-and " && " lex rex))
       
       ((pos ,expr) (unary/l 'pos "+" expr))
       ((neg ,expr) (unary/l 'neg "-" expr))

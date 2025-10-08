@@ -75,13 +75,13 @@
      (statement))
 
     (class-defn
-     ("classdef" "(" attr-list ")" ident "<" supers class-parts "end"
+     ("classdef" "(" attr-list ")" ident "<" supers term class-parts "end"
       ($$ `(class-defn ,$5 ,$7 ,$3 ,@(cdr (tl->list $8)))))
-     ("classdef" "(" attr-list ")" ident class-parts "end"
+     ("classdef" "(" attr-list ")" ident term class-parts "end"
       ($$ `(class-defn ,$5 ,$3 ,@(cdr (tl->list $6)))))
-     ("classdef" ident "<" supers  class-parts "end"
+     ("classdef" ident "<" supers  term class-parts "end"
       ($$ `(class-defn ,$2 ,$4 ,@(cdr (tl->list $5)))))
-     ("classdef" ident class-parts "end"
+     ("classdef" ident term class-parts "end"
       ($$ `(class-defn ,$2 ,@(cdr (tl->list $3))))))
 
     (supers
@@ -90,11 +90,11 @@
 
     (class-parts
      ($empty ($$ (make-tl 'seq)))
-     #|
      (class-parts "properties" "(" attr-list ")" prop-list "end"
                  ($$ (tl-append $1 `(properties ,$4 ,$6))))
      (class-parts "properties" prop-list "end"
                  ($$ (tl-append $1 `(properties ,$3))))
+     #|
      |#
      (class-parts "methods" "(" attr-list ")" function-list "end"
                  ($$ (tl-append $1 `(methods ,$4 ,$6))))
@@ -115,6 +115,15 @@
      (attr-list-1 "," attr ($$ (tl-append $1 $3))))
     (attr
      (ident "=" expr ($$ `(attr ,$1 ,$3))))
+
+    (prop-list
+     (prop-list-1 ($$ (tl->list $1))))
+    (prop-list-1
+     ($empty ($$ (make-tl 'properties)))
+     (prop-list-1 prop ($$ (tl-append $1 $2))))
+    (prop
+     (ident term ($$ `(property ,$1)))
+     )
 
     (function-list
      (function-list-1 ($$ (tl->list $1))))
@@ -252,11 +261,13 @@
 
     (or-expr
      (and-expr)
-     (or-expr "|" and-expr ($$ `(or ,$1 ,$3))))
+     (or-expr "|" and-expr ($$ `(or ,$1 ,$3)))
+     (or-expr "||" and-expr ($$ `(ss-or ,$1 ,$3))))
 
     (and-expr
      (equality-expr)
-     (and-expr "&" equality-expr ($$ `(and ,$1 ,$3))))
+     (and-expr "&" equality-expr ($$ `(and ,$1 ,$3)))
+     (and-expr "&&" equality-expr ($$ `(ss-and ,$1 ,$3))))
 
     (equality-expr
      (rel-expr)
