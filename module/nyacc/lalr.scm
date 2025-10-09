@@ -1649,8 +1649,18 @@
 ;; default production.  However, reductions triggered by @var{keepers} and
 ;; the required keeper -- @code{'$error} -- are not counted.  The keepers
 ;; can then be trapped by the parser (e.g., to skip un-accounted comments).
+;; If you use @code{skip-if-unexp} for @code{make-lalr-mach} those skipped
+;; items must appear in @var{keepers}.
 ;; @end deffn
 (define* (compact-machine mach #:key (keep 0) (keepers '()))
+  "- Procedure: compact-machine mach [#:keep 0] [#:keepers '()] => mach
+     A \"filter\" to compact the parse table.  For each state this will
+     replace the most populus set of reductions of the same production
+     rule with a default production.  However, reductions triggered by
+     KEEPERS and the required keeper - ‘'$error’ - are not counted.  The
+     keepers can then be trapped by the parser (e.g., to skip
+     un-accounted comments).  If you use ‘skip-if-unexp’ for
+     ‘make-lalr-mach’ those skipped items must appear in KEEPERS."
   (if (< keep 0) (error "expecting keep > 0"))
   (let* ((pat-v (assq-ref mach 'pat-v))
          (nst (vector-length pat-v))
@@ -1768,6 +1778,8 @@
 ;; Convert symbol-based tables to integer-based tables.
 ;; @end deffn
 (define (hashify-machine mach)
+  "- Procedure: hashify-machine mach => mach
+     Convert symbol-based tables to integer-based tables."
   (if (machine-hashed? mach) mach
       (let* ((terminals (assq-ref mach 'terminals))
              (non-terms (assq-ref mach 'non-terms))

@@ -21,7 +21,7 @@
   #:export (parse-c99 parse-c99x gen-c99-lexer gen-c99x-lexer gen-c-lexer)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang c99 parse)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 util)
   #:re-export (c99-def-help c99-std-help))
@@ -714,18 +714,23 @@
 (define process-specs move-attributes)
 (define process-declr move-attributes)
 
+(define (make-user-hook mtab)
+  (let ((typename (assq-ref mtab 'typename))
+        (ident (assq-ref mtab '$ident)))
+    (lambda (tal tok stk)
+      (and (eq? tok typename)
+           (or (assq-ref tal tok) (assq-ref tal ident))))))
+
 ;; === file parser ====================
 
 (include-from-path "nyacc/lang/c99/mach.d/c99-act.scm")
 (include-from-path "nyacc/lang/c99/mach.d/c99-tab.scm")
 
 (define c99-raw-parser
-  (make-lalr-parser/c99
+  (make-lalr-parser
    (acons 'act-v c99-act-v c99-tables)
-   ;; These must also appear in #:keepers arg to hashify in mach.scm.
-   #:skip-if-unexp (map (lambda (n) (assoc-ref c99-mtab n))
-                        '($lone-comm $code-comm $pragma cpp-stmt))))
-
+   #:skip-if-unexp '($lone-comm $code-comm $pragma cpp-stmt)
+   #:user-hook (make-user-hook (assq-ref c99-tables 'mtab))))
 
 (define gen-c99-lexer
   (make-c99-lexer-generator c99-mtab c99-raw-parser))
@@ -798,10 +803,10 @@
 (include-from-path "nyacc/lang/c99/mach.d/c99x-tab.scm")
 
 (define c99x-raw-parser
-  (make-lalr-parser/c99
+  (make-lalr-parser
    (acons 'act-v c99x-act-v c99x-tables)
-   #:skip-if-unexp (map (lambda (n) (assoc-ref c99x-mtab n))
-                        '($lone-comm $code-comm $pragma))))
+   #:skip-if-unexp '($lone-comm $code-comm $pragma)
+   #:user-hook (make-user-hook (assq-ref c99x-tables 'mtab))))
 
 (define gen-c99x-lexer
   (make-c99-lexer-generator c99x-mtab c99x-raw-parser))
