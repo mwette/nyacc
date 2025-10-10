@@ -213,12 +213,14 @@
       ($$ `(switch ,$2 ,@(cdr (tl->list $4)))))
      ("return"
       ($$ '(return)))
-     (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2))))))
+     (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2)))))
+     (command "(" arg-list ")" ($$ `(command ,$1 ,@(cdr (tl->list $3))))))
 
     (command
-     ("clear" ($$ '(command "clear")))
-     ("global" ($$ '(command "global")))
-     ("load" ($$ '(command "load"))))
+     (command-name ($$ '(command ,$1))))
+    (command-name
+     ("clc") ("doc") ("format") ("global") ("grid") ("help") ("hold")
+     ("load") ("rotate3d") ("save") ("uiimport") ("ver"))
 
     ;; Only ident list type commands are allowed
     (arg-list
@@ -312,6 +314,7 @@
      (postfix-expr ".'" ($$ `(conj-transpose ,$1)))
      (postfix-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,(tl->list $3))))
      (postfix-expr "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
+     (postfix-expr "{" expr-list "}" ($$ `(cell-ref ,$1 ,(tl->list $3))))
      (postfix-expr "." ident ($$ `(sel ,$3 ,$1))))
     
     (primary-expr
@@ -322,8 +325,7 @@
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ (tl->list $2)))
      ("{" "}" ($$ '(cell-array)))
-     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2)))))
-     )
+     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2))))))
 
     (expr-nosp
      (or-expr-nosp)
@@ -388,6 +390,7 @@
      (postfix-expr-nosp "(" expr-list ")"
                         ($$ `(aref-or-call ,$1 ,(tl->list $3))))
      (postfix-expr-nosp "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
+     (postfix-expr-nosp "{" expr-list "}" ($$ `(cell-ref ,$1 ,(tl->list $3))))
      (postfix-expr-nosp "." ident ($$ `(sel ,$3 ,$1))))
     
     (primary-expr-nosp
@@ -398,8 +401,7 @@
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ (tl->list $2)))
      ("{" "}" ($$ '(cell-array)))
-     ;;("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2)))))
-     )
+     ("{" matrix-row-list "}" ($$ `(cell-array ,(cdr (tl->list $2))))))
 
     (matrix-row-list
      (matrix-row ($$ (make-tl 'matrix (tl->list $1))))

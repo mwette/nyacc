@@ -99,6 +99,15 @@
      ((eqv? ch #\newline) (read-char))
      (else (loop (read-char))))))
 
+(define space-cs (string->char-set " \t"))
+
+(define (flush-ws)
+  (let loop ((ch (read-char)))
+    (cond
+     ((eof-object? ch))
+     ((char-set-contains? space-cs ch) (loop (read-char)))
+     (else (unread-char ch)))))
+
 ;; @deffn {Procedure} make-mlang-lexer-generator match-table
 ;; This function, given the @var{match-table} from a lalr-generated
 ;; machine, generates a procedure that returns lexical analyzers for
@@ -110,7 +119,6 @@
   (let* ((read-string mlang-read-string)
          (read-comm mlang-read-comm)
          (read-ident read-c$-ident)
-         (space-cs (string->char-set " \t\r\f"))
          ;;
          (strtab (filter-mt string? match-table)) ; strings in grammar
          (kwstab (filter-mt like-c$-ident? strtab)) ; keyword strings =>
@@ -119,20 +127,23 @@
          (symtab (filter-mt symbol? match-table)) ; symbols in grammar
          (chrtab (filter-mt char? match-table)) ; characters in grammar
          (read-chseq (make-chseq-reader chrseq))
-         (newline-val (assoc-ref chrseq "\n"))
-         (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
-    (if (not newline-val) (error "mlang setup error"))
+         (nl-val (assoc-ref match-table "\n"))
+         (sp-val (assoc-ref match-table 'sp))
+         (assc-$
+          (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
+    (if (not nl-val) (error "mlang setup error"))
     (lambda ()
-      (let ((qms #f) (bol #t) (line 0)) ; qms: quote means string
+      (let ((qms #f) (bol #t)) ; qms: quote means string
         (define (loop ch)
           (cond
            ((eof-object? ch)
             (if bol (assc-$ (cons '$end ch)) (loop #\newline)))
            ((elipsis? ch) (loop (skip-to-next-line)))
-           ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
-           ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
+           ((eqv? ch #\newline) (set! bol #t) (cons nl-val "\n"))
+           ((char-set-contains? space-cs ch)
+            (set! qms #t) (flush-ws) (cons sp-val " "))
            ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
-           (bol (set! bol #f) (set! line (1+ line)) (loop ch))
+           (bol (set! bol #f) (loop ch))
            ((read-ident ch) =>
             (lambda (s) ;; s is a string
               (set! qms #f)
@@ -143,7 +154,8 @@
            ((char=? ch #\") (assc-$ (read-string ch)))
            ((char=? ch #\') (if qms (assc-$ (read-string ch)) (read-chseq ch)))
            ((read-chseq ch) =>
-            (lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
+            ;;(lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
+            (lambda (p) (set! qms (not (memq ch '(#\] #\} #\))))) p))
            ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
            (else (cons ch (string ch)))))
         (if #t                  ; read properties
@@ -151,6 +163,7 @@
               (let* ((lxm (loop (read-char)))
                      (port (current-input-port))
                      (file (port-filename port))
+                     (line (1+ (port-line port)))
                      (props `((filename . ,file) (line . ,line) (column . 0))))
                 (set-source-properties! lxm props)
                 lxm))
@@ -239,6 +252,12 @@
   
   (cadr (foldt fU fH `(*TOP* ,tree))))
 
+(define (make-user-hook mach)
+  (let* ((mtab (assoc-ref mach 'mtab))
+         )
+    (lambda (tal tok stk)
+      #f)))
+
 ;; === file parser 
 
 (include-from-path "language/nx-mlang/mach.d/mlang-tab.scm")
@@ -250,7 +269,7 @@
 (define raw-parser
   (make-lalr-parser
    (acons 'act-v mlang-act-v mlang-tables)
-   #:skip-if-unexp '($code-comm $lone-comm "\n")))
+   #:skip-if-unexp '($code-comm $lone-comm sp "\n")))
 
 (define* (parse-mlang #:key debug)
   (catch
@@ -269,7 +288,7 @@
     (lambda ()
       (if (eof-object? (peek-char port))
           (read-char port)
-          (parse-mlang #:debug #t)))))
+          (parse-mlang #:debug #f)))))
 
 ;; === interactive parser
 
@@ -279,6 +298,7 @@
 (define raw-ia-parser
   (make-lalr-parser
    (acons 'act-v mlangia-act-v mlangia-tables)
+   #:skip-if-unexp '($code-comm $lone-comm sp)
    #:interactive #t))
 
 (define (parse-mlang-stmt lexer)

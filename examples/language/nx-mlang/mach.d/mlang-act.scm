@@ -202,12 +202,35 @@
    ;; nontrivial-statement-1 => command arg-list
    (lambda ($2 $1 . $rest)
      `(command ,$1 ,@(cdr (tl->list $2))))
-   ;; command => "clear"
-   (lambda ($1 . $rest) '(command "clear"))
-   ;; command => "global"
-   (lambda ($1 . $rest) '(command "global"))
-   ;; command => "load"
-   (lambda ($1 . $rest) '(command "load"))
+   ;; nontrivial-statement-1 => command "(" arg-list ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(command ,$1 ,@(cdr (tl->list $3))))
+   ;; command => command-name
+   (lambda ($1 . $rest) '(command ,$1))
+   ;; command-name => "clc"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "doc"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "format"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "global"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "grid"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "help"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "hold"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "load"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "rotate3d"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "save"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "uiimport"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "ver"
+   (lambda ($1 . $rest) $1)
    ;; arg-list => ident
    (lambda ($1 . $rest)
      (make-tl 'arg-list (cons 'arg (cdr $1))))
@@ -338,6 +361,9 @@
    ;; postfix-expr => postfix-expr "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(aref-or-call ,$1 (expr-list)))
+   ;; postfix-expr => postfix-expr "{" expr-list "}"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(cell-ref ,$1 ,(tl->list $3)))
    ;; postfix-expr => postfix-expr "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
    ;; primary-expr => ident
@@ -448,6 +474,9 @@
    ;; postfix-expr-nosp => postfix-expr-nosp "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(aref-or-call ,$1 (expr-list)))
+   ;; postfix-expr-nosp => postfix-expr-nosp "{" expr-list "}"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(cell-ref ,$1 ,(tl->list $3)))
    ;; postfix-expr-nosp => postfix-expr-nosp "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
    ;; primary-expr-nosp => ident
@@ -464,6 +493,9 @@
    (lambda ($3 $2 $1 . $rest) (tl->list $2))
    ;; primary-expr-nosp => "{" "}"
    (lambda ($2 $1 . $rest) '(cell-array))
+   ;; primary-expr-nosp => "{" matrix-row-list "}"
+   (lambda ($3 $2 $1 . $rest)
+     `(cell-array ,(cdr (tl->list $2))))
    ;; matrix-row-list => matrix-row
    (lambda ($1 . $rest)
      (make-tl 'matrix (tl->list $1)))
