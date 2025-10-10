@@ -42,16 +42,16 @@
    (lambda ($1 . $rest) $1)
    ;; class-defn => "classdef" "(" attr-list ")" ident "<" supers term clas...
    (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$5 ,$7 ,$3 ,(cdr $9)))
+     `(class-defn ,$5 ,$7 ,$3 ,@(cdr $9)))
    ;; class-defn => "classdef" "(" attr-list ")" ident term class-parts "end"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$5 ,$3 ,(cdr $7)))
+     `(class-defn ,$5 ,$3 ,@(cdr $7)))
    ;; class-defn => "classdef" ident "<" supers term class-parts "end"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$2 ,$4 ,(cdr $6)))
+     `(class-defn ,$2 ,$4 ,@(cdr $6)))
    ;; class-defn => "classdef" ident term class-parts "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$2 ,(cdr $4)))
+     `(class-defn ,$2 ,@(cdr $4)))
    ;; supers => supers-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; supers-1 => ident
@@ -64,16 +64,16 @@
    (lambda $rest (make-tl 'seq))
    ;; class-parts-1 => class-parts-1 "properties" "(" attr-list ")" prop-li...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     (tl-append $1 `(properties ,$4 ,$6)))
+     (tl-append $1 `(properties ,$4 ,@(cdr $6))))
    ;; class-parts-1 => class-parts-1 "properties" prop-list "end"
    (lambda ($4 $3 $2 $1 . $rest)
-     (tl-append $1 `(properties ,$3)))
+     (tl-append $1 `(properties ,@(cdr $3))))
    ;; class-parts-1 => class-parts-1 "methods" "(" attr-list ")" method-lis...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     (tl-append $1 `(methods ,$4 ,$6)))
+     (tl-append $1 `(methods ,$4 ,@(cdr $6))))
    ;; class-parts-1 => class-parts-1 "methods" method-list "end"
    (lambda ($4 $3 $2 $1 . $rest)
-     (tl-append $1 `(methods ,$3)))
+     (tl-append $1 `(methods ,@(cdr $3))))
    ;; attr-list => attr-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; attr-list-1 => attr
@@ -94,18 +94,16 @@
    (lambda ($2 $1 . $rest) `(property ,$1))
    ;; method-list => method-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; method-list-1 => function-defn
+   ;; method-list-1 => method-item
    (lambda ($1 . $rest) (make-tl 'methods $1))
-   ;; method-list-1 => method-list-1 function-defn
+   ;; method-list-1 => method-list-1 method-item
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; method-list-1 => ident "\n"
-   (lambda ($2 $1 . $rest) (make-tl 'methods $1))
-   ;; method-list-1 => method-list-1 ident "\n"
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; method-list-1 => function-sig "\n"
-   (lambda ($2 $1 . $rest) (make-tl 'methods $1))
-   ;; method-list-1 => method-list-1 function-sig "\n"
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
+   ;; method-item => function-defn
+   (lambda ($1 . $rest) $1)
+   ;; method-item => ident
+   (lambda ($1 . $rest) $1)
+   ;; method-item => function-sig
+   (lambda ($1 . $rest) `(function-sig ,@(cdr $1)))
    ;; function-defn => function-decl non-comment-statement stmt-list the-end
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn
@@ -535,14 +533,14 @@
    (lambda ($1 . $rest) $1)
    ;; term-list => term-list term
    (lambda ($2 $1 . $rest) $1)
-   ;; term => "\n"
-   (lambda ($1 . $rest) $1)
-   ;; term => "\n" '$code-comm
-   (lambda ($2 $1 . $rest) $1)
    ;; term => ";"
    (lambda ($1 . $rest) $1)
    ;; term => ";" '$code-comm
    (lambda ($2 $1 . $rest) $1)
+   ;; term => ";" "\n"
+   (lambda ($2 $1 . $rest) $1)
+   ;; term => "\n"
+   (lambda ($1 . $rest) $1)
    ;; term => ","
    (lambda ($1 . $rest) $1)
    ;; lone-comment-list => lone-comment-list-1

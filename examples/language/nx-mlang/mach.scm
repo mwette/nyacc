@@ -77,13 +77,13 @@
 
     (class-defn
      ("classdef" "(" attr-list ")" ident "<" supers term class-parts "end"
-      ($$ `(class-defn ,$5 ,$7 ,$3 ,(cdr $9))))
+      ($$ `(class-defn ,$5 ,$7 ,$3 ,@(cdr $9))))
      ("classdef" "(" attr-list ")" ident term class-parts "end"
-      ($$ `(class-defn ,$5 ,$3 ,(cdr $7))))
+      ($$ `(class-defn ,$5 ,$3 ,@(cdr $7))))
      ("classdef" ident "<" supers term class-parts "end"
-      ($$ `(class-defn ,$2 ,$4 ,(cdr $6))))
+      ($$ `(class-defn ,$2 ,$4 ,@(cdr $6))))
      ("classdef" ident term class-parts "end"
-      ($$ `(class-defn ,$2 ,(cdr $4)))))
+      ($$ `(class-defn ,$2 ,@(cdr $4)))))
 
     (supers
      (supers-1 ($$ (tl->list $1))))
@@ -96,13 +96,13 @@
     (class-parts-1
      ($empty ($$ (make-tl 'seq)))
      (class-parts-1 "properties" "(" attr-list ")" prop-list "end"
-                 ($$ (tl-append $1 `(properties ,$4 ,$6))))
+                 ($$ (tl-append $1 `(properties ,$4 ,@(cdr $6)))))
      (class-parts-1 "properties" prop-list "end"
-                 ($$ (tl-append $1 `(properties ,$3))))
+                 ($$ (tl-append $1 `(properties ,@(cdr $3)))))
      (class-parts-1 "methods" "(" attr-list ")" method-list "end"
-                 ($$ (tl-append $1 `(methods ,$4 ,$6))))
+                 ($$ (tl-append $1 `(methods ,$4 ,@(cdr $6)))))
      (class-parts-1 "methods" method-list "end"
-                 ($$ (tl-append $1 `(methods ,$3))))
+                 ($$ (tl-append $1 `(methods ,@(cdr $3)))))
      #|
      (class-parts-1 "events"  "(" attr-list ")" prop-decl "end"
                  ($$ (tl-append $1 `(events $4 $6))))
@@ -110,7 +110,7 @@
                  ($$ (tl-append $1 `(enumeration $3))))
      |#
      )
-
+     
     (attr-list
      (attr-list-1 ($$ (tl->list $1))))
     (attr-list-1
@@ -132,13 +132,12 @@
     (method-list
      (method-list-1 ($$ (tl->list $1))))
     (method-list-1
-     (function-defn ($$ (make-tl 'methods $1)))
-     (method-list-1 function-defn ($$ (tl-append $1 $2)))
-     (ident "\n" ($$ (make-tl 'methods $1)))
-     (method-list-1 ident "\n" ($$ (tl-append $1 $2)))
-     (function-sig "\n" ($$ (make-tl 'methods $1)))
-     (method-list-1 function-sig "\n" ($$ (tl-append $1 $2)))
-     )
+     (method-item ($$ (make-tl 'methods $1)))
+     (method-list-1 method-item ($$ (tl-append $1 $2))))
+    (method-item
+     (function-defn)
+     (ident)
+     (function-sig ($$ `(function-sig ,@(cdr $1)))))
 
     (function-defn
      (function-decl non-comment-statement stmt-list the-end
@@ -433,9 +432,11 @@
 
     (term-list (term) (term-list term))
 
-    (term ("\n") ("\n" $code-comm)
-          (";") (";" $code-comm)
-          (","))
+    (term
+     (";") (";" $code-comm)
+     (";" "\n")
+     ("\n")
+     (","))
 
     (lone-comment-list
      (lone-comment-list-1 ($$ (tl->list $1))))
