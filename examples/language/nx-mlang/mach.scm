@@ -46,6 +46,7 @@
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
                           license-lgpl3+))
+   (expect 1)                           ; SR on 'sp after expr
    (start translation-unit)
    (grammar
     
@@ -321,36 +322,122 @@
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ (tl->list $2)))
      ("{" "}" ($$ '(cell-array)))
-     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2))))))
+     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2)))))
+     )
+
+    (expr-nosp
+     (or-expr-nosp)
+     (":" ($$ `(colon-expr)))
+     (or-expr-nosp ":" or-expr-nosp ($$ `(colon-expr ,$1 ,$3)))
+     (or-expr-nosp ":" or-expr-nosp ":" or-expr-nosp
+                   ($$ `(colon-expr ,$1 ,$3 ,$5)))
+     (or-expr-nosp ":" "end" ($$ `(colon-expr ,$1 (end))))
+     (or-expr-nosp ":" or-expr-nosp ":" "end"
+                   ($$ `(colon-expr ,$1 ,$3 (end)))))
+
+    (or-expr-nosp
+     (and-expr-nosp)
+     (or-expr-nosp "|" and-expr-nosp ($$ `(or ,$1 ,$3)))
+     (or-expr-nosp "||" and-expr-nosp ($$ `(ss-or ,$1 ,$3))))
+
+    (and-expr-nosp
+     (equality-expr-nosp)
+     (and-expr-nosp "&" equality-expr-nosp ($$ `(and ,$1 ,$3)))
+     (and-expr-nosp "&&" equality-expr-nosp ($$ `(ss-and ,$1 ,$3))))
+
+    (equality-expr-nosp
+     (rel-expr-nosp)
+     (equality-expr-nosp "==" rel-expr-nosp ($$ `(eq ,$1 ,$3)))
+     (equality-expr-nosp "~=" rel-expr-nosp ($$ `(ne ,$1 ,$3))))
+
+    (rel-expr-nosp
+     (add-expr-nosp)
+     (rel-expr-nosp "<" add-expr-nosp ($$ `(lt ,$1 ,$3)))
+     (rel-expr-nosp ">" add-expr-nosp ($$ `(gt ,$1 ,$3)))
+     (rel-expr-nosp "<=" add-expr-nosp ($$ `(le ,$1 ,$3)))
+     (rel-expr-nosp ">=" add-expr-nosp ($$ `(ge ,$1 ,$3))))
+
+    (add-expr-nosp
+     (mul-expr-nosp)
+     (add-expr-nosp "+" mul-expr-nosp ($$ `(add ,$1 ,$3)))
+     (add-expr-nosp "-" mul-expr-nosp ($$ `(sub ,$1 ,$3)))
+     (add-expr-nosp ".+" mul-expr-nosp ($$ `(dot-add ,$1 ,$3)))
+     (add-expr-nosp ".-" mul-expr-nosp ($$ `(dot-sub ,$1 ,$3))))
+
+    (mul-expr-nosp
+     (unary-expr-nosp)
+     (mul-expr-nosp "*" unary-expr-nosp ($$ `(mul ,$1 ,$3)))
+     (mul-expr-nosp "/" unary-expr-nosp ($$ `(div ,$1 ,$3)))
+     (mul-expr-nosp "\\" unary-expr-nosp ($$ `(ldiv ,$1 ,$3)))
+     (mul-expr-nosp "^" unary-expr-nosp ($$ `(pow ,$1 ,$3)))
+     (mul-expr-nosp ".*" unary-expr-nosp ($$ `(dot-mul ,$1 ,$3)))
+     (mul-expr-nosp "./" unary-expr-nosp ($$ `(dot-div ,$1 ,$3)))
+     (mul-expr-nosp ".\\" unary-expr-nosp ($$ `(dot-ldiv ,$1 ,$3)))
+     (mul-expr-nosp ".^" unary-expr-nosp ($$ `(dot-pow ,$1 ,$3))))
+
+    (unary-expr-nosp
+     (postfix-expr-nosp)
+     ("-" postfix-expr-nosp ($$ `(neg ,$2)))
+     ("+" postfix-expr-nosp ($$ $2))
+     ("~" postfix-expr-nosp ($$ `(not ,$2))))
+
+    (postfix-expr-nosp
+     (primary-expr-nosp)
+     (postfix-expr-nosp "'" ($$ `(transpose ,$1)))
+     (postfix-expr-nosp ".'" ($$ `(conj-transpose ,$1)))
+     (postfix-expr-nosp "(" expr-list ")"
+                        ($$ `(aref-or-call ,$1 ,(tl->list $3))))
+     (postfix-expr-nosp "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
+     (postfix-expr-nosp "." ident ($$ `(sel ,$3 ,$1))))
+    
+    (primary-expr-nosp
+     (ident)
+     (number)
+     (string)
+     ("(" expr ")" ($$ $2))
+     ("[" "]" ($$ '(matrix)))
+     ("[" matrix-row-list "]" ($$ (tl->list $2)))
+     ("{" "}" ($$ '(cell-array)))
+     ;;("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2)))))
+     )
 
     (matrix-row-list
      (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
+     (matrix-row row-term matrix-row-list ($$ (tl-insert $3 (tl->list $1)))))
+    #;(matrix-row-list
+     (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
      (matrix-row-list row-term matrix-row ($$ (tl-append $1 (tl->list $3)))))
-    (row-term (";") (nl))
+    (row-term (";") ("\n"))
 
     (matrix-row
+     (expr-nosp ($$ (make-tl 'row $1)))
+     (expr-nosp "," matrix-row ($$ (tl-insert $3 $1)))
+     (expr-nosp 'sp matrix-row ($$ (tl-insert $3 $1)))
+     )
+    #;(matrix-row
      (expr ($$ (make-tl 'row $1)))
-     (matrix-row "," expr ($$ (tl-append $1 $3))))
+     (matrix-row "," expr ($$ (tl-append $1 $3)))
+     (matrix-row 'sp expr ($$ (tl-append $1 $3)))
+     )
 
     (term-list (term) (term-list term))
 
-    (term (nl) (";") (","))
+    (term ("\n") ("\n" $code-comm)
+          (";") (";" $code-comm)
+          (","))
 
     (lone-comment-list
      (lone-comment-list-1 ($$ (tl->list $1))))
     (lone-comment-list-1
-     (lone-comment nl ($$ (make-tl 'comm-list $1)))
-     (lone-comment-list-1 lone-comment nl ($$ (tl-append $1 $2))))
+     (lone-comment "\n" ($$ (make-tl 'comm-list $1)))
+     (lone-comment-list-1 lone-comment "\n" ($$ (tl-append $1 $2))))
 
     (ident ($ident ($$ `(ident ,$1))))
     (fixed ($fixed ($$ `(fixed ,$1))))
     (float ($float ($$ `(float ,$1))))
     (number (fixed) (float))
     (string ($string ($$ `(string ,$1))))
-    (lone-comment ($lone-comm ($$ `(comm ,$1))))
-    ;;(code-comment ($code-comm ($$ `(comm ,$1))))
-    (nl ("\n"))
-    )))
+    (lone-comment ($lone-comm ($$ `(comm ,$1)))))))
 
 ;; === parsers ==========================
 
@@ -358,16 +445,16 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine mlang-spec))
-   #:keep 0 #:keepers '($code-comm $lone-comm "\n")))
+   #:keep 0 #:keepers '($code-comm $lone-comm sp "\n")))
+;;(define mlang-mach (make-lalr-machine mlang-spec))
 
 (define mlang-ia-spec (restart-spec mlang-spec 'mlang-item))
 
 (define mlang-ia-mach
-  (let* ((mach (make-lalr-machine mlang-ia-spec))
-         (mach (compact-machine mach #:keep 0 #:keepers '()))
-         (mach (hashify-machine mach))
-         )
-    mach))
+  (compact-machine
+   (hashify-machine
+    (make-lalr-machine mlang-ia-spec))
+   #:keep 0 #:keepers '($code-comm $lone-comm sp)))
 
 ;; === automaton file generators =========
 

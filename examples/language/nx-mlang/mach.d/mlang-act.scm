@@ -357,35 +357,148 @@
    ;; primary-expr => "{" matrix-row-list "}"
    (lambda ($3 $2 $1 . $rest)
      (cons 'cell-array (cdr (tl->list $2))))
+   ;; expr-nosp => or-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; expr-nosp => ":"
+   (lambda ($1 . $rest) `(colon-expr))
+   ;; expr-nosp => or-expr-nosp ":" or-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(colon-expr ,$1 ,$3))
+   ;; expr-nosp => or-expr-nosp ":" or-expr-nosp ":" or-expr-nosp
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(colon-expr ,$1 ,$3 ,$5))
+   ;; expr-nosp => or-expr-nosp ":" "end"
+   (lambda ($3 $2 $1 . $rest)
+     `(colon-expr ,$1 (end)))
+   ;; expr-nosp => or-expr-nosp ":" or-expr-nosp ":" "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(colon-expr ,$1 ,$3 (end)))
+   ;; or-expr-nosp => and-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; or-expr-nosp => or-expr-nosp "|" and-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
+   ;; or-expr-nosp => or-expr-nosp "||" and-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(ss-or ,$1 ,$3))
+   ;; and-expr-nosp => equality-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; and-expr-nosp => and-expr-nosp "&" equality-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
+   ;; and-expr-nosp => and-expr-nosp "&&" equality-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(ss-and ,$1 ,$3))
+   ;; equality-expr-nosp => rel-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; equality-expr-nosp => equality-expr-nosp "==" rel-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
+   ;; equality-expr-nosp => equality-expr-nosp "~=" rel-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(ne ,$1 ,$3))
+   ;; rel-expr-nosp => add-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; rel-expr-nosp => rel-expr-nosp "<" add-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(lt ,$1 ,$3))
+   ;; rel-expr-nosp => rel-expr-nosp ">" add-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(gt ,$1 ,$3))
+   ;; rel-expr-nosp => rel-expr-nosp "<=" add-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(le ,$1 ,$3))
+   ;; rel-expr-nosp => rel-expr-nosp ">=" add-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(ge ,$1 ,$3))
+   ;; add-expr-nosp => mul-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; add-expr-nosp => add-expr-nosp "+" mul-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
+   ;; add-expr-nosp => add-expr-nosp "-" mul-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
+   ;; add-expr-nosp => add-expr-nosp ".+" mul-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-add ,$1 ,$3))
+   ;; add-expr-nosp => add-expr-nosp ".-" mul-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-sub ,$1 ,$3))
+   ;; mul-expr-nosp => unary-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; mul-expr-nosp => mul-expr-nosp "*" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
+   ;; mul-expr-nosp => mul-expr-nosp "/" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
+   ;; mul-expr-nosp => mul-expr-nosp "\\" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(ldiv ,$1 ,$3))
+   ;; mul-expr-nosp => mul-expr-nosp "^" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(pow ,$1 ,$3))
+   ;; mul-expr-nosp => mul-expr-nosp ".*" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-mul ,$1 ,$3))
+   ;; mul-expr-nosp => mul-expr-nosp "./" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-div ,$1 ,$3))
+   ;; mul-expr-nosp => mul-expr-nosp ".\\" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-ldiv ,$1 ,$3))
+   ;; mul-expr-nosp => mul-expr-nosp ".^" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-pow ,$1 ,$3))
+   ;; unary-expr-nosp => postfix-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; unary-expr-nosp => "-" postfix-expr-nosp
+   (lambda ($2 $1 . $rest) `(neg ,$2))
+   ;; unary-expr-nosp => "+" postfix-expr-nosp
+   (lambda ($2 $1 . $rest) $2)
+   ;; unary-expr-nosp => "~" postfix-expr-nosp
+   (lambda ($2 $1 . $rest) `(not ,$2))
+   ;; postfix-expr-nosp => primary-expr-nosp
+   (lambda ($1 . $rest) $1)
+   ;; postfix-expr-nosp => postfix-expr-nosp "'"
+   (lambda ($2 $1 . $rest) `(transpose ,$1))
+   ;; postfix-expr-nosp => postfix-expr-nosp ".'"
+   (lambda ($2 $1 . $rest) `(conj-transpose ,$1))
+   ;; postfix-expr-nosp => postfix-expr-nosp "(" expr-list ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(aref-or-call ,$1 ,(tl->list $3)))
+   ;; postfix-expr-nosp => postfix-expr-nosp "(" ")"
+   (lambda ($3 $2 $1 . $rest)
+     `(aref-or-call ,$1 (expr-list)))
+   ;; postfix-expr-nosp => postfix-expr-nosp "." ident
+   (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
+   ;; primary-expr-nosp => ident
+   (lambda ($1 . $rest) $1)
+   ;; primary-expr-nosp => number
+   (lambda ($1 . $rest) $1)
+   ;; primary-expr-nosp => string
+   (lambda ($1 . $rest) $1)
+   ;; primary-expr-nosp => "(" expr ")"
+   (lambda ($3 $2 $1 . $rest) $2)
+   ;; primary-expr-nosp => "[" "]"
+   (lambda ($2 $1 . $rest) '(matrix))
+   ;; primary-expr-nosp => "[" matrix-row-list "]"
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
+   ;; primary-expr-nosp => "{" "}"
+   (lambda ($2 $1 . $rest) '(cell-array))
    ;; matrix-row-list => matrix-row
    (lambda ($1 . $rest)
      (make-tl 'matrix (tl->list $1)))
-   ;; matrix-row-list => matrix-row-list row-term matrix-row
+   ;; matrix-row-list => matrix-row row-term matrix-row-list
    (lambda ($3 $2 $1 . $rest)
-     (tl-append $1 (tl->list $3)))
+     (tl-insert $3 (tl->list $1)))
    ;; row-term => ";"
    (lambda ($1 . $rest) $1)
-   ;; row-term => nl
+   ;; row-term => "\n"
    (lambda ($1 . $rest) $1)
-   ;; matrix-row => expr
+   ;; matrix-row => expr-nosp
    (lambda ($1 . $rest) (make-tl 'row $1))
-   ;; matrix-row => matrix-row "," expr
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; matrix-row => expr-nosp "," matrix-row
+   (lambda ($3 $2 $1 . $rest) (tl-insert $3 $1))
+   ;; matrix-row => expr-nosp 'sp matrix-row
+   (lambda ($3 $2 $1 . $rest) (tl-insert $3 $1))
    ;; term-list => term
    (lambda ($1 . $rest) $1)
    ;; term-list => term-list term
    (lambda ($2 $1 . $rest) $1)
-   ;; term => nl
+   ;; term => "\n"
    (lambda ($1 . $rest) $1)
+   ;; term => "\n" '$code-comm
+   (lambda ($2 $1 . $rest) $1)
    ;; term => ";"
    (lambda ($1 . $rest) $1)
+   ;; term => ";" '$code-comm
+   (lambda ($2 $1 . $rest) $1)
    ;; term => ","
    (lambda ($1 . $rest) $1)
    ;; lone-comment-list => lone-comment-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; lone-comment-list-1 => lone-comment nl
+   ;; lone-comment-list-1 => lone-comment "\n"
    (lambda ($2 $1 . $rest) (make-tl 'comm-list $1))
-   ;; lone-comment-list-1 => lone-comment-list-1 lone-comment nl
+   ;; lone-comment-list-1 => lone-comment-list-1 lone-comment "\n"
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
@@ -401,8 +514,6 @@
    (lambda ($1 . $rest) `(string ,$1))
    ;; lone-comment => '$lone-comm
    (lambda ($1 . $rest) `(comm ,$1))
-   ;; nl => "\n"
-   (lambda ($1 . $rest) $1)
    ))
 
 ;;; end tables
