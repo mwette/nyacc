@@ -42,32 +42,36 @@
    (lambda ($1 . $rest) $1)
    ;; class-defn => "classdef" "(" attr-list ")" ident "<" supers term clas...
    (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$5 ,$7 ,$3 ,@(cdr (tl->list $8))))
+     `(class-defn ,$5 ,$7 ,$3 ,$9))
    ;; class-defn => "classdef" "(" attr-list ")" ident term class-parts "end"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$5 ,$3 ,@(cdr (tl->list $6))))
+     `(class-defn ,$5 ,$3 ,$7))
    ;; class-defn => "classdef" ident "<" supers term class-parts "end"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$2 ,$4 ,@(cdr (tl->list $5))))
+     `(class-defn ,$2 ,$4 ,$6))
    ;; class-defn => "classdef" ident term class-parts "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$2 ,@(cdr (tl->list $3))))
-   ;; supers => ident
+     `(class-defn ,$2 ,$4))
+   ;; supers => supers-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; supers-1 => ident
    (lambda ($1 . $rest) (make-tl 'supers $1))
-   ;; supers => supers "&" ident
+   ;; supers-1 => supers-1 "&" ident
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; class-parts => 
+   ;; class-parts => class-parts-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; class-parts-1 => 
    (lambda $rest (make-tl 'seq))
-   ;; class-parts => class-parts "properties" "(" attr-list ")" prop-list "...
+   ;; class-parts-1 => class-parts-1 "properties" "(" attr-list ")" prop-li...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(properties ,$4 ,$6)))
-   ;; class-parts => class-parts "properties" prop-list "end"
+   ;; class-parts-1 => class-parts-1 "properties" prop-list "end"
    (lambda ($4 $3 $2 $1 . $rest)
      (tl-append $1 `(properties ,$3)))
-   ;; class-parts => class-parts "methods" "(" attr-list ")" function-list ...
+   ;; class-parts-1 => class-parts-1 "methods" "(" attr-list ")" function-l...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(methods ,$4 ,$6)))
-   ;; class-parts => class-parts "methods" function-list "end"
+   ;; class-parts-1 => class-parts-1 "methods" function-list "end"
    (lambda ($4 $3 $2 $1 . $rest)
      (tl-append $1 `(methods ,$3)))
    ;; attr-list => attr-list-1

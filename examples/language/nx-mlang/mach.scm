@@ -77,34 +77,38 @@
 
     (class-defn
      ("classdef" "(" attr-list ")" ident "<" supers term class-parts "end"
-      ($$ `(class-defn ,$5 ,$7 ,$3 ,@(cdr (tl->list $8)))))
+      ($$ `(class-defn ,$5 ,$7 ,$3 ,$9)))
      ("classdef" "(" attr-list ")" ident term class-parts "end"
-      ($$ `(class-defn ,$5 ,$3 ,@(cdr (tl->list $6)))))
-     ("classdef" ident "<" supers  term class-parts "end"
-      ($$ `(class-defn ,$2 ,$4 ,@(cdr (tl->list $5)))))
+      ($$ `(class-defn ,$5 ,$3 ,$7)))
+     ("classdef" ident "<" supers term class-parts "end"
+      ($$ `(class-defn ,$2 ,$4 ,$6)))
      ("classdef" ident term class-parts "end"
-      ($$ `(class-defn ,$2 ,@(cdr (tl->list $3))))))
+      ($$ `(class-defn ,$2 ,$4))))
 
     (supers
+     (supers-1 ($$ (tl->list $1))))
+    (supers-1
      (ident ($$ (make-tl 'supers $1)))
-     (supers "&" ident ($$ (tl-append $1 $3))))
+     (supers-1 "&" ident ($$ (tl-append $1 $3))))
 
     (class-parts
+     (class-parts-1 ($$ (tl->list $1))))
+    (class-parts-1
      ($empty ($$ (make-tl 'seq)))
-     (class-parts "properties" "(" attr-list ")" prop-list "end"
+     (class-parts-1 "properties" "(" attr-list ")" prop-list "end"
                  ($$ (tl-append $1 `(properties ,$4 ,$6))))
-     (class-parts "properties" prop-list "end"
+     (class-parts-1 "properties" prop-list "end"
                  ($$ (tl-append $1 `(properties ,$3))))
      #|
      |#
-     (class-parts "methods" "(" attr-list ")" function-list "end"
+     (class-parts-1 "methods" "(" attr-list ")" function-list "end"
                  ($$ (tl-append $1 `(methods ,$4 ,$6))))
-     (class-parts "methods" function-list "end"
+     (class-parts-1 "methods" function-list "end"
                  ($$ (tl-append $1 `(methods ,$3))))
      #|
-     (class-parts "events"  "(" attr-list ")" prop-decl "end"
+     (class-parts-1 "events"  "(" attr-list ")" prop-decl "end"
                  ($$ (tl-append $1 `(events $4 $6))))
-     (class-parts "enumeration" xxx "end"
+     (class-parts-1 "enumeration" xxx "end"
                  ($$ (tl-append $1 `(enumeration $3))))
      |#
      )
