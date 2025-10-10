@@ -77,13 +77,13 @@
 
     (class-defn
      ("classdef" "(" attr-list ")" ident "<" supers term class-parts "end"
-      ($$ `(class-defn ,$5 ,$7 ,$3 ,$9)))
+      ($$ `(class-defn ,$5 ,$7 ,$3 ,(cdr $9))))
      ("classdef" "(" attr-list ")" ident term class-parts "end"
-      ($$ `(class-defn ,$5 ,$3 ,$7)))
+      ($$ `(class-defn ,$5 ,$3 ,(cdr $7))))
      ("classdef" ident "<" supers term class-parts "end"
-      ($$ `(class-defn ,$2 ,$4 ,$6)))
+      ($$ `(class-defn ,$2 ,$4 ,(cdr $6))))
      ("classdef" ident term class-parts "end"
-      ($$ `(class-defn ,$2 ,$4))))
+      ($$ `(class-defn ,$2 ,(cdr $4)))))
 
     (supers
      (supers-1 ($$ (tl->list $1))))
@@ -99,11 +99,9 @@
                  ($$ (tl-append $1 `(properties ,$4 ,$6))))
      (class-parts-1 "properties" prop-list "end"
                  ($$ (tl-append $1 `(properties ,$3))))
-     #|
-     |#
-     (class-parts-1 "methods" "(" attr-list ")" function-list "end"
+     (class-parts-1 "methods" "(" attr-list ")" method-list "end"
                  ($$ (tl-append $1 `(methods ,$4 ,$6))))
-     (class-parts-1 "methods" function-list "end"
+     (class-parts-1 "methods" method-list "end"
                  ($$ (tl-append $1 `(methods ,$3))))
      #|
      (class-parts-1 "events"  "(" attr-list ")" prop-decl "end"
@@ -116,9 +114,10 @@
     (attr-list
      (attr-list-1 ($$ (tl->list $1))))
     (attr-list-1
-     (attr ($$ (make-tl 'attr $1)))
+     (attr ($$ (make-tl 'attr-list $1)))
      (attr-list-1 "," attr ($$ (tl-append $1 $3))))
     (attr
+     (ident ($$ `(attr ,$1)))
      (ident "=" expr ($$ `(attr ,$1 ,$3))))
 
     (prop-list
@@ -130,11 +129,16 @@
      (ident term ($$ `(property ,$1)))
      )
 
-    (function-list
-     (function-list-1 ($$ (tl->list $1))))
-    (function-list-1
-     (function-defn ($$ (make-tl 'functions $1)))
-     (function-list-1 function-defn ($$ (tl-append $1 $2))))
+    (method-list
+     (method-list-1 ($$ (tl->list $1))))
+    (method-list-1
+     (function-defn ($$ (make-tl 'methods $1)))
+     (method-list-1 function-defn ($$ (tl-append $1 $2)))
+     (ident "\n" ($$ (make-tl 'methods $1)))
+     (method-list-1 ident "\n" ($$ (tl-append $1 $2)))
+     (function-sig "\n" ($$ (make-tl 'methods $1)))
+     (method-list-1 function-sig "\n" ($$ (tl-append $1 $2)))
+     )
 
     (function-defn
      (function-decl non-comment-statement stmt-list the-end
@@ -147,28 +151,29 @@
     (the-end ("end" term)) 
 
     (function-decl
-     (function-decl-line lone-comment-list ($$ (append $1 (list $2))))
-     (function-decl-line ($$ $1)))
+     ("function" function-sig term lone-comment-list ($$ (append $2 (list $4))))
+     ("function" function-sig term ($$ $2)))
 
-    (function-decl-line
+    (function-sig
      ;; fctn-decl name input-args output-args
-     ("function" "[" ident-list "]" "=" ident "(" ident-list ")" term
-      ($$ `(fctn-decl ,$6 ,(tl->list $8) ,(tl->list $3))))
-     ("function" "[" ident-list "]" "=" ident "(" ")" term
-      ($$ `(fctn-decl ,$6 (ident-list) ,(tl->list $3))))
-     ("function" ident "=" ident "(" ident-list ")" term
-      ($$ `(fctn-decl ,$4 ,(tl->list $6) (ident-list ,$2))))
-     ("function" ident "=" ident "(" ")" term
-      ($$ `(fctn-decl ,$4 (ident-list) (ident-list ,$2))))
-     ("function" ident "(" ident-list ")" term
-      ($$ `(fctn-decl ,$2 ,(tl->list $4) (ident-list))))
-     ("function" ident "(" ")" term
-      ($$ `(fctn-decl ,$2 (ident-list) (ident-list))))
-      )
+     ("[" ident-list "]" "=" ident "(" ident-list ")"
+      ($$ `(fctn-decl ,$5 ,$7 ,$2)))
+     ("[" ident-list "]" "=" ident "(" ")"
+      ($$ `(fctn-decl ,$5 (ident-list) ,$2)))
+     (ident "=" ident "(" ident-list ")"
+      ($$ `(fctn-decl ,$3 ,$5 (ident-list ,$1))))
+     (ident "=" ident "(" ")"
+      ($$ `(fctn-decl ,$3 (ident-list) (ident-list ,$1))))
+     (ident "(" ident-list ")"
+      ($$ `(fctn-decl ,$1 ,$3 (ident-list))))
+     (ident "(" ")"
+      ($$ `(fctn-decl ,$1 (ident-list) (ident-list)))))
 
     (ident-list
+     (ident-list-1 ($$ (tl->list $1))))
+    (ident-list-1
      (ident ($$ (make-tl 'ident-list $1)))
-     (ident-list "," ident ($$ (tl-append $1 $3))))
+     (ident-list-1 "," ident ($$ (tl-append $1 $3))))
 
     (stmt-list
      (statement ($$ (if $1 (make-tl 'stmt-list $1) (make-tl 'stmt-list))))
@@ -310,7 +315,9 @@
      (postfix-expr)
      ("-" postfix-expr ($$ `(neg ,$2)))
      ("+" postfix-expr ($$ $2))
-     ("~" postfix-expr ($$ `(not ,$2))))
+     ("~" postfix-expr ($$ `(not ,$2)))
+     ("@" postfix-expr ($$ `(handle ,$2))))
+    
 
     (postfix-expr
      (primary-expr)
@@ -407,24 +414,22 @@
      ("{" "}" ($$ '(cell-array)))
      ("{" matrix-row-list "}" ($$ `(cell-array ,(cdr (tl->list $2))))))
 
-    (matrix-row-list
+    #;(matrix-row-list
      (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
      (matrix-row row-term matrix-row-list ($$ (tl-insert $3 (tl->list $1)))))
-    #;(matrix-row-list
+    (matrix-row-list
      (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
      (matrix-row-list row-term matrix-row ($$ (tl-append $1 (tl->list $3)))))
     (row-term (";") ("\n"))
 
-    (matrix-row
+    #;(matrix-row
      (expr-nosp ($$ (make-tl 'row $1)))
      (expr-nosp "," matrix-row ($$ (tl-insert $3 $1)))
-     (expr-nosp 'sp matrix-row ($$ (tl-insert $3 $1)))
-     )
-    #;(matrix-row
-     (expr ($$ (make-tl 'row $1)))
-     (matrix-row "," expr ($$ (tl-append $1 $3)))
-     (matrix-row 'sp expr ($$ (tl-append $1 $3)))
-     )
+     (expr-nosp 'sp matrix-row ($$ (tl-insert $3 $1))))
+    (matrix-row
+     (expr-nosp ($$ (make-tl 'row $1)))
+     (matrix-row "," expr-nosp ($$ (tl-append $1 $3)))
+     (matrix-row 'sp expr-nosp ($$ (tl-append $1 $3))))
 
     (term-list (term) (term-list term))
 

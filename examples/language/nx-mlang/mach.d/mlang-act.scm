@@ -42,16 +42,16 @@
    (lambda ($1 . $rest) $1)
    ;; class-defn => "classdef" "(" attr-list ")" ident "<" supers term clas...
    (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$5 ,$7 ,$3 ,$9))
+     `(class-defn ,$5 ,$7 ,$3 ,(cdr $9)))
    ;; class-defn => "classdef" "(" attr-list ")" ident term class-parts "end"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$5 ,$3 ,$7))
+     `(class-defn ,$5 ,$3 ,(cdr $7)))
    ;; class-defn => "classdef" ident "<" supers term class-parts "end"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$2 ,$4 ,$6))
+     `(class-defn ,$2 ,$4 ,(cdr $6)))
    ;; class-defn => "classdef" ident term class-parts "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(class-defn ,$2 ,$4))
+     `(class-defn ,$2 ,(cdr $4)))
    ;; supers => supers-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; supers-1 => ident
@@ -68,18 +68,20 @@
    ;; class-parts-1 => class-parts-1 "properties" prop-list "end"
    (lambda ($4 $3 $2 $1 . $rest)
      (tl-append $1 `(properties ,$3)))
-   ;; class-parts-1 => class-parts-1 "methods" "(" attr-list ")" function-l...
+   ;; class-parts-1 => class-parts-1 "methods" "(" attr-list ")" method-lis...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(methods ,$4 ,$6)))
-   ;; class-parts-1 => class-parts-1 "methods" function-list "end"
+   ;; class-parts-1 => class-parts-1 "methods" method-list "end"
    (lambda ($4 $3 $2 $1 . $rest)
      (tl-append $1 `(methods ,$3)))
    ;; attr-list => attr-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; attr-list-1 => attr
-   (lambda ($1 . $rest) (make-tl 'attr $1))
+   (lambda ($1 . $rest) (make-tl 'attr-list $1))
    ;; attr-list-1 => attr-list-1 "," attr
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; attr => ident
+   (lambda ($1 . $rest) `(attr ,$1))
    ;; attr => ident "=" expr
    (lambda ($3 $2 $1 . $rest) `(attr ,$1 ,$3))
    ;; prop-list => prop-list-1
@@ -90,12 +92,20 @@
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; prop => ident term
    (lambda ($2 $1 . $rest) `(property ,$1))
-   ;; function-list => function-list-1
+   ;; method-list => method-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; function-list-1 => function-defn
-   (lambda ($1 . $rest) (make-tl 'functions $1))
-   ;; function-list-1 => function-list-1 function-defn
+   ;; method-list-1 => function-defn
+   (lambda ($1 . $rest) (make-tl 'methods $1))
+   ;; method-list-1 => method-list-1 function-defn
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; method-list-1 => ident "\n"
+   (lambda ($2 $1 . $rest) (make-tl 'methods $1))
+   ;; method-list-1 => method-list-1 ident "\n"
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
+   ;; method-list-1 => function-sig "\n"
+   (lambda ($2 $1 . $rest) (make-tl 'methods $1))
+   ;; method-list-1 => method-list-1 function-sig "\n"
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; function-defn => function-decl non-comment-statement stmt-list the-end
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn
@@ -111,31 +121,34 @@
      `(fctn-defn ,$1 (stmt-list)))
    ;; the-end => "end" term
    (lambda ($2 $1 . $rest) $1)
-   ;; function-decl => function-decl-line lone-comment-list
-   (lambda ($2 $1 . $rest) (append $1 (list $2)))
-   ;; function-decl => function-decl-line
-   (lambda ($1 . $rest) $1)
-   ;; function-decl-line => "function" "[" ident-list "]" "=" ident "(" ide...
-   (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$6 ,(tl->list $8) ,(tl->list $3)))
-   ;; function-decl-line => "function" "[" ident-list "]" "=" ident "(" ")"...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$6 (ident-list) ,(tl->list $3)))
-   ;; function-decl-line => "function" ident "=" ident "(" ident-list ")" term
+   ;; function-decl => "function" function-sig term lone-comment-list
+   (lambda ($4 $3 $2 $1 . $rest)
+     (append $2 (list $4)))
+   ;; function-decl => "function" function-sig term
+   (lambda ($3 $2 $1 . $rest) $2)
+   ;; function-sig => "[" ident-list "]" "=" ident "(" ident-list ")"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$4 ,(tl->list $6) (ident-list ,$2)))
-   ;; function-decl-line => "function" ident "=" ident "(" ")" term
+     `(fctn-decl ,$5 ,$7 ,$2))
+   ;; function-sig => "[" ident-list "]" "=" ident "(" ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$4 (ident-list) (ident-list ,$2)))
-   ;; function-decl-line => "function" ident "(" ident-list ")" term
+     `(fctn-decl ,$5 (ident-list) ,$2))
+   ;; function-sig => ident "=" ident "(" ident-list ")"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$2 ,(tl->list $4) (ident-list)))
-   ;; function-decl-line => "function" ident "(" ")" term
+     `(fctn-decl ,$3 ,$5 (ident-list ,$1)))
+   ;; function-sig => ident "=" ident "(" ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$2 (ident-list) (ident-list)))
-   ;; ident-list => ident
+     `(fctn-decl ,$3 (ident-list) (ident-list ,$1)))
+   ;; function-sig => ident "(" ident-list ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(fctn-decl ,$1 ,$3 (ident-list)))
+   ;; function-sig => ident "(" ")"
+   (lambda ($3 $2 $1 . $rest)
+     `(fctn-decl ,$1 (ident-list) (ident-list)))
+   ;; ident-list => ident-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; ident-list-1 => ident
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
-   ;; ident-list => ident-list "," ident
+   ;; ident-list-1 => ident-list-1 "," ident
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; stmt-list => statement
    (lambda ($1 . $rest)
@@ -353,6 +366,8 @@
    (lambda ($2 $1 . $rest) $2)
    ;; unary-expr => "~" postfix-expr
    (lambda ($2 $1 . $rest) `(not ,$2))
+   ;; unary-expr => "@" postfix-expr
+   (lambda ($2 $1 . $rest) `(handle ,$2))
    ;; postfix-expr => primary-expr
    (lambda ($1 . $rest) $1)
    ;; postfix-expr => postfix-expr "'"
@@ -503,19 +518,19 @@
    ;; matrix-row-list => matrix-row
    (lambda ($1 . $rest)
      (make-tl 'matrix (tl->list $1)))
-   ;; matrix-row-list => matrix-row row-term matrix-row-list
+   ;; matrix-row-list => matrix-row-list row-term matrix-row
    (lambda ($3 $2 $1 . $rest)
-     (tl-insert $3 (tl->list $1)))
+     (tl-append $1 (tl->list $3)))
    ;; row-term => ";"
    (lambda ($1 . $rest) $1)
    ;; row-term => "\n"
    (lambda ($1 . $rest) $1)
    ;; matrix-row => expr-nosp
    (lambda ($1 . $rest) (make-tl 'row $1))
-   ;; matrix-row => expr-nosp "," matrix-row
-   (lambda ($3 $2 $1 . $rest) (tl-insert $3 $1))
-   ;; matrix-row => expr-nosp 'sp matrix-row
-   (lambda ($3 $2 $1 . $rest) (tl-insert $3 $1))
+   ;; matrix-row => matrix-row "," expr-nosp
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; matrix-row => matrix-row 'sp expr-nosp
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; term-list => term
    (lambda ($1 . $rest) $1)
    ;; term-list => term-list term
