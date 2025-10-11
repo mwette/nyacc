@@ -1,6 +1,6 @@
 ;;; nyacc/lang/mlang/pprint.scm
 
-;; Copyright (C) 2016,2018 Matthew R. Wette
+;; Copyright (C) 2016,2018,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -56,15 +56,15 @@
 (define op-assc ;; this is C
   '((left array-ref sel post-inc post-dec comp-lit mul div ldiv mod add sub
           lshift rshift lt gt le ge bitwise-and bitwise-xor bitwise-or and or)
-    (right pre-inc pre-dec sizeof bitwise-not not pos neg ref-to de-ref cast
-           cond assn-expr)
+    (right pre-inc pre-dec sizeof bitwise-not not pos neg handle ref-to de-ref
+           cast cond assn-expr)
     (nonassoc)))
 
 (define protect-expr? (make-protect-expr op-prec op-assc))
 
 (define* (pretty-print-ml tree #:key (indent-level 3))
 
-  (define fmtr (make-pp-formatter))
+  (define fmtr (make-pp-formatter #:width 120))
   (define (push-il) (fmtr 'push))
   (define (pop-il) (fmtr 'pop))
   
@@ -73,23 +73,23 @@
   (define (unary/l op rep rval)
     (sf rep)
     (if (protect-expr? 'rt op rval)
-        (ppx/p rval)
-        (ppx rval)))
+        (ppx/p rval #f)
+        (ppx rval #f)))
   
   (define (unary/r op rep lval)
     (sf rep)
     (if (protect-expr? 'lt op lval)
-        (ppx/p lval)
-        (ppx lval)))
+        (ppx/p lval #f)
+        (ppx lval #f)))
   
   (define (binary op rep lval rval)
     (if (protect-expr? 'lt op lval)
-        (ppx/p lval)
-        (ppx lval))
+        (ppx/p lval #f)
+        (ppx lval #f))
     (sf rep)
     (if (protect-expr? 'rt op rval)
-        (ppx/p rval)
-        (ppx rval)))
+        (ppx/p rval #f)
+        (ppx rval #f)))
 
   (define (string->mlang st)
     (if (string-any #\' st)
@@ -100,26 +100,71 @@
           '() st))
         st))
 
-  (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
+  (define (ppx/p tree nosp) (sf "(") (ppx tree nosp) (sf ")"))
   
-  (define (ppx tree)
+  (define (ppx tree nosp)
+    (define ppxin (lambda (tree) (ppx tree nosp)))
     (sx-match tree
 
       ((script-file . ,rest)
        #f)
 
+      ((classdef-file . ,items)
+        (for-each ppxin items))
+
+      ;;((class-defn (ident ,name) (attr-list . ,attrs) . ,rest)   )
+      ((class-defn (ident ,name) (supers . ,supers) . ,rest)
+       (sf "classdef ~a < ~a\n" name (string-join (map cadr supers) " & "))
+       (push-il) (for-each ppxin rest) (pop-il) (sf "end\n"))
+
+      ;;((properties (attr-list)
+      ((properties . ,items)
+       (sf "properties\n") (push-il)
+       (for-each ppxin items) (pop-il) (sf "end\n"))
+      ((property (ident ,name))
+       (sf "~a\n" name))
+
+      ((methods (attr-list . ,attrs) . ,items)
+       (sf "methods (") (for-each ppxin attrs) (sf ")\n") (push-il)
+       (for-each ppxin items) (pop-il) (sf "end\n"))
+      ((methods . ,items)
+       (sf "methods\n") (push-il)
+       (for-each ppxin items) (pop-il) (sf "end\n"))
+
+      ((function-sig (ident ,name) ,iputs ,oputs ,coml)
+       (case (length (cdr oputs))
+         ((0) #f)
+         ((1) (sf "~a = " (cadar oputs)))
+         (else (sf "[~a] = " (string-join (map cadr oputs) ", "))))
+       (case (length (cdr iputs))
+         ((0) (sf "~a\n" name))
+         (else (sf "~a(" name) (ppx iputs nosp) (sf ")\n"))))
+
+      ((attr (ident ,name) "=" ,expr)
+       (sf "~a = " name) (ppxin expr))
+      ((attr (ident ,name))
+       (sf "~a" name))
+
       ((function-file . ,items)
-       (for-each ppx items))
+       (for-each ppxin items))
 
       ((fctn-defn (fctn-decl (ident ,name) ,iputs ,oputs ,coml) ,stmt-list)
-       (sf "function [")
-       (ppx oputs)
-       (sf "] = ~A(" name)
-       (ppx iputs) (sf ")\n")
-       (for-each ppx (sx-tail coml 1))
-       (push-il)
-       (ppx stmt-list)
-       (pop-il))
+       (sf "function ")
+       (case (length (cdr oputs))
+         ((0) #f)
+         ((1) (ppxin oputs) (sf " = "))
+         ((else) (sf "[") (ppxin oputs) (sf "] = ")))
+       (sf "~A(" name) (ppxin iputs) (sf ")\n")
+       (for-each ppxin (sx-tail coml 1))
+       (push-il) (ppxin stmt-list) (pop-il) (sf "end\n"))
+      ((fctn-defn (fctn-decl (ident ,name) ,iputs ,oputs) ,stmt-list)
+       (sf "function ")
+       (case (length (cdr oputs))
+         ((0) #f)
+         ((1) (ppxin oputs) (sf " = "))
+         ((else) (sf "[") (ppxin oputs) (sf "] = ")))
+       (sf "~A(" name) (ppxin iputs) (sf ")\n")
+       (push-il) (ppxin stmt-list) (pop-il) (sf "end\n"))
 
       ((comm ,text)
        (sf "%~A\n" text))
@@ -127,7 +172,7 @@
       ((ident-list . ,rest)
        (pair-for-each
         (lambda (pair)
-          (ppx (car pair))
+          (ppxin (car pair))
           (if (pair? (cdr pair)) (sf ", ")))
         rest))
 
@@ -135,74 +180,117 @@
        (sf "~A" ident))
 
       ((stmt-list . ,stmts)
-       (for-each (lambda (stmt) (ppx stmt) (sf "\n")) stmts))
+       (for-each
+        (lambda (stmt)
+          ;;(unless (eq? 'empty-stmt (sx-tag stmt)) (ppxin stmt) (sf ";\n"))
+          (ppxin stmt)
+          )
+        stmts))
+
+      ((empty-stmt) (sf "\n"))
 
       ((call-stmt ,name . ,args)
-       (ppx name) (sf "(")
+       (ppxin name) (sf "(")
        (pair-for-each
-        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
-        args)
-       (sf ");"))
-
-      ((aref-or-call ,name . ,args)
-       (ppx name) (sf "(")
-       (pair-for-each
-        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
-        args)
-       (sf ")"))
-
-      ((assn ,lhs ,rhs)
-       (ppx lhs) (sf " = ") (ppx rhs) (sf ";"))
-
-      ((multi-assign ,lvals ,name ,args)
-       (sf "[") (for-each ppx lvals) (sf "] = ")
-       (ppx name) (sf "(")
-       (pair-for-each
-        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) (sf ", ")))
         args)
        (sf ");\n"))
 
+      ((assn ,lhs ,rhs)
+       (ppxin lhs) (sf " = ") (ppxin rhs) (sf ";\n"))
+
+      ((multi-assn (lval-list . ,lvals) ,expr)
+       (sf "[")
+       (pair-for-each
+        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        lvals)
+       (sf "] = ") (ppxin expr) (sf "\n"))
+
       ((for . ,rest)
-       #f)
+       (sf "TODO: for\n"))
 
       ((while . ,rest)
-       #f)
+       (sf "TODO: while\n"))
 
-      ((if . ,rest)
-       #f)
+      ((if ,expr ,stmt-list . ,forms)
+       (sf "if ") (ppxin expr) (sf "\n") (push-il)
+       (ppxin stmt-list)
+       (for-each
+        (lambda (form)
+          (case (sx-tag form)
+            ((elseif)
+             (pop-il) (sf "elseif ") (ppxin (sx-ref form 1)) (push-il) (sf "\n")
+             (ppxin (sx-ref form 2)))
+            ((else)
+             (pop-il) (sf "else\n") (push-il)
+             (ppxin (sx-ref form 1)))))
+        forms)
+       (pop-il) (sf "end\n"))
 
       ((switch . ,rest)
-       #f)
+       (sf "TODO: switch\n"))
+
+      ((expr-stmt ,expr)
+       (ppxin expr)
+       (sf ";\n"))
 
       ((return ,value)
-       (sf "return ") (ppx value) (sf ";\n"))
+       (sf "return ") (ppxin value) (sf ";\n"))
 
-      ((command (ident ,name) (arg-list . ,args))
+      ((command ,name . ,args)
        (sf "~A" name)
-       (for-each (lambda (arg) (sf " ~A" (sx-ref arg 1))) args))
+       (for-each (lambda (arg) (sf " ~A" (sx-ref arg 1))) args)
+       (sf "\n"))
+
+      ((aref-or-call ,name . ,args)
+       (ppxin name) (sf "(")
+       (pair-for-each
+        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) ", "))
+        args)
+       (sf ")"))
+
+      ((cell-array . ,rows)
+       (sf "{")
+       (pair-for-each
+        (lambda (pair)
+          (ppxin (car pair))
+          (if (pair? (cdr pair)) (sf "; ")))
+        rows)
+       (sf "}"))
 
       ((matrix . ,rows)
        (sf "[")
        (pair-for-each
-        (lambda (pair)
-          (ppx (car pair))
-          (if (pair? (cdr pair)) (sf "; "))
-          ;; newline?
-          )
+        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) (sf "; ")))
+        rows)
+       (sf "]"))
+      ((float-matrix . ,rows)
+       (sf "[")
+       (pair-for-each
+        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) (sf "; ")))
+        rows)
+       (sf "]"))
+      ((fixed-vector . ,rows)
+       (sf "[")
+       (pair-for-each
+        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) (sf "; ")))
         rows)
        (sf "]"))
 
       ((row . ,expr-list)
        (pair-for-each
         (lambda (pair)
-          (ppx (car pair))
+          (ppx (car pair) #t)
           (if (pair? (cdr pair)) (sf ", ")))
         expr-list))
 
-      ((xpose ,expr) (ppx expr) (sf "'"))
+      ((transpose ,expr) (ppxin expr) (sf "'"))
       
       ((array-ref ,ident ,expr-list)
-       (ppx ident) (sf "(") (ppx expr-list) (sf ")"))
+       (ppxin ident) (sf "(") (ppxin expr-list) (sf ")"))
+
+      ((cell-ref ,ident ,expr-list)
+       (ppxin ident) (sf "{") (ppxin expr-list) (sf "}"))
 
       ((expr-list . ,items)
        (fold-right                      ; seed is "need comma"
@@ -210,32 +298,52 @@
           (if seed (sf ", "))
           (cond
            ((eqv? 'colon-expr (sx-tag item)) (sf ":") #f)
-           (else (ppx item) #t)))
+           (else (ppxin item) #t)))
         #f
         items))
 
-      ((or ,lex ,rex) (binary 'or " | " lex rex))
-      ((ss-or ,lex ,rex) (binary 'ss-or " || " lex rex))
-      ((and ,lex ,rex) (binary 'and " & " lex rex))
-      ((ss-and ,lex ,rex) (binary 'ss-and " && " lex rex))
+      ((colon-expr ,start ,incr ,end)
+       (ppxin start) (sf ":") (ppxin incr) (sf ":") (ppxin end))
+      ((colon-expr ,start ,end)
+       (ppxin start) (sf ":") (ppxin end))
+      ((colon-expr)
+       (sf ":"))
+      ((fixed-colon-expr ,start ,incr ,end)
+       (ppxin start) (sf ":") (ppxin incr) (sf ":") (ppxin end))
+      ((fixed-colon-expr ,start ,end)
+       (ppxin start) (sf ":") (ppxin end))
+      ((fixed-colon-expr)
+       (sf ":"))
+
+      ((or ,lex ,rex) (binary 'or (if nosp "|" " | ") lex rex))
+      ((ss-or ,lex ,rex) (binary 'ss-or (if nosp "||" " || ") lex rex))
+      ((and ,lex ,rex) (binary 'and (if nosp "&" " & ") lex rex))
+      ((ss-and ,lex ,rex) (binary 'ss-and (if nosp "&&" " && ") lex rex))
       
       ((pos ,expr) (unary/l 'pos "+" expr))
       ((neg ,expr) (unary/l 'neg "-" expr))
+      ((handle ,expr) (unary/l 'handle "@" expr))
 
-      ((lt ,lval ,rval) (binary 'lt " < " lval rval))
-      ((gt ,lval ,rval) (binary 'gt " > " lval rval))
-      ((le ,lval ,rval) (binary 'le " <= " lval rval))
-      ((ge ,lval ,rval) (binary 'ge " >= " lval rval))
-      ((eq ,lval ,rval) (binary 'eq " == " lval rval))
-      ((neq ,lval ,rval) (binary 'neq " ~= " lval rval))
+      ((lt ,lval ,rval) (binary 'lt (if nosp "<" " < ") lval rval))
+      ((gt ,lval ,rval) (binary 'gt (if nosp ">" " > ") lval rval))
+      ((le ,lval ,rval) (binary 'le (if nosp "<=" " <= ") lval rval))
+      ((ge ,lval ,rval) (binary 'ge (if nosp ">=" " >= ") lval rval))
+      ((eq ,lval ,rval) (binary 'eq (if nosp "==" " == ") lval rval))
+      ((neq ,lval ,rval) (binary 'neq (if nosp "~=" " ~= ") lval rval))
 
-      ((add ,lval ,rval) (binary 'add " + " lval rval))
-      ((sub ,lval ,rval) (binary 'sub " - " lval rval))
+      ((add ,lval ,rval) (binary 'add (if nosp "+" " + ") lval rval))
+      ((sub ,lval ,rval) (binary 'sub (if nosp "-" " - ") lval rval))
       ((mul ,lval ,rval) (binary 'mul "*" lval rval))
       ((div ,lval ,rval) (binary 'div "/" lval rval))
       ((ldiv ,lval ,rval) (binary 'ldiv "\\" lval rval))
 
+      ((neg ,expr) (sf "-") (ppxin expr))
+      ((pos ,expr) (sf "+") (ppxin expr))
+      ((not ,expr) (sf "~") (ppxin expr))
+      ((handle ,expr) (sf "@") (ppxin expr))
+
       ((sel ,id ,ex) (binary 'sel "." ex id))
+      ((wrap ,ex) (ppx ex #f))
 
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
@@ -243,7 +351,7 @@
       
       (,_ (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
 
-  (ppx tree))
+  (ppx tree #f))
 
 
 #;(use-modules (nyacc lang mlang parser))

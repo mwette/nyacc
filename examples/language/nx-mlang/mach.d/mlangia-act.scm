@@ -189,17 +189,17 @@
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$2 ,(tl->list $4)))
    ;; nontrivial-statement-1 => "if" expr term stmt-list elseif-list "else"...
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2
         ,(tl->list $4)
         ,@(cdr (tl->list $5))
-        (else ,(tl->list $7))))
+        (else ,(tl->list $8))))
    ;; nontrivial-statement-1 => "if" expr term stmt-list elseif-list "end"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5))))
-   ;; nontrivial-statement-1 => "if" expr term stmt-list "else" stmt-list "...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$2 ,(tl->list $4) (else ,(tl->list $6))))
+   ;; nontrivial-statement-1 => "if" expr term stmt-list "else" term stmt-l...
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(if ,$2 ,(tl->list $4) (else ,(tl->list $7))))
    ;; nontrivial-statement-1 => "if" expr term stmt-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4)))
@@ -215,13 +215,12 @@
    ;; nontrivial-statement-1 => "return"
    (lambda ($1 . $rest) '(return))
    ;; nontrivial-statement-1 => command arg-list
-   (lambda ($2 $1 . $rest)
-     `(command ,$1 ,@(cdr (tl->list $2))))
+   (lambda ($2 $1 . $rest) (append $1 (cdr $2)))
    ;; nontrivial-statement-1 => command "(" arg-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(command ,$1 ,@(cdr (tl->list $3))))
+     (append $1 (cdr $3)))
    ;; command => command-name
-   (lambda ($1 . $rest) '(command ,$1))
+   (lambda ($1 . $rest) `(command ,$1))
    ;; command-name => "clc"
    (lambda ($1 . $rest) $1)
    ;; command-name => "doc"
@@ -246,10 +245,12 @@
    (lambda ($1 . $rest) $1)
    ;; command-name => "ver"
    (lambda ($1 . $rest) $1)
-   ;; arg-list => ident
+   ;; arg-list => arg-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; arg-list-1 => ident
    (lambda ($1 . $rest)
      (make-tl 'arg-list (cons 'arg (cdr $1))))
-   ;; arg-list => arg-list ident
+   ;; arg-list-1 => arg-list-1 ident
    (lambda ($2 $1 . $rest)
      (tl-append $1 (cons 'arg $2)))
    ;; elseif-list => "elseif" expr term stmt-list
@@ -361,7 +362,7 @@
    ;; unary-expr => "-" postfix-expr
    (lambda ($2 $1 . $rest) `(neg ,$2))
    ;; unary-expr => "+" postfix-expr
-   (lambda ($2 $1 . $rest) $2)
+   (lambda ($2 $1 . $rest) `(pos $2))
    ;; unary-expr => "~" postfix-expr
    (lambda ($2 $1 . $rest) `(not ,$2))
    ;; unary-expr => "@" postfix-expr
@@ -503,7 +504,7 @@
    ;; primary-expr-nosp => string
    (lambda ($1 . $rest) $1)
    ;; primary-expr-nosp => "(" expr ")"
-   (lambda ($3 $2 $1 . $rest) $2)
+   (lambda ($3 $2 $1 . $rest) `(wrap ,$2))
    ;; primary-expr-nosp => "[" "]"
    (lambda ($2 $1 . $rest) '(matrix))
    ;; primary-expr-nosp => "[" matrix-row-list "]"
@@ -533,15 +534,15 @@
    (lambda ($1 . $rest) $1)
    ;; term-list => term-list term
    (lambda ($2 $1 . $rest) $1)
-   ;; term => ";"
-   (lambda ($1 . $rest) $1)
-   ;; term => ";" '$code-comm
-   (lambda ($2 $1 . $rest) $1)
+   ;; term => ";" '$code-comm "\n"
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; term => ";" "\n"
    (lambda ($2 $1 . $rest) $1)
-   ;; term => "\n"
+   ;; term => ";"
    (lambda ($1 . $rest) $1)
    ;; term => ","
+   (lambda ($1 . $rest) $1)
+   ;; term => "\n"
    (lambda ($1 . $rest) $1)
    ;; lone-comment-list => lone-comment-list-1
    (lambda ($1 . $rest) (tl->list $1))

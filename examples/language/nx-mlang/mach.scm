@@ -205,14 +205,14 @@
       ($$ `(for ,$2 ,$4 ,(tl->list $6))))
      ("while" expr term stmt-list "end"
       ($$ `(while ,$2 ,(tl->list $4))))
-     ("if" expr term stmt-list elseif-list "else" stmt-list "end"
+     ("if" expr term stmt-list elseif-list "else" term stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4)
                ,@(cdr (tl->list $5))
-               (else ,(tl->list $7)))))
+               (else ,(tl->list $8)))))
      ("if" expr term stmt-list elseif-list "end"
       ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)))))
-     ("if" expr term stmt-list "else" stmt-list "end"
-      ($$ `(if ,$2 ,(tl->list $4) (else ,(tl->list $6)))))
+     ("if" expr term stmt-list "else" term stmt-list "end"
+      ($$ `(if ,$2 ,(tl->list $4) (else ,(tl->list $7)))))
      ("if" expr term stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4))))
      ("switch" expr term case-list "otherwise" term stmt-list "end"
@@ -221,19 +221,21 @@
       ($$ `(switch ,$2 ,@(cdr (tl->list $4)))))
      ("return"
       ($$ '(return)))
-     (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2)))))
-     (command "(" arg-list ")" ($$ `(command ,$1 ,@(cdr (tl->list $3))))))
+     (command arg-list ($$ (append $1 (cdr $2))))
+     (command "(" arg-list ")" ($$ (append $1 (cdr $3)))))
 
     (command
-     (command-name ($$ '(command ,$1))))
+     (command-name ($$ `(command ,$1))))
     (command-name
      ("clc") ("doc") ("format") ("global") ("grid") ("help") ("hold")
      ("load") ("rotate3d") ("save") ("uiimport") ("ver"))
 
     ;; Only ident list type commands are allowed
     (arg-list
+     (arg-list-1 ($$ (tl->list $1))))
+    (arg-list-1
      (ident ($$ (make-tl 'arg-list (cons 'arg (cdr $1)))))
-     (arg-list ident ($$ (tl-append $1 (cons 'arg $2)))))
+     (arg-list-1 ident ($$ (tl-append $1 (cons 'arg $2)))))
 
     (elseif-list
      ("elseif" expr term stmt-list
@@ -313,7 +315,7 @@
     (unary-expr
      (postfix-expr)
      ("-" postfix-expr ($$ `(neg ,$2)))
-     ("+" postfix-expr ($$ $2))
+     ("+" postfix-expr ($$ `(pos $2)))
      ("~" postfix-expr ($$ `(not ,$2)))
      ("@" postfix-expr ($$ `(handle ,$2))))
     
@@ -407,24 +409,17 @@
      (ident)
      (number)
      (string)
-     ("(" expr ")" ($$ $2))
+     ("(" expr ")" ($$ `(wrap ,$2)))
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ (tl->list $2)))
      ("{" "}" ($$ '(cell-array)))
      ("{" matrix-row-list "}" ($$ `(cell-array ,(cdr (tl->list $2))))))
 
-    #;(matrix-row-list
-     (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
-     (matrix-row row-term matrix-row-list ($$ (tl-insert $3 (tl->list $1)))))
     (matrix-row-list
      (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
      (matrix-row-list row-term matrix-row ($$ (tl-append $1 (tl->list $3)))))
     (row-term (";") ("\n"))
 
-    #;(matrix-row
-     (expr-nosp ($$ (make-tl 'row $1)))
-     (expr-nosp "," matrix-row ($$ (tl-insert $3 $1)))
-     (expr-nosp 'sp matrix-row ($$ (tl-insert $3 $1))))
     (matrix-row
      (expr-nosp ($$ (make-tl 'row $1)))
      (matrix-row "," expr-nosp ($$ (tl-append $1 $3)))
@@ -433,10 +428,9 @@
     (term-list (term) (term-list term))
 
     (term
-     (";") (";" $code-comm)
+     (";" $code-comm "\n")
      (";" "\n")
-     ("\n")
-     (","))
+     (";") (",") ("\n"))
 
     (lone-comment-list
      (lone-comment-list-1 ($$ (tl->list $1))))
