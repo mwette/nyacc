@@ -53,13 +53,21 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
+(use-modules (language nx-mlang pprint))
+(define ppml pretty-print-ml)
 
 (define (do-this . args)
   (call-with-values
       (lambda () (parse-args args))
     (lambda (opts files)
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
-      (for-each (lambda (file) (pp (mlang-to-tree file opts))) files)))
+      (for-each 
+         (lambda (file) 
+           ;;(pp (mlang-to-tree file opts))
+           (ppml (mlang-to-tree file opts))
+           )
+          files)
+      ))
   0)
 
 (apply do-this (cdr (program-arguments)))
