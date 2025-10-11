@@ -141,7 +141,7 @@
 
     (function-defn
      (function-decl non-comment-statement stmt-list the-end
-      ($$ `(fctn-defn ,$1 ,(tl->list (if $2 (tl-insert $3 $2) $3)))))
+      ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2 . ,(cdr $3)) $3))))
      (function-decl non-comment-statement the-end
       ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
      (function-decl the-end
@@ -175,8 +175,10 @@
      (ident-list-1 "," ident ($$ (tl-append $1 $3))))
 
     (stmt-list
+     (stmt-list-1 ($$ (tl->list $1))))
+    (stmt-list-1
      (statement ($$ (if $1 (make-tl 'stmt-list $1) (make-tl 'stmt-list))))
-     (stmt-list statement ($$ (if $2 (tl-append $1 $2) $1))))
+     (stmt-list-1 statement ($$ (if $2 (tl-append $1 $2) $1))))
 
     (triv-stmt-list
      (triv-stmt-list-1 ($$ (tl->list $1))))
@@ -202,23 +204,21 @@
      (expr ($$ `(expr-stmt ,$1)))
      (expr "=" expr ($$ `(assn ,$1 ,$3)))
      ("for" ident "=" expr term stmt-list "end"
-      ($$ `(for ,$2 ,$4 ,(tl->list $6))))
+      ($$ `(for ,$2 ,$4 ,$6)))
      ("while" expr term stmt-list "end"
-      ($$ `(while ,$2 ,(tl->list $4))))
+      ($$ `(while ,$2 ,$4)))
      ("if" expr term stmt-list elseif-list "else" term stmt-list "end"
-      ($$ `(if ,$2 ,(tl->list $4)
-               ,@(cdr (tl->list $5))
-               (else ,(tl->list $8)))))
+      ($$ `(if ,$2 ,$4 ,@(cdr $5) (else ,$8))))
      ("if" expr term stmt-list elseif-list "end"
-      ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)))))
+      ($$ `(if ,$2 ,$4 ,@(cdr $5))))
      ("if" expr term stmt-list "else" term stmt-list "end"
-      ($$ `(if ,$2 ,(tl->list $4) (else ,(tl->list $7)))))
+      ($$ `(if ,$2 ,$4 (else ,$7))))
      ("if" expr term stmt-list "end"
-      ($$ `(if ,$2 ,(tl->list $4))))
+      ($$ `(if ,$2 ,$4)))
      ("switch" expr term case-list "otherwise" term stmt-list "end"
-      ($$ `(switch ,$2 ,@(cdr (tl->list $4)) (otherwise ,(tl->list $7)))))
+      ($$ `(switch ,$2 ,@(cdr $4) (otherwise ,$7))))
      ("switch" expr term case-list "end"
-      ($$ `(switch ,$2 ,@(cdr (tl->list $4)))))
+      ($$ `(switch ,$2 ,@(cdr $4))))
      ("return"
       ($$ '(return)))
      (command arg-list ($$ (append $1 (cdr $2))))
@@ -238,17 +238,19 @@
      (arg-list-1 ident ($$ (tl-append $1 (cons 'arg $2)))))
 
     (elseif-list
+     (elseif-list-1 ($$ (tl->list $1))))
+    (elseif-list-1
      ("elseif" expr term stmt-list
-      ($$ (make-tl 'elseif-list `(elseif ,$2 ,(tl->list $4)))))
-     (elseif-list "elseif" expr term stmt-list
-                   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5))))))
+      ($$ (make-tl 'elseif-list `(elseif ,$2 ,$4))))
+     (elseif-list-1 "elseif" expr term stmt-list
+                    ($$ (tl-append $1 `(elseif ,$3 ,$5)))))
 
     ;; The switch case for this mlang only allows case-expr of form
     ;; @code{fixed}, @code{string}, @code{fixed-list} or @code{string-list}.
     (case-list
      ($empty ($$ (make-tl 'case-list)))
      (case-list "case" case-expr term stmt-list
-                ($$ (tl-append $1 `(case ,$3 ,(tl->list $5))))))
+                ($$ (tl-append $1 `(case ,$3 ,$5)))))
     (case-expr
      (fixed) (string)
      ("{" fixed-list "}" ($$ (tl->list $2)))

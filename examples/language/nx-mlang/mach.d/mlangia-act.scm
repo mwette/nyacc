@@ -108,7 +108,7 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn
         ,$1
-        ,(tl->list (if $2 (tl-insert $3 $2) $3))))
+        ,(if $2 `(stmt-list ,$2 unquote (cdr $3)) $3)))
    ;; function-defn => function-decl non-comment-statement the-end
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn
@@ -148,12 +148,14 @@
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
    ;; ident-list-1 => ident-list-1 "," ident
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; stmt-list => statement
+   ;; stmt-list => stmt-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; stmt-list-1 => statement
    (lambda ($1 . $rest)
      (if $1
        (make-tl 'stmt-list $1)
        (make-tl 'stmt-list)))
-   ;; stmt-list => stmt-list statement
+   ;; stmt-list-1 => stmt-list-1 statement
    (lambda ($2 $1 . $rest)
      (if $2 (tl-append $1 $2) $1))
    ;; triv-stmt-list => triv-stmt-list-1
@@ -184,34 +186,27 @@
    (lambda ($3 $2 $1 . $rest) `(assn ,$1 ,$3))
    ;; nontrivial-statement-1 => "for" ident "=" expr term stmt-list "end"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(for ,$2 ,$4 ,(tl->list $6)))
+     `(for ,$2 ,$4 ,$6))
    ;; nontrivial-statement-1 => "while" expr term stmt-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(while ,$2 ,(tl->list $4)))
+     `(while ,$2 ,$4))
    ;; nontrivial-statement-1 => "if" expr term stmt-list elseif-list "else"...
    (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$2
-        ,(tl->list $4)
-        ,@(cdr (tl->list $5))
-        (else ,(tl->list $8))))
+     `(if ,$2 ,$4 ,@(cdr $5) (else ,$8)))
    ;; nontrivial-statement-1 => "if" expr term stmt-list elseif-list "end"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5))))
+     `(if ,$2 ,$4 ,@(cdr $5)))
    ;; nontrivial-statement-1 => "if" expr term stmt-list "else" term stmt-l...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$2 ,(tl->list $4) (else ,(tl->list $7))))
+     `(if ,$2 ,$4 (else ,$7)))
    ;; nontrivial-statement-1 => "if" expr term stmt-list "end"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(if ,$2 ,(tl->list $4)))
+   (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$2 ,$4))
    ;; nontrivial-statement-1 => "switch" expr term case-list "otherwise" te...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(switch
-        ,$2
-        ,@(cdr (tl->list $4))
-        (otherwise ,(tl->list $7))))
+     `(switch ,$2 ,@(cdr $4) (otherwise ,$7)))
    ;; nontrivial-statement-1 => "switch" expr term case-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(switch ,$2 ,@(cdr (tl->list $4))))
+     `(switch ,$2 ,@(cdr $4)))
    ;; nontrivial-statement-1 => "return"
    (lambda ($1 . $rest) '(return))
    ;; nontrivial-statement-1 => command arg-list
@@ -253,19 +248,19 @@
    ;; arg-list-1 => arg-list-1 ident
    (lambda ($2 $1 . $rest)
      (tl-append $1 (cons 'arg $2)))
-   ;; elseif-list => "elseif" expr term stmt-list
+   ;; elseif-list => elseif-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; elseif-list-1 => "elseif" expr term stmt-list
    (lambda ($4 $3 $2 $1 . $rest)
-     (make-tl
-       'elseif-list
-       `(elseif ,$2 ,(tl->list $4))))
-   ;; elseif-list => elseif-list "elseif" expr term stmt-list
+     (make-tl 'elseif-list `(elseif ,$2 ,$4)))
+   ;; elseif-list-1 => elseif-list-1 "elseif" expr term stmt-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (tl-append $1 `(elseif ,$3 ,(tl->list $5))))
+     (tl-append $1 `(elseif ,$3 ,$5)))
    ;; case-list => 
    (lambda $rest (make-tl 'case-list))
    ;; case-list => case-list "case" case-expr term stmt-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (tl-append $1 `(case ,$3 ,(tl->list $5))))
+     (tl-append $1 `(case ,$3 ,$5)))
    ;; case-expr => fixed
    (lambda ($1 . $rest) $1)
    ;; case-expr => string
