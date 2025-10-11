@@ -318,7 +318,7 @@ See the file COPYING included with the this distribution.")
               (else
                (loop (cons ch chl) (1+ col) (1+ ix)))))))))
 
-;; @deffn {Procedure} make-pp-formatter [port] <[options> => fmtr
+;; @deffn {Procedure} make-pp-formatter [port] [options] => fmtr
 ;; Options
 ;; @table @code
 ;; @item #:per-line-prefix
