@@ -180,12 +180,7 @@
        (sf "~A" ident))
 
       ((stmt-list . ,stmts)
-       (for-each
-        (lambda (stmt)
-          ;;(unless (eq? 'empty-stmt (sx-tag stmt)) (ppxin stmt) (sf ";\n"))
-          (ppxin stmt)
-          )
-        stmts))
+       (for-each ppxin stmts))
 
       ((empty-stmt) (sf "\n"))
 
@@ -206,11 +201,13 @@
         lvals)
        (sf "] = ") (ppxin expr) (sf "\n"))
 
-      ((for . ,rest)
-       (sf "TODO: for\n"))
+      ((for (ident ,name) ,expr ,stmt-list)
+       (sf "for ~a =" name) (ppxin expr) (sf "\n")
+       (push-il) (ppxin stmt-list) (pop-il) (sf "end"))
 
-      ((while . ,rest)
-       (sf "TODO: while\n"))
+      ((while ,expr ,stmt-list)
+       (sf "while ") (ppxin expr) (sf "\n")
+       (push-il) (ppxin stmt-list) (pop-il) (sf "end"))
 
       ((if ,expr ,stmt-list . ,forms)
        (sf "if ") (ppxin expr) (sf "\n") (push-il)
@@ -227,8 +224,18 @@
         forms)
        (pop-il) (sf "end\n"))
 
-      ((switch . ,rest)
-       (sf "TODO: switch\n"))
+      ((switch ,expr . ,cases)
+       (sf "switch ") (ppxin expr) (sf "\n") (push-il)
+       (for-each
+        (lambda (case)
+          (cond
+           ((eq? 'otherwise (sx-tag case))
+            (sf "otherwise\n") (push-il) (ppxin (sx-ref case 1)) (pop-il))
+           (else
+            (sf "case ") (ppxin (sx-ref case 1)) (sf "\n")
+            (push-il) (ppxin (sx-ref case 2)) (pop-il))))
+        cases)
+       (pop-il) (sf "end"))
 
       ((expr-stmt ,expr)
        (ppxin expr)
