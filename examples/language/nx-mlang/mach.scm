@@ -35,7 +35,7 @@
   (lalr-spec
    (notice (string-append "Copyright 2015-2025 Matthew Wette"
                           license-lgpl3+))
-   (expect 1)                           ; SR on 'sp after expr
+   (expect 1)                           ; 'sp after expr
    (start translation-unit)
    (grammar
     
