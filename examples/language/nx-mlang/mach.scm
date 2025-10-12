@@ -17,14 +17,8 @@
 
 ;;; Description:
 
-;; mlang parser
-;; 1) does NOT support non-comma rows [ 1 2 ] => syntax error
-
-;; TODO:
-;; 1) function handles: {foo = @bar;} where bar is a function
-;; 2) anonymous functions: {foo = @(arg1,arg2) arg1 + arg2;}
-;; 3) structs
-;; 4) cell arrays (hoping not needed)
+;; This should be close to complete, but more will need to be added as
+;; I could not find any complete syntax description.
 
 ;;; Code:
 
@@ -33,18 +27,13 @@
             mlang-mach
             mlang-ia-spec
             mlang-ia-mach
-            dev-parse-ml
             gen-mlang-files)
-  #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
-  #:use-module (nyacc lex)
-  #:use-module (nyacc parse)
-  #:use-module (ice-9 pretty-print)
-  )
+  #:use-module (nyacc lang util))
 
 (define mlang-spec
   (lalr-spec
-   (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
+   (notice (string-append "Copyright 2015-2025 Matthew Wette"
                           license-lgpl3+))
    (expect 1)                           ; SR on 'sp after expr
    (start translation-unit)
@@ -263,8 +252,13 @@
      (string-list string ($$ (tl-append $1 $2))))
      
     (expr-list
+     (expr-list-1 ($$ (tl->list $1))))
+    (expr-list-1
      (expr ($$ (make-tl 'expr-list $1)))
-     (expr-list "," expr ($$ (tl-append $1 $3))))
+     (expr-list-1 "," expr ($$ (tl-append $1 $3))))
+
+    ;; We need separate expr and expr w/o space to avoid picking up
+    ;; machine that accepts all partial expressions followed by 'sp.
 
     (expr
      (or-expr)
@@ -274,20 +268,45 @@
      (or-expr ":" "end" ($$ `(colon-expr ,$1 (end))))
      (or-expr ":" or-expr ":" "end" ($$ `(colon-expr ,$1 ,$3 (end)))))
 
+    (expr-nosp
+     (or-expr-nosp)
+     (":" ($$ `(colon-expr)))
+     (or-expr-nosp ":" or-expr-nosp ($$ `(colon-expr ,$1 ,$3)))
+     (or-expr-nosp ":" or-expr-nosp ":" or-expr-nosp
+                   ($$ `(colon-expr ,$1 ,$3 ,$5)))
+     (or-expr-nosp ":" "end" ($$ `(colon-expr ,$1 (end))))
+     (or-expr-nosp ":" or-expr-nosp ":" "end"
+                   ($$ `(colon-expr ,$1 ,$3 (end)))))
+
     (or-expr
      (and-expr)
      (or-expr "|" and-expr ($$ `(or ,$1 ,$3)))
      (or-expr "||" and-expr ($$ `(ss-or ,$1 ,$3))))
+
+    (or-expr-nosp
+     (and-expr-nosp)
+     (or-expr-nosp "|" and-expr-nosp ($$ `(or ,$1 ,$3)))
+     (or-expr-nosp "||" and-expr-nosp ($$ `(ss-or ,$1 ,$3))))
 
     (and-expr
      (equality-expr)
      (and-expr "&" equality-expr ($$ `(and ,$1 ,$3)))
      (and-expr "&&" equality-expr ($$ `(ss-and ,$1 ,$3))))
 
+    (and-expr-nosp
+     (equality-expr-nosp)
+     (and-expr-nosp "&" equality-expr-nosp ($$ `(and ,$1 ,$3)))
+     (and-expr-nosp "&&" equality-expr-nosp ($$ `(ss-and ,$1 ,$3))))
+
     (equality-expr
      (rel-expr)
      (equality-expr "==" rel-expr ($$ `(eq ,$1 ,$3)))
      (equality-expr "~=" rel-expr ($$ `(ne ,$1 ,$3))))
+
+    (equality-expr-nosp
+     (rel-expr-nosp)
+     (equality-expr-nosp "==" rel-expr-nosp ($$ `(eq ,$1 ,$3)))
+     (equality-expr-nosp "~=" rel-expr-nosp ($$ `(ne ,$1 ,$3))))
 
     (rel-expr
      (add-expr)
@@ -296,12 +315,26 @@
      (rel-expr "<=" add-expr ($$ `(le ,$1 ,$3)))
      (rel-expr ">=" add-expr ($$ `(ge ,$1 ,$3))))
 
+    (rel-expr-nosp
+     (add-expr-nosp)
+     (rel-expr-nosp "<" add-expr-nosp ($$ `(lt ,$1 ,$3)))
+     (rel-expr-nosp ">" add-expr-nosp ($$ `(gt ,$1 ,$3)))
+     (rel-expr-nosp "<=" add-expr-nosp ($$ `(le ,$1 ,$3)))
+     (rel-expr-nosp ">=" add-expr-nosp ($$ `(ge ,$1 ,$3))))
+
     (add-expr
      (mul-expr)
      (add-expr "+" mul-expr ($$ `(add ,$1 ,$3)))
      (add-expr "-" mul-expr ($$ `(sub ,$1 ,$3)))
      (add-expr ".+" mul-expr ($$ `(dot-add ,$1 ,$3)))
      (add-expr ".-" mul-expr ($$ `(dot-sub ,$1 ,$3))))
+
+    (add-expr-nosp
+     (mul-expr-nosp)
+     (add-expr-nosp "+" mul-expr-nosp ($$ `(add ,$1 ,$3)))
+     (add-expr-nosp "-" mul-expr-nosp ($$ `(sub ,$1 ,$3)))
+     (add-expr-nosp ".+" mul-expr-nosp ($$ `(dot-add ,$1 ,$3)))
+     (add-expr-nosp ".-" mul-expr-nosp ($$ `(dot-sub ,$1 ,$3))))
 
     (mul-expr
      (unary-expr)
@@ -314,72 +347,6 @@
      (mul-expr ".\\" unary-expr ($$ `(dot-ldiv ,$1 ,$3)))
      (mul-expr ".^" unary-expr ($$ `(dot-pow ,$1 ,$3))))
 
-    (unary-expr
-     (postfix-expr)
-     ("-" postfix-expr ($$ `(neg ,$2)))
-     ("+" postfix-expr ($$ `(pos $2)))
-     ("~" postfix-expr ($$ `(not ,$2)))
-     ("@" postfix-expr ($$ `(handle ,$2))))
-    
-
-    (postfix-expr
-     (primary-expr)
-     (postfix-expr "'" ($$ `(transpose ,$1)))
-     (postfix-expr ".'" ($$ `(conj-transpose ,$1)))
-     (postfix-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,(tl->list $3))))
-     (postfix-expr "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
-     (postfix-expr "{" expr-list "}" ($$ `(cell-ref ,$1 ,(tl->list $3))))
-     (postfix-expr "." ident ($$ `(sel ,$3 ,$1))))
-    
-    (primary-expr
-     (ident)
-     (number)
-     (string)
-     ("(" expr ")" ($$ $2))
-     ("[" "]" ($$ '(matrix)))
-     ("[" matrix-row-list "]" ($$ (tl->list $2)))
-     ("{" "}" ($$ '(cell-array)))
-     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2))))))
-
-    (expr-nosp
-     (or-expr-nosp)
-     (":" ($$ `(colon-expr)))
-     (or-expr-nosp ":" or-expr-nosp ($$ `(colon-expr ,$1 ,$3)))
-     (or-expr-nosp ":" or-expr-nosp ":" or-expr-nosp
-                   ($$ `(colon-expr ,$1 ,$3 ,$5)))
-     (or-expr-nosp ":" "end" ($$ `(colon-expr ,$1 (end))))
-     (or-expr-nosp ":" or-expr-nosp ":" "end"
-                   ($$ `(colon-expr ,$1 ,$3 (end)))))
-
-    (or-expr-nosp
-     (and-expr-nosp)
-     (or-expr-nosp "|" and-expr-nosp ($$ `(or ,$1 ,$3)))
-     (or-expr-nosp "||" and-expr-nosp ($$ `(ss-or ,$1 ,$3))))
-
-    (and-expr-nosp
-     (equality-expr-nosp)
-     (and-expr-nosp "&" equality-expr-nosp ($$ `(and ,$1 ,$3)))
-     (and-expr-nosp "&&" equality-expr-nosp ($$ `(ss-and ,$1 ,$3))))
-
-    (equality-expr-nosp
-     (rel-expr-nosp)
-     (equality-expr-nosp "==" rel-expr-nosp ($$ `(eq ,$1 ,$3)))
-     (equality-expr-nosp "~=" rel-expr-nosp ($$ `(ne ,$1 ,$3))))
-
-    (rel-expr-nosp
-     (add-expr-nosp)
-     (rel-expr-nosp "<" add-expr-nosp ($$ `(lt ,$1 ,$3)))
-     (rel-expr-nosp ">" add-expr-nosp ($$ `(gt ,$1 ,$3)))
-     (rel-expr-nosp "<=" add-expr-nosp ($$ `(le ,$1 ,$3)))
-     (rel-expr-nosp ">=" add-expr-nosp ($$ `(ge ,$1 ,$3))))
-
-    (add-expr-nosp
-     (mul-expr-nosp)
-     (add-expr-nosp "+" mul-expr-nosp ($$ `(add ,$1 ,$3)))
-     (add-expr-nosp "-" mul-expr-nosp ($$ `(sub ,$1 ,$3)))
-     (add-expr-nosp ".+" mul-expr-nosp ($$ `(dot-add ,$1 ,$3)))
-     (add-expr-nosp ".-" mul-expr-nosp ($$ `(dot-sub ,$1 ,$3))))
-
     (mul-expr-nosp
      (unary-expr-nosp)
      (mul-expr-nosp "*" unary-expr-nosp ($$ `(mul ,$1 ,$3)))
@@ -391,41 +358,70 @@
      (mul-expr-nosp ".\\" unary-expr-nosp ($$ `(dot-ldiv ,$1 ,$3)))
      (mul-expr-nosp ".^" unary-expr-nosp ($$ `(dot-pow ,$1 ,$3))))
 
+    (unary-expr
+     (postfix-expr)
+     ("-" postfix-expr ($$ `(neg ,$2)))
+     ("+" postfix-expr ($$ `(pos $2)))
+     ("~" postfix-expr ($$ `(not ,$2)))
+     ("@" postfix-expr ($$ `(handle ,$2))))
+    
     (unary-expr-nosp
      (postfix-expr-nosp)
      ("-" postfix-expr-nosp ($$ `(neg ,$2)))
      ("+" postfix-expr-nosp ($$ $2))
      ("~" postfix-expr-nosp ($$ `(not ,$2))))
 
+    (postfix-expr
+     (primary-expr)
+     (postfix-expr "'" ($$ `(transpose ,$1)))
+     (postfix-expr ".'" ($$ `(conj-transpose ,$1)))
+     (postfix-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,$3)))
+     (postfix-expr "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
+     (postfix-expr "{" expr-list "}" ($$ `(cell-ref ,$1 ,$3)))
+     (postfix-expr "." ident ($$ `(sel ,$3 ,$1))))
+    
     (postfix-expr-nosp
      (primary-expr-nosp)
      (postfix-expr-nosp "'" ($$ `(transpose ,$1)))
      (postfix-expr-nosp ".'" ($$ `(conj-transpose ,$1)))
-     (postfix-expr-nosp "(" expr-list ")"
-                        ($$ `(aref-or-call ,$1 ,(tl->list $3))))
+     (postfix-expr-nosp "(" expr-list ")" ($$ `(aref-or-call ,$1 ,$3)))
      (postfix-expr-nosp "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
-     (postfix-expr-nosp "{" expr-list "}" ($$ `(cell-ref ,$1 ,(tl->list $3))))
+     (postfix-expr-nosp "{" expr-list "}" ($$ `(cell-ref ,$1 ,$3)))
      (postfix-expr-nosp "." ident ($$ `(sel ,$3 ,$1))))
     
+    (primary-expr
+     (ident)
+     (number)
+     (string)
+     ("(" expr ")" ($$ $2))
+     ("[" "]" ($$ '(matrix)))
+     ("[" matrix-row-list "]" ($$ $2))
+     ("{" "}" ($$ '(cell-array)))
+     ("{" matrix-row-list "}" ($$ `(cell-array . ,(cdr $2)))))
+
     (primary-expr-nosp
      (ident)
      (number)
      (string)
      ("(" expr ")" ($$ `(wrap ,$2)))
      ("[" "]" ($$ '(matrix)))
-     ("[" matrix-row-list "]" ($$ (tl->list $2)))
+     ("[" matrix-row-list "]" ($$ $2))
      ("{" "}" ($$ '(cell-array)))
-     ("{" matrix-row-list "}" ($$ `(cell-array ,(cdr (tl->list $2))))))
+     ("{" matrix-row-list "}" ($$ `(cell-array . ,(cdr $2)))))
 
     (matrix-row-list
-     (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
-     (matrix-row-list row-term matrix-row ($$ (tl-append $1 (tl->list $3)))))
+     (matrix-row-list-1 ($$ (tl->list $1))))
+    (matrix-row-list-1
+     (matrix-row ($$ (make-tl 'matrix $1)))
+     (matrix-row-list-1 row-term matrix-row ($$ (tl-append $1 $3))))
     (row-term (";") ("\n"))
 
     (matrix-row
+     (matrix-row-1 ($$ (tl->list $1))))
+    (matrix-row-1
      (expr-nosp ($$ (make-tl 'row $1)))
-     (matrix-row "," expr-nosp ($$ (tl-append $1 $3)))
-     (matrix-row 'sp expr-nosp ($$ (tl-append $1 $3))))
+     (matrix-row-1 "," expr-nosp ($$ (tl-append $1 $3)))
+     (matrix-row-1 'sp expr-nosp ($$ (tl-append $1 $3))))
 
     (term-list (term) (term-list term))
 
@@ -454,7 +450,6 @@
    (hashify-machine
     (make-lalr-machine mlang-spec))
    #:keep 0 #:keepers '($code-comm $lone-comm sp "\n")))
-;;(define mlang-mach (make-lalr-machine mlang-spec))
 
 (define mlang-ia-spec (restart-spec mlang-spec 'mlang-item))
 
