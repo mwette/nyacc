@@ -33,6 +33,7 @@
             sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
             sx-find
             sx-split sx-split* sx-join sx-join* sx-cons sx-cons* sx-list
+            sx-cons*/src sx-list/src
             sx-unitize
             sx-match sx-match-tail
             ;; deprecated:
@@ -284,6 +285,18 @@
     (sx-cons tag attr tail)))
 (define sx-join sx-cons)
 (define sx-join* sx-list)
+
+;; @deffn {Procedure} sx-cons*/src src tag attr exp ... tail => sexp
+;; @deffnx {Procedure} sx-list/src src tag attr exp ... => sexp
+;; These are like their respective procedures without the @code{/src}
+;; but allow source properties to be transferred from the sx @var{src}.
+;; @end deffn
+(define (sx-cons*/src src tag attr . rest)
+  (let ((sx (apply sx-cons* tag attr rest)))
+    (cons-source src (car sx) (cdr sx))))
+(define (sx-list/src src tag attr . rest)
+  (let ((sx (apply sx-list tag attr rest)))
+    (cons-source src (car sx) (cdr sx))))
 
 ;; @deffn {Procedure} sx-split sexp => tag attr tail
 ;; @deffnx {Procedure} sx-split* sexp => tag attr exp ...
