@@ -62,9 +62,9 @@
 
 (define protect-expr? (make-protect-expr op-prec op-assc))
 
-(define* (pretty-print-ml tree #:key (indent-level 3))
+(define* (pretty-print-ml tree #:key (indent-level 4))
 
-  (define fmtr (make-pp-formatter #:width 120))
+  (define fmtr (make-pp-formatter #:width 120 #:basic-offset indent-level))
   (define (push-il) (fmtr 'push))
   (define (pop-il) (fmtr 'pop))
   
@@ -126,10 +126,12 @@
 
       ((methods (attr-list . ,attrs) . ,items)
        (sf "methods (") (for-each ppxin attrs) (sf ")\n") (push-il)
-       (for-each ppxin items) (pop-il) (sf "end\n"))
+       (for-each (lambda (item) (ppxin item) (sf "\n")) items)
+       (pop-il) (sf "end\n"))
       ((methods . ,items)
        (sf "methods\n") (push-il)
-       (for-each ppxin items) (pop-il) (sf "end\n"))
+       (for-each (lambda (item) (ppxin item) (sf "\n")) items)
+       (pop-il) (sf "end\n"))
 
       ((function-sig (ident ,name) ,iputs ,oputs ,coml)
        (case (length (cdr oputs))
@@ -194,7 +196,7 @@
       ((assn ,lhs ,rhs)
        (ppxin lhs) (sf " = ") (ppxin rhs) (sf ";\n"))
 
-      ((multi-assn (lval-list . ,lvals) ,expr)
+      ((assn-many (lval-list . ,lvals) ,expr)
        (sf "[")
        (pair-for-each
         (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) (sf ", ")))
@@ -243,17 +245,21 @@
 
       ((return ,value)
        (sf "return ") (ppxin value) (sf ";\n"))
+      ((return)
+       (sf "return;\n"))
 
       ((command ,name . ,args)
        (sf "~A" name)
        (for-each (lambda (arg) (sf " ~A" (sx-ref arg 1))) args)
        (sf "\n"))
 
-      ((aref-or-call ,name . ,args)
+      ((aref-or-call ,name ,argx-list)
        (ppxin name) (sf "(")
        (pair-for-each
-        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) ", "))
-        args)
+        (lambda (pair)
+          (ppxin (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        (sx-tail argx-list))
        (sf ")"))
 
       ((cell-array . ,rows)
@@ -268,7 +274,9 @@
       ((matrix . ,rows)
        (sf "[")
        (pair-for-each
-        (lambda (pair) (ppxin (car pair)) (if (pair? (cdr pair)) (sf "; ")))
+        (lambda (pair)
+          (ppxin (car pair))
+          (if (pair? (cdr pair)) (sf "; ")))
         rows)
        (sf "]"))
       ((float-matrix . ,rows)
@@ -355,6 +363,7 @@
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
       ((string ,value) (sf "'~A'" (string->mlang value)))
+      ((end) (sf "end"))
       
       (,_ (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
 

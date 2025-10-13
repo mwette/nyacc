@@ -93,10 +93,14 @@
      (class-parts-1 "methods" method-list "end"
                  ($$ (tl-append $1 `(methods ,@(cdr $3)))))
      #|
-     (class-parts-1 "events"  "(" attr-list ")" prop-decl "end"
-                 ($$ (tl-append $1 `(events $4 $6))))
-     (class-parts-1 "enumeration" xxx "end"
-                 ($$ (tl-append $1 `(enumeration $3))))
+     (class-parts-1 "events" "(" attr-list ")" evnt-list "end"
+                 ($$ (tl-append $1 `(events ,$4 ,$6))))
+     (class-parts-1 "events" evnt-list "end"
+                 ($$ (tl-append $1 `(events ,$4))))
+     (class-parts-1 "enumeration" "(" attr-list ")" enum-list "end"
+                 ($$ (tl-append $1 `(enumeration ,$4 ,$6))))
+     (class-parts-1 "enumeration" enum-list "end"
+                 ($$ (tl-append $1 `(enumeration ,$6))))
      |#
      )
      
@@ -130,11 +134,11 @@
 
     (function-defn
      (function-decl non-comment-statement stmt-list the-end
-      ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2 . ,(cdr $3)) $3))))
+      ($$ `(fctn-defn ,@(cdr $1) ,(if $2 `(stmt-list ,$2 . ,(cdr $3)) $3))))
      (function-decl non-comment-statement the-end
-      ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
+      ($$ `(fctn-defn ,@(cdr $1) ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
      (function-decl the-end
-      ($$ `(fctn-defn ,$1 (stmt-list)))))
+      ($$ `(fctn-defn ,@(cdr $1) (stmt-list)))))
     
     (the-end ("end" term)) 
 
@@ -216,8 +220,9 @@
     (command
      (command-name ($$ `(command ,$1))))
     (command-name
-     ("clc") ("doc") ("format") ("global") ("grid") ("help") ("hold")
-     ("load") ("rotate3d") ("save") ("uiimport") ("ver"))
+     ("clc") ("doc") ("drawnow") ("format") ("global") ("grid")
+     ("help") ("hold") ("load") ("pause") ("rotate3d") ("save")
+     ("uiimport") ("ver"))
 
     ;; Only ident list type commands are allowed
     (arg-list
@@ -388,7 +393,7 @@
      (postfix-expr-nosp "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
      (postfix-expr-nosp "{" expr-list "}" ($$ `(cell-ref ,$1 ,$3)))
      (postfix-expr-nosp "." ident ($$ `(sel ,$3 ,$1))))
-    
+
     (primary-expr
      (ident)
      (number)

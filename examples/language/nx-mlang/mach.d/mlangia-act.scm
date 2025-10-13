@@ -107,16 +107,16 @@
    ;; function-defn => function-decl non-comment-statement stmt-list the-end
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn
-        ,$1
+        ,@(cdr $1)
         ,(if $2 `(stmt-list ,$2 unquote (cdr $3)) $3)))
    ;; function-defn => function-decl non-comment-statement the-end
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn
-        ,$1
+        ,@(cdr $1)
         ,(if $2 `(stmt-list ,$2) '(stmt-list))))
    ;; function-defn => function-decl the-end
    (lambda ($2 $1 . $rest)
-     `(fctn-defn ,$1 (stmt-list)))
+     `(fctn-defn ,@(cdr $1) (stmt-list)))
    ;; the-end => "end" term
    (lambda ($2 $1 . $rest) $1)
    ;; function-decl => "function" function-sig term lone-comment-list
@@ -220,6 +220,8 @@
    (lambda ($1 . $rest) $1)
    ;; command-name => "doc"
    (lambda ($1 . $rest) $1)
+   ;; command-name => "drawnow"
+   (lambda ($1 . $rest) $1)
    ;; command-name => "format"
    (lambda ($1 . $rest) $1)
    ;; command-name => "global"
@@ -231,6 +233,8 @@
    ;; command-name => "hold"
    (lambda ($1 . $rest) $1)
    ;; command-name => "load"
+   (lambda ($1 . $rest) $1)
+   ;; command-name => "pause"
    (lambda ($1 . $rest) $1)
    ;; command-name => "rotate3d"
    (lambda ($1 . $rest) $1)

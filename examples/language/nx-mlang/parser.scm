@@ -158,7 +158,7 @@
             (lambda (p) (set! qms (not (memq ch '(#\] #\} #\))))) p))
            ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
            (else (cons ch (string ch)))))
-        (if #t                  ; read properties
+        (if #t                  ; add source properties
             (lambda ()
               (let* ((lxm (loop (read-char)))
                      (port (current-input-port))
@@ -171,10 +171,11 @@
 
 ;; === static semantics
 
-;; 1) assn: "[ ... ] = expr" => multi-assign
+;; 1) assn: "[ ... ] = expr" => assn-many
 ;; 2) matrix: "[ int, int, int ]" => ivec
 ;; 3) matrix: "[ ... (fixed) ... ]" => error
-;; .) colon-expr => fixed-colon-expr
+;; 4) colon-expr => fixed-colon-expr
+;; 5) aref-or-call => array-ref | call
 
 (define (fixed-colon-expr? expr)
   (sx-match expr
@@ -231,15 +232,71 @@
 ;; Apply static semantics for Octave.  Currently, this includes
 ;; @itemize
 ;; @item Change @code{assn} with matrix expression on LHS to a
-;; multiple value assignment (@code{multi-assn}).
+;; multiple value assignment (@code{assn-many}).
 ;; @end itemize
+;; TODO: aref-or-call:
 ;; @end deffn
 (define (apply-mlang-statics tree)
 
   (define (fU tree)
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (cons-source tree 'multi-assn `((@ . ,attr) (lval-list . ,elts) ,rhs)))
+       (cons-source tree 'assn-many `((@ . ,attr) (lval-list . ,elts) ,rhs)))
+      ((colon-expr . ,rest)
+       (if (fixed-colon-expr? tree)
+           (cons-source tree 'fixed-colon-expr (cdr tree))
+           tree))
+      ((matrix . ,rest)
+       (check-matrix tree))
+      (,_ tree)))
+  
+  (define (fH tree) tree)
+  
+  (cadr (foldt fU fH `(*TOP* ,tree))))
+
+(define (lval-root lval)
+  (sx-match lval
+    ((ident ,name) lval)
+    ((aref-or-call ,par ,exl) (lval-root par))
+    ((cell-ref ,par ,exl) (lval-root par))
+    ((sel ,kid ,par) (lval-root par))
+    (,otherwise #f)))
+
+(define (lval-name lval)
+  (and=> (lval-root lval) cadr))
+
+(define (fix-lval lval)
+  (sx-match lval
+    ((aref-or-call ,par ,exl) `(array-ref ,par ,exl))
+    (,__ lval)))
+
+(define (apply-new-mlang-statics tree)
+  ;; (aref-or-call (handle ...) ...) is call
+  ;; NEEDS WORK because we are losing attributes
+
+  ;; gbl : global variables
+  ;; lcl : local variables (incl function args)
+
+  (define (fD tree seed gbl lcl)        ; => tree seed gbl lcl
+    (sx-match tree
+      ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
+       (if lcl
+           (values tree seed gbl (map lval-name elts))
+           (values tree seed (map lval-name elts) lcl)))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs) ,stmts)
+       (values tree seed gbl (map cadr iargs)))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs ,coml) ,stmts)
+       (values tree seed gbl (map cadr iargs)))
+      ((command "global" . ,args)
+       (values tree seed (fold cadr gbl args) lcl))
+      (,__ (values tree seed gbl lcl))))
+    
+  (define (fU tree seed gbl lcl kseed kgbl klcl) ; => seed gbl lcl
+    (sx-match tree
+      ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
+       (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs))
+      ((assn (@ . ,attr) (aref-or-call . ,rest) ,rhs)
+       (sx-list/src tree 'assn attr `(array-ref . ,rest) rhs))
       ((colon-expr . ,rest)
        (if (fixed-colon-expr? tree)
            (cons-source tree 'fixed-colon-expr (cdr tree))
@@ -288,7 +345,11 @@
     (lambda ()
       (if (eof-object? (peek-char port))
           (read-char port)
-          (parse-mlang #:debug #f)))))
+          (let ((sx (parse-mlang #:debug #f))
+                (fn (port-filename port)))
+            (if (and sx fn)
+                (cons* (car sx) `(@ (filename ,fn)) (cdr sx))
+                sx))))))
 
 ;; === interactive parser
 
