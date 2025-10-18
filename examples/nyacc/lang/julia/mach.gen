@@ -1,0 +1,14 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0
+!#
+(use-modules (nyacc lang julia mach))
+(use-modules (nyacc lalr))
+
+(when (gen-julia-files)
+  (system "touch parser.scm")
+  (with-output-to-file ",gram.txt"
+    (lambda ()
+      (pp-lalr-grammar julia-spec)
+      (pp-lalr-machine julia-mach))))
+;;; --- last line ---
