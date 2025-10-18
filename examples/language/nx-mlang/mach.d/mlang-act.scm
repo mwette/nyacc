@@ -107,16 +107,16 @@
    ;; function-defn => function-decl non-comment-statement stmt-list the-end
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn
-        ,@(cdr $1)
-        ,(if $2 `(stmt-list ,$2 unquote (cdr $3)) $3)))
+        ,$1
+        ,(if $2 `(stmt-list ,$2 ,@(cdr $3)) $3)))
    ;; function-defn => function-decl non-comment-statement the-end
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn
-        ,@(cdr $1)
+        ,$1
         ,(if $2 `(stmt-list ,$2) '(stmt-list))))
    ;; function-defn => function-decl the-end
    (lambda ($2 $1 . $rest)
-     `(fctn-defn ,@(cdr $1) (stmt-list)))
+     `(fctn-defn ,$1 (stmt-list)))
    ;; the-end => "end" term
    (lambda ($2 $1 . $rest) $1)
    ;; function-decl => "function" function-sig term lone-comment-list

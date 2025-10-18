@@ -158,7 +158,6 @@
             (lambda (p) (set! qms (not (memq ch '(#\] #\} #\))))) p))
            ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
            (else (cons ch (string ch)))))
-        (if #t                  ; add source properties
             (lambda ()
               (let* ((lxm (loop (read-char)))
                      (port (current-input-port))
@@ -166,10 +165,12 @@
                      (line (1+ (port-line port)))
                      (props `((filename . ,file) (line . ,line) (column . 0))))
                 (set-source-properties! lxm props)
-                lxm))
-            (lambda () (loop (read-char))))))))
+                lxm))))))
+
 
 ;; === static semantics
+
+;; THIS is actually pretty useless w/o reading and parsing all dependencies.
 
 ;; 1) assn: "[ ... ] = expr" => assn-many
 ;; 2) matrix: "[ int, int, int ]" => ivec
@@ -236,7 +237,7 @@
 ;; @end itemize
 ;; TODO: aref-or-call:
 ;; @end deffn
-(define (apply-mlang-statics tree)
+(define (apply-old-mlang-statics tree)
 
   (define (fU tree)
     (sx-match tree
@@ -270,9 +271,8 @@
     ((aref-or-call ,par ,exl) `(array-ref ,par ,exl))
     (,__ lval)))
 
-(define (apply-new-mlang-statics tree)
+(define (apply-mlang-statics tree)
   ;; (aref-or-call (handle ...) ...) is call
-  ;; NEEDS WORK because we are losing attributes
 
   ;; gbl : global variables
   ;; lcl : local variables (incl function args)
@@ -283,31 +283,48 @@
        (if lcl
            (values tree seed gbl (map lval-name elts))
            (values tree seed (map lval-name elts) lcl)))
+      ((assn (@ . ,attr) (ident ,name) ,rhs)
+       (cond
+        ((member name lcl) (values tree seed gbl lcl))
+        ((member name gbl) (values tree seed gbl lcl))
+        (else (values tree seed gbl (cons name lcl)))))
       ((fctn-defn (fctn-decl ,name ,iargs ,oargs) ,stmts)
-       (values tree seed gbl (map cadr iargs)))
+       (values tree seed gbl (map cadr (cdr iargs))))
       ((fctn-defn (fctn-decl ,name ,iargs ,oargs ,coml) ,stmts)
-       (values tree seed gbl (map cadr iargs)))
+       (values tree seed gbl (map cadr (cdr iargs))))
       ((command "global" . ,args)
        (values tree seed (fold cadr gbl args) lcl))
       (,__ (values tree seed gbl lcl))))
-    
+
   (define (fU tree seed gbl lcl kseed kgbl klcl) ; => seed gbl lcl
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs))
+       (values 
+        (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
+        gbl lcl))
+      ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
+       (let ((op (if (or (member name lcl) (member name gbl)) 'array-ref 'call)))
+         (values (sx-cons* op attr (sx-tail tree)))))
+      ;; We may have a complexity with classes.  If they allow obj.foo(1)
+      ;; to be a (method) call or array-ref.
+      #| ;; should never happen
       ((assn (@ . ,attr) (aref-or-call . ,rest) ,rhs)
-       (sx-list/src tree 'assn attr `(array-ref . ,rest) rhs))
+      (values (sx-list/src tree 'assn attr `(array-ref . ,rest) rhs) gbl lcl))
+      |#
       ((colon-expr . ,rest)
-       (if (fixed-colon-expr? tree)
-           (cons-source tree 'fixed-colon-expr (cdr tree))
-           tree))
+       (values
+        (if (fixed-colon-expr? tree)
+            (cons-source tree 'fixed-colon-expr (cdr tree))
+            tree)) gbl lcl)
       ((matrix . ,rest)
-       (check-matrix tree))
-      (,_ tree)))
+       (values (check-matrix tree) gbl lcl))
+      (,__
+       (values tree gbl lcl))))
   
-  (define (fH tree) tree)
+  (define (fH leaf seed gbl lcl)
+    (values (cons leaf seed) gbl lcl))
   
-  (cadr (foldt fU fH `(*TOP* ,tree))))
+  (cadr (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '())))
 
 (define (make-user-hook mach)
   (let* ((mtab (assoc-ref mach 'mtab))

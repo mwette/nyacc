@@ -1,6 +1,6 @@
 ;;; nyacc/lang/mlang/mltoc.scm
 
-;; Copyright (C) 2018,2020 Matthew R. Wette
+;; Copyright (C) 2018,2020,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -15,10 +15,18 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
+;;; Notes:
+
+;; We could convert each function into similar with
+;;   (ident "foo") => (ident "foo#123" "foo" type-info)
+;; where type-info is something that can maybe narrow types.
+;; A global analysis might be able to narrow down variable
+;; types and (e.g., matrix) sizes.
+
 ;;; Code:
 
 (define-module (nyacc lang mlang mltoc)
-  #:export (mlang-to-c99 mlang-to-tree))
+  #:export (mlang->c99))
 
 (use-modules (language nx-mlang parser))
 
@@ -104,7 +112,7 @@
     (if (null? (cdr args)) (car args)
         (add-lexical (car args) (loop (cdr args))))))
 (define (add-symbol name dict)
-  (if (top-level? dict) (add-symbol name dict) (add-lexical name dict)))
+  (if (top-level? dict) (nx-add-variable name dict) (add-lexical name dict)))
 (define (add-reference name dict)
   (add-nxsym 'reference name dict))
 (define (add-return name dict)
@@ -289,12 +297,14 @@
 
 ;; ====================================
 
-(define (ml->c99 exp opts)
+(define (mlang->c99 tree opts)
 
   (define (rem-empties stmts)
     (filter (lambda (item) (not (eq? 'empty-stmt (sx-tag item)))) stmts))
   
   (define (fD tree seed dict) ;; => tree seed dict
+    (when #t
+      (sferr "fD:\n") (pperr tree))
     (sx-match tree
 
       ((ident ,name)
@@ -399,7 +409,7 @@
       ;;   (lambda () (f a))
       ;;  (lambda (arg0 arg1 . $rest) (set! x arg0) (set! y arg1)))
       ;; @end example
-      ((multi-assn (@ . ,attr) (lval-list . ,elts) ,rhsx)
+      ((assn-many (@ . ,attr) (lval-list . ,elts) ,rhsx)
        (let loop ((lvxl '()) (dict dict) (elts elts) (ix 0))
          (if (null? elts)
              (values
@@ -408,7 +418,7 @@
              (let* ((n (string-append "arg" (number->string ix)))
                     (s (string->symbol n)) (g (genxsym n))
                     (rv `(lexical ,s ,g)))
-n              (sx-match (car elts)
+              (sx-match (car elts)
                  ((ident ,name)
                   (loop (cons `(var-assn (ident ,name) ,rv) lvxl)
                         (maybe-add-symbol name dict) (cdr elts) (1+ ix)))
@@ -419,29 +429,42 @@ n              (sx-match (car elts)
                   (loop (cons `(mem-assn ,expr ,name ,rv) lvxl)
                         dict (cdr elts) (1+ ix)))
                  (,_ (throw 'nyacc-error "bad lhs syntax")))))))
-      ((multi-assn . ,rest) (throw 'nyacc-error "syntax error: multi-assn"))
+      ((assn-many . ,rest) (throw 'nyacc-error "syntax error: assn-many"))
 
       ((stmt-list . ,stmts)
        (values `(stmt-list . ,(rem-empties stmts)) '() dict))
 
       ((fctn-defn
-        (fctn-decl (ident ,name) (ident-list . ,inargs) (ident-list . ,outargs)
-                   . ,rest)
+        (fctn-decl
+         (ident ,name) (ident-list . ,inargs) (ident-list . ,outargs) . ,rest)
         ,stmt-list)
-       ;;(sferr "name=~S, udict:\n" name) (pperr *udict*) (quit)
-       (let* ((dict (if (top-level? dict) (add-symbol name dict) dict))
+       (sferr "name=~S, dict:\n" name) (pperr dict) ;;(quit)
+       (let* (
+              (x (sferr "0\n"))
+              (dict (if (top-level? dict) (add-symbol name dict) dict))
+              (x (sferr "1\n"))
               (dict (push-scope dict))
+              (x (sferr "2\n"))
               (udecl (udict-ref *udict* name))
+              (x (sferr "3\n"))
               ;; "return" is inserted by match-sigs
               (dict (match-sigs inargs outargs udecl dict))
+              (x (sferr "4\n"))
               (dict (acons '@F name dict))
+              (x (sferr "5\n"))
               ;; ensure last statement is a return
               #;(tree (if (eq? 'return (sx-tag (last stmt-list))) tree
                         `(fctn-defn ,(sx-ref tree 1)
                                     ,(append stmt-list '((return))))))
               )
+         (sferr "fctn-defn returns\n")
          (values tree '() dict)))
-      ((fctn-defn . ,rest) (throw 'nyacc-error "syntax error: function def"))
+      ((fctn-defn . ,rest)
+       (sferr "syntax error: fctn-defn\n")
+       (pperr tree)
+       (quit)
+       ;;(throw 'nyacc-error "syntax error: function def")
+       )
 
       ((command (ident ,cname) . ,args)
        (unless (string=? cname "global") (error "bad command: ~S" cname))
@@ -478,13 +501,14 @@ n              (sx-match (car elts)
         (else (values tree '() dict))))
        
       (,_
+       (sferr "else\n")
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     ;; This routine rolls up processes leaves into the current branch.
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
-    (when #f
+    (when #t
       (sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
       ;;(sferr "    kseed=~S\n    seed=~S\n" kseed seed)
       ;;(pperr tree)
@@ -632,7 +656,9 @@ n              (sx-match (car elts)
         (values (cons kseed seed) kdict))
 
        ((colon-expr fixed-colon-expr)
-        (sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
+        (sferr "not implemented: ~S, so I quit\n" (car tree))
+        (pperr tree)
+        (quit)
         (values seed kdict))
 
        ((and or) (make-opcall1 kseed seed kdict))
@@ -708,14 +734,15 @@ n              (sx-match (car elts)
   (define (fH leaf seed dict)
     (values (if (null? leaf) seed (cons leaf seed)) dict))
 
-  (foldts*-values fD fU fH `(*TOP* ,exp) '() (acons '@top #t '())))
+  (foldts*-values fD fU fH `(*TOP* ,tree) '() (acons '@top #t '())))
 
+#|
 (define (mlang-to-c99 srcfile opts)
   (let* ((base (basename srcfile))
          (dstfile (string-append (basename srcfile ".m") "_m.c"))
          (tree (call-with-input-file srcfile
                  (lambda (iport) (read-mlang-file iport '())))))
-    (pperr tree)
+    ;;(pperr tree)
     (unless tree (error "compile failed"))
     (let ((ct (ml->c99 tree opts)))
       (call-with-output-file dstfile
@@ -723,13 +750,6 @@ n              (sx-match (car elts)
           (pretty-print-c99 ct oport)
           (simple-format #t "wrote ~S\n" dstfile))))
     0))
-
-(define (mlang-to-tree srcfile opts)
-  (let* ((base (basename srcfile))
-         (dstfile (string-append (basename srcfile ".m") "_m.c"))
-         (tree (call-with-input-file srcfile
-                 (lambda (iport) (read-mlang-file iport '())))))
-    tree))
- 
+|#
 
 ;; --- last line ---

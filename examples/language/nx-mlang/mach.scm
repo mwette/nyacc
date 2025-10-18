@@ -134,11 +134,11 @@
 
     (function-defn
      (function-decl non-comment-statement stmt-list the-end
-      ($$ `(fctn-defn ,@(cdr $1) ,(if $2 `(stmt-list ,$2 . ,(cdr $3)) $3))))
+      ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2 ,@(cdr $3)) $3))))
      (function-decl non-comment-statement the-end
-      ($$ `(fctn-defn ,@(cdr $1) ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
+      ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
      (function-decl the-end
-      ($$ `(fctn-defn ,@(cdr $1) (stmt-list)))))
+      ($$ `(fctn-defn ,$1 (stmt-list)))))
     
     (the-end ("end" term)) 
 

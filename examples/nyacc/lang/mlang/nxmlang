@@ -27,7 +27,7 @@ exec guile $0 $*
 
 ;; =================================
 
-;;(use-modules (nyacc lang mlang mltoc)) ;; provides (mlang-to-c99 file opts)
+(use-modules (nyacc lang mlang mltoc))  ; provides (mlang-to-c99 file opts)
 
 
 ;; =================================
@@ -55,9 +55,12 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
    (option '(#\s "sxml") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'sxml #t opts) files)))
-   (option '(#\m "mlang") #f #f
+   (option '(#\p "pprint") #f #f
            (lambda (opt name arg opts files)
-             (values (acons 'mlang #t opts) files)))
+             (values (acons 'pprint #t opts) files)))
+   (option '(#\c "c99") #f #f
+           (lambda (opt name arg opts files)
+             (values (acons 'c99 #t opts) files)))
    ))
 
 (define (parse-args args)
@@ -79,12 +82,14 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       (for-each 
        (lambda (srcfile)
          (let ((tree (call-with-input-file srcfile
-                 (lambda (iport) (read-mlang-file iport '())))))
+                       (lambda (port)
+                         (set-port-filename! port srcfile)
+                         (read-mlang-file port '())))))
            (when (assq-ref opts 'sxml) (pp tree))
-           (when (assq-ref opts 'mlang) (pretty-print-ml tree))
+           (when (assq-ref opts 'pprint) (pretty-print-ml tree))
+           (when (assq-ref opts 'c99) (mlang->c99 tree opts))
            #f))
-       files)
-      ))
+       files)))
   0)
 
 (apply main (cdr (program-arguments)))
