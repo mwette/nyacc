@@ -1,6 +1,6 @@
 ;;; langauge/nx-mlang/compile-tree-il.scm compile mlang sxml to tree-il
 
-;; Copyright (C) 2018,2023-2024 Matthew Wette
+;; Copyright (C) 2018,2023-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -242,8 +242,8 @@
 
       ((while . ,rest)
        (values tree '()
-               (acons '@L "while"
-                      (nx-add-lexicals "break" "continue" (nx-push-scope dict)))))
+               (acons '@L "while" (nx-add-lexicals
+                                   "break" "continue" (nx-push-scope dict)))))
 
       ((for (ident ,name) . ,rest)
        ;;(sferr "for:\n") (pperr tree)
