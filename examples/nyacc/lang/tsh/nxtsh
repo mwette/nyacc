@@ -4,9 +4,9 @@
 exec guile $0 $*
 !#
 
-(use-modules (nyacc lang tsh parser))
-(use-modules (nyacc lang tsh compile-tree-il))
-;;(use-modules (nyacc lang tsh pprint))
+(use-modules (language nx-tsh parser))
+(use-modules (language nx-tsh compile-tree-il))
+;;(use-modules (language nx-tsh pprint))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
@@ -43,6 +43,8 @@ exec guile $0 $*
 		 (fail "expecting .tsh file"))
 	       (acons 'file file seed))
              '()))
+
+(set! show-xtil #t)
 
 (define (compile-nx-file . args)
   (let* ((options (let ((opts (parse-args args)))
