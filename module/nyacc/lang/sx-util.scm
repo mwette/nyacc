@@ -380,9 +380,9 @@
 ;; kt kf are continuation syntax expresions
 
 ;; @deffn {Syntax} sx-match exp (pat body ...) ...
-;; This syntax will attempt to match @var{expr} against the patterns.
+;; This syntax will attempt to match the SXML @var{exp} against the patterns.
 ;; At runtime, when @var{pat} is matched against @var{exp}, then @var{body ...}
-;; will be evaluated.
+;; will be evaluated.  The pattern @code{()} is also supported.
 ;; @end deffn
 (define-syntax sx-match
   (syntax-rules ()
@@ -432,7 +432,9 @@
               (let ((vt (sx-tail v)))
                 (sxm-tail vt nl kt kf))
               kf))
-    ))
+    ;; allow end-of-list
+    ((_ v () kt kf)
+     (if (null? v) kt kf))))
  
 ;; sxml-attr-tail va vt (@ (k v) ...) nl kt kf
 (define-syntax sxm-attr-tail
