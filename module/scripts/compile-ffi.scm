@@ -98,7 +98,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
 >>>>>>> fadb39ca83393bb4281d0a61e43a73ba27c2b144
 
 See the FFI-Helper User's Manual for help generating a .ffi file.
-Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
+Report bugs to https://github.com/mwette/nyacc/issues.\n"))
 
 (define options
   ;; specification of command-line options
