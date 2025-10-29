@@ -170,7 +170,7 @@
 
 ;; === static semantics
 
-;; THIS is actually pretty useless w/o reading and parsing all dependencies.
+;; This won't be able to resolve all aref-or-call if classes are used.
 
 ;; 1) assn: "[ ... ] = expr" => assn-many
 ;; 2) matrix: "[ int, int, int ]" => ivec
@@ -271,66 +271,57 @@
     ((aref-or-call ,par ,exl) `(array-ref ,par ,exl))
     (,__ lval)))
 
+;; assn matrix rhs => assn-many lval-list rhs
+;;(define apply-mlang-statics identity)
 (define (apply-mlang-statics tree)
   ;; (aref-or-call (handle ...) ...) is call
-
-  ;; gbl : global variables
-  ;; lcl : local variables (incl function args)
-
+  ;; gbl : global variables (e.g., from global)
+  ;; lcl : local variables (e.g., function ins or outs)
   (define (fD tree seed gbl lcl)        ; => tree seed gbl lcl
+    ;;(sferr "fD:\n") (pperr tree) ;;(pperr seed)
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (if lcl
-           (values tree seed gbl (map lval-name elts))
-           (values tree seed (map lval-name elts) lcl)))
+       (values (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
+               '() gbl lcl))
       ((assn (@ . ,attr) (ident ,name) ,rhs)
        (cond
-        ((member name lcl) (values tree seed gbl lcl))
-        ((member name gbl) (values tree seed gbl lcl))
-        (else (values tree seed gbl (cons name lcl)))))
-      ((fctn-defn (fctn-decl ,name ,iargs ,oargs) ,stmts)
-       (values tree seed gbl (map cadr (cdr iargs))))
-      ((fctn-defn (fctn-decl ,name ,iargs ,oargs ,coml) ,stmts)
-       (values tree seed gbl (map cadr (cdr iargs))))
+        ((member name lcl) (values tree '() gbl lcl))
+        ((member name gbl) (values tree '() gbl lcl))
+        (else (values tree '() gbl (cons name lcl)))))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
+       (values tree '() gbl (map cadr (append (cdr iargs) (cdr iargs)))))
       ((command "global" . ,args)
-       (values tree seed (fold cadr gbl args) lcl))
-      (,__ (values tree seed gbl lcl))))
+       (values tree '() (fold cadr gbl args) lcl))
+      (,__ (values tree '() gbl lcl))))
 
   (define (fU tree seed gbl lcl kseed kgbl klcl) ; => seed gbl lcl
     (sx-match tree
-      ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (values 
-        (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
-        gbl lcl))
+      (() (values (cons (reverse kseed) seed) gbl lcl))
       ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
-       (let ((op (if (or (member name lcl) (member name gbl)) 'array-ref 'call)))
-         (values (sx-cons* op attr (sx-tail tree)))))
-      ;; We may have a complexity with classes.  If they allow obj.foo(1)
-      ;; to be a (method) call or array-ref.
-      #| ;; should never happen
-      ((assn (@ . ,attr) (aref-or-call . ,rest) ,rhs)
-      (values (sx-list/src tree 'assn attr `(array-ref . ,rest) rhs) gbl lcl))
-      |#
+       (let ((op (if (or (member name lcl) (member name gbl))
+                     'array-ref 'call))
+             (tail (cdr (reverse kseed))))
+         (values (cons (cons-source tree op tail) seed) gbl lcl)))
+      ((aref-or-call (@ . ,attr) (handle (ident ,name)) . ,rest)
+       (let ((tail (cdr (reverse kseed))))
+         (values (cons (cons-source tree 'call tail) seed) gbl lcl)))
       ((colon-expr . ,rest)
-       (values
-        (if (fixed-colon-expr? tree)
-            (cons-source tree 'fixed-colon-expr (cdr tree))
-            tree)) gbl lcl)
+       (let ((form (reverse kseed)))
+         (values (if (fixed-colon-expr? tree)
+                     (cons-source tree 'fixed-colon-expr (cdr form))
+                     form)) gbl lcl))
       ((matrix . ,rest)
-       (values (check-matrix tree) gbl lcl))
+       (values (cons (check-matrix (reverse kseed)) seed) gbl lcl))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
+       (values (cons (reverse kseed) seed) gbl '()))
       (,__
-       (values tree gbl lcl))))
+       (values (cons (reverse kseed) seed) gbl lcl))))
   
   (define (fH leaf seed gbl lcl)
     (values (cons leaf seed) gbl lcl))
   
-  (cadr (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '())))
+  (cadar (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '())))
 
-(define (make-user-hook mach)
-  (let* ((mtab (assoc-ref mach 'mtab))
-         )
-    (lambda (tal tok stk)
-      #f)))
 
 ;; === file parser 
 

@@ -174,7 +174,7 @@
 ;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
 ;; @end deffn
-(define (xlang-sxml->xtil exp env opts)
+(define (mlang-sxml->xtil exp env opts)
 
   (define (rem-empties stmts)
     (filter (lambda (item) (not (eq? 'empty-stmt (sx-tag item)))) stmts))
@@ -695,7 +695,7 @@
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
     (if exp 
         (call-with-values
-            (lambda () (xlang-sxml->xtil exp cenv opts))
+            (lambda () (mlang-sxml->xtil exp cenv opts))
           (lambda (exp cenv)
             (when show-xtil (sferr "tree-il:\n") (pperr exp))
             (values (parse-tree-il exp) env cenv)

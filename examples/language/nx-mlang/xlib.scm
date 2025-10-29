@@ -24,8 +24,8 @@
 (define-module (language nx-mlang xlib)
   #:export (xdict)
   #:use-module (srfi srfi-9)
-  #:use-module (language nx-mlang parser)
-  #:use-module (language nx-mlang compile-tree-il)
+  ;;#:use-module (language nx-mlang parser)
+  ;;#:use-module (language nx-mlang compile-tree-il)
   #:use-module (system base compile)
   )
 (define (sferr fmt . args)
@@ -192,6 +192,9 @@
   (if #f #f))
 
 (define-public (ml:source file)
+    (error "not supported yet: source"))
+#|
+(define-public (ml:source file)
   (show-mlang-sxml #t)
   (show-mlang-xtil #t)
   (let* ((env (current-module))
@@ -208,6 +211,7 @@
     ;;(pperr var)
     ;;(quit)
     (if #f #f)))
+|#
 
 ;; ===
 
