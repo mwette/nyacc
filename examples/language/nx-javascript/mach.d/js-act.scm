@@ -1,12 +1,12 @@
-;; ./mach.d/js-act.scm
+;; js-act.scm
 
-;; Copyright 2015-2018 Matthew R. Wette
+;; Copyright (c) 2015-2018 Matthew R. Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
-;; See the file COPYING.LESSER included with the this distribution.
+;; See the file COPYING included with the this distribution.
 
 (define js-act-v
   (vector
@@ -32,6 +32,10 @@
    (lambda ($1 . $rest) `(NumericLiteral ,$1))
    ;; StringLiteral => '$string
    (lambda ($1 . $rest) `(StringLiteral ,$1))
+   ;; term => ";"
+   (lambda ($1 . $rest) $1)
+   ;; term => "\n"
+   (lambda ($1 . $rest) $1)
    ;; Identifier => '$ident
    (lambda ($1 . $rest) `(Identifier ,$1))
    ;; PrimaryExpression => "this"
@@ -136,14 +140,10 @@
    (lambda ($1 . $rest) $1)
    ;; PostfixExpression => LeftHandSideExpression
    (lambda ($1 . $rest) $1)
-   ;; PostfixExpression => LeftHandSideExpression $P1 "++"
-   (lambda ($3 $2 $1 . $rest) `(post-inc ,$1))
-   ;; PostfixExpression => LeftHandSideExpression $P2 "--"
-   (lambda ($3 $2 $1 . $rest) `(post-dec ,$1))
-   ;; $P1 => 
-   (lambda ($1 . $rest) (NSI))
-   ;; $P2 => 
-   (lambda ($1 . $rest) (NSI))
+   ;; PostfixExpression => LeftHandSideExpression "++"
+   (lambda ($2 $1 . $rest) `(post-inc ,$1))
+   ;; PostfixExpression => LeftHandSideExpression "--"
+   (lambda ($2 $1 . $rest) `(post-dec ,$1))
    ;; UnaryExpression => PostfixExpression
    (lambda ($1 . $rest) $1)
    ;; UnaryExpression => "delete" UnaryExpression
@@ -376,14 +376,14 @@
      (make-tl 'LetStatementList $1))
    ;; LetStatementList => LetStatementList LetStatement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; LetStatement => "let" DeclarationList ";"
+   ;; LetStatement => "let" DeclarationList term
    (lambda ($3 $2 $1 . $rest)
      `(LetStatement ,(tl->list $2)))
    ;; StatementList => Statement
    (lambda ($1 . $rest) (make-tl 'StatementList $1))
    ;; StatementList => StatementList Statement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; VariableStatement => "var" DeclarationList ";"
+   ;; VariableStatement => "var" DeclarationList term
    (lambda ($3 $2 $1 . $rest)
      `(VariableStatement ,(tl->list $2)))
    ;; DeclarationList => VariableDeclaration
@@ -410,9 +410,9 @@
    (lambda ($2 $1 . $rest) `(Initializer ,$2))
    ;; InitializerNoIn => "=" AssignmentExpressionNoIn
    (lambda ($2 $1 . $rest) `(Initializer ,$2))
-   ;; EmptyStatement => ";"
+   ;; EmptyStatement => term
    (lambda ($1 . $rest) '(EmptyStatement))
-   ;; ExpressionStatement => Expression ";"
+   ;; ExpressionStatement => Expression term
    (lambda ($2 $1 . $rest)
      `(ExpressionStatement ,$1))
    ;; IfStatement => "if" "(" Expression ")" Statement "else" Statement
@@ -421,7 +421,7 @@
    ;; IfStatement => "if" "(" Expression ")" Statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(IfStatement ,$3 ,$5))
-   ;; IterationStatement => "do" Statement "while" "(" Expression ")" ";"
+   ;; IterationStatement => "do" Statement "while" "(" Expression ")" term
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(do ,$2 ,$5))
    ;; IterationStatement => "while" "(" Expression ")" Statement
@@ -451,35 +451,26 @@
    (lambda ($1 . $rest) '(NoExpression))
    ;; OptExprClose => Expression ")"
    (lambda ($2 $1 . $rest) $1)
-   ;; ContinueStatement => "continue" $P3 Identifier ";"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(ContinueStatement ,$3))
-   ;; ContinueStatement => "continue" ";"
+   ;; ContinueStatement => "continue" Identifier term
+   (lambda ($3 $2 $1 . $rest)
+     `(ContinueStatement ,$2))
+   ;; ContinueStatement => "continue" term
    (lambda ($2 $1 . $rest) '(ContinueStatement))
-   ;; $P3 => 
-   (lambda ($1 . $rest) (NSI))
-   ;; BreakStatement => "break" $P4 Identifier ";"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(BreakStatement ,$3))
-   ;; BreakStatement => "break" ";"
+   ;; BreakStatement => "break" Identifier term
+   (lambda ($3 $2 $1 . $rest) `(BreakStatement ,$2))
+   ;; BreakStatement => "break" term
    (lambda ($2 $1 . $rest) '(BreakStatement))
-   ;; $P4 => 
-   (lambda ($1 . $rest) (NSI))
-   ;; ReturnStatement => "return" $P5 Expression ";"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(ReturnStatement ,$3))
-   ;; ReturnStatement => "return" ";"
+   ;; ReturnStatement => "return" Expression term
+   (lambda ($3 $2 $1 . $rest)
+     `(ReturnStatement ,$2))
+   ;; ReturnStatement => "return" term
    (lambda ($2 $1 . $rest) '(ReturnStatement))
-   ;; $P5 => 
-   (lambda ($1 . $rest) (NSI))
    ;; WithStatement => "with" "(" Expression ")" Statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(WithStatement ,$3 ,$5))
-   ;; SwitchStatement => "switch" "(" Expression ")" $P6 CaseBlock
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(SwitchStatement ,$3 ,$6))
-   ;; $P6 => 
-   (lambda ($4 $3 $2 $1 . $rest) (NSI))
+   ;; SwitchStatement => "switch" "(" Expression ")" CaseBlock
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(SwitchStatement ,$3 ,$5))
    ;; CaseBlock => "{" CaseBlockTail
    (lambda ($2 $1 . $rest) $2)
    ;; CaseBlock => "{" seq-of-semis CaseBlockTail
@@ -521,11 +512,8 @@
    ;; LabelledStatement => Identifier ":" Statement
    (lambda ($3 $2 $1 . $rest)
      `(LabelledStatement ,$1 ,$3))
-   ;; ThrowStatement => "throw" $P7 Expression ";"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(ThrowStatement ,$3))
-   ;; $P7 => 
-   (lambda ($1 . $rest) (NSI))
+   ;; ThrowStatement => "throw" Expression term
+   (lambda ($3 $2 $1 . $rest) `(ThrowStatement ,$2))
    ;; TryStatement => "try" Block Catch
    (lambda ($3 $2 $1 . $rest)
      `(TryStatement ,$2 ,$3))

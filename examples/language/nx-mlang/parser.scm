@@ -113,11 +113,12 @@
 ;; machine, generates a procedure that returns lexical analyzers for
 ;; use in Octave parsers. 
 ;; @end deffn
-(define-public (make-mlang-lexer-generator match-table)
+(define* (make-mlang-lexer-generator match-table #:key interactive)
   ;; There is some trickery here to assure that if the last line
   ;; ends w/o newline then one gets inserted.
   (let* ((read-string mlang-read-string)
          (read-comm mlang-read-comm)
+         (skip-comm (if interactive read-comm (const #f)))
          (read-ident read-c$-ident)
          ;;
          (strtab (filter-mt string? match-table)) ; strings in grammar
@@ -142,6 +143,7 @@
            ((eqv? ch #\newline) (set! bol #t) (cons nl-val "\n"))
            ((char-set-contains? space-cs ch)
             (set! qms #t) (flush-ws) (cons sp-val " "))
+           ((skip-comm ch) (loop (read-char))) ; must be before read-comm
            ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
            (bol (set! bol #f) (loop ch))
            ((read-ident ch) =>

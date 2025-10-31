@@ -38,7 +38,7 @@
 ;; Exclusion of ObjectLiteral and FunctionExpression at statement scope
 ;; is implemented using precedence for reduction.
 
-;; NSI = "no semi-colon insertion"
+;; NSI = "no semi-colon insertion" : not needed for nyacc w/ skip-if-unexpected
 
 ;; @subheading Deviations from Ecmascript
 ;; @itemize
@@ -76,6 +76,8 @@
      ($float ($$ `(NumericLiteral ,$1))))
     (StringLiteral
      ($string ($$ `(StringLiteral ,$1))))
+
+    (term (";") ("\n"))
     
     ;;(DoubleStringCharacters ($string))
     ;;(SingleStringCharacters ($string))
@@ -184,8 +186,8 @@
 
     (PostfixExpression
      (LeftHandSideExpression)
-     (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc ,$1)))
-     (LeftHandSideExpression ($$ (NSI)) "--" ($$ `(post-dec ,$1)))
+     (LeftHandSideExpression "++" ($$ `(post-inc ,$1)))
+     (LeftHandSideExpression "--" ($$ `(post-dec ,$1)))
      )
 
     (UnaryExpression
@@ -425,7 +427,7 @@
      (LetStatementList LetStatement ($$ (tl-append $1 $2))))
 
     (LetStatement
-     ("let" DeclarationList ";"
+     ("let" DeclarationList term
       ($$ `(LetStatement ,(tl->list $2)))))
 
     (StatementList
@@ -433,7 +435,7 @@
      (StatementList Statement ($$ (tl-append $1 $2))))
 
     (VariableStatement
-     ("var" DeclarationList ";"
+     ("var" DeclarationList term
        ($$ `(VariableStatement ,(tl->list $2)))))
 
     (DeclarationList
@@ -461,11 +463,11 @@
      )
 
     (EmptyStatement
-     (";" ($$ '(EmptyStatement)))
+     (term ($$ '(EmptyStatement)))
      )
 
     (ExpressionStatement
-     (Expression ";" ($$ `(ExpressionStatement ,$1)))
+     (Expression term ($$ `(ExpressionStatement ,$1)))
      )
 
     (IfStatement
@@ -476,7 +478,7 @@
      )
 
     (IterationStatement
-     ("do" Statement "while" "(" Expression ")" ";" ;; <= spec has ';' here
+     ("do" Statement "while" "(" Expression ")" term ;; <= spec has ';' here
       ($$ `(do ,$2 ,$5)))
      ("while" "(" Expression ")" Statement
       ($$ `(while ,$3 ,$5)))
@@ -504,21 +506,20 @@
      )
 
     (ContinueStatement
-     ("continue" ($$ (NSI)) Identifier ";"
-      ($$ `(ContinueStatement ,$3)))
-     ("continue" ";" ($$ '(ContinueStatement)))
+     ("continue" Identifier term ($$ `(ContinueStatement ,$2)))
+     ("continue" term ($$ '(ContinueStatement)))
      )
 
     (BreakStatement
-     ("break" ($$ (NSI)) Identifier ";"
-      ($$ `(BreakStatement ,$3)))
-     ("break" ";" ($$ '(BreakStatement)))
+     ("break" Identifier term
+      ($$ `(BreakStatement ,$2)))
+     ("break" term ($$ '(BreakStatement)))
      )
 
     (ReturnStatement
-     ("return" ($$ (NSI)) Expression ";"
-      ($$ `(ReturnStatement ,$3)))
-     ("return" ";" ($$ '(ReturnStatement)))
+     ("return" Expression term
+      ($$ `(ReturnStatement ,$2)))
+     ("return" term ($$ '(ReturnStatement)))
      )
 
     (WithStatement
@@ -526,8 +527,8 @@
       ($$ `(WithStatement ,$3 ,$5))))
 
     (SwitchStatement
-     ("switch" "(" Expression ")" ($$ (NSI)) CaseBlock
-      ($$ `(SwitchStatement ,$3 ,$6))))
+     ("switch" "(" Expression ")" CaseBlock
+      ($$ `(SwitchStatement ,$3 ,$5))))
     (CaseBlock
      ("{" CaseBlockTail ($$ $2))
      ("{" seq-of-semis CaseBlockTail ($$ $3)))
@@ -564,8 +565,8 @@
      )
 
     (ThrowStatement
-     ("throw" ($$ (NSI)) Expression ";"
-      ($$ `(ThrowStatement ,$3)))
+     ("throw" Expression term
+      ($$ `(ThrowStatement ,$2)))
      )
 
     (TryStatement
@@ -587,7 +588,7 @@
       ($$ `(Finally ,$2)))
      )
 
-    ;;(DebuggerStatement ("debugger" ";"))
+    ;;(DebuggerStatement ("debugger" term))
 
     ;; A.5
     (FunctionDeclaration
@@ -649,31 +650,18 @@
 ;; === parsers ==========================
 
 (define javascript-mach
-  (hashify-machine
-   (compact-machine
-    (make-lalr-machine javascript-spec))))
-
-(include-from-path "nyacc/lang/javascript/body.scm")
-
-(define gen-js-lexer (make-js-lexer-generator (assq-ref javascript-mach 'mtab)))
-
-(define raw-parser (make-lalr-parser javascript-mach))
-
-(define* (dev-parse-js #:key debug)
-  (catch 'nyacc-error
-   (lambda ()
-     (with-fluid* *insert-semi* #t
-       (lambda () (raw-parser (gen-js-lexer) #:debug debug))))
-   (lambda (key fmt . args)
-     (report-error fmt args)
-     #f)))
+  (compact-machine
+   (hashify-machine
+    (make-lalr-machine javascript-spec))
+   #:keep 0 #:keepers '("\n")))
 
 (define javascript-ia-spec (restart-spec javascript-spec 'ProgramElement))
 
 (define javascript-ia-mach
-  (hashify-machine
-   (compact-machine
-    (make-lalr-machine javascript-ia-spec))))
+  (compact-machine
+   (hashify-machine
+    (make-lalr-machine javascript-ia-spec))
+   #:keep 0))
 
 ;; === automaton file generators =========
 

@@ -35,20 +35,6 @@
 (define (js-Boolean? v) (or (eq? #t v) (eq? #f v)))
 (define (js-Null? v) (eq? 'Null v))
 
-;; This is the state to determine if #\newline gets converted to semicolon.
-;; The ECMA-262 specification (3rd ed., Sec 7.9.1) says that conversion is done
-;; if the parser would otherwise generate an error on the following token.  For
-;; now, there is handshaking between the lexer and parser to state when
-;; conversion is not allowed (e.g., between "return" and expression) and the
-;; lexer does the conversion.  The real solution is to modify the parser to
-;; check on error and see if last token was newline.  Right now user needs to
-;; be careful about linebreaks in his/her code.
-
-(define *insert-semi* (make-fluid))
-
-(define (NSI) ;; no semicolon insertion
-  (fluid-set! *insert-semi* #f))
-
 (define read-js-ident
   (let* ((idf (char-set-union char-set:letter (string->char-set "_$")))
          (idr (char-set-union idf char-set:digit)))
@@ -102,13 +88,7 @@
              (cond
               ((eof-object? ch) (assc-$ (cons '$end ch)))
               ((char-set-contains? space-cs ch) (loop (read-char)))
-              ((eqv? ch #\newline)
-               (set! bol #t)
-               (if (fluid-ref *insert-semi*)
-                   (cons semicolon "\n")
-                   (loop (read-char))))
               ((read-js-comm ch bol) (loop (read-char)))
-              ((and (set! bol #f) #f))
               ((read-js-string ch) => assc-$)
               ((read-js-ident ch) =>
                (lambda (s)
@@ -176,7 +156,8 @@
 (include-from-path "language/nx-javascript/mach.d/ia-js-tab.scm")
 (include-from-path "language/nx-javascript/mach.d/ia-js-act.scm")
 
-(define gen-ia-js-lexer (make-js-lexer-generator ia-js-mtab))
+(define gen-ia-js-lexer
+  (make-js-lexer-generator ia-js-mtab))
 
 (define raw-ia-parser
   (make-lalr-parser
