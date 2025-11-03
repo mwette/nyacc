@@ -604,7 +604,7 @@
       (`((array-of ,dim) . ,rest)
        `(make-list ,(eval-dim dim) ,(cnvt rest)))
       (`((array-of) . ,rest)
-       (cnvt `((array-of "0") . ,rest)))
+       (cnvt `((array-of (fixed "0")) . ,rest)))
 
       (`((struct-def (field-list . ,fields)))
        `(list ,@(map (lambda (fld)
@@ -632,6 +632,7 @@
 
   (match mtail
     (`((array-of ,dim) . ,rest) ''*)
+    (`((array-of) . ,rest) ''*)
     (__ (cnvt mtail))))
 
 (define* (defined-type-unwrapper name mname)

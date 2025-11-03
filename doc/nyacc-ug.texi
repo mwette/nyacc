@@ -1548,9 +1548,9 @@ $ make install-srcs
 
 @subheading Reporting Bugs
 Please report bugs by navigating with your browser to
-@indicateurl{https://savannah.nongnu.org/projects/nyacc} and select
-the ``Submit New'' item under the ``Bugs'' menu.  Alternatively,
-ask on the Guile user's mailing list @email{guile-user@@gnu.org}.
+@indicateurl{https://github.com/mwette/nyacc/issues}.
+Alternatively, ask on the Guile user's mailing list
+@email{guile-user@@gnu.org}. 
 
 @subheading The Free Documentation License
 The Free Documentation License is included in the Guile Reference
