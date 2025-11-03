@@ -632,6 +632,7 @@
 
   (match mtail
     (`((array-of ,dim) . ,rest) ''*)
+    (`((array-of) . ,rest) ''*)
     (__ (cnvt mtail))))
 
 (define* (defined-type-unwrapper name mname)
