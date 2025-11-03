@@ -2217,9 +2217,8 @@ If Guile is not installed it is possible to install source only:
 **Reporting Bugs**
 
 Please report bugs by navigating with your browser to
-`https://savannah.nongnu.org/projects/nyacc` and select the "Submit New"
-item under the "Bugs" menu. Alternatively, ask on the Guile user's
-mailing list <guile-user@gnu.org>.
+`https://github.com/mwette/nyacc/issues`. Alternatively, ask on the
+Guile user's mailing list <guile-user@gnu.org>.
 
 **The Free Documentation License**
 

@@ -12,7 +12,7 @@ copy of the license is included with the distribution as ‘COPYING.DOC’.
 NYACC User's Guide
 Matt Wette
 May 2024
-With NYACC Version 3.00.0
+With NYACC Version 3.00.1
 
 
 File: nyacc-ug.info,  Node: Top,  Next: Demonstration,  Prev: (dir),  Up: (dir)
@@ -1274,9 +1274,8 @@ Reporting Bugs
 --------------
 
 Please report bugs by navigating with your browser to
-‘https://savannah.nongnu.org/projects/nyacc’ and select the "Submit New"
-item under the "Bugs" menu.  Alternatively, ask on the Guile user's
-mailing list <guile-user@gnu.org>.
+‘https://github.com/mwette/nyacc/issues’.  Alternatively, ask on the
+Guile user's mailing list <guile-user@gnu.org>.
 
 The Free Documentation License
 ------------------------------
@@ -1361,8 +1360,8 @@ Ref: SXML Parse Trees47047
 Node: Coding to the Compiler Tower48984
 Ref: Pretty Print50200
 Node: Administrative50396
-Node: TODOs51481
-Node: References52506
+Node: TODOs51422
+Node: References52447
 
 End Tag Table
 
