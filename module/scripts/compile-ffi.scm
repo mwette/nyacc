@@ -158,7 +158,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
 (define (parse-args args)
   (args-fold args
              options
-             (lambda (opt name arg files opts)
+             (lambda (opt name arg opts files)
                (fail "unrecognized option: ~S" name)
                (exit 1))
              (lambda (file opts files)
