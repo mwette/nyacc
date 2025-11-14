@@ -602,16 +602,18 @@
             ddict def-list)))
   (fold
    (lambda (pair ddict)
+     ;; not sure why I'm filtering out ("" . decl)
      (if (or (pair? (car pair)) (positive? (string-length (car pair))))
          (let* ((specs (sx-ref (cdr pair) 1))
-                (tspec (sx-ref (sx-find 'type-spec specs) 1)))
-           (sx-match tspec
+                (tspec (sx-find 'type-spec specs))
+                (tspec (and tspec (sx-ref tspec 1))))
+           (sx-match tspec ;; tspec may be #f if typeof-{expr,type}
              ((enum-def (ident ,name) (enum-def-list . ,defs))
               (gen-nvl (sx-ref tspec 2) ddict))
              ((enum-def (enum-def-list . ,defs))
               (gen-nvl (sx-ref tspec 1) ddict))
-             (,_
-              ddict)))
+             (,_ ddict)) ;; <= can be typeof
+           ddict)
          ddict))
    ddict udict))
 
