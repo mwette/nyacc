@@ -1,6 +1,6 @@
 ;;; module/nyacc/sx-util.scm - runtime utilities for the parsers
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -416,22 +416,28 @@
     ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ;; capture attributes by name
     ((_ v (tag (@ (ky vl) p1 ...) . nl) kt kf)
-     (sxm-tag (car v) tag
-              (let ((va (sx-attr v)) (vt (sx-tail v)))
-                (sxm-attr-tail va vt ((ky vl) p1 ...) nl kt kf))
-              kf))
+     (if (pair? v)
+         (sxm-tag (car v) tag
+                  (let ((va (sx-attr v)) (vt (sx-tail v)))
+                    (sxm-attr-tail va vt ((ky vl) p1 ...) nl kt kf))
+                  kf)
+         kf))
     ;; capture attributes as dict
     ((_ v (tag (@ . (unquote va)) . nl) kt kf)
-     (sxm-tag (car v) tag
-              (let ((va (sx-attr v)) (vt (sx-tail v)))
-                (sxm-tail vt nl kt kf))
-              kf))
+     (if (pair? v)
+         (sxm-tag (car v) tag
+                  (let ((va (sx-attr v)) (vt (sx-tail v)))
+                    (sxm-tail vt nl kt kf))
+                  kf)
+         kf))
     ;; ignore attributes; (cadr v) may be an attr node. If so, ignore it.
     ((_ v (tag . nl) kt kf)
-     (sxm-tag (car v) tag
-              (let ((vt (sx-tail v)))
-                (sxm-tail vt nl kt kf))
-              kf))
+     (if (pair? v)
+         (sxm-tag (car v) tag
+                  (let ((vt (sx-tail v)))
+                    (sxm-tail vt nl kt kf))
+                  kf)
+         kf))
     ;; allow end-of-list
     ((_ v () kt kf)
      (if (null? v) kt kf))))
