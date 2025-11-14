@@ -30,7 +30,7 @@
             lalr-start lalr-match-table
             restart-spec add-recovery-logic!
             pp-lalr-notice pp-lalr-grammar pp-lalr-machine
-            write-lalr-actions write-lalr-tables write-lalr-stubs
+            write-lalr-actions write-lalr-tables write-lalr-actrefs
             pp-rule find-terminal gen-match-table) ; used by (nyacc bison)
   #:re-export (*nyacc-version*)
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
@@ -394,7 +394,7 @@
     (let loop ((ll '($start))           ; LHS list
                (@l (list                ; attributes per prod' rule
                     `((rhs . ,(vector start-symbol))
-                      (ref . all) (act 1 $1))))
+                      (ref . #f) (act 1 $1))))
                (tl (cons* '$error '$end ; terminals
                           (or (assq-ref tree 'reserve) '())))
                (nl (list start-symbol)) ; set of non-terminals
@@ -2108,11 +2108,12 @@
        (assq-ref mach 'act-v))
       (fmt port "   ))\n\n"))))
 
-(define (write-refstubs mach port prefix)
+(define (write-actrefs mach port prefix)
   (with-fluid*
       *lalr-core* (make-core mach)
     (lambda ()
       (let ((ref-v (assq-ref mach 'ref-v)))
+        (fmt port ";; vector of (ref num-args rule-spec)\n")
         (fmt port "(define ~Aref-v\n  #(\n" prefix)
         (vector-for-each
          (lambda (gx actn)
@@ -2135,25 +2136,24 @@
       (fmt port ";; ~A\n\n" (drop-dot-new (basename filename)))
       (write-notice mach port)
       (write-actions mach port prefix)
-      ;;(write-refstubs mach port prefix)
       (display ";; --- last line ---" port)
       (newline port)
       (force-output port))))
 
-;; @deffn {Procedure} write-lalr-stubs mach filename
+;; @deffn {Procedure} write-lalr-actrefs mach filename
 ;; For example,
 ;; @example
 ;; write-lalr-actions mach "actions.scm"
 ;; write-lalr-actions mach "actions.tcl" #:lang 'tcl
 ;; @end example
 ;; @end deffn
-(define* (write-lalr-stubs mach filename #:key (prefix ""))
+(define* (write-lalr-actrefs mach filename #:key (prefix ""))
 
   (call-with-output-file filename
     (lambda (port)
       (fmt port ";; ~A\n\n" (drop-dot-new (basename filename)))
       (write-notice mach port)
-      (write-refstubs mach port prefix)
+      (write-actrefs mach port prefix)
       (display ";; --- last line ---" port)
       (newline port)
       (force-output port))))
