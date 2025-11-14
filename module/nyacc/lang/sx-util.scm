@@ -396,31 +396,36 @@
     ((_ v) (error "sx-match-tail: nothing matches"))))
 
 ;; sxm-sexp val pat kt kf
-;; match sexp
+;; match sexp @var{val}
 (define-syntax sxm-sexp
   (syntax-rules (@ unquote)
     ;; accept anything
     ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ;; capture attributes by name
     ((_ v (tag (@ (ky vl) p1 ...) . nl) kt kf)
-     (sxm-tag (car v) tag
-              (let ((va (sx-attr v)) (vt (sx-tail v)))
-                (sxm-attr-tail va vt ((ky vl) p1 ...) nl kt kf))
-              kf))
+     (if (pair? v)
+         (sxm-tag (car v) tag
+                  (let ((va (sx-attr v)) (vt (sx-tail v)))
+                    (sxm-attr-tail va vt ((ky vl) p1 ...) nl kt kf))
+                  kf)
+         kf))
     ;; capture attributes as dict
     ((_ v (tag (@ . (unquote va)) . nl) kt kf)
-     (sxm-tag (car v) tag
-              (let ((va (sx-attr v)) (vt (sx-tail v)))
-                (sxm-tail vt nl kt kf))
-              kf))
+     (if (pair? v)
+         (sxm-tag (car v) tag
+                  (let ((va (sx-attr v)) (vt (sx-tail v)))
+                    (sxm-tail vt nl kt kf))
+                  kf)
+         kf))
     ;; ignore attributes; (cadr v) may be an attr node. If so, ignore it.
     ((_ v (tag . nl) kt kf)
-     (sxm-tag (car v) tag
-              (let ((vt (sx-tail v)))
-                (sxm-tail vt nl kt kf))
-              kf))
-    ))
- 
+     (if (pair? v)
+         (sxm-tag (car v) tag
+                  (let ((vt (sx-tail v)))
+                    (sxm-tail vt nl kt kf))
+                  kf)
+         kf))))
+
 ;; sxml-attr-tail va vt (@ (k v) ...) nl kt kf
 (define-syntax sxm-attr-tail
   (syntax-rules (unquote)
