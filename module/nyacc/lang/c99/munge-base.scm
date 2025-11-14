@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/munge-base.scm -
 
-;; Copyright (C) 2015-2018,2020,2023-2024 Matthew Wette
+;; Copyright (C) 2015-2018,2020,2023-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -378,7 +378,8 @@
              (values specl declr)
              (values (replace-type-spec specl '(type-spec (void))) declr)))
         (else
-         (re-expand (replace-aggr-ref specl name (w/struct name) udict) declr))))
+         (re-expand
+          (replace-aggr-ref specl name (w/struct name) udict) declr))))
 
       ((union-ref (ident ,name))
        (cond
@@ -438,7 +439,7 @@
          (let ((tspec '(type-spec (fixed-type "int")))) ;; FIXME packed?
            (values (replace-type-spec specl tspec) declr)))))
 
-      (,_ (values specl declr)))))
+      (,_ (values specl declr))))) ;; <= typeof-{expr,type} will be skipped
 
 ;; @deffn {Procedure} expand-typerefs adecl udict [keep]
 ;; Given a declaration or component-declaration, return a udecl with all
