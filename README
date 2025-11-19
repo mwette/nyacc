@@ -7,8 +7,14 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-Full source distribution for NYACC is available at
+Full source distribution for NYACC (version 3.00 and later) is available at
 https://github.com./mwette/nyacc
+
+Released tarballs for version 3.00 and later are available at
+https://github.com./mwette/nyacc/releases
+
+Released tarballs for versions prior to 3.00 are available at
+https://download.savannah.gnu.org/project/nyacc
 
 This software package is covered by the following licenses:
 * GNU LESSER PUBLIC GENERAL LICENCE, version 3 (See COPYING.)
