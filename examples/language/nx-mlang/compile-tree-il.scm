@@ -1,6 +1,6 @@
 ;;; langauge/nx-mlang/compile-tree-il.scm compile mlang sxml to tree-il
 
-;; Copyright (C) 2018,2023-2024 Matthew Wette
+;; Copyright (C) 2018,2023-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -174,7 +174,7 @@
 ;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
 ;; @end deffn
-(define (xlang-sxml->xtil exp env opts)
+(define (mlang-sxml->xtil exp env opts)
 
   (define (rem-empties stmts)
     (filter (lambda (item) (not (eq? 'empty-stmt (sx-tag item)))) stmts))
@@ -242,8 +242,8 @@
 
       ((while . ,rest)
        (values tree '()
-               (acons '@L "while"
-                      (nx-add-lexicals "break" "continue" (nx-push-scope dict)))))
+               (acons '@L "while" (nx-add-lexicals
+                                   "break" "continue" (nx-push-scope dict)))))
 
       ((for (ident ,name) . ,rest)
        ;;(sferr "for:\n") (pperr tree)
@@ -695,7 +695,7 @@
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
     (if exp 
         (call-with-values
-            (lambda () (xlang-sxml->xtil exp cenv opts))
+            (lambda () (mlang-sxml->xtil exp cenv opts))
           (lambda (exp cenv)
             (when show-xtil (sferr "tree-il:\n") (pperr exp))
             (values (parse-tree-il exp) env cenv)

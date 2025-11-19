@@ -1,6 +1,6 @@
-;;; nyacc/lang/mlang/parser.scm - parsing 
+;;; language/nx-mlang/parser.scm - parsing 
 
-;; Copyright (C) 2016,2018 Matthew R. Wette
+;; Copyright (C) 2016,2018,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -99,18 +99,27 @@
      ((eqv? ch #\newline) (read-char))
      (else (loop (read-char))))))
 
+(define space-cs (string->char-set " \t"))
+
+(define (flush-ws)
+  (let loop ((ch (read-char)))
+    (cond
+     ((eof-object? ch))
+     ((char-set-contains? space-cs ch) (loop (read-char)))
+     (else (unread-char ch)))))
+
 ;; @deffn {Procedure} make-mlang-lexer-generator match-table
 ;; This function, given the @var{match-table} from a lalr-generated
 ;; machine, generates a procedure that returns lexical analyzers for
 ;; use in Octave parsers. 
 ;; @end deffn
-(define-public (make-mlang-lexer-generator match-table)
+(define* (make-mlang-lexer-generator match-table #:key interactive)
   ;; There is some trickery here to assure that if the last line
   ;; ends w/o newline then one gets inserted.
   (let* ((read-string mlang-read-string)
          (read-comm mlang-read-comm)
+         (skip-comm (if interactive read-comm (const #f)))
          (read-ident read-c$-ident)
-         (space-cs (string->char-set " \t\r\f"))
          ;;
          (strtab (filter-mt string? match-table)) ; strings in grammar
          (kwstab (filter-mt like-c$-ident? strtab)) ; keyword strings =>
@@ -119,20 +128,24 @@
          (symtab (filter-mt symbol? match-table)) ; symbols in grammar
          (chrtab (filter-mt char? match-table)) ; characters in grammar
          (read-chseq (make-chseq-reader chrseq))
-         (newline-val (assoc-ref chrseq "\n"))
-         (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
-    (if (not newline-val) (error "mlang setup error"))
+         (nl-val (assoc-ref match-table "\n"))
+         (sp-val (assoc-ref match-table 'sp))
+         (assc-$
+          (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
+    (if (not nl-val) (error "mlang setup error"))
     (lambda ()
-      (let ((qms #f) (bol #t) (line 0)) ; qms: quote means string
+      (let ((qms #f) (bol #t)) ; qms: quote means string
         (define (loop ch)
           (cond
            ((eof-object? ch)
             (if bol (assc-$ (cons '$end ch)) (loop #\newline)))
            ((elipsis? ch) (loop (skip-to-next-line)))
-           ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
-           ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
+           ((eqv? ch #\newline) (set! bol #t) (cons nl-val "\n"))
+           ((char-set-contains? space-cs ch)
+            (set! qms #t) (flush-ws) (cons sp-val " "))
+           ((skip-comm ch) (loop (read-char))) ; must be before read-comm
            ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
-           (bol (set! bol #f) (set! line (1+ line)) (loop ch))
+           (bol (set! bol #f) (loop ch))
            ((read-ident ch) =>
             (lambda (s) ;; s is a string
               (set! qms #f)
@@ -143,25 +156,29 @@
            ((char=? ch #\") (assc-$ (read-string ch)))
            ((char=? ch #\') (if qms (assc-$ (read-string ch)) (read-chseq ch)))
            ((read-chseq ch) =>
-            (lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
+            ;;(lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
+            (lambda (p) (set! qms (not (memq ch '(#\] #\} #\))))) p))
            ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
            (else (cons ch (string ch)))))
-        (if #t                  ; read properties
             (lambda ()
               (let* ((lxm (loop (read-char)))
                      (port (current-input-port))
                      (file (port-filename port))
+                     (line (1+ (port-line port)))
                      (props `((filename . ,file) (line . ,line) (column . 0))))
                 (set-source-properties! lxm props)
-                lxm))
-            (lambda () (loop (read-char))))))))
+                lxm))))))
+
 
 ;; === static semantics
 
-;; 1) assn: "[ ... ] = expr" => multi-assign
+;; This won't be able to resolve all aref-or-call if classes are used.
+
+;; 1) assn: "[ ... ] = expr" => assn-many
 ;; 2) matrix: "[ int, int, int ]" => ivec
 ;; 3) matrix: "[ ... (fixed) ... ]" => error
-;; .) colon-expr => fixed-colon-expr
+;; 4) colon-expr => fixed-colon-expr
+;; 5) aref-or-call => array-ref | call
 
 (define (fixed-colon-expr? expr)
   (sx-match expr
@@ -218,15 +235,16 @@
 ;; Apply static semantics for Octave.  Currently, this includes
 ;; @itemize
 ;; @item Change @code{assn} with matrix expression on LHS to a
-;; multiple value assignment (@code{multi-assn}).
+;; multiple value assignment (@code{assn-many}).
 ;; @end itemize
+;; TODO: aref-or-call:
 ;; @end deffn
-(define (apply-mlang-statics tree)
+(define (apply-old-mlang-statics tree)
 
   (define (fU tree)
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (cons-source tree 'multi-assn `((@ . ,attr) (lval-list . ,elts) ,rhs)))
+       (cons-source tree 'assn-many `((@ . ,attr) (lval-list . ,elts) ,rhs)))
       ((colon-expr . ,rest)
        (if (fixed-colon-expr? tree)
            (cons-source tree 'fixed-colon-expr (cdr tree))
@@ -239,6 +257,74 @@
   
   (cadr (foldt fU fH `(*TOP* ,tree))))
 
+(define (lval-root lval)
+  (sx-match lval
+    ((ident ,name) lval)
+    ((aref-or-call ,par ,exl) (lval-root par))
+    ((cell-ref ,par ,exl) (lval-root par))
+    ((sel ,kid ,par) (lval-root par))
+    (,otherwise #f)))
+
+(define (lval-name lval)
+  (and=> (lval-root lval) cadr))
+
+(define (fix-lval lval)
+  (sx-match lval
+    ((aref-or-call ,par ,exl) `(array-ref ,par ,exl))
+    (,__ lval)))
+
+;; assn matrix rhs => assn-many lval-list rhs
+;;(define apply-mlang-statics identity)
+(define (apply-mlang-statics tree)
+  ;; (aref-or-call (handle ...) ...) is call
+  ;; gbl : global variables (e.g., from global)
+  ;; lcl : local variables (e.g., function ins or outs)
+  (define (fD tree seed gbl lcl)        ; => tree seed gbl lcl
+    ;;(sferr "fD:\n") (pperr tree) ;;(pperr seed)
+    (sx-match tree
+      ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
+       (values (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
+               '() gbl lcl))
+      ((assn (@ . ,attr) (ident ,name) ,rhs)
+       (cond
+        ((member name lcl) (values tree '() gbl lcl))
+        ((member name gbl) (values tree '() gbl lcl))
+        (else (values tree '() gbl (cons name lcl)))))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
+       (values tree '() gbl (map cadr (append (cdr iargs) (cdr iargs)))))
+      ((command "global" . ,args)
+       (values tree '() (fold cadr gbl args) lcl))
+      (,__ (values tree '() gbl lcl))))
+
+  (define (fU tree seed gbl lcl kseed kgbl klcl) ; => seed gbl lcl
+    (sx-match tree
+      (() (values (cons (reverse kseed) seed) gbl lcl))
+      ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
+       (let ((op (if (or (member name lcl) (member name gbl))
+                     'array-ref 'call))
+             (tail (cdr (reverse kseed))))
+         (values (cons (cons-source tree op tail) seed) gbl lcl)))
+      ((aref-or-call (@ . ,attr) (handle (ident ,name)) . ,rest)
+       (let ((tail (cdr (reverse kseed))))
+         (values (cons (cons-source tree 'call tail) seed) gbl lcl)))
+      ((colon-expr . ,rest)
+       (let ((form (reverse kseed)))
+         (values (if (fixed-colon-expr? tree)
+                     (cons-source tree 'fixed-colon-expr (cdr form))
+                     form)) gbl lcl))
+      ((matrix . ,rest)
+       (values (cons (check-matrix (reverse kseed)) seed) gbl lcl))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
+       (values (cons (reverse kseed) seed) gbl '()))
+      (,__
+       (values (cons (reverse kseed) seed) gbl lcl))))
+  
+  (define (fH leaf seed gbl lcl)
+    (values (cons leaf seed) gbl lcl))
+  
+  (cadar (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '())))
+
+
 ;; === file parser 
 
 (include-from-path "language/nx-mlang/mach.d/mlang-tab.scm")
@@ -249,7 +335,8 @@
 ;; Parse given a token generator.
 (define raw-parser
   (make-lalr-parser
-   (acons 'act-v mlang-act-v mlang-tables)))
+   (acons 'act-v mlang-act-v mlang-tables)
+   #:skip-if-unexp '($code-comm $lone-comm sp "\n")))
 
 (define* (parse-mlang #:key debug)
   (catch
@@ -268,7 +355,11 @@
     (lambda ()
       (if (eof-object? (peek-char port))
           (read-char port)
-          (parse-mlang #:debug #f)))))
+          (let ((sx (parse-mlang #:debug #f))
+                (fn (port-filename port)))
+            (if (and sx fn)
+                (cons* (car sx) `(@ (filename ,fn)) (cdr sx))
+                sx))))))
 
 ;; === interactive parser
 
@@ -278,6 +369,7 @@
 (define raw-ia-parser
   (make-lalr-parser
    (acons 'act-v mlangia-act-v mlangia-tables)
+   #:skip-if-unexp '($code-comm $lone-comm sp)
    #:interactive #t))
 
 (define (parse-mlang-stmt lexer)
@@ -289,7 +381,8 @@
       (newline (current-error-port))
       #f)))
 
-(define gen-mlang-ia-lexer (make-mlang-lexer-generator mlangia-mtab))
+(define gen-mlang-ia-lexer
+  (make-mlang-lexer-generator mlangia-mtab #:interactive #t))
 
 (define read-mlang-stmt
   (let ((lexer (gen-mlang-ia-lexer)))
