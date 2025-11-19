@@ -24,7 +24,7 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 NYACC User's Guide
 Matt Wette
 May 2024
-With NYACC Version 3.00.1
+With NYACC Version 3.00.2
 @end format
 
 @c @clear skip

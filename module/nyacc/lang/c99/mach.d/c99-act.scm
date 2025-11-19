@@ -1113,4 +1113,4 @@
    (lambda ($1 . $rest) `(pragma ,$1))
    ))
 
-;;; end tables
+;; --- last line ---
