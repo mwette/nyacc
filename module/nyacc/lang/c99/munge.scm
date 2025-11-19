@@ -598,11 +598,14 @@
 (define* (udict-enums->ddict udict #:optional (ddict '()))
   (define (gen-nvl edef-list ddict)
     (let ((def-list (and=> (canize-enum-def-list edef-list udict ddict) cdr)))
-      (fold (lambda (edef dd) (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) dd))
+      (fold (lambda (edef dd)
+              (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) dd))
             ddict def-list)))
   (fold
    (lambda (pair ddict)
      ;; not sure why I'm filtering out ("" . decl)
+     ;;     => because it's a duplicate to "*anon*"
+     ;;        ("" . decl) should be deprecated
      (if (or (pair? (car pair)) (positive? (string-length (car pair))))
          (let* ((specs (sx-ref (cdr pair) 1))
                 (tspec (sx-find 'type-spec specs))
@@ -612,8 +615,7 @@
               (gen-nvl (sx-ref tspec 2) ddict))
              ((enum-def (enum-def-list . ,defs))
               (gen-nvl (sx-ref tspec 1) ddict))
-             (,_ ddict)) ;; <= can be typeof
-           ddict)
+             (,_ ddict))) ;; <= can be typeof
          ddict))
    ddict udict))
 
