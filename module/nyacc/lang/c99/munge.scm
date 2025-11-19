@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/munge.scm - util's for processing output of the C99 parser
 
-;; Copyright (C) 2015-2022 Matthew R. Wette
+;; Copyright (C) 2015-2022,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
