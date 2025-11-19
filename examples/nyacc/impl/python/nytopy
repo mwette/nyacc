@@ -1,0 +1,271 @@
+#!/bin/sh
+# -*- scheme -*-
+
+# Copyright (C) 2015,2025 - Matthew Wette
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+GUILE_LOAD_PATH=$HOME/proj/nyacc/released/current/module:$GUILE_LOAD_PATH
+export GUILE_LOAD_PATH
+
+exec guile $0 "$@"
+!#
+(use-modules (ice-9 match))
+(use-modules (srfi srfi-37))
+(use-modules (ice-9 string-fun))
+(use-modules (nyacc lex))
+(use-modules (nyacc util))
+
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
+
+(define* (make-ugly-printer port #:key (per-line-prefix "") (width 76))
+  (let ((width 76)
+        (col 0)
+        (plplen (string-length per-line-prefix)))
+    (lambda (fmt . args)
+      (if fmt
+          (let* ((str (apply format #f fmt args)) (len (string-length str)))
+            (when (zero? col)
+              (display per-line-prefix port)
+              (set! col plplen))
+            (cond
+             ((not fmt) (set! col 0))
+             ((string=? "\n" str)
+              (newline port)
+              (display per-line-prefix port)
+              (set! col plplen))
+             ((>= (+ col len) width)
+              (cond
+               ((string-every #\space str) (display "\n" port) (set! col 0))
+               (else
+                (newline port) (display per-line-prefix port) (display str port)
+                (set! col (+ plplen len)))))
+             (else
+              (display str port)
+              (set! col (+ col len)))))
+          (set! col 0)))))
+
+(define (si-map string-list ix)
+  (let loop ((sal '()) (sl string-list))
+    (cond
+     ((null? sl) sal)
+     ((= ix (string-length (car sl)))
+      (loop (reverse (acons 'else (car sl) sal)) (cdr sl)))
+     ((assq (string-ref (car sl) ix) sal) =>
+      (lambda (pair)
+        (set-cdr! pair (cons (car sl) (cdr pair)))
+        (loop sal (cdr sl))))
+     (else ;; Add (#\? . string) to alist.
+      (loop (cons (cons (string-ref (car sl) ix) (list (car sl))) sal)
+            (cdr sl))))))
+
+;;.@deffn {Procedure} make-tree strtab -> tree
+;; This routine takes an alist of strings and symbols and makes a tree
+;; that parses one char at a time and provide @code{'else} entry for
+;; signaling sequence found.  That is, if @code{("ab" . 1)} is an entry
+;; then a chseq-reader (see below) would stop at @code{"ab"} and
+;; return @code{1}.
+;; @end deffn
+(define (make-tree strtab)
+  (define (si-cnvt string-list ix)
+    (map (lambda (pair)
+           (if (pair? (cdr pair))
+               (cons (car pair) (si-cnvt (cdr pair) (1+ ix)))
+               (cons (car pair) (assq-ref strtab (cdr pair)))))
+         (si-map string-list ix)))
+  (si-cnvt (map car strtab) 0))
+
+
+(define (write-chseq-table chstab port)
+  ;; This code works on the assumption that the else-part is always last
+  ;; in the list of transitions.
+  (define repl-tab
+    '((#\newline . #\n) (#\tab . #\t) (#\return . #\r)
+      (#\\ . #\\) (#\' . #\')))
+  (define (ckv kv) ;; convert key or value (to string)
+    ;;(sferr "kv=~s\n" kv)
+    (cond ;; could use object->string now that I found it
+     ((assq-ref repl-tab kv) => (lambda (ch) (list->string (list #\\ ch))))
+     ((char? kv) (list->string (list kv)))
+     ((number? kv) (number->string kv))
+     ((symbol? kv) (symbol->string kv))
+     (else (pp kv) (error "missed it"))))
+  (let loop ((is "    ") (tree (make-tree chstab)))
+    (cond
+     ((pair? tree)
+      (format port "~a'~a': " is (ckv (caar tree)))
+      (cond
+       ((and (pair? (cdar tree)) (= 1 (length (cdar tree))))
+        (format port "{ ") (loop "" (cadar tree)) (format port " },\n"))
+       ((pair? (cdar tree))
+        (format port "{\n")
+        (loop (string-append is "    ") (cdar tree))
+        (format port "~a},\n" is))
+       (else
+        (format port "~a,\n" (ckv (cdar tree)))))
+      (loop is (cdr tree)))
+     #;(else
+     (format port "~a},\n" is)))))
+
+(define (nytabs->pytabs tables pfx)
+  (let* ((port (current-output-port))
+         (mtab (assq-ref tables 'mtab))
+         (ntab (assq-ref tables 'ntab))
+         (lenv (assq-ref tables 'len-v))
+         (rtov (assq-ref tables 'rto-v))
+         (patv (assq-ref tables 'pat-v))
+         (strtab (filter-mt string? mtab))
+         (symtab (filter-mt symbol? mtab))
+         (kwstab (filter-mt like-c-ident? strtab))
+         (chrseq (remove-mt like-c-ident? strtab))
+         (uglyfmt (make-ugly-printer port #:per-line-prefix "    " #:width 78))
+         )
+    (format port "# ~a\n\n" pfx)
+    (format port "~a_kwd = {\n" pfx)
+    (for-each
+     (lambda (p) (format port "    '~a': ~a,\n" (car p) (cdr p)))
+     kwstab)
+    (format port "}\n\n")
+    (format port "~a_sym = {\n" pfx)
+    (for-each
+     (lambda (p) (format port "    '~a': ~a,\n" (car p) (cdr p)))
+     symtab)
+    (format port "}\n\n")
+    (format port "~a_csq = {\n" pfx)
+    (write-chseq-table chrseq port)
+    (format port "}\n\n")
+    (format port "~a_non = {\n" pfx)
+    (for-each (lambda (p) (uglyfmt "~a:'~a', " (car p) (cdr p))) ntab)
+    (format port "}\n\n") (uglyfmt #f)
+    (format port "~a_len = [\n" pfx)
+    (vector-for-each (lambda (ix item) (uglyfmt "~a, " item)) lenv)
+    (format port "]\n\n") (uglyfmt #f)
+    (format port "~a_rto = [\n" pfx)
+    (vector-for-each (lambda (ix item) (uglyfmt "~a, " (or item 0))) rtov)
+    (format port "]\n\n") (uglyfmt #f)
+    (format port "~a_pat = [\n" pfx)
+    (vector-for-each
+     (lambda (ix pt)
+       (uglyfmt "{")
+       (for-each (lambda (ax) (uglyfmt "~a:~a, " (car ax) (cdr ax))) pt)
+       (uglyfmt "}, "))
+     patv)
+    (format port "]\n\n") (uglyfmt #f)
+    (format port "~a_tables = {\n" pfx)
+    (for-each
+     (lambda (tag) (format port "    '~a': ~a_~a,\n" tag pfx tag))
+     '(kwd sym csq non len rto pat))
+    (format port "}\n\n")
+    (format port "# --- last line ---\n")))
+
+
+(define* (nyrefs->pyacts actrefv pfx #:key (no-refs #f) (no-stubs #f))
+  (define (args na)
+    (string-join (map (lambda (i) (format #f "_~a" (1+ i))) (iota na)) ", "))
+  (let* ((port (current-output-port))
+         (uglyfmt (make-ugly-printer port #:per-line-prefix "    " #:width 78))
+         (nrule (vector-length actrefv))
+         )
+    (vector-for-each
+     (lambda (ix ent)
+       (let* ((ref (list-ref ent 0))
+              (narg (list-ref ent 1))
+              (rule (list-ref ent 2))) ;; string-replace-substring "=>" "<="
+         (when (or (and (not ref) (not no-stubs))
+                   (and ref (not no-refs)))
+           (if ref
+               (format port "def ~a_~a(~a):\n" pfx ref (args narg))
+               (format port "def ~a_red_~a(~a):\n" pfx ix (args narg)))
+           (format port "    \"\"\" ~a \"\"\"\n" rule)
+           (format port "    return _1\n\n"))))
+     actrefv)
+    (unless no-stubs
+      (format port "~a_xact = [\n" pfx)
+      (vector-for-each
+       (lambda (ix ent)
+         (let* ((ref (list-ref ent 0)))
+           (if ref
+               (uglyfmt "~a_~a, " pfx ref)
+               (uglyfmt "~a_red_~a, " pfx ix))))
+       actrefv)
+      (format port "]\n\n"))))
+
+(define (read-tables path)
+  (with-input-from-file path
+    (lambda ()
+      (save-module-excursion
+       (lambda ()
+         (let loop ((last #f) (exp (read)))
+           (match exp
+             ((? eof-object?)
+              (module-ref (current-module) last))
+             (`(define ,sym ,val)
+              (eval exp (current-module))
+              (loop sym (read))))))))))
+
+
+
+(define options
+  (list
+   (option '(#\h "help") #f #f
+           (lambda (opt name arg opts)
+             (format #t "help coming\n")
+             (quit)))
+   (option '(#\r "refs") #t #f
+           (lambda (opt name arg opts)
+             (acons 'refs arg opts)))
+   (option '(#\p "prefix") #t #f
+           (lambda (opt name arg opts)
+             (acons 'pfx arg opts)))
+   ))
+
+(define (parse-args args)
+  (args-fold args
+             options
+             (lambda (opt name arg opts)
+               ;;(fail "unrecognized option: ~S" name)
+               (exit 1))
+             (lambda (file opts)
+               (acons 'file file opts))
+             `()))
+
+
+(define (main args)
+  (let* ((opts (parse-args args))
+         (tabfile (or (assq-ref opts 'file) (exit 1)))
+         (reffile (assq-ref opts 'refs))
+         (prefix (or (assq-ref opts 'prefix) "py__"))
+         (tbls (read-tables tabfile))
+         ;;(x (begin (sf "refflie=~s\n" reffile) (quit)))
+         (refs (and reffile (read-tables reffile)))
+         (tblout (string-append prefix "_tab.py-new"))
+         (refout (string-append prefix "_ref.py-new"))
+         (actout (string-append prefix "_act.py-new"))
+         )
+    (with-output-to-file tblout
+      (lambda ()
+        (nytabs->pytabs tbls prefix)))
+    (when reffile
+      (with-output-to-file refout
+        (lambda ()
+          (nyrefs->pyacts refs prefix #:no-stubs #t)))
+      (with-output-to-file actout
+        (lambda ()
+          (format #t "from ~a_ref import *\n\n" prefix)
+          (nyrefs->pyacts refs prefix #:no-refs #t))))
+    (exit 0)))
+
+(main (cdr (program-arguments)))
+
+;; --- last line ---
