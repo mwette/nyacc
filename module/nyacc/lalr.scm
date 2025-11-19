@@ -30,7 +30,7 @@
             lalr-start lalr-match-table
             restart-spec add-recovery-logic!
             pp-lalr-notice pp-lalr-grammar pp-lalr-machine
-            write-lalr-actions write-lalr-tables write-lalr-extras
+            write-lalr-actions write-lalr-tables write-lalr-actrefs
             pp-rule find-terminal gen-match-table) ; used by (nyacc bison)
   #:re-export (*nyacc-version*)
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
@@ -394,7 +394,7 @@
     (let loop ((ll '($start))           ; LHS list
                (@l (list                ; attributes per prod' rule
                     `((rhs . ,(vector start-symbol))
-                      (ref . all) (act 1 $1))))
+                      (ref . #f) (act 1 $1))))
                (tl (cons* '$error '$end ; terminals
                           (or (assq-ref tree 'reserve) '())))
                (nl (list start-symbol)) ; set of non-terminals
@@ -1649,8 +1649,18 @@
 ;; default production.  However, reductions triggered by @var{keepers} and
 ;; the required keeper -- @code{'$error} -- are not counted.  The keepers
 ;; can then be trapped by the parser (e.g., to skip un-accounted comments).
+;; If you use @code{skip-if-unexp} for @code{make-lalr-mach} those skipped
+;; items must appear in @var{keepers}.
 ;; @end deffn
 (define* (compact-machine mach #:key (keep 0) (keepers '()))
+  "- Procedure: compact-machine mach [#:keep 0] [#:keepers '()] => mach
+     A \"filter\" to compact the parse table.  For each state this will
+     replace the most populus set of reductions of the same production
+     rule with a default production.  However, reductions triggered by
+     KEEPERS and the required keeper - ‘'$error’ - are not counted.  The
+     keepers can then be trapped by the parser (e.g., to skip
+     un-accounted comments).  If you use ‘skip-if-unexp’ for
+     ‘make-lalr-mach’ those skipped items must appear in KEEPERS."
   (if (< keep 0) (error "expecting keep > 0"))
   (let* ((pat-v (assq-ref mach 'pat-v))
          (nst (vector-length pat-v))
@@ -1768,6 +1778,8 @@
 ;; Convert symbol-based tables to integer-based tables.
 ;; @end deffn
 (define (hashify-machine mach)
+  "- Procedure: hashify-machine mach => mach
+     Convert symbol-based tables to integer-based tables."
   (if (machine-hashed? mach) mach
       (let* ((terminals (assq-ref mach 'terminals))
              (non-terms (assq-ref mach 'non-terms))
@@ -2048,68 +2060,101 @@
       (fmt port "   (cons 'rto-v ~Arto-v)\n" prefix)
       (fmt port "   (cons 'pat-v ~Apat-v)\n" prefix)
       (fmt port "   ))\n\n")
-      (display ";;; end tables" port)
+      (display ";; --- last line ---" port)
       (newline port)
       (force-output port))))
 
-;; @deffn {Procedure} write-lalr-actions mach filename [#:lang output-lang]
+
+(define (pp-rule/ts gx)
+  (let* ((core (fluid-ref *lalr-core*))
+         (lhs (vector-ref (core-lhs-v core) gx))
+         (rhs (vector-ref (core-rhs-v core) gx))
+         (tl (core-terminals core))
+         (line (string-append
+                (symbol->string lhs) " => "
+                (string-join 
+                 (map (lambda (elt) (elt->str elt tl))
+                      (vector->list rhs))
+                 " "))))
+    (if (> (string-length line) 72)
+        (string-append (substring/shared line 0 69) "...")
+        line)))
+
+(define (NEW-pp-rule/ts gx)
+  ;; TBD: use start for zeroth rule
+  (let* ((core (fluid-ref *lalr-core*))
+         (lhs (vector-ref (core-lhs-v core) gx))
+         (rhs (vector-ref (core-rhs-v core) gx))
+         (tl (core-terminals core))
+         (line (string-append
+                (symbol->string lhs) " => "
+                (string-join 
+                 (map (lambda (elt) (elt->str elt tl))
+                      (vector->list rhs))
+                 " "))))
+    (if (> (string-length line) 72)
+        (string-append (substring/shared line 0 69) "...")
+        line)))
+
+(define (write-actions mach port prefix)
+  (with-fluid*
+      *lalr-core* (make-core mach)
+    (lambda ()
+      (fmt port "(define ~Aact-v\n  (vector\n" prefix)
+      (vector-for-each
+       (lambda (gx actn)
+         (fmt port "   ;; ~A\n" (pp-rule/ts gx))
+         (pretty-print (wrap-action actn) port #:per-line-prefix "   "))
+       (assq-ref mach 'act-v))
+      (fmt port "   ))\n\n"))))
+
+(define (write-actrefs mach port prefix)
+  (with-fluid*
+      *lalr-core* (make-core mach)
+    (lambda ()
+      (let ((ref-v (assq-ref mach 'ref-v)))
+        (fmt port ";; vector of (ref num-args rule-spec)\n")
+        (fmt port "(define ~Aref-v\n  #(\n" prefix)
+        (vector-for-each
+         (lambda (gx actn)
+           (pretty-print (list (vector-ref ref-v gx) (car actn) (pp-rule/ts gx))
+                         port #:per-line-prefix "    "))
+         (assq-ref mach 'act-v))
+        (fmt port "   ))\n\n")))))
+
+;; @deffn {Procedure} write-lalr-actions mach filename
 ;; For example,
 ;; @example
 ;; write-lalr-actions mach "actions.scm"
 ;; write-lalr-actions mach "actions.tcl" #:lang 'tcl
 ;; @end example
 ;; @end deffn
-(define* (write-lalr-actions mach filename #:key (lang 'scheme) (prefix ""))
-
-  (define (pp-rule/ts gx)
-    (let* ((core (fluid-ref *lalr-core*))
-           (lhs (vector-ref (core-lhs-v core) gx))
-           (rhs (vector-ref (core-rhs-v core) gx))
-           (tl (core-terminals core))
-           (line (string-append
-                  (symbol->string lhs) " => "
-                  (string-join 
-                   (map (lambda (elt) (elt->str elt tl))
-                        (vector->list rhs))
-                   " "))))
-      (if (> (string-length line) 72)
-          (string-append (substring/shared line 0 69) "...")
-          line)))
-
-  (define (NEW-pp-rule/ts gx)
-    ;; TBD: use start for zeroth rule
-    (let* ((core (fluid-ref *lalr-core*))
-           (lhs (vector-ref (core-lhs-v core) gx))
-           (rhs (vector-ref (core-rhs-v core) gx))
-           (tl (core-terminals core))
-           (line (string-append
-                  (symbol->string lhs) " => "
-                  (string-join 
-                   (map (lambda (elt) (elt->str elt tl))
-                        (vector->list rhs))
-                   " "))))
-      (if (> (string-length line) 72)
-          (string-append (substring/shared line 0 69) "...")
-          line)))
-    
-  (define (write-actions mach port)
-    (with-fluid*
-     *lalr-core* (make-core mach)
-     (lambda ()
-       (fmt port "(define ~Aact-v\n  (vector\n" prefix)
-       (vector-for-each
-        (lambda (gx actn)
-          (fmt port "   ;; ~A\n" (pp-rule/ts gx))
-          (pretty-print (wrap-action actn) port #:per-line-prefix "   "))
-        (assq-ref mach 'act-v))
-       (fmt port "   ))\n\n"))))
+(define* (write-lalr-actions mach filename #:key (prefix ""))
 
   (call-with-output-file filename
     (lambda (port)
       (fmt port ";; ~A\n\n" (drop-dot-new (basename filename)))
       (write-notice mach port)
-      (write-actions mach port)
-      (display ";;; end tables" port)
+      (write-actions mach port prefix)
+      (display ";; --- last line ---" port)
+      (newline port)
+      (force-output port))))
+
+;; @deffn {Procedure} write-lalr-actrefs mach filename
+;; For example,
+;; @example
+;; write-lalr-actions mach "actions.scm"
+;; write-lalr-actions mach "actions.tcl" #:lang 'tcl
+;; @end example
+;; @end deffn
+(define* (write-lalr-actrefs mach filename #:key (prefix ""))
+
+  (call-with-output-file filename
+    (lambda (port)
+      (fmt port ";; ~A\n\n" (drop-dot-new (basename filename)))
+      (write-notice mach port)
+      (write-actrefs mach port prefix)
+      (display ";; --- last line ---" port)
       (newline port)
       (force-output port))))
 
