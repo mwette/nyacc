@@ -92,10 +92,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -X, --no-exec         don't generate .go file(s)
   -R, --dont-recurse    don't do recursive compile on dep's
   -a, --any-suffix      allow any suffix (if not, must be .ffi)
-<<<<<<< HEAD
   -w, --no-foreign-library  guile has no (system foreign-library) module
-=======
->>>>>>> fadb39ca83393bb4281d0a61e43a73ba27c2b144
 
 See the FFI-Helper User's Manual for help generating a .ffi file.
 Report bugs to https://github.com/mwette/nyacc/issues.\n"))
