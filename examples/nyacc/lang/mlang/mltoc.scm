@@ -165,6 +165,11 @@
 
 ;; ====================================
 
+;; parse a function file for ...
+;; parse a script file for ...
+ 
+;; ====================================
+
 ;; if return type passed as pointer => ("x" (de-ref (float-type "double")))
 
 ;; This should update dict to

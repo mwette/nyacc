@@ -73,9 +73,6 @@
      ((assq '@F dict) #t)
      (else (loop (nx-pop-scope dict))))))
 
-(define (maybe-add-symbol name dict)
-  (if (lookup name dict) dict (nx-add-symbol name dict)))
-
 ;; Add toplevel def's from dict before evaluating expression.  This puts
 ;; @var{expr} at the end of a chain of @code{seq}'s that execution
 ;; conditional defines to a void.  See @code{make-toplevel-defcheck}.
@@ -181,6 +178,10 @@
   
   (define (fD tree seed dict) ;; => tree seed dict
     (define +SP (make-+SP tree))
+    
+    (when #t
+      (sferr "fD: ~S\n" (if (pair? tree) (car tree) tree))
+      )
 
     (sx-match tree
 
@@ -261,7 +262,7 @@
       ;; (assn . ,other) => syntax error
       ((assn (@ . ,attr) (ident ,name) ,rhsx)   ; assign variable
        (values `(var-assn (@ . ,attr) (ident ,name) ,rhsx) '()
-               (maybe-add-symbol name dict)))
+               (nx-ensure-variable name dict)))
       ((assn (@ . ,attr) (aref-or-call ,aexp ,expl) ,rhsx) ; assign element
        (values `(elt-assn (@ . ,attr) ,aexp ,expl ,rhsx) '() dict))
       ((assn (@ . ,attr) (sel (ident ,name) ,expr) ,rhsx) ; assign member
@@ -289,7 +290,7 @@
                (sx-match (car elts)
                  ((ident ,name)
                   (loop (cons `(var-assn (ident ,name) ,rv) lvxl)
-                        (maybe-add-symbol name dict) (cdr elts) (1+ ix)))
+                        (nx-ensure-variable name dict) (cdr elts) (1+ ix)))
                  ((aref-or-call ,ax ,xl)
                   (loop (cons `(elt-assn ,ax ,xl ,rv) lvxl)
                         dict (cdr elts) (1+ ix)))
@@ -355,7 +356,7 @@
     ;; This routine rolls up processes leaves into the current branch.
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
-    (when #f
+    (when #t
       (sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
       ;;(sferr "    kseed=~S\n    seed=~S\n" kseed seed)
       ;;(pperr tree)
@@ -682,8 +683,8 @@
   (define (fH leaf seed dict)
     (values (if (null? leaf) seed (cons leaf seed)) dict))
 
-  (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
-  )
+  (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
+(export mlang-sxml->xtil)
 
 (define show-sxml #f)
 (define (show-mlang-sxml v) (set! show-sxml v))
@@ -692,7 +693,9 @@
 
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
-  (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
+  (let ((cenv (if (module? env)
+                  (cons* `(@top . #t) `(@M . env) xdict)
+                  env)))
     (if exp 
         (call-with-values
             (lambda () (mlang-sxml->xtil exp cenv opts))

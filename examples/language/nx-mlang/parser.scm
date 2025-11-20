@@ -381,7 +381,8 @@
       (newline (current-error-port))
       #f)))
 
-(define gen-mlang-ia-lexer (make-mlang-lexer-generator mlangia-mtab))
+(define gen-mlang-ia-lexer
+  (make-mlang-lexer-generator mlangia-mtab #:interactive #t))
 
 (define read-mlang-stmt
   (let ((lexer (gen-mlang-ia-lexer)))

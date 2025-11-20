@@ -40,19 +40,18 @@
    (grammar
     
     (translation-unit
-     #;(triv-stmt-list nontrivial-statement mlang-item-list
+     (triv-stmt-list nontrivial-statement mlang-item-list
                      ($$ `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (nontrivial-statement mlang-item-list
                            ($$ `(script ,$1 ,@(sx-tail $2))))
      (triv-stmt-list function-defn mlang-item-list
                      ($$ `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
-     (triv-stmt-list class-defn mlang-item-list
-                     ($$ `(classdef-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (function-defn mlang-item-list
                     ($$ `(function-file ,$1 ,@(sx-tail $2))))
+     (triv-stmt-list class-defn mlang-item-list
+                     ($$ `(classdef-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (class-defn mlang-item-list
-                 ($$ `(classdef-file ,$1 ,@(sx-tail $2))))
-     )
+                 ($$ `(classdef-file ,$1 ,@(sx-tail $2)))))
  
     (mlang-item-list
      (mlang-item-list-1 ($$ (tl->list $1))))
@@ -462,7 +461,6 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine mlang-ia-spec))
-   ;;#:keep 0 #:keepers '($code-comm $lone-comm sp)))
    #:keep 0 #:keepers '(sp)))
 
 ;; === automaton file generators =========
