@@ -5,6 +5,22 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2025-XX-XX  V3.01.0
+	* Matured the mlang parser and pretty printer.
+	  + It now can parse comma-less matrix rows with spacing constraint.
+	* Updated julia parser, needs lots of work still
+
+2025-11-19  V3.00.2
+	* munge.scm(udict-enum->ddict): make robust to typeof- (gobject case)
+	* sx-util.scm(sxm-sexp): make sure value is pair before calling car
+	* lalr.scm: update for generating tag-based parsers
+	* examples/impl/python: first shot at python-based parser help
+	* nx-mlang/mach.scm: update for space for row element separator
+
+2025-11-03  V3.00.1
+	* ffi-help-cd(mtail->ffi-decl): bug 67664, convert array function
+	  arg w/o dimension to '*
+
 2025-09-27  V3.00.0
 	* Removed support for bytestructures
 	* Updated C parser to handle typedefs better.
