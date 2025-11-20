@@ -48,7 +48,7 @@
 
 (define javascript-spec
   (lalr-spec
-   (notice (string-append "Copyright (c) 2015-2018 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2015-2018 Matthew Wette"
                           license-lgpl3+))
    (reserve "abstract" "boolean" "byte" "char" "class" "const" "debugger"
             "double" "enum" "export" "extends" "final" "float" "goto"
