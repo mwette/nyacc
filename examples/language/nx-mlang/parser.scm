@@ -315,7 +315,7 @@
   (define (fU tree seed gbl lcl kseed kgbl klcl) ; => seed gbl lcl
     (let ((form (reverse kseed)))
       (sx-match form
-        ((*TOP* . ,_) (values (tag-source tree form) gbl lcl))
+        ((*TOP* ,subform) (values (tag-source tree subform) gbl lcl))
         ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
          (let ((op (if (or (member name lcl) (member name gbl))
                        'array-ref

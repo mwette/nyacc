@@ -18,7 +18,6 @@
 (use-modules (language nx-mlang pprint))
 (use-modules (language nx-mlang compile-tree-il))
 
-
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define (sf fmt . args) (apply simple-format (current-output-port) fmt args))
@@ -27,7 +26,8 @@
 (define (pp exp)
   (pretty-print exp (current-output-port) #:per-line-prefix "  "))
 
-;; =================================
+
+;; ============================================================================
 
 ;; A variable is a unique symbol, a string name and a list of uses.
 ;; var : (x-123 "x" () ((kind . struct) (rank . 2) (type . float))
@@ -193,7 +193,9 @@
 
 ;;  
 
-;; =================================
+
+;; ============================================================================
+;; identify tree
 
 ;; need to do a full pass to convert 
 ;; (ident "name") => (toplevel name)|(lexical name name-123)
@@ -247,50 +249,32 @@
                              (ident-list . ,outargs) . ,comms) ,stmt-list)
        (let* ((dict (ensure-variable name dict))
               (dict (nx-push-scope dict))
-              (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
-                          dict inargs))
-              (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
-                          dict outargs))
+              (dict (fold add-lexical dict (map cadr inargs)))
+              (dict (fold add-lexical dict (map cadr outargs)))
               (dict (nx-add-tag dict name)))
-         (values
-          `(fctn-defn (fctn-decl (ident ,name) (ident-list . ,inargs)
-                                 (ident-list . ,outargs)) ,stmt-list)
-          '() dict)))
+         (values tree '() dict)))
       ((assn (@ . ,attr) (ident ,name) ,rhsx)
-       ;;(sf "fD: assn\n  bef\n") (pp dict)
-       (let* ((dict (ensure-variable name dict))
-              (idxp (nx-lookup name dict)))
-         ;;(sf "  aft\n") (pp dict)
-         (values tree '() dict))) ;; ident will be updated in fU
-      #|
+       (values tree '() (ensure-variable name dict)))
       ((assn (@ . ,attr) (aref-or-call (ident ,name) ,expl) ,rhsx)
-       (let* ((dict (ensure-variable name dict))
-              (idxp (nx-lookup name dict)))
-         (values `(assn (aref-or-call ,idxp ,expl ,rhsx) '() dict))))
+       (values tree '() (ensure-variable name dict)))
       ((assn (@ . ,attr) (sel (ident ,name) ,expr) ,rhsx)
-       (let* ((dict (ensure-variable name dict))
-              (idxp (nx-lookup name dict)))
-         (values `(assn (sel ,idxp ,expr)) '() dict)))
-      |#
+       (values tree '() (ensure-variable name dict)))
+      ((for (ident ,name) ,range ,stmt-list) 
+       (values tree '() (nx-add-lexical name dict)))
       (,_ (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     (let ((form (reverse kseed)))
-      ;;(sf "fU form, dict, kdict\n") (pp form) (pp dict) (pp kdict)
       ;; Here we update identifiers where they are used.
       (sx-match form
-        ((*TOP* ,form) (values form kdict))
+        ((*TOP* ,subform) (values subform kdict))
         ((ident ,name)
-         ;;(sf "fU.ident: form, dict:\n") (pp form) (pp dict)
-         (values (cons (nx-lookup name kdict) seed) kdict))
+         (values (cons (or (nx-lookup name kdict) form) seed) kdict))
         ((fctn-defn . ,_)
          (values (cons form seed) (nx-pop-scope kdict)))
         ((assn . ,_)
-         ;;(sf "fU.assn: form, dict\n") (pp form) (pp dict)
          (values (cons form seed) kdict))
-        (,_
-         ;;(sf "fU, __:\n") (pp dict)
-         (values (cons form seed) kdict)))))
+        (,_ (values (cons form seed) kdict)))))
 
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))
@@ -299,7 +283,8 @@
       (lambda () (foldts*-values fD fU fH `(*TOP* ,tree) '() gbls))
     (lambda (seed dict) seed)))
 
-;; =================================
+
+;; ============================================================================
 
 (use-modules (srfi srfi-37))
 
@@ -364,8 +349,10 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
            (when (assq-ref opts 'pprint) (pretty-print-ml tree))
            (when (assq-ref opts 'probe) (pp (probe-script tree)))
            (when (assq-ref opts 'identify)
+             ;;(pp (identify-tree tree '((@top . #t))))
+             (sf "BEFORE:\n") (pp tree) (sf "AFTER:\n")
              (pp (identify-tree tree '((@top . #t)))))
-           (when (assq-ref opts 'tree-il) 
+           (when (assq-ref opts 'tree-il)
              (pp (mlang-sxml->xtil tree (current-module) '())))
            #f))
        files)))
