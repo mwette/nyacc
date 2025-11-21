@@ -3,28 +3,25 @@
 (define-module (nyacc lang mlang mltoc)
   #:export (mlang->c99))
 
-(use-modules (language nx-mlang parser))
-(use-modules (language nx-mlang pprint))
-(use-modules (language nx-mlang compile-tree-il))
-
-(use-modules (nyacc lang c99 munge))
-(use-modules (nyacc lang sx-util))
-
-(use-modules (nyacc lang nx-util))
-(use-modules (nyacc lang c99 parser))
-(use-modules (nyacc lang c99 pprint))
-
+(use-modules (ice-9 regex))
+(use-modules (ice-9 match))
 (use-modules ((srfi srfi-1) #:select (fold last)))
 (use-modules (srfi srfi-9))             ; define-record-type
 (use-modules (srfi srfi-11))
 (use-modules (sxml match))
 (use-modules (sxml fold))               ; fold-values
-(use-modules (ice-9 regex))
-(use-modules (ice-9 match))
+
+(use-modules (nyacc lang sx-util))
+(use-modules (nyacc lang nx-util))
+
+(use-modules (language nx-mlang parser))
+(use-modules (language nx-mlang pprint))
+(use-modules (language nx-mlang compile-tree-il))
+
 
 (use-modules (ice-9 pretty-print))
-(define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (sf fmt . args) (apply simple-format (current-output-port) fmt args))
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 (define (pp exp)
@@ -207,36 +204,65 @@
 ;;     if ident convert to lexical|toplevel
 ;;     function call and implies file, add file to next
 
-(define (ensure-variable name dict)
-  (let* ((dict (nx-ensure-variable name dict))
+(define (sx-ize nref)
+  (match nref
+    (`(toplevel ,n)
+     (set-cdr! nref (list (symbol->string n))))
+    (`(lexical ,n ,r)
+     (set-cdr! nref (list (symbol->string n) (symbol->string r))))
+    (__
+     (pperr nref)
+     (error "add-variable error")))
+  nref)
+
+(define (add-variable name dict)
+  (let* ((dict (or (nx-add-framelevel name dict)
+                   (nx-add-toplevel name dict)))
          (nref (nx-lookup name dict)))
-    (match nref
-      ((toplevel ,n) `(toplevel ,(symbol->string n)))
-      ((lexical ,n ,r) `(lexical ,(symbol->string n) ,(symbol->string r))))
+    (sx-ize nref)
     dict))
 
-(define (identify-tree tree env)
+(define (add-lexical name dict)
+  (let* ((dict (nx-add-lexical name dict))
+         (nref (nx-lookup name dict)))
+    (sx-ize nref)
+    dict))
+
+(define (ensure-variable name dict)
+  (if (nx-lookup name dict)
+      dict
+      (add-variable name dict)))
+
+(define (ensure-variable/frame name dict)
+  (if (nx-lookup-in-frame name dict)
+      dict
+      (add-variable name dict)))
+
+(define (identify-tree tree gbls)
 
   (define (fD tree seed dict)
     ;; Here we update symbol table where identifiers are defined.
     (sx-match tree
       ((fctn-defn (fctn-decl (ident ,name) (ident-list . ,inargs)
-                             (ident-list . ,outargs) . ,comms))
+                             (ident-list . ,outargs) . ,comms) ,stmt-list)
        (let* ((dict (ensure-variable name dict))
               (dict (nx-push-scope dict))
-              (dict (fold (lambda (sx dt) (nx-add-lexical (sx-ref sx 1) dt))
+              (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
                           dict inargs))
-              (dict (fold (lambda (sx dt) (nx-add-lexical (sx-ref sx 1) dt))
+              (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
                           dict outargs))
-              (dict (acons '@F name dict)))
+              (dict (nx-add-tag dict name)))
          (values
           `(fctn-defn (fctn-decl (ident ,name) (ident-list . ,inargs)
                                  (ident-list . ,outargs)) ,stmt-list)
           '() dict)))
       ((assn (@ . ,attr) (ident ,name) ,rhsx)
+       ;;(sf "fD: assn\n  bef\n") (pp dict)
        (let* ((dict (ensure-variable name dict))
               (idxp (nx-lookup name dict)))
-         (values `(assn ,idxp ,rhsx) '() dict)))
+         ;;(sf "  aft\n") (pp dict)
+         (values tree '() dict))) ;; ident will be updated in fU
+      #|
       ((assn (@ . ,attr) (aref-or-call (ident ,name) ,expl) ,rhsx)
        (let* ((dict (ensure-variable name dict))
               (idxp (nx-lookup name dict)))
@@ -245,19 +271,34 @@
        (let* ((dict (ensure-variable name dict))
               (idxp (nx-lookup name dict)))
          (values `(assn (sel ,idxp ,expr)) '() dict)))
+      |#
       (,_ (values tree '() dict))))
 
-  (define (fU tree seed dict kseed kdict)
-    ;; Here we update identifiers where they are used.
-    (sx-match leaf
-      ((ident ,name) (values (cons (nx-lookup name) seed) kdict))
-      (,_ (values tree seed kdict))))
+  (define (fU tree seed dict kseed kdict) ;; => seed dict
+    (let ((form (reverse kseed)))
+      ;;(sf "fU form, dict, kdict\n") (pp form) (pp dict) (pp kdict)
+      ;; Here we update identifiers where they are used.
+      (sx-match form
+        ((*TOP* ,form) (values form kdict))
+        ((ident ,name)
+         ;;(sf "fU.ident: form, dict:\n") (pp form) (pp dict)
+         (values (cons (nx-lookup name kdict) seed) kdict))
+        ((fctn-defn . ,_)
+         (values (cons form seed) (nx-pop-scope kdict)))
+        ((assn . ,_)
+         ;;(sf "fU.assn: form, dict\n") (pp form) (pp dict)
+         (values (cons form seed) kdict))
+        (,_
+         ;;(sf "fU, __:\n") (pp dict)
+         (values (cons form seed) kdict)))))
 
   (define (fH leaf seed dict)
-    (values (if (null? leaf) seed (cons leaf seed)) dict))
+    (values (cons leaf seed) dict))
 
-  (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
-    
+  (call-with-values
+      (lambda () (foldts*-values fD fU fH `(*TOP* ,tree) '() gbls))
+    (lambda (seed dict) seed)))
+
 ;; =================================
 
 (use-modules (srfi srfi-37))
@@ -283,12 +324,15 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
    (option '(#\s "sxml") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'sxml #t opts) files)))
-   (option '(#\t "tree-il") #f #f
-           (lambda (opt name arg opts files)
-             (values (acons 'tree-il #t opts) files)))
    (option '(#\p "pprint") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'pprint #t opts) files)))
+   (option '(#\t "tree-il") #f #f
+           (lambda (opt name arg opts files)
+             (values (acons 'tree-il #t opts) files)))
+   (option '(#\i "identify") #f #f
+           (lambda (opt name arg opts files)
+             (values (acons 'identify #t opts) files)))
    (option '(#\j "probe") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'probe #t opts) files)))
@@ -319,13 +363,31 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
            (when (assq-ref opts 'sxml) (pp tree))
            (when (assq-ref opts 'pprint) (pretty-print-ml tree))
            (when (assq-ref opts 'probe) (pp (probe-script tree)))
-           (when (assq-ref opts 'tree-il)
+           (when (assq-ref opts 'identify)
+             (pp (identify-tree tree '((@top . #t)))))
+           (when (assq-ref opts 'tree-il) 
              (pp (mlang-sxml->xtil tree (current-module) '())))
            #f))
        files)))
   0)
 
-(sferr "program-args: ~s\n" (program-arguments))
+;;(sferr "program-args: ~s\n" (program-arguments))
 (apply main (cdr (program-arguments)))
+#|
+
+(define d0 '((@top . #t)))
+(define d1 (ensure-variable "foo" d0)) ;(pp d1)
+(define d2 (ensure-variable "bar" d1)) ;(pp d2)
+(define d3 (nx-push-scope d2))         ;(pp d3)
+(define d4 (nx-add-tag d3 '@F "f"))    ;(pp d4)
+(define d5 (ensure-variable "x" d4))   ;(pp d5)
+(define d6 (ensure-variable "y" d5))   (pp d6)
+;;(define d5 (nx-ensure-var-in-tagged "baz" d4)) (pp d4a)
+;;(define d4a (nx-add-lexical "baz" d3)) (pp d4a)
+(define d4 (ensure-variable/frame "baz" d3)) (pp d4)
+(define d5 (nx-pop-frame d4)) (pp d5)
+(pp (nx-lookup "x" d6))
+(pp (nx-lookup "foo" d6))
+|#
 
 ;; --- last line ---
