@@ -465,7 +465,8 @@
    ;; postfix-expr => postfix-expr "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
    ;; postfix-expr => postfix-expr ".(" ident ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(sel ,$3 ,$1))
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(obj-prop ,$3 ,$1))
    ;; postfix-expr-nosp => primary-expr-nosp
    (lambda ($1 . $rest) $1)
    ;; postfix-expr-nosp => postfix-expr-nosp "'"
@@ -484,7 +485,8 @@
    ;; postfix-expr-nosp => postfix-expr-nosp "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
    ;; postfix-expr-nosp => postfix-expr-nosp ".(" ident ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(sel ,$3 ,$1))
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(obj-prop ,$3 ,$1))
    ;; primary-expr => ident
    (lambda ($1 . $rest) $1)
    ;; primary-expr => number
