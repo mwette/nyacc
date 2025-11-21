@@ -172,13 +172,26 @@
 
 ;; === static semantics
 
-;; This won't be able to resolve all aref-or-call if classes are used.
+;; Now that I understand object we should be able to resolve all
+;; aref-or-call to array-ref or call.
 
-;; 1) assn: "[ ... ] = expr" => assn-many
-;; 2) matrix: "[ int, int, int ]" => ivec
-;; 3) matrix: "[ ... (fixed) ... ]" => error
-;; 4) colon-expr => fixed-colon-expr
-;; 5) aref-or-call => array-ref | call
+;; 1) aref-or-call => array-ref | call
+;; 2) assn: "[ ... ] = expr" => assn-many
+;; removed
+;; 3) matrix: "[ int, int, int ]" => ivec
+;; 4) matrix: "[ ... (fixed) ... ]" => error
+;; 5) colon-expr => fixed-colon-expr (removed)
+;; dot notation: obj.meth(args ...) | obj.(property)
+
+#|
+((colon-expr . ,rest)
+ (let ((form (reverse kseed)))
+   (values (if (fixed-colon-expr? tree)
+               (cons-source tree 'fixed-colon-expr (cdr form))
+               form) gbl lcl)))
+((matrix . ,rest)
+ (values (cons (check-matrix form seed) gbl lcl)))
+|#
 
 (define (fixed-colon-expr? expr)
   (sx-match expr
@@ -276,6 +289,9 @@
 ;; assn matrix rhs => assn-many lval-list rhs
 ;;(define apply-mlang-statics identity)
 (define (apply-mlang-statics tree)
+
+  (define (tag-source orig pair) (cons-source orig (car pair) (cdr pair)))
+
   ;; (aref-or-call (handle ...) ...) is call
   ;; gbl : global variables (e.g., from global)
   ;; lcl : local variables (e.g., function ins or outs)
@@ -297,32 +313,31 @@
       (,__ (values tree '() gbl lcl))))
 
   (define (fU tree seed gbl lcl kseed kgbl klcl) ; => seed gbl lcl
-    (sx-match tree
-      (() (values (cons (reverse kseed) seed) gbl lcl))
-      ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
-       (let ((op (if (or (member name lcl) (member name gbl))
-                     'array-ref 'call))
-             (tail (cdr (reverse kseed))))
-         (values (cons (cons-source tree op tail) seed) gbl lcl)))
-      ((aref-or-call (@ . ,attr) (handle (ident ,name)) . ,rest)
-       (let ((tail (cdr (reverse kseed))))
-         (values (cons (cons-source tree 'call tail) seed) gbl lcl)))
-      ((colon-expr . ,rest)
-       (let ((form (reverse kseed)))
-         (values (if (fixed-colon-expr? tree)
-                     (cons-source tree 'fixed-colon-expr (cdr form))
-                     form)) gbl lcl))
-      ((matrix . ,rest)
-       (values (cons (check-matrix (reverse kseed)) seed) gbl lcl))
-      ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
-       (values (cons (reverse kseed) seed) gbl '()))
-      (,__
-       (values (cons (reverse kseed) seed) gbl lcl))))
+    (let ((form (reverse kseed)))
+      (sx-match form
+        ((*TOP* . ,_) (values (tag-source tree form) gbl lcl))
+        ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
+         (let ((op (if (or (member name lcl) (member name gbl))
+                       'array-ref
+                       'call))
+               (tail (cdr form)))
+           (values (cons (cons-source tree op tail) seed) gbl lcl)))
+        ((aref-or-call (@ . ,attr) (handle (ident ,name)) . ,rest)
+         (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl))
+        ((aref-or-call (@ . ,attr) (sel ,_1 ,_2) . ,_3)
+         (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl))
+        ((aref-or-call . ,_)
+         (sferr "not handled:\n") (pperr form) (quit))
+        ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
+         (values (cons-source tree form seed) gbl '()))
+        (,__ (values (cons-source tree form seed) gbl lcl)))))
   
   (define (fH leaf seed gbl lcl)
     (values (cons leaf seed) gbl lcl))
   
-  (cadar (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '())))
+  (call-with-values
+      (lambda () (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '()))
+    (lambda (seed gbl lcl) seed)))
 
 
 ;; === file parser 
