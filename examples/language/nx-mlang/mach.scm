@@ -382,7 +382,8 @@
      (postfix-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,$3)))
      (postfix-expr "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
      (postfix-expr "{" expr-list "}" ($$ `(cell-ref ,$1 ,$3)))
-     (postfix-expr "." ident ($$ `(sel ,$3 ,$1))))
+     (postfix-expr "." ident ($$ `(sel ,$3 ,$1)))
+     (postfix-expr ".(" ident ")" ($$ `(sel ,$3 ,$1))))
     
     (postfix-expr-nosp
      (primary-expr-nosp)
@@ -391,7 +392,8 @@
      (postfix-expr-nosp "(" expr-list ")" ($$ `(aref-or-call ,$1 ,$3)))
      (postfix-expr-nosp "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
      (postfix-expr-nosp "{" expr-list "}" ($$ `(cell-ref ,$1 ,$3)))
-     (postfix-expr-nosp "." ident ($$ `(sel ,$3 ,$1))))
+     (postfix-expr-nosp "." ident ($$ `(sel ,$3 ,$1)))
+     (postfix-expr-nosp ".(" ident ")" ($$ `(sel ,$3 ,$1))))
 
     (primary-expr
      (ident)
