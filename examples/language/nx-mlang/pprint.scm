@@ -106,8 +106,8 @@
     (define ppxin (lambda (tree) (ppx tree nosp)))
     (sx-match tree
 
-      ((script-file . ,rest)
-       #f)
+      ((script-file . ,items)
+       (for-each ppxin items))
 
       ((classdef-file . ,items)
         (for-each ppxin items))
@@ -254,6 +254,15 @@
        (sf "\n"))
 
       ((aref-or-call ,name ,argx-list)
+       (ppxin name) (sf "(")
+       (pair-for-each
+        (lambda (pair)
+          (ppxin (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        (sx-tail argx-list))
+       (sf ")"))
+
+      ((call ,name ,argx-list)
        (ppxin name) (sf "(")
        (pair-for-each
         (lambda (pair)
