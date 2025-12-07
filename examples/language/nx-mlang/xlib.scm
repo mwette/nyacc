@@ -34,7 +34,7 @@
 (define (pperr exp)
   (pretty-print exp (current-error-port)))
 
-(define undefined (if #f #f))
+(define unspecified (if #f #f))
 
 (define* (xassert cnd #:optional msg)
   (unless cnd (error (or msg "assertion failed"))))
@@ -111,7 +111,7 @@
 (define-public (ml:narg . args)
   (let loop ((args args))
     (if (null? args) 0
-        (if (eq? (car args) undefined)
+        (if (eq? (car args) unspecified)
             (loop (cdr args))
             (1+ (loop (cdr args)))))))
 
@@ -154,12 +154,21 @@
 (define-public (ml:assn-elt arry expl value)
   #f)
       
-;; @deffn {Procedure} ml:make-struct [args]
+;; @deffn {Procedure} ml:make-struct [key1 val1 key2 val2 ...]
 ;; Generate a struct.  Currently no args are processed.
 ;; The hash size is 31.
 ;; @end deffn
 (define-public (ml:make-struct . args)
-  (make-hash-table 31))
+  (let ((struct (make-hash-table 31)))
+    (let loop ((key #f) (args args))
+      (cond
+       (key
+        (if (null? args) (error "missing arg"))
+        (if (not (string? key)) (error "expect string"))
+        (hash-set! struct key (car args))
+        (loop #f (cddr args)))
+       ((null? args) struct)
+       (else (loop (car args) (cdr args)))))))
 
 ;; @deffn {Procedure} ml:struct-set! expr name
 ;; Get @code{expr.name}.  @var{name} is assumed to be a symbol.

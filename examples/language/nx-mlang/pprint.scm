@@ -103,7 +103,15 @@
   (define (ppx/p tree nosp) (sf "(") (ppx tree nosp) (sf ")"))
   
   (define (ppx tree nosp)
-    (define ppxin (lambda (tree) (ppx tree nosp)))
+    (define (ppxin expr)
+      (ppx expr nosp))
+
+    (define (ppxsp expr)
+      (let ((sp (source-properties expr)))
+        (if (pair? sp)
+            (sf "% ~s:~a\n" (assq-ref sp 'filename) (assq-ref sp 'line))))
+      (ppx expr nosp))
+    
     (sx-match tree
 
       ((script-file . ,items)
@@ -182,7 +190,9 @@
        (sf "~A" ident))
 
       ((stmt-list . ,stmts)
-       (for-each ppxin stmts))
+       (unless (zero? (length stmts))
+         (ppxsp (car stmts))
+         (for-each ppxin (cdr stmts))))
 
       ((empty-stmt) (sf "\n"))
 

@@ -14,10 +14,10 @@
    (lambda ($1 . $rest) $1)
    ;; translation-unit => triv-stmt-list nontrivial-statement mlang-item-list
    (lambda ($3 $2 $1 . $rest)
-     `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3)))
+     `(script-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3)))
    ;; translation-unit => nontrivial-statement mlang-item-list
    (lambda ($2 $1 . $rest)
-     `(script ,$1 ,@(sx-tail $2)))
+     `(script-file ,$1 ,@(sx-tail $2)))
    ;; translation-unit => triv-stmt-list function-defn mlang-item-list
    (lambda ($3 $2 $1 . $rest)
      `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3)))

@@ -160,137 +160,27 @@
             (lambda (p) (set! qms (not (memq ch '(#\] #\} #\))))) p))
            ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
            (else (cons ch (string ch)))))
-            (lambda ()
-              (let* ((lxm (loop (read-char)))
-                     (port (current-input-port))
-                     (file (port-filename port))
-                     (line (1+ (port-line port)))
-                     (props `((filename . ,file) (line . ,line) (column . 0))))
-                (set-source-properties! lxm props)
-                lxm))))))
+        (lambda ()
+          (let* ((lxm (loop (read-char)))
+                 (port (current-input-port))
+                 (file (port-filename port))
+                 (line (1+ (port-line port)))
+                 (props `((filename . ,file) (line . ,line) (column . 0))))
+            (set-source-properties! lxm props)
+            ;;(sferr "lx: ~s, ~s\n" lxm (source-properties lxm))
+            lxm))))))
 
 
 ;; === static semantics
 
-;; Now that I understand object we should be able to resolve all
-;; aref-or-call to array-ref or call.
-
 ;; 1) aref-or-call => array-ref | call
 ;; 2) assn: "[ ... ] = expr" => assn-many
-;; removed
-;; 3) matrix: "[ int, int, int ]" => ivec
-;; 4) matrix: "[ ... (fixed) ... ]" => error
-;; 5) colon-expr => fixed-colon-expr (removed)
-;; dot notation: obj.meth(args ...) | obj.(property)
-
-#|
-((colon-expr . ,rest)
- (let ((form (reverse kseed)))
-   (values (if (fixed-colon-expr? tree)
-               (cons-source tree 'fixed-colon-expr (cdr form))
-               form) gbl lcl)))
-((matrix . ,rest)
- (values (cons (check-matrix form seed) gbl lcl)))
-|#
-
-(define (fixed-colon-expr? expr)
-  (sx-match expr
-    ((colon-expr) #t)
-    ((colon-expr (fixed ,s) (fixed ,e)) #t)
-    ((colon-expr (fixed ,s) (fixed ,i) (fixed ,e)) #t)
-    (,_ #f)))
-
-(define (fixed-expr? expr)
-  (define (fixed-primary-expr? expr)
-    (sx-match expr
-      ((fixed ,val) #t)
-      ((add ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      ((sub ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      ((mul ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      (,_ #f)))
-  (or (fixed-primary-expr? expr)
-      (eq? 'fixed-colon-expr (sx-tag expr))))
-
-(define (float-expr? expr)
-  (define (float-primary-expr? expr)
-    (sx-match expr
-      ((float ,val) #t)
-      ((add ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((sub ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((mul ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((div ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      (,_ #f)))
-  (float-primary-expr? expr))
-
-(define (fixed-vec? row)
-  (fold (lambda (elt fx) (and fx (fixed-expr? elt))) #t (sx-tail row)))
-
-(define (float-vec? row)
-  (fold (lambda (elt fx) (and fx (float-expr? elt))) #t (sx-tail row)))
-
-(define (float-mat? mat)
-  (fold (lambda (row fx) (and fx (float-vec? row))) #t
-        (map sx-tail (sx-tail mat))))
-
-(define (check-matrix mat)
-  (let* ((rows (sx-tail mat))
-         (nrow (length rows))
-         (row1 (if (positive? nrow) (car rows) #f)))
-    (cond
-     ((zero? nrow) mat)
-     ((and (= 1 nrow) (fixed-vec? row1))
-      (cons-source row1 'fixed-vector (cdr row1)))
-     ((float-mat? mat)
-      (cons-source mat 'float-matrix (cdr mat)))
-     (else mat))))
-
-;; @deffn {Procedure} apply-mlang-statics tree => tree
-;; Apply static semantics for Octave.  Currently, this includes
-;; @itemize
-;; @item Change @code{assn} with matrix expression on LHS to a
-;; multiple value assignment (@code{assn-many}).
-;; @end itemize
-;; TODO: aref-or-call:
-;; @end deffn
-(define (apply-old-mlang-statics tree)
-
-  (define (fU tree)
-    (sx-match tree
-      ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (cons-source tree 'assn-many `((@ . ,attr) (lval-list . ,elts) ,rhs)))
-      ((colon-expr . ,rest)
-       (if (fixed-colon-expr? tree)
-           (cons-source tree 'fixed-colon-expr (cdr tree))
-           tree))
-      ((matrix . ,rest)
-       (check-matrix tree))
-      (,_ tree)))
-  
-  (define (fH tree) tree)
-  
-  (cadr (foldt fU fH `(*TOP* ,tree))))
-
-(define (lval-root lval)
-  (sx-match lval
-    ((ident ,name) lval)
-    ((aref-or-call ,par ,exl) (lval-root par))
-    ((cell-ref ,par ,exl) (lval-root par))
-    ((sel ,kid ,par) (lval-root par))
-    (,otherwise #f)))
-
-(define (lval-name lval)
-  (and=> (lval-root lval) cadr))
-
-(define (fix-lval lval)
-  (sx-match lval
-    ((aref-or-call ,par ,exl) `(array-ref ,par ,exl))
-    (,__ lval)))
-
-;; assn matrix rhs => assn-many lval-list rhs
-;;(define apply-mlang-statics identity)
 (define (apply-mlang-statics tree)
 
   (define (tag-source orig pair) (cons-source orig (car pair) (cdr pair)))
+
+  (define (afc-name->use name lcl gbl)
+    (if (or (member name lcl) (member name gbl)) 'array-ref 'call))
 
   ;; (aref-or-call (handle ...) ...) is call
   ;; gbl : global variables (e.g., from global)
@@ -316,14 +206,12 @@
     (let ((form (reverse kseed)))
       (sx-match form
         ((*TOP* ,subform) (values (tag-source tree subform) gbl lcl))
-        ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
-         (let ((op (if (or (member name lcl) (member name gbl))
-                       'array-ref
-                       'call))
-               (tail (cdr form)))
-           (values (cons (cons-source tree op tail) seed) gbl lcl)))
         ((aref-or-call (@ . ,attr) (handle (ident ,name)) . ,rest)
          (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl))
+        ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
+         (let ((op (afc-name->use name lcl gbl))
+               (tail (cdr form)))
+           (values (cons (cons-source tree op (cdr form)) seed) gbl lcl)))
         ((aref-or-call (@ . ,attr) (sel ,_1 ,_2) . ,_3)
          (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl))
         ((aref-or-call . ,_)
@@ -338,7 +226,7 @@
   (call-with-values
       (lambda () (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '()))
     (lambda (seed gbl lcl) seed)))
-
+ 
 
 ;; === file parser 
 
@@ -376,6 +264,7 @@
                 (cons* (car sx) `(@ (filename ,fn)) (cdr sx))
                 sx))))))
 
+
 ;; === interactive parser
 
 (include-from-path "language/nx-mlang/mach.d/mlangia-tab.scm")
@@ -408,7 +297,7 @@
         (read-char port))
        (else
         (let* ((stmt (with-input-from-port port
-                      (lambda () (parse-mlang-stmt lexer))))
+                       (lambda () (parse-mlang-stmt lexer))))
                (stmt (apply-mlang-statics stmt)))
           ;;(sferr "stmt=~S\n" stmt)
           (cond
