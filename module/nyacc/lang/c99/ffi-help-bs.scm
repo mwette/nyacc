@@ -278,7 +278,7 @@
 ;; The @var{fields} is the tail of the form @code{(field-list field ...)}
 ;; The procedure @var{expand-tail} will expand the type in the field.
 ;; @end deffn
-(define-public (cnvt-fields fields expand-tail)
+(define (cnvt-fields fields expand-tail)
   (define qq 'quasiquote)
   (define uq 'unquote)
   (map
