@@ -15,7 +15,7 @@
 
 (use-modules (ice-9 regex))
 (use-modules (ice-9 match))
-(use-modules ((srfi srfi-1) #:select (fold last)))
+(use-modules ((srfi srfi-1) #:select (fold last lset-union)))
 (use-modules (srfi srfi-9))             ; define-record-type
 (use-modules (srfi srfi-11))
 (use-modules (sxml match))
@@ -199,14 +199,16 @@
      (,_ (pperr tree) (error "missed form")))))
 
 (define (tree-calls tree)
-  "return calls or aref-or-call (script-file or function-file)"
+  "return calls or aref-or-call (script-file or function-file)
+  should be w/o duplicates.
+  "
   (foldts
    (lambda (seed tree) tree)
    (lambda (seed kseed tree)
      (sx-match tree
        ((call (ident ,name) . ,_) (cons name seed))
        ((aref-or-call (ident ,name) . ,_) (cons name seed))
-       (,__ (append kseed seed))))
+       (,__ (lset-union string=? kseed seed))))
    (lambda (seed leaf) '())
    '() tree))
 
@@ -214,22 +216,24 @@
   ;; parse script-file => tree
   ;; extract calls and aref-or-call
   ;; add to next refs w/ .m
-  (let loop ((treed '()) (done '()) (curr '())
-             (next (list (basename script-file ".m"))))
-    (cond
-     ((pair? curr)
-      (let* ((file (find-file (string-append (car next) ".m")))
-             (tree (call-with-input-file file
-                    (lambda (port)
-                      (set-port-filename! port file)
-                      (read-mlang-file port '()))))
-             (next (fold (lambda (fn nx)
-                           (if (or (member fn done) (member fn nx))
-                               nx (cons fn nx)))
-                         next (tree-calls tree))))
-        (loop (acons file tree treed) done (cdr curr) next)))
-     ((pair? next) (loop treed done next '()))
-     (else treed))))
+  ;; assumes tree-calls provides no duplicates (hence lset-union there)
+  (parameterize ((*path* (cons (dirname script-file) (*path*))))
+    (let loop ((treed '()) (done builtins) (curr '())
+               (next (list (basename script-file ".m"))))
+      (cond
+       ((pair? curr)
+        (let* ((file (find-file (string-append (car curr) ".m")))
+               (tree (call-with-input-file file
+                       (lambda (port)
+                         (set-port-filename! port file)
+                         (read-mlang-file port '()))))
+               (next (fold (lambda (fn nx)
+                             (if (or (member fn done) (member fn nx))
+                                 nx (cons fn nx)))
+                           next (tree-calls tree))))
+          (loop (acons file tree treed) (cons (car curr) done) (cdr curr) next)))
+       ((pair? next) (loop treed done next '()))
+       (else treed)))))
     
       
 
@@ -700,7 +704,9 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
            (when (assq-ref opts 'tree-il)
              (pp (mlang-sxml->xtil tree (current-module) '())))
            (when (assq-ref opts 'misc)
-             (pp (tree-calls tree)))
+             ;;(pp (tree-calls tree))
+             (pp (gen-program srcfile))
+             #t)
            #f))
        files)))
   0)
