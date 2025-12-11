@@ -20,6 +20,10 @@
 ;; This should be close to complete, but more will need to be added as
 ;; I could not find any complete syntax description.
 
+;;; Notes:
+;; Parsing MATLAB can be hard because the MathWorks documentation is often
+;; lacking (e.g., for `foo = @(x,y)ftn(a,b,c);'.
+
 ;;; Code:
 
 (define-module (language nx-mlang mach)
@@ -166,6 +170,16 @@
      (ident ($$ (make-tl 'ident-list $1)))
      (ident-list-1 "," ident ($$ (tl-append $1 $3))))
 
+    ;; For handle signatures ???
+    (q-ident-list
+     (q-ident-list-1 ($$ (tl->list $1))))
+    (q-ident-list-1
+     (q-ident ($$ (make-tl 'ident-list `(qident ,@(reverse $1)))))
+     (q-ident-list-1 "," q-ident ($$ (tl-append $1 `(q-ident ,@(reverse $3))))))
+    (q-ident
+     ($ident ($$ (list $1)))
+     (q-ident "." $ident ($$ (cons $3 $1))))
+
     (stmt-list
      (stmt-list-1 ($$ (tl->list $1))))
     (stmt-list-1
@@ -221,7 +235,7 @@
     (command
      (command-name ($$ `(command ,$1))))
     (command-name
-     ("clc") ("doc") ("drawnow") ("format") ("global") ("grid")
+     ("clc") ("clear") ("doc") ("drawnow") ("format") ("global") ("grid")
      ("help") ("hold") ("load") ("pause") ("rotate3d") ("save")
      ("uiimport") ("ver"))
 
@@ -343,16 +357,24 @@
      (add-expr-nosp ".-" mul-expr-nosp ($$ `(dot-sub ,$1 ,$3))))
 
     (mul-expr
-     (unary-expr)
-     (mul-expr "*" unary-expr ($$ `(mul ,$1 ,$3)))
-     (mul-expr "/" unary-expr ($$ `(div ,$1 ,$3)))
-     (mul-expr "\\" unary-expr ($$ `(ldiv ,$1 ,$3)))
-     (mul-expr "^" unary-expr ($$ `(pow ,$1 ,$3)))
-     (mul-expr ".*" unary-expr ($$ `(dot-mul ,$1 ,$3)))
-     (mul-expr "./" unary-expr ($$ `(dot-div ,$1 ,$3)))
-     (mul-expr ".\\" unary-expr ($$ `(dot-ldiv ,$1 ,$3)))
-     (mul-expr ".^" unary-expr ($$ `(dot-pow ,$1 ,$3))))
+     (handle-expr)
+     (mul-expr "*" handle-expr ($$ `(mul ,$1 ,$3)))
+     (mul-expr "/" handle-expr ($$ `(div ,$1 ,$3)))
+     (mul-expr "\\" handle-expr ($$ `(ldiv ,$1 ,$3)))
+     (mul-expr "^" handle-expr ($$ `(pow ,$1 ,$3)))
+     (mul-expr ".*" handle-expr ($$ `(dot-mul ,$1 ,$3)))
+     (mul-expr "./" handle-expr ($$ `(dot-div ,$1 ,$3)))
+     (mul-expr ".\\" handle-expr ($$ `(dot-ldiv ,$1 ,$3)))
+     (mul-expr ".^" handle-expr ($$ `(dot-pow ,$1 ,$3))))
 
+    ;; stuff in here -- hope it works out
+    (handle-expr
+     (unary-expr)
+     ("@" q-ident ($$ `(handle ,$2)))
+     ("@" "(" q-ident-list ")" ident "(" q-ident-list ")"
+      ($$ `(handle ,$5 ,$7 ,$3)))
+     )
+    
     (mul-expr-nosp
      (unary-expr-nosp)
      (mul-expr-nosp "*" unary-expr-nosp ($$ `(mul ,$1 ,$3)))
@@ -362,20 +384,25 @@
      (mul-expr-nosp ".*" unary-expr-nosp ($$ `(dot-mul ,$1 ,$3)))
      (mul-expr-nosp "./" unary-expr-nosp ($$ `(dot-div ,$1 ,$3)))
      (mul-expr-nosp ".\\" unary-expr-nosp ($$ `(dot-ldiv ,$1 ,$3)))
-     (mul-expr-nosp ".^" unary-expr-nosp ($$ `(dot-pow ,$1 ,$3))))
+    (mul-expr-nosp ".^" unary-expr-nosp ($$ `(dot-pow ,$1 ,$3))))
 
     (unary-expr
      (postfix-expr)
      ("-" postfix-expr ($$ `(neg ,$2)))
      ("+" postfix-expr ($$ `(pos $2)))
      ("~" postfix-expr ($$ `(not ,$2)))
-     ("@" postfix-expr ($$ `(handle ,$2))))
-    
+     ("~" ($$ '(ignore)))
+     ;;("@" postfix-expr ($$ `(handle ,$2)))
+     )
+
     (unary-expr-nosp
      (postfix-expr-nosp)
      ("-" postfix-expr-nosp ($$ `(neg ,$2)))
      ("+" postfix-expr-nosp ($$ $2))
-     ("~" postfix-expr-nosp ($$ `(not ,$2))))
+     ("~" postfix-expr-nosp ($$ `(not ,$2)))
+     ("~" ($$ '(ignore)))
+     ;;("@" postfix-expr-nosp ($$ `(handle ,$2)))
+     )
 
     (postfix-expr
      (primary-expr)
@@ -405,7 +432,9 @@
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ $2))
      ("{" "}" ($$ '(cell-array)))
-     ("{" matrix-row-list "}" ($$ `(cell-array . ,(cdr $2)))))
+     ("{" matrix-row-list "}" ($$ `(cell-array . ,(cdr $2))))
+     ;;("~" ($$ '(ignore)))
+     )
 
     (primary-expr-nosp
      (ident)
@@ -415,7 +444,9 @@
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ $2))
      ("{" "}" ($$ '(cell-array)))
-     ("{" matrix-row-list "}" ($$ `(cell-array . ,(cdr $2)))))
+     ("{" matrix-row-list "}" ($$ `(cell-array . ,(cdr $2))))
+     ;;("~" ($$ '(ignore)))
+     )
 
     (matrix-row-list
      (matrix-row-list-1 ($$ (tl->list $1))))

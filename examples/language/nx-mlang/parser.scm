@@ -192,6 +192,8 @@
           ((div ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
           (,__ #f))))
 
+  (define (insert-name name list) (cons (cadr name) list)) ;; (ident ,name)
+  
   ;; (aref-or-call (handle ...) ...) is call
   ;; gbl : global variables (e.g., from global)
   ;; lcl : local variables (e.g., function ins or outs)
@@ -205,11 +207,11 @@
        (cond
         ((member name vars) (values tree '() vars))
         (else (values tree '() (cons name vars)))))
-      ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
-       (values tree '() (fold cadr (cons "@F" vars)
-                              (append (cdr iargs) (cdr iargs)))))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs) ,stmts)
+       (values tree '() (fold insert-name (cons "@F" vars)
+                              (append (cdr iargs) (cdr oargs)))))
       ((command "global" . ,args)
-       (values tree '() (fold cadr vars args)))
+       (values tree '() (fold insert-name vars args)))
       (,__ (values tree '() vars))))
 
   (define (fU tree seed vars kseed kvars) ; => seed vars
@@ -217,7 +219,7 @@
     (let ((form (reverse kseed)))
       (sx-match form
         ((*TOP* ,subform) (values (tag-source tree subform) kvars))
-        ((aref-or-call (@ . ,attr) (handle (ident ,name)) . ,rest)
+        ((aref-or-call (@ . ,attr) (handle (q-ident . ,_)) . ,rest)
          (values (cons (cons-source tree 'call (cdr form)) seed)
                  kvars))
         ((aref-or-call (@ . ,attr) (ident ,name) ,args)

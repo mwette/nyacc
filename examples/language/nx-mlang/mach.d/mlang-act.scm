@@ -148,429 +148,452 @@
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
    ;; 54. ident-list-1 => ident-list-1 "," ident
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 55. stmt-list => stmt-list-1
+   ;; 55. q-ident-list => q-ident-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 56. stmt-list-1 => statement
+   ;; 56. q-ident-list-1 => q-ident
+   (lambda ($1 . $rest)
+     (make-tl 'ident-list `(qident ,@(reverse $1))))
+   ;; 57. q-ident-list-1 => q-ident-list-1 "," q-ident
+   (lambda ($3 $2 $1 . $rest)
+     (tl-append $1 `(q-ident ,@(reverse $3))))
+   ;; 58. q-ident => '$ident
+   (lambda ($1 . $rest) (list $1))
+   ;; 59. q-ident => q-ident "." '$ident
+   (lambda ($3 $2 $1 . $rest) (cons $3 $1))
+   ;; 60. stmt-list => stmt-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; 61. stmt-list-1 => statement
    (lambda ($1 . $rest)
      (if $1
        (make-tl 'stmt-list $1)
        (make-tl 'stmt-list)))
-   ;; 57. stmt-list-1 => stmt-list-1 statement
+   ;; 62. stmt-list-1 => stmt-list-1 statement
    (lambda ($2 $1 . $rest)
      (if $2 (tl-append $1 $2) $1))
-   ;; 58. triv-stmt-list => triv-stmt-list-1
+   ;; 63. triv-stmt-list => triv-stmt-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 59. triv-stmt-list-1 => trivial-statement
+   ;; 64. triv-stmt-list-1 => trivial-statement
    (lambda ($1 . $rest)
      (make-tl 'triv-stmt-list $1))
-   ;; 60. triv-stmt-list-1 => triv-stmt-list-1 trivial-statement
+   ;; 65. triv-stmt-list-1 => triv-stmt-list-1 trivial-statement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 61. statement => trivial-statement
+   ;; 66. statement => trivial-statement
    (lambda ($1 . $rest) $1)
-   ;; 62. statement => nontrivial-statement
+   ;; 67. statement => nontrivial-statement
    (lambda ($1 . $rest) $1)
-   ;; 63. non-comment-statement => term
+   ;; 68. non-comment-statement => term
    (lambda ($1 . $rest) '(empty-stmt))
-   ;; 64. non-comment-statement => nontrivial-statement
+   ;; 69. non-comment-statement => nontrivial-statement
    (lambda ($1 . $rest) $1)
-   ;; 65. trivial-statement => lone-comment "\n"
+   ;; 70. trivial-statement => lone-comment "\n"
    (lambda ($2 $1 . $rest) $1)
-   ;; 66. trivial-statement => term
+   ;; 71. trivial-statement => term
    (lambda ($1 . $rest) '(empty-stmt))
-   ;; 67. nontrivial-statement => nontrivial-statement-1 term
+   ;; 72. nontrivial-statement => nontrivial-statement-1 term
    (lambda ($2 $1 . $rest) $1)
-   ;; 68. nontrivial-statement-1 => expr
+   ;; 73. nontrivial-statement-1 => expr
    (lambda ($1 . $rest) `(expr-stmt ,$1))
-   ;; 69. nontrivial-statement-1 => expr "=" expr
+   ;; 74. nontrivial-statement-1 => expr "=" expr
    (lambda ($3 $2 $1 . $rest) `(assn ,$1 ,$3))
-   ;; 70. nontrivial-statement-1 => "for" ident "=" expr term stmt-list "end"
+   ;; 75. nontrivial-statement-1 => "for" ident "=" expr term stmt-list "end"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$2 ,$4 ,$6))
-   ;; 71. nontrivial-statement-1 => "while" expr term stmt-list "end"
+   ;; 76. nontrivial-statement-1 => "while" expr term stmt-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$2 ,$4))
-   ;; 72. nontrivial-statement-1 => "if" expr term stmt-list elseif-list "else"...
+   ;; 77. nontrivial-statement-1 => "if" expr term stmt-list elseif-list "else"...
    (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,$4 ,@(cdr $5) (else ,$8)))
-   ;; 73. nontrivial-statement-1 => "if" expr term stmt-list elseif-list "end"
+   ;; 78. nontrivial-statement-1 => "if" expr term stmt-list elseif-list "end"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,$4 ,@(cdr $5)))
-   ;; 74. nontrivial-statement-1 => "if" expr term stmt-list "else" term stmt-l...
+   ;; 79. nontrivial-statement-1 => "if" expr term stmt-list "else" term stmt-l...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,$4 (else ,$7)))
-   ;; 75. nontrivial-statement-1 => "if" expr term stmt-list "end"
+   ;; 80. nontrivial-statement-1 => "if" expr term stmt-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$2 ,$4))
-   ;; 76. nontrivial-statement-1 => "switch" expr term case-list "otherwise" te...
+   ;; 81. nontrivial-statement-1 => "switch" expr term case-list "otherwise" te...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(switch ,$2 ,@(cdr $4) (otherwise ,$7)))
-   ;; 77. nontrivial-statement-1 => "switch" expr term case-list "end"
+   ;; 82. nontrivial-statement-1 => "switch" expr term case-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(switch ,$2 ,@(cdr $4)))
-   ;; 78. nontrivial-statement-1 => "return"
+   ;; 83. nontrivial-statement-1 => "return"
    (lambda ($1 . $rest) '(return))
-   ;; 79. nontrivial-statement-1 => command arg-list
+   ;; 84. nontrivial-statement-1 => command arg-list
    (lambda ($2 $1 . $rest) (append $1 (cdr $2)))
-   ;; 80. nontrivial-statement-1 => command "(" arg-list ")"
+   ;; 85. nontrivial-statement-1 => command "(" arg-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      (append $1 (cdr $3)))
-   ;; 81. command => command-name
+   ;; 86. command => command-name
    (lambda ($1 . $rest) `(command ,$1))
-   ;; 82. command-name => "clc"
+   ;; 87. command-name => "clc"
    (lambda ($1 . $rest) $1)
-   ;; 83. command-name => "doc"
+   ;; 88. command-name => "clear"
    (lambda ($1 . $rest) $1)
-   ;; 84. command-name => "drawnow"
+   ;; 89. command-name => "doc"
    (lambda ($1 . $rest) $1)
-   ;; 85. command-name => "format"
+   ;; 90. command-name => "drawnow"
    (lambda ($1 . $rest) $1)
-   ;; 86. command-name => "global"
+   ;; 91. command-name => "format"
    (lambda ($1 . $rest) $1)
-   ;; 87. command-name => "grid"
+   ;; 92. command-name => "global"
    (lambda ($1 . $rest) $1)
-   ;; 88. command-name => "help"
+   ;; 93. command-name => "grid"
    (lambda ($1 . $rest) $1)
-   ;; 89. command-name => "hold"
+   ;; 94. command-name => "help"
    (lambda ($1 . $rest) $1)
-   ;; 90. command-name => "load"
+   ;; 95. command-name => "hold"
    (lambda ($1 . $rest) $1)
-   ;; 91. command-name => "pause"
+   ;; 96. command-name => "load"
    (lambda ($1 . $rest) $1)
-   ;; 92. command-name => "rotate3d"
+   ;; 97. command-name => "pause"
    (lambda ($1 . $rest) $1)
-   ;; 93. command-name => "save"
+   ;; 98. command-name => "rotate3d"
    (lambda ($1 . $rest) $1)
-   ;; 94. command-name => "uiimport"
+   ;; 99. command-name => "save"
    (lambda ($1 . $rest) $1)
-   ;; 95. command-name => "ver"
+   ;; 100. command-name => "uiimport"
    (lambda ($1 . $rest) $1)
-   ;; 96. arg-list => arg-list-1
+   ;; 101. command-name => "ver"
+   (lambda ($1 . $rest) $1)
+   ;; 102. arg-list => arg-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 97. arg-list-1 => ident
+   ;; 103. arg-list-1 => ident
    (lambda ($1 . $rest)
      (make-tl 'arg-list (cons 'arg (cdr $1))))
-   ;; 98. arg-list-1 => arg-list-1 ident
+   ;; 104. arg-list-1 => arg-list-1 ident
    (lambda ($2 $1 . $rest)
      (tl-append $1 (cons 'arg $2)))
-   ;; 99. elseif-list => elseif-list-1
+   ;; 105. elseif-list => elseif-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 100. elseif-list-1 => "elseif" expr term stmt-list
+   ;; 106. elseif-list-1 => "elseif" expr term stmt-list
    (lambda ($4 $3 $2 $1 . $rest)
      (make-tl 'elseif-list `(elseif ,$2 ,$4)))
-   ;; 101. elseif-list-1 => elseif-list-1 "elseif" expr term stmt-list
+   ;; 107. elseif-list-1 => elseif-list-1 "elseif" expr term stmt-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(elseif ,$3 ,$5)))
-   ;; 102. case-list => 
+   ;; 108. case-list => 
    (lambda $rest (make-tl 'case-list))
-   ;; 103. case-list => case-list "case" case-expr term stmt-list
+   ;; 109. case-list => case-list "case" case-expr term stmt-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(case ,$3 ,$5)))
-   ;; 104. case-expr => fixed
+   ;; 110. case-expr => fixed
    (lambda ($1 . $rest) $1)
-   ;; 105. case-expr => string
+   ;; 111. case-expr => string
    (lambda ($1 . $rest) $1)
-   ;; 106. case-expr => "{" fixed-list "}"
+   ;; 112. case-expr => "{" fixed-list "}"
    (lambda ($3 $2 $1 . $rest) (tl->list $2))
-   ;; 107. case-expr => "{" string-list "}"
+   ;; 113. case-expr => "{" string-list "}"
    (lambda ($3 $2 $1 . $rest) (tl->list $2))
-   ;; 108. fixed-list => fixed
+   ;; 114. fixed-list => fixed
    (lambda ($1 . $rest) (make-tl 'fixed-list $1))
-   ;; 109. fixed-list => fixed-list fixed
+   ;; 115. fixed-list => fixed-list fixed
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 110. string-list => string
+   ;; 116. string-list => string
    (lambda ($1 . $rest) (make-tl 'string-list $1))
-   ;; 111. string-list => string-list string
+   ;; 117. string-list => string-list string
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 112. expr-list => expr-list-1
+   ;; 118. expr-list => expr-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 113. expr-list-1 => expr
+   ;; 119. expr-list-1 => expr
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
-   ;; 114. expr-list-1 => expr-list-1 "," expr
+   ;; 120. expr-list-1 => expr-list-1 "," expr
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 115. expr => or-expr
+   ;; 121. expr => or-expr
    (lambda ($1 . $rest) $1)
-   ;; 116. expr => ":"
+   ;; 122. expr => ":"
    (lambda ($1 . $rest) `(colon-expr))
-   ;; 117. expr => or-expr ":" or-expr
+   ;; 123. expr => or-expr ":" or-expr
    (lambda ($3 $2 $1 . $rest) `(colon-expr ,$1 ,$3))
-   ;; 118. expr => or-expr ":" or-expr ":" or-expr
+   ;; 124. expr => or-expr ":" or-expr ":" or-expr
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(colon-expr ,$1 ,$3 ,$5))
-   ;; 119. expr => or-expr ":" "end"
+   ;; 125. expr => or-expr ":" "end"
    (lambda ($3 $2 $1 . $rest)
      `(colon-expr ,$1 (end)))
-   ;; 120. expr => or-expr ":" or-expr ":" "end"
+   ;; 126. expr => or-expr ":" or-expr ":" "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(colon-expr ,$1 ,$3 (end)))
-   ;; 121. expr-nosp => or-expr-nosp
+   ;; 127. expr-nosp => or-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 122. expr-nosp => ":"
+   ;; 128. expr-nosp => ":"
    (lambda ($1 . $rest) `(colon-expr))
-   ;; 123. expr-nosp => or-expr-nosp ":" or-expr-nosp
+   ;; 129. expr-nosp => or-expr-nosp ":" or-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(colon-expr ,$1 ,$3))
-   ;; 124. expr-nosp => or-expr-nosp ":" or-expr-nosp ":" or-expr-nosp
+   ;; 130. expr-nosp => or-expr-nosp ":" or-expr-nosp ":" or-expr-nosp
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(colon-expr ,$1 ,$3 ,$5))
-   ;; 125. expr-nosp => or-expr-nosp ":" "end"
+   ;; 131. expr-nosp => or-expr-nosp ":" "end"
    (lambda ($3 $2 $1 . $rest)
      `(colon-expr ,$1 (end)))
-   ;; 126. expr-nosp => or-expr-nosp ":" or-expr-nosp ":" "end"
+   ;; 132. expr-nosp => or-expr-nosp ":" or-expr-nosp ":" "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(colon-expr ,$1 ,$3 (end)))
-   ;; 127. or-expr => and-expr
+   ;; 133. or-expr => and-expr
    (lambda ($1 . $rest) $1)
-   ;; 128. or-expr => or-expr "|" and-expr
+   ;; 134. or-expr => or-expr "|" and-expr
    (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
-   ;; 129. or-expr => or-expr "||" and-expr
+   ;; 135. or-expr => or-expr "||" and-expr
    (lambda ($3 $2 $1 . $rest) `(ss-or ,$1 ,$3))
-   ;; 130. or-expr-nosp => and-expr-nosp
+   ;; 136. or-expr-nosp => and-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 131. or-expr-nosp => or-expr-nosp "|" and-expr-nosp
+   ;; 137. or-expr-nosp => or-expr-nosp "|" and-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
-   ;; 132. or-expr-nosp => or-expr-nosp "||" and-expr-nosp
+   ;; 138. or-expr-nosp => or-expr-nosp "||" and-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(ss-or ,$1 ,$3))
-   ;; 133. and-expr => equality-expr
+   ;; 139. and-expr => equality-expr
    (lambda ($1 . $rest) $1)
-   ;; 134. and-expr => and-expr "&" equality-expr
+   ;; 140. and-expr => and-expr "&" equality-expr
    (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
-   ;; 135. and-expr => and-expr "&&" equality-expr
+   ;; 141. and-expr => and-expr "&&" equality-expr
    (lambda ($3 $2 $1 . $rest) `(ss-and ,$1 ,$3))
-   ;; 136. and-expr-nosp => equality-expr-nosp
+   ;; 142. and-expr-nosp => equality-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 137. and-expr-nosp => and-expr-nosp "&" equality-expr-nosp
+   ;; 143. and-expr-nosp => and-expr-nosp "&" equality-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
-   ;; 138. and-expr-nosp => and-expr-nosp "&&" equality-expr-nosp
+   ;; 144. and-expr-nosp => and-expr-nosp "&&" equality-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(ss-and ,$1 ,$3))
-   ;; 139. equality-expr => rel-expr
+   ;; 145. equality-expr => rel-expr
    (lambda ($1 . $rest) $1)
-   ;; 140. equality-expr => equality-expr "==" rel-expr
+   ;; 146. equality-expr => equality-expr "==" rel-expr
    (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
-   ;; 141. equality-expr => equality-expr "~=" rel-expr
+   ;; 147. equality-expr => equality-expr "~=" rel-expr
    (lambda ($3 $2 $1 . $rest) `(ne ,$1 ,$3))
-   ;; 142. equality-expr-nosp => rel-expr-nosp
+   ;; 148. equality-expr-nosp => rel-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 143. equality-expr-nosp => equality-expr-nosp "==" rel-expr-nosp
+   ;; 149. equality-expr-nosp => equality-expr-nosp "==" rel-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
-   ;; 144. equality-expr-nosp => equality-expr-nosp "~=" rel-expr-nosp
+   ;; 150. equality-expr-nosp => equality-expr-nosp "~=" rel-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(ne ,$1 ,$3))
-   ;; 145. rel-expr => add-expr
+   ;; 151. rel-expr => add-expr
    (lambda ($1 . $rest) $1)
-   ;; 146. rel-expr => rel-expr "<" add-expr
+   ;; 152. rel-expr => rel-expr "<" add-expr
    (lambda ($3 $2 $1 . $rest) `(lt ,$1 ,$3))
-   ;; 147. rel-expr => rel-expr ">" add-expr
+   ;; 153. rel-expr => rel-expr ">" add-expr
    (lambda ($3 $2 $1 . $rest) `(gt ,$1 ,$3))
-   ;; 148. rel-expr => rel-expr "<=" add-expr
+   ;; 154. rel-expr => rel-expr "<=" add-expr
    (lambda ($3 $2 $1 . $rest) `(le ,$1 ,$3))
-   ;; 149. rel-expr => rel-expr ">=" add-expr
+   ;; 155. rel-expr => rel-expr ">=" add-expr
    (lambda ($3 $2 $1 . $rest) `(ge ,$1 ,$3))
-   ;; 150. rel-expr-nosp => add-expr-nosp
+   ;; 156. rel-expr-nosp => add-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 151. rel-expr-nosp => rel-expr-nosp "<" add-expr-nosp
+   ;; 157. rel-expr-nosp => rel-expr-nosp "<" add-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(lt ,$1 ,$3))
-   ;; 152. rel-expr-nosp => rel-expr-nosp ">" add-expr-nosp
+   ;; 158. rel-expr-nosp => rel-expr-nosp ">" add-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(gt ,$1 ,$3))
-   ;; 153. rel-expr-nosp => rel-expr-nosp "<=" add-expr-nosp
+   ;; 159. rel-expr-nosp => rel-expr-nosp "<=" add-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(le ,$1 ,$3))
-   ;; 154. rel-expr-nosp => rel-expr-nosp ">=" add-expr-nosp
+   ;; 160. rel-expr-nosp => rel-expr-nosp ">=" add-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(ge ,$1 ,$3))
-   ;; 155. add-expr => mul-expr
+   ;; 161. add-expr => mul-expr
    (lambda ($1 . $rest) $1)
-   ;; 156. add-expr => add-expr "+" mul-expr
+   ;; 162. add-expr => add-expr "+" mul-expr
    (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
-   ;; 157. add-expr => add-expr "-" mul-expr
+   ;; 163. add-expr => add-expr "-" mul-expr
    (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
-   ;; 158. add-expr => add-expr ".+" mul-expr
+   ;; 164. add-expr => add-expr ".+" mul-expr
    (lambda ($3 $2 $1 . $rest) `(dot-add ,$1 ,$3))
-   ;; 159. add-expr => add-expr ".-" mul-expr
+   ;; 165. add-expr => add-expr ".-" mul-expr
    (lambda ($3 $2 $1 . $rest) `(dot-sub ,$1 ,$3))
-   ;; 160. add-expr-nosp => mul-expr-nosp
+   ;; 166. add-expr-nosp => mul-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 161. add-expr-nosp => add-expr-nosp "+" mul-expr-nosp
+   ;; 167. add-expr-nosp => add-expr-nosp "+" mul-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
-   ;; 162. add-expr-nosp => add-expr-nosp "-" mul-expr-nosp
+   ;; 168. add-expr-nosp => add-expr-nosp "-" mul-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
-   ;; 163. add-expr-nosp => add-expr-nosp ".+" mul-expr-nosp
+   ;; 169. add-expr-nosp => add-expr-nosp ".+" mul-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(dot-add ,$1 ,$3))
-   ;; 164. add-expr-nosp => add-expr-nosp ".-" mul-expr-nosp
+   ;; 170. add-expr-nosp => add-expr-nosp ".-" mul-expr-nosp
    (lambda ($3 $2 $1 . $rest) `(dot-sub ,$1 ,$3))
-   ;; 165. mul-expr => unary-expr
+   ;; 171. mul-expr => handle-expr
    (lambda ($1 . $rest) $1)
-   ;; 166. mul-expr => mul-expr "*" unary-expr
+   ;; 172. mul-expr => mul-expr "*" handle-expr
    (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
-   ;; 167. mul-expr => mul-expr "/" unary-expr
+   ;; 173. mul-expr => mul-expr "/" handle-expr
    (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
-   ;; 168. mul-expr => mul-expr "\\" unary-expr
+   ;; 174. mul-expr => mul-expr "\\" handle-expr
    (lambda ($3 $2 $1 . $rest) `(ldiv ,$1 ,$3))
-   ;; 169. mul-expr => mul-expr "^" unary-expr
+   ;; 175. mul-expr => mul-expr "^" handle-expr
    (lambda ($3 $2 $1 . $rest) `(pow ,$1 ,$3))
-   ;; 170. mul-expr => mul-expr ".*" unary-expr
+   ;; 176. mul-expr => mul-expr ".*" handle-expr
    (lambda ($3 $2 $1 . $rest) `(dot-mul ,$1 ,$3))
-   ;; 171. mul-expr => mul-expr "./" unary-expr
+   ;; 177. mul-expr => mul-expr "./" handle-expr
    (lambda ($3 $2 $1 . $rest) `(dot-div ,$1 ,$3))
-   ;; 172. mul-expr => mul-expr ".\\" unary-expr
+   ;; 178. mul-expr => mul-expr ".\\" handle-expr
    (lambda ($3 $2 $1 . $rest) `(dot-ldiv ,$1 ,$3))
-   ;; 173. mul-expr => mul-expr ".^" unary-expr
+   ;; 179. mul-expr => mul-expr ".^" handle-expr
    (lambda ($3 $2 $1 . $rest) `(dot-pow ,$1 ,$3))
-   ;; 174. mul-expr-nosp => unary-expr-nosp
+   ;; 180. handle-expr => unary-expr
    (lambda ($1 . $rest) $1)
-   ;; 175. mul-expr-nosp => mul-expr-nosp "*" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
-   ;; 176. mul-expr-nosp => mul-expr-nosp "/" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
-   ;; 177. mul-expr-nosp => mul-expr-nosp "\\" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(ldiv ,$1 ,$3))
-   ;; 178. mul-expr-nosp => mul-expr-nosp "^" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(pow ,$1 ,$3))
-   ;; 179. mul-expr-nosp => mul-expr-nosp ".*" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(dot-mul ,$1 ,$3))
-   ;; 180. mul-expr-nosp => mul-expr-nosp "./" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(dot-div ,$1 ,$3))
-   ;; 181. mul-expr-nosp => mul-expr-nosp ".\\" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(dot-ldiv ,$1 ,$3))
-   ;; 182. mul-expr-nosp => mul-expr-nosp ".^" unary-expr-nosp
-   (lambda ($3 $2 $1 . $rest) `(dot-pow ,$1 ,$3))
-   ;; 183. unary-expr => postfix-expr
-   (lambda ($1 . $rest) $1)
-   ;; 184. unary-expr => "-" postfix-expr
-   (lambda ($2 $1 . $rest) `(neg ,$2))
-   ;; 185. unary-expr => "+" postfix-expr
-   (lambda ($2 $1 . $rest) `(pos $2))
-   ;; 186. unary-expr => "~" postfix-expr
-   (lambda ($2 $1 . $rest) `(not ,$2))
-   ;; 187. unary-expr => "@" postfix-expr
+   ;; 181. handle-expr => "@" q-ident
    (lambda ($2 $1 . $rest) `(handle ,$2))
-   ;; 188. unary-expr-nosp => postfix-expr-nosp
+   ;; 182. handle-expr => "@" "(" q-ident-list ")" ident "(" q-ident-list ")"
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(handle ,$5 ,$7 ,$3))
+   ;; 183. mul-expr-nosp => unary-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 189. unary-expr-nosp => "-" postfix-expr-nosp
+   ;; 184. mul-expr-nosp => mul-expr-nosp "*" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
+   ;; 185. mul-expr-nosp => mul-expr-nosp "/" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
+   ;; 186. mul-expr-nosp => mul-expr-nosp "\\" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(ldiv ,$1 ,$3))
+   ;; 187. mul-expr-nosp => mul-expr-nosp "^" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(pow ,$1 ,$3))
+   ;; 188. mul-expr-nosp => mul-expr-nosp ".*" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-mul ,$1 ,$3))
+   ;; 189. mul-expr-nosp => mul-expr-nosp "./" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-div ,$1 ,$3))
+   ;; 190. mul-expr-nosp => mul-expr-nosp ".\\" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-ldiv ,$1 ,$3))
+   ;; 191. mul-expr-nosp => mul-expr-nosp ".^" unary-expr-nosp
+   (lambda ($3 $2 $1 . $rest) `(dot-pow ,$1 ,$3))
+   ;; 192. unary-expr => postfix-expr
+   (lambda ($1 . $rest) $1)
+   ;; 193. unary-expr => "-" postfix-expr
    (lambda ($2 $1 . $rest) `(neg ,$2))
-   ;; 190. unary-expr-nosp => "+" postfix-expr-nosp
-   (lambda ($2 $1 . $rest) $2)
-   ;; 191. unary-expr-nosp => "~" postfix-expr-nosp
+   ;; 194. unary-expr => "+" postfix-expr
+   (lambda ($2 $1 . $rest) `(pos $2))
+   ;; 195. unary-expr => "~" postfix-expr
    (lambda ($2 $1 . $rest) `(not ,$2))
-   ;; 192. postfix-expr => primary-expr
+   ;; 196. unary-expr => "~"
+   (lambda ($1 . $rest) '(ignore))
+   ;; 197. unary-expr-nosp => postfix-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 193. postfix-expr => postfix-expr "'"
+   ;; 198. unary-expr-nosp => "-" postfix-expr-nosp
+   (lambda ($2 $1 . $rest) `(neg ,$2))
+   ;; 199. unary-expr-nosp => "+" postfix-expr-nosp
+   (lambda ($2 $1 . $rest) $2)
+   ;; 200. unary-expr-nosp => "~" postfix-expr-nosp
+   (lambda ($2 $1 . $rest) `(not ,$2))
+   ;; 201. unary-expr-nosp => "~"
+   (lambda ($1 . $rest) '(ignore))
+   ;; 202. postfix-expr => primary-expr
+   (lambda ($1 . $rest) $1)
+   ;; 203. postfix-expr => postfix-expr "'"
    (lambda ($2 $1 . $rest) `(transpose ,$1))
-   ;; 194. postfix-expr => postfix-expr ".'"
+   ;; 204. postfix-expr => postfix-expr ".'"
    (lambda ($2 $1 . $rest) `(conj-transpose ,$1))
-   ;; 195. postfix-expr => postfix-expr "(" expr-list ")"
+   ;; 205. postfix-expr => postfix-expr "(" expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(aref-or-call ,$1 ,$3))
-   ;; 196. postfix-expr => postfix-expr "(" ")"
+   ;; 206. postfix-expr => postfix-expr "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(aref-or-call ,$1 (expr-list)))
-   ;; 197. postfix-expr => postfix-expr "{" expr-list "}"
+   ;; 207. postfix-expr => postfix-expr "{" expr-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(cell-ref ,$1 ,$3))
-   ;; 198. postfix-expr => postfix-expr "." ident
+   ;; 208. postfix-expr => postfix-expr "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
-   ;; 199. postfix-expr => postfix-expr ".(" ident ")"
+   ;; 209. postfix-expr => postfix-expr ".(" ident ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(obj-prop ,$3 ,$1))
-   ;; 200. postfix-expr-nosp => primary-expr-nosp
+   ;; 210. postfix-expr-nosp => primary-expr-nosp
    (lambda ($1 . $rest) $1)
-   ;; 201. postfix-expr-nosp => postfix-expr-nosp "'"
+   ;; 211. postfix-expr-nosp => postfix-expr-nosp "'"
    (lambda ($2 $1 . $rest) `(transpose ,$1))
-   ;; 202. postfix-expr-nosp => postfix-expr-nosp ".'"
+   ;; 212. postfix-expr-nosp => postfix-expr-nosp ".'"
    (lambda ($2 $1 . $rest) `(conj-transpose ,$1))
-   ;; 203. postfix-expr-nosp => postfix-expr-nosp "(" expr-list ")"
+   ;; 213. postfix-expr-nosp => postfix-expr-nosp "(" expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(aref-or-call ,$1 ,$3))
-   ;; 204. postfix-expr-nosp => postfix-expr-nosp "(" ")"
+   ;; 214. postfix-expr-nosp => postfix-expr-nosp "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(aref-or-call ,$1 (expr-list)))
-   ;; 205. postfix-expr-nosp => postfix-expr-nosp "{" expr-list "}"
+   ;; 215. postfix-expr-nosp => postfix-expr-nosp "{" expr-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(cell-ref ,$1 ,$3))
-   ;; 206. postfix-expr-nosp => postfix-expr-nosp "." ident
+   ;; 216. postfix-expr-nosp => postfix-expr-nosp "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
-   ;; 207. postfix-expr-nosp => postfix-expr-nosp ".(" ident ")"
+   ;; 217. postfix-expr-nosp => postfix-expr-nosp ".(" ident ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(obj-prop ,$3 ,$1))
-   ;; 208. primary-expr => ident
+   ;; 218. primary-expr => ident
    (lambda ($1 . $rest) $1)
-   ;; 209. primary-expr => number
+   ;; 219. primary-expr => number
    (lambda ($1 . $rest) $1)
-   ;; 210. primary-expr => string
+   ;; 220. primary-expr => string
    (lambda ($1 . $rest) $1)
-   ;; 211. primary-expr => "(" expr ")"
+   ;; 221. primary-expr => "(" expr ")"
    (lambda ($3 $2 $1 . $rest) $2)
-   ;; 212. primary-expr => "[" "]"
+   ;; 222. primary-expr => "[" "]"
    (lambda ($2 $1 . $rest) '(matrix))
-   ;; 213. primary-expr => "[" matrix-row-list "]"
+   ;; 223. primary-expr => "[" matrix-row-list "]"
    (lambda ($3 $2 $1 . $rest) $2)
-   ;; 214. primary-expr => "{" "}"
+   ;; 224. primary-expr => "{" "}"
    (lambda ($2 $1 . $rest) '(cell-array))
-   ;; 215. primary-expr => "{" matrix-row-list "}"
+   ;; 225. primary-expr => "{" matrix-row-list "}"
    (lambda ($3 $2 $1 . $rest)
      `(cell-array unquote (cdr $2)))
-   ;; 216. primary-expr-nosp => ident
+   ;; 226. primary-expr-nosp => ident
    (lambda ($1 . $rest) $1)
-   ;; 217. primary-expr-nosp => number
+   ;; 227. primary-expr-nosp => number
    (lambda ($1 . $rest) $1)
-   ;; 218. primary-expr-nosp => string
+   ;; 228. primary-expr-nosp => string
    (lambda ($1 . $rest) $1)
-   ;; 219. primary-expr-nosp => "(" expr ")"
+   ;; 229. primary-expr-nosp => "(" expr ")"
    (lambda ($3 $2 $1 . $rest) `(wrap ,$2))
-   ;; 220. primary-expr-nosp => "[" "]"
+   ;; 230. primary-expr-nosp => "[" "]"
    (lambda ($2 $1 . $rest) '(matrix))
-   ;; 221. primary-expr-nosp => "[" matrix-row-list "]"
+   ;; 231. primary-expr-nosp => "[" matrix-row-list "]"
    (lambda ($3 $2 $1 . $rest) $2)
-   ;; 222. primary-expr-nosp => "{" "}"
+   ;; 232. primary-expr-nosp => "{" "}"
    (lambda ($2 $1 . $rest) '(cell-array))
-   ;; 223. primary-expr-nosp => "{" matrix-row-list "}"
+   ;; 233. primary-expr-nosp => "{" matrix-row-list "}"
    (lambda ($3 $2 $1 . $rest)
      `(cell-array unquote (cdr $2)))
-   ;; 224. matrix-row-list => matrix-row-list-1
+   ;; 234. matrix-row-list => matrix-row-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 225. matrix-row-list-1 => matrix-row
+   ;; 235. matrix-row-list-1 => matrix-row
    (lambda ($1 . $rest) (make-tl 'matrix $1))
-   ;; 226. matrix-row-list-1 => matrix-row-list-1 row-term matrix-row
+   ;; 236. matrix-row-list-1 => matrix-row-list-1 row-term matrix-row
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 227. row-term => ";"
+   ;; 237. row-term => ";"
    (lambda ($1 . $rest) $1)
-   ;; 228. row-term => "\n"
+   ;; 238. row-term => "\n"
    (lambda ($1 . $rest) $1)
-   ;; 229. matrix-row => matrix-row-1
+   ;; 239. matrix-row => matrix-row-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 230. matrix-row-1 => expr-nosp
+   ;; 240. matrix-row-1 => expr-nosp
    (lambda ($1 . $rest) (make-tl 'row $1))
-   ;; 231. matrix-row-1 => matrix-row-1 "," expr-nosp
+   ;; 241. matrix-row-1 => matrix-row-1 "," expr-nosp
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 232. matrix-row-1 => matrix-row-1 'sp expr-nosp
+   ;; 242. matrix-row-1 => matrix-row-1 'sp expr-nosp
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 233. term-list => term
+   ;; 243. term-list => term
    (lambda ($1 . $rest) $1)
-   ;; 234. term-list => term-list term
+   ;; 244. term-list => term-list term
    (lambda ($2 $1 . $rest) $1)
-   ;; 235. term => ";" '$code-comm "\n"
+   ;; 245. term => ";" '$code-comm "\n"
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; 236. term => ";" "\n"
+   ;; 246. term => ";" "\n"
    (lambda ($2 $1 . $rest) $1)
-   ;; 237. term => ";"
+   ;; 247. term => ";"
    (lambda ($1 . $rest) $1)
-   ;; 238. term => ","
+   ;; 248. term => ","
    (lambda ($1 . $rest) $1)
-   ;; 239. term => "\n"
+   ;; 249. term => "\n"
    (lambda ($1 . $rest) $1)
-   ;; 240. lone-comment-list => lone-comment-list-1
+   ;; 250. lone-comment-list => lone-comment-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 241. lone-comment-list-1 => lone-comment "\n"
+   ;; 251. lone-comment-list-1 => lone-comment "\n"
    (lambda ($2 $1 . $rest) (make-tl 'comm-list $1))
-   ;; 242. lone-comment-list-1 => lone-comment-list-1 lone-comment "\n"
+   ;; 252. lone-comment-list-1 => lone-comment-list-1 lone-comment "\n"
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; 243. ident => '$ident
+   ;; 253. ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; 244. fixed => '$fixed
+   ;; 254. fixed => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; 245. float => '$float
+   ;; 255. float => '$float
    (lambda ($1 . $rest) `(float ,$1))
-   ;; 246. number => fixed
+   ;; 256. number => fixed
    (lambda ($1 . $rest) $1)
-   ;; 247. number => float
+   ;; 257. number => float
    (lambda ($1 . $rest) $1)
-   ;; 248. string => '$string
+   ;; 258. string => '$string
    (lambda ($1 . $rest) `(string ,$1))
-   ;; 249. lone-comment => '$lone-comm
+   ;; 259. lone-comment => '$lone-comm
    (lambda ($1 . $rest) `(comm ,$1))
    ))
 
