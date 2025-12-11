@@ -2103,7 +2103,7 @@
       (fmt port "(define ~Aact-v\n  (vector\n" prefix)
       (vector-for-each
        (lambda (gx actn)
-         (fmt port "   ;; ~A\n" (pp-rule/ts gx))
+         (fmt port "   ;; ~A. ~A\n" gx (pp-rule/ts gx))
          (pretty-print (wrap-action actn) port #:per-line-prefix "   "))
        (assq-ref mach 'act-v))
       (fmt port "   ))\n\n"))))
@@ -2130,7 +2130,6 @@
 ;; @end example
 ;; @end deffn
 (define* (write-lalr-actions mach filename #:key (prefix ""))
-
   (call-with-output-file filename
     (lambda (port)
       (fmt port ";; ~A\n\n" (drop-dot-new (basename filename)))
