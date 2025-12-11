@@ -16,6 +16,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 ;; This demo shows that one can create new GObject based classes in Guile.
+;; Work in progress: i.e., memory management not worked.
 
 (use-modules (srfi srfi-9))
 (use-modules (rnrs bytevectors))

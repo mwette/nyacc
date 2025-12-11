@@ -91,7 +91,7 @@
 
 (define-module (nyacc lang nx-util)
   #:export (genxsym
-            nx-undefined-xtil
+            nx-unspecified-xtil
 
             nx-top-level?
             nx-push-scope nx-pop-scope nx-add-tag

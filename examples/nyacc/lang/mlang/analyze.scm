@@ -43,6 +43,8 @@
 
 (define builtins
   '(
+    "cos"
+    "sin"
     "struct"
     ))
 
@@ -162,7 +164,7 @@
 
 ;; ============================================================================
 
-(define *path* (make-parameter '(".")))
+(define *path* (make-parameter '("." "ex")))
 (define *trees* (make-parameter '())) ;; alist of basename, tree
 
 (define (find-in-path file-name dirl)
@@ -218,7 +220,7 @@
   ;; add to next refs w/ .m
   ;; assumes tree-calls provides no duplicates (hence lset-union there)
   (parameterize ((*path* (cons (dirname script-file) (*path*))))
-    (let loop ((treed '()) (done builtins) (curr '())
+    (let loop ((trees '()) (done builtins) (curr '())
                (next (list (basename script-file ".m"))))
       (cond
        ((pair? curr)
@@ -231,10 +233,10 @@
                              (if (or (member fn done) (member fn nx))
                                  nx (cons fn nx)))
                            next (tree-calls tree))))
-          (loop (acons file tree treed) (cons (car curr) done) (cdr curr) next)))
-       ((pair? next) (loop treed done next '()))
-       (else treed)))))
-    
+          ;; tree has file as attribute
+          (loop (cons tree trees) (cons (car curr) done) (cdr curr) next)))
+       ((pair? next) (loop trees done next '()))
+       (else `(program ,@(reverse trees)))))))
       
 
 ;; ============================================================================
