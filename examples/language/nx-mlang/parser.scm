@@ -163,11 +163,10 @@
         (lambda ()
           (let* ((lxm (loop (read-char)))
                  (port (current-input-port))
-                 (file (port-filename port))
-                 (line (1+ (port-line port)))
-                 (props `((filename . ,file) (line . ,line) (column . 0))))
+                 (props `((filename . ,(port-filename port))
+                          (line . ,(1+ (port-line port)))
+                          (column . ,(port-column port)))))
             (set-source-properties! lxm props)
-            ;;(sferr "lx: ~s, ~s\n" lxm (source-properties lxm))
             lxm))))))
 
 
@@ -175,57 +174,75 @@
 
 ;; 1) aref-or-call => array-ref | call
 ;; 2) assn: "[ ... ] = expr" => assn-many
+;; 3) broken x.a(1) means array if x is struct or call if x is object
+(define (Xapply-mlang-statics tree) tree)
 (define (apply-mlang-statics tree)
 
   (define (tag-source orig pair) (cons-source orig (car pair) (cdr pair)))
 
-  (define (afc-name->use name lcl gbl)
-    (if (or (member name lcl) (member name gbl)) 'array-ref 'call))
+  (define (arg-not-index arg seed)
+    (or seed
+        (sx-match arg
+          ((float ,_) #t)
+          ((string ,_) #t)
+          ((ldiv ,lt ,rt) #t)
+          ((add ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          ((sub ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          ((mul ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          ((div ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          (,__ #f))))
 
   ;; (aref-or-call (handle ...) ...) is call
   ;; gbl : global variables (e.g., from global)
   ;; lcl : local variables (e.g., function ins or outs)
-  (define (fD tree seed gbl lcl)        ; => tree seed gbl lcl
-    ;;(sferr "fD:\n") (pperr tree) ;;(pperr seed)
+  (define (fD tree seed vars)        ; => tree seed gbl
+    ;;(sferr "fD: v=~s\n" vars) ;;(pperr tree) ;;(pperr seed)
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
        (values (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
-               '() gbl lcl))
+               '() vars))
       ((assn (@ . ,attr) (ident ,name) ,rhs)
        (cond
-        ((member name lcl) (values tree '() gbl lcl))
-        ((member name gbl) (values tree '() gbl lcl))
-        (else (values tree '() gbl (cons name lcl)))))
+        ((member name vars) (values tree '() vars))
+        (else (values tree '() (cons name vars)))))
       ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
-       (values tree '() gbl (map cadr (append (cdr iargs) (cdr iargs)))))
+       (values tree '() (fold cadr (cons "@F" vars)
+                              (append (cdr iargs) (cdr iargs)))))
       ((command "global" . ,args)
-       (values tree '() (fold cadr gbl args) lcl))
-      (,__ (values tree '() gbl lcl))))
+       (values tree '() (fold cadr vars args)))
+      (,__ (values tree '() vars))))
 
-  (define (fU tree seed gbl lcl kseed kgbl klcl) ; => seed gbl lcl
+  (define (fU tree seed vars kseed kvars) ; => seed vars
+    ;;(sferr "fU: v=~s kv=~s, tree:\n" vars kvars) ;;(pperr tree)
     (let ((form (reverse kseed)))
       (sx-match form
-        ((*TOP* ,subform) (values (tag-source tree subform) gbl lcl))
+        ((*TOP* ,subform) (values (tag-source tree subform) kvars))
         ((aref-or-call (@ . ,attr) (handle (ident ,name)) . ,rest)
-         (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl))
-        ((aref-or-call (@ . ,attr) (ident ,name) . ,rest)
-         (let ((op (afc-name->use name lcl gbl))
+         (values (cons (cons-source tree 'call (cdr form)) seed)
+                 kvars))
+        ((aref-or-call (@ . ,attr) (ident ,name) ,args)
+         ;;(sferr "~a() lcl=~s gbl=~s, kl=~s, kg=~s\n" name lcl gbl klcl kgbl)
+         (let ((op (if (member name vars) 'array-ref 'aref-or-call))
                (tail (cdr form)))
-           (values (cons (cons-source tree op (cdr form)) seed) gbl lcl)))
-        ((aref-or-call (@ . ,attr) (sel ,_1 ,_2) . ,_3)
-         (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl))
-        ((aref-or-call . ,_)
-         (sferr "not handled:\n") (pperr form) (quit))
+           (values (cons (cons-source tree op (cdr form)) seed)
+                   kvars)))
+        #;((aref-or-call (@ . ,attr) ,expr ,args)
+         (if (fold arg-not-index #f args)
+           (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl)
+           (values (cons (cons-source tree form form) seed) gbl lcl)))
+        #|
+        |#
         ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
-         (values (cons-source tree form seed) gbl '()))
-        (,__ (values (cons-source tree form seed) gbl lcl)))))
-  
-  (define (fH leaf seed gbl lcl)
-    (values (cons leaf seed) gbl lcl))
+         (values (cons-source tree form seed) (cdr (member "@F" kvars))))
+        ;;(,__ (values (cons-source tree form seed) gbl lcl)))))
+        (,__ (values (cons-source tree form seed) kvars)))))
+
+  (define (fH leaf seed vars)
+    (values (cons leaf seed) vars))
   
   (call-with-values
-      (lambda () (foldts*-values fD fU fH `(*TOP* ,tree) '() '() '()))
-    (lambda (seed gbl lcl) seed)))
+      (lambda () (foldts*-values fD fU fH `(*TOP* ,tree) '() '()))
+    (lambda (seed vars) seed)))
  
 
 ;; === file parser 
@@ -253,7 +270,6 @@
      #f)))
 
 (define (read-mlang-file port env)
-  ;;(sferr "<parse file>\n")
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
@@ -291,7 +307,6 @@
 (define read-mlang-stmt
   (let ((lexer (gen-mlang-ia-lexer)))
     (lambda (port env)
-      ;;(sferr "<parse stmt>\n")
       (cond
        ((eof-object? (peek-char port))
         (read-char port))
@@ -299,11 +314,8 @@
         (let* ((stmt (with-input-from-port port
                        (lambda () (parse-mlang-stmt lexer))))
                (stmt (apply-mlang-statics stmt)))
-          ;;(sferr "stmt=~S\n" stmt)
           (cond
            ((equal? stmt '(empty-stmt)) #f)
-           (stmt)
-           ;;(else (flush-input-after-error port) #f)
-           )))))))
+           (stmt))))))))
 
 ;; --- last line ---

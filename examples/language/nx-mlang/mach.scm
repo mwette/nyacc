@@ -41,9 +41,9 @@
     
     (translation-unit
      (triv-stmt-list nontrivial-statement mlang-item-list
-                     ($$ `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
+                     ($$ `(script-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (nontrivial-statement mlang-item-list
-                           ($$ `(script ,$1 ,@(sx-tail $2))))
+                           ($$ `(script-file ,$1 ,@(sx-tail $2))))
      (triv-stmt-list function-defn mlang-item-list
                      ($$ `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (function-defn mlang-item-list
@@ -191,7 +191,9 @@
      (term ($$ '(empty-stmt))))
 
     (nontrivial-statement
-     (nontrivial-statement-1 term ($$ (sx-attr-add $1 'term $2))))
+     ;;(nontrivial-statement-1 term ($$ (sx-attr-add $1 'term $2))))
+     ;;^ maybe useful, but annoying, to add (@ (term "\n"))
+     (nontrivial-statement-1 term ($$ $1)))
     (nontrivial-statement-1
      (expr ($$ `(expr-stmt ,$1)))
      (expr "=" expr ($$ `(assn ,$1 ,$3)))

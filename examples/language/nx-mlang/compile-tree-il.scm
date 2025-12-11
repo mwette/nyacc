@@ -697,9 +697,9 @@
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
 (export mlang-sxml->xtil)
 
-(define show-sxml #t)
+(define show-sxml #f)
 (define (show-mlang-sxml v) (set! show-sxml v))
-(define show-xtil #t)
+(define show-xtil #f)
 (define (show-mlang-xtil v) (set! show-xtil v))
 
 (define (compile-tree-il exp env opts)
