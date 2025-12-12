@@ -174,7 +174,7 @@
 
 ;; 1) aref-or-call => array-ref | call
 ;; 2) assn: "[ ... ] = expr" => assn-many
-;; 3) broken x.a(1) means array if x is struct or call if x is object
+;; 3) can't do: x.a(1) means array if x is struct or call if x is object
 (define (Xapply-mlang-statics tree) tree)
 (define (apply-mlang-statics tree)
 
@@ -197,11 +197,13 @@
   ;; (aref-or-call (handle ...) ...) is call
   ;; vars : variables (e.g., from global or function sig)
   (define (fD tree seed vars)        ; => tree seed gbl
-    ;;(sferr "fD: v=~s\n" vars) ;;(pperr tree) ;;(pperr seed)
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
        (values (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
                '() vars))
+      ((assn (@ . ,attr) (ident ,name) (handle ,_1))
+       ;; handles will generate calls
+       (values tree '() vars))
       ((assn (@ . ,attr) (ident ,name) ,rhs)
        (cond
         ((member name vars) (values tree '() vars))
@@ -214,7 +216,6 @@
       (,__ (values tree '() vars))))
 
   (define (fU tree seed vars kseed kvars) ; => seed vars
-    ;;(sferr "fU: v=~s kv=~s, tree:\n" vars kvars) ;;(pperr tree)
     (let ((form (reverse kseed)))
       (sx-match form
         ((*TOP* ,subform) (values (tag-source tree subform) kvars))
@@ -222,20 +223,15 @@
          (values (cons (cons-source tree 'call (cdr form)) seed)
                  kvars))
         ((aref-or-call (@ . ,attr) (ident ,name) ,args)
-         ;;(sferr "~a() lcl=~s gbl=~s, kl=~s, kg=~s\n" name lcl gbl klcl kgbl)
-         (let ((op (if (member name vars) 'array-ref 'aref-or-call))
-               (tail (cdr form)))
-           (values (cons (cons-source tree op (cdr form)) seed)
-                   kvars)))
-        #;((aref-or-call (@ . ,attr) ,expr ,args)
+         (let ((op (if (member name vars) 'array-ref 'call)) (tail (cdr form)))
+           (values (cons (cons-source tree op (cdr form)) seed) kvars)))
+        #|
          (if (fold arg-not-index #f args)
            (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl)
            (values (cons (cons-source tree form form) seed) gbl lcl)))
-        #|
         |#
         ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
          (values (cons-source tree form seed) (cdr (member "@F" kvars))))
-        ;;(,__ (values (cons-source tree form seed) gbl lcl)))))
         (,__ (values (cons-source tree form seed) kvars)))))
 
   (define (fH leaf seed vars)
