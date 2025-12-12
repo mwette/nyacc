@@ -6,8 +6,10 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2025-XX-XX  V3.01.0
+	* Reworked nx-util.scm, esp symbol table handling.
+	* Minor work on lalr.scm output: add index to action element comment.
 	* Matured the mlang parser and pretty printer.
-	  + It now can parse comma-less matrix rows with spacing constraint.
+	  + It now can parse comma-less matrix rows with space constraint.
 	* Updated julia parser, needs lots of work still
 
 2025-11-19  V3.00.2

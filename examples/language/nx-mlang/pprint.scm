@@ -118,7 +118,7 @@
        (for-each ppxin items))
 
       ((classdef-file . ,items)
-        (for-each ppxin items))
+       (for-each ppxin items))
 
       ;;((class-defn (ident ,name) (attr-list . ,attrs) . ,rest)   )
       ((class-defn (ident ,name) (supers . ,supers) . ,rest)
@@ -189,6 +189,9 @@
       ((ident ,ident)
        (sf "~A" ident))
 
+      ((qident . ,names)
+       (sf "~A" (string-join names ".")))
+      
       ((stmt-list . ,stmts)
        (unless (zero? (length stmts))
          (ppxsp (car stmts))
@@ -356,7 +359,11 @@
       
       ((pos ,expr) (unary/l 'pos "+" expr))
       ((neg ,expr) (unary/l 'neg "-" expr))
-      ((handle ,expr) (unary/l 'handle "@" expr))
+      ((handle ,ident) (unary/l 'handle "@" ident))
+      ((handle ,ident ,iargs ,oargs)
+       (sf "@(") (ppxsp oargs) (sf ")")
+       (ppxsp ident)
+       (sf "@(") (ppxsp iargs) (sf ")"))
 
       ((lt ,lval ,rval) (binary 'lt (if nosp "<" " < ") lval rval))
       ((gt ,lval ,rval) (binary 'gt (if nosp ">" " > ") lval rval))
@@ -374,7 +381,8 @@
       ((neg ,expr) (sf "-") (ppxin expr))
       ((pos ,expr) (sf "+") (ppxin expr))
       ((not ,expr) (sf "~") (ppxin expr))
-      ((handle ,expr) (sf "@") (ppxin expr))
+      ;;((handle ,expr) (sf "@") (ppxin expr))
+      ((ignore) (sf "~"))
 
       ((sel ,id ,ex) (binary 'sel "." ex id))
       ((wrap ,ex) (ppx ex #f))

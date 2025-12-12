@@ -174,11 +174,13 @@
     (q-ident-list
      (q-ident-list-1 ($$ (tl->list $1))))
     (q-ident-list-1
-     (q-ident ($$ (make-tl 'ident-list `(qident ,@(reverse $1)))))
-     (q-ident-list-1 "," q-ident ($$ (tl-append $1 `(q-ident ,@(reverse $3))))))
+     (q-ident ($$ (make-tl 'ident-list $1)))
+     (q-ident-list-1 "," q-ident ($$ (tl-append $1 $3))))
     (q-ident
+     (q-ident-1 ($$ `(qident ,@(reverse $1)))))
+    (q-ident-1
      ($ident ($$ (list $1)))
-     (q-ident "." $ident ($$ (cons $3 $1))))
+     (q-ident-1 "." $ident ($$ (cons $3 $1))))
 
     (stmt-list
      (stmt-list-1 ($$ (tl->list $1))))
@@ -367,16 +369,8 @@
      (mul-expr ".\\" handle-expr ($$ `(dot-ldiv ,$1 ,$3)))
      (mul-expr ".^" handle-expr ($$ `(dot-pow ,$1 ,$3))))
 
-    ;; stuff in here -- hope it works out
-    (handle-expr
-     (unary-expr)
-     ("@" q-ident ($$ `(handle ,$2)))
-     ("@" "(" q-ident-list ")" ident "(" q-ident-list ")"
-      ($$ `(handle ,$5 ,$7 ,$3)))
-     )
-    
     (mul-expr-nosp
-     (unary-expr-nosp)
+     (handle-expr-nosp)
      (mul-expr-nosp "*" unary-expr-nosp ($$ `(mul ,$1 ,$3)))
      (mul-expr-nosp "/" unary-expr-nosp ($$ `(div ,$1 ,$3)))
      (mul-expr-nosp "\\" unary-expr-nosp ($$ `(ldiv ,$1 ,$3)))
@@ -386,6 +380,21 @@
      (mul-expr-nosp ".\\" unary-expr-nosp ($$ `(dot-ldiv ,$1 ,$3)))
     (mul-expr-nosp ".^" unary-expr-nosp ($$ `(dot-pow ,$1 ,$3))))
 
+    ;; stuff in here -- hope it works out
+    (handle-expr
+     (unary-expr)
+     ("@" q-ident ($$ `(handle ,$2)))
+     ("@" "(" q-ident-list ")" ident "(" q-ident-list ")"
+      ($$ `(handle ,$5 ,$7 ,$3)))
+     )
+    
+    (handle-expr-nosp
+     (unary-expr-nosp)
+     ("@" q-ident ($$ `(handle ,$2)))
+     ("@" "(" q-ident-list ")" ident "(" q-ident-list ")"
+      ($$ `(handle ,$5 ,$7 ,$3)))
+     )
+    
     (unary-expr
      (postfix-expr)
      ("-" postfix-expr ($$ `(neg ,$2)))

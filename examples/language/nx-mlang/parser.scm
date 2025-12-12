@@ -195,8 +195,7 @@
   (define (insert-name name list) (cons (cadr name) list)) ;; (ident ,name)
   
   ;; (aref-or-call (handle ...) ...) is call
-  ;; gbl : global variables (e.g., from global)
-  ;; lcl : local variables (e.g., function ins or outs)
+  ;; vars : variables (e.g., from global or function sig)
   (define (fD tree seed vars)        ; => tree seed gbl
     ;;(sferr "fD: v=~s\n" vars) ;;(pperr tree) ;;(pperr seed)
     (sx-match tree
