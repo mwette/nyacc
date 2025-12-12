@@ -385,15 +385,13 @@
      (unary-expr)
      ("@" q-ident ($$ `(handle ,$2)))
      ("@" "(" q-ident-list ")" ident "(" q-ident-list ")"
-      ($$ `(handle ,$5 ,$7 ,$3)))
-     )
+      ($$ `(handle ,$5 ,$7 ,$3))))
     
     (handle-expr-nosp
      (unary-expr-nosp)
      ("@" q-ident ($$ `(handle ,$2)))
      ("@" "(" q-ident-list ")" ident "(" q-ident-list ")"
-      ($$ `(handle ,$5 ,$7 ,$3)))
-     )
+      ($$ `(handle ,$5 ,$7 ,$3))))
     
     (unary-expr
      (postfix-expr)
