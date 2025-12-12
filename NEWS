@@ -6,11 +6,16 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2025-XX-XX  V3.01.0
-	* Reworked nx-util.scm, esp symbol table handling.
-	* Minor work on lalr.scm output: add index to action element comment.
-	* Matured the mlang parser and pretty printer.
+	* nyacc/parse.scm(make-lalr-parser): Added option to provide user-hook
+	  to intercept state transition.   
+ 	* Removed nyacc/lang/c99/parse.scm, since using nyacc/parse.scm now.
+	* nyacc/lang/sx-util.scm(sx-match): allow '() as a pattern
+	* lang/nx-util.scm: major rework for symbol table handling.
+	* Matured the mlang parser, compiler and pretty printer.
 	  + It now can parse comma-less matrix rows with space constraint.
+	  (javascript compiler probably not working)
 	* Updated julia parser, needs lots of work still
+	* Minor work on lalr.scm output: add index to action element comment.
 
 2025-11-19  V3.00.2
 	* munge.scm(udict-enum->ddict): make robust to typeof- (gobject case)
