@@ -231,22 +231,8 @@
       ($$ `(switch ,$2 ,@(cdr $4))))
      ("return"
       ($$ '(return)))
-     (command arg-list ($$ (append $1 (cdr $2))))
-     (command "(" arg-list ")" ($$ (append $1 (cdr $3)))))
-
-    (command
-     (command-name ($$ `(command ,$1))))
-    (command-name
-     ("clc") ("clear") ("doc") ("drawnow") ("format") ("global") ("grid")
-     ("help") ("hold") ("load") ("pause") ("rotate3d") ("save")
-     ("uiimport") ("ver"))
-
-    ;; Only ident list type commands are allowed
-    (arg-list
-     (arg-list-1 ($$ (tl->list $1))))
-    (arg-list-1
-     (ident ($$ (make-tl 'arg-list (cons 'arg (cdr $1)))))
-     (arg-list-1 ident ($$ (tl-append $1 (cons 'arg $2)))))
+     ('cmd-line ($$ `(cmd-line ,@$1)))
+     ('cmd-call "(" expr-list ")" ($$ `(cmd-call ,$1 ,@(sx-tail $3)))))
 
     (elseif-list
      (elseif-list-1 ($$ (tl->list $1))))

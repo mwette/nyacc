@@ -261,11 +261,20 @@
       ((return)
        (sf "return;\n"))
 
-      ((command ,name . ,args)
+      ((cmd-line ,name . ,args)
        (sf "~A" name)
        (for-each (lambda (arg) (sf " ~A" (sx-ref arg 1))) args)
        (sf "\n"))
 
+      ((cmd-call ,name . ,args)
+       (sf "~A(" name)
+       (pair-for-each
+        (lambda (pair)
+          (ppxin (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        args)
+       (sf ");\n"))
+       
       ((aref-or-call ,name ,argx-list)
        (ppxin name) (sf "(")
        (pair-for-each
@@ -361,16 +370,16 @@
       ((neg ,expr) (unary/l 'neg "-" expr))
       ((handle ,ident) (unary/l 'handle "@" ident))
       ((handle ,ident ,iargs ,oargs)
-       (sf "@(") (ppxsp oargs) (sf ")")
+       (sf "@(") (ppxin oargs) (sf ")")
        (ppxsp ident)
-       (sf "@(") (ppxsp iargs) (sf ")"))
+       (sf "@(") (ppxin iargs) (sf ")"))
 
       ((lt ,lval ,rval) (binary 'lt (if nosp "<" " < ") lval rval))
       ((gt ,lval ,rval) (binary 'gt (if nosp ">" " > ") lval rval))
       ((le ,lval ,rval) (binary 'le (if nosp "<=" " <= ") lval rval))
       ((ge ,lval ,rval) (binary 'ge (if nosp ">=" " >= ") lval rval))
       ((eq ,lval ,rval) (binary 'eq (if nosp "==" " == ") lval rval))
-      ((neq ,lval ,rval) (binary 'neq (if nosp "~=" " ~= ") lval rval))
+      ((ne ,lval ,rval) (binary 'neq (if nosp "~~=" " ~~= ") lval rval))
 
       ((add ,lval ,rval) (binary 'add (if nosp "+" " + ") lval rval))
       ((sub ,lval ,rval) (binary 'sub (if nosp "-" " - ") lval rval))
@@ -381,8 +390,7 @@
       ((neg ,expr) (sf "-") (ppxin expr))
       ((pos ,expr) (sf "+") (ppxin expr))
       ((not ,expr) (sf "~") (ppxin expr))
-      ;;((handle ,expr) (sf "@") (ppxin expr))
-      ((ignore) (sf "~"))
+      ((ignore) (sf "~~"))
 
       ((sel ,id ,ex) (binary 'sel "." ex id))
       ((wrap ,ex) (ppx ex #f))

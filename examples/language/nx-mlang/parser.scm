@@ -47,8 +47,8 @@
 
 ;;; === lexical analyzer
 
-(define *src-file* (make-parameter #f))
-(define *src-line* (make-parameter #f))
+;;(define *src-file* (make-parameter #f))
+;;(define *src-line* (make-parameter #f))
 
 ;; @deffn {Procedure} mlang-read-string ch
 ;; Read string and return @code{($string . "string")}.  If @var{ch} is
@@ -80,6 +80,44 @@
   (make-comm-reader '(("%" . "\n") ("#" . "\n") ("#{" . "#}") ("%{" . "%}")
                       ("#!" . "!#"))))
 
+
+(define commands
+  '("clc" "clear" "doc" "drawnow" "format" "global" "grid" "help" "hold"
+    "load" "pause" "rotate3d" "save" "uiimport" "ver"))
+
+;; @deffn {Procedure} mlang-read-cmd ch bol
+;; Given next character @var{ch} and beginning-of-line boolean @var{bol}
+;; return a string if this is the start of a function-type command or
+;; a list of strings if this is a scripting-type command, or @code{#f}.
+;; @end deffn
+(define mlang-read-cmd
+  (let ((read-cmd (make-chseq-reader (map (lambda (s) (cons s #f)) commands))))
+    (lambda (ch bol)
+      (define rls reverse-list->string)
+      (and bol
+           (and=> (read-cmd ch)
+             (lambda (pair)
+               (let ((name (cdr pair)) (ch (skip-ws (read-char))))
+                 (cond
+                  ((eof-object? ch) (list name))
+                  ((char=? ch #\() (unread-char #\() name)
+                  (else
+                   (let loop ((args (list name)) (ch (skip-ws ch)))
+                     (case ch
+                       ((#\newline #\return) (unread-char ch) (reverse args))
+                       ((#\" #\') (loop (cons (cdr (mlang-read-string ch)) args)
+                                        (skip-ws (read-char))))
+                       (else
+                        (let lp ((cl '()) (ch ch))
+                          (cond
+                           ((or (eof-object? ch) (memq ch '(#\newline)))
+                            (if (eq? ch #\newline) (unread-char ch))
+                            (loop (cons (rls cl) args) ch))
+                           ((char-set-contains? space-cs ch)
+                            (loop (cons (rls cl) args) (skip-ws (read-char ch))))
+                           (else (lp (cons ch cl) (read-char)))))))))))))))))
+(export mlang-read-cmd)
+
 ;; elipsis reader "..." whitespace "\n"
 (define (elipsis? ch)
   (if (eqv? ch #\.)
@@ -101,6 +139,12 @@
 
 (define space-cs (string->char-set " \t"))
 
+(define (skip-ws ch)
+  (cond
+   ((eof-object? ch) ch)
+   ((memq ch '(#\space #\t #\return)) (skip-ws (read-char)))
+   (else ch)))
+                                 
 (define (flush-ws)
   (let loop ((ch (read-char)))
     (cond
@@ -130,6 +174,9 @@
          (read-chseq (make-chseq-reader chrseq))
          (nl-val (assoc-ref match-table "\n"))
          (sp-val (assoc-ref match-table 'sp))
+         (cl-val (assoc-ref match-table 'cmd-line))
+         (cc-val (assoc-ref match-table 'cmd-call))
+         (id-val (assoc-ref match-table '$ident))
          (assc-$
           (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (if (not nl-val) (error "mlang setup error"))
@@ -145,6 +192,8 @@
             (set! qms #t) (flush-ws) (cons sp-val " "))
            ((skip-comm ch) (loop (read-char))) ; must be before read-comm
            ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
+           ((mlang-read-cmd ch bol) =>
+            (lambda (cl) (cons (if (string? cl) cc-val cl-val) cl)))
            (bol (set! bol #f) (loop ch))
            ((read-ident ch) =>
             (lambda (s) ;; s is a string
