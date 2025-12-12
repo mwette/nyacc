@@ -415,7 +415,7 @@
       (or (assoc-ref cfix-dict name) name))))
 
 
-;; === cdata/ctype support =====================================================
+;; === bytestructure support ===================================================
 
 (define (mtail->bsdesc mtail)
   (let ((defined (*defined*)))
@@ -895,14 +895,11 @@
               (deftype type* `(bs:pointer ,type)))))
 
           (`((function-returning (param-list . ,params)) . ,rest)
-           (let ((return (mdecl->udecl (cons "~ret" rest))))
-             (call-with-values (lambda () (function*-wraps return params))
-               (lambda (proc->ptr ptr->proc)
-                 (values
-                  (dcons name (w/* name) defined)
-                  (xcons* seed
-                    (deftype type `(cfunction ,proc->ptr ,ptr->proc))
-                    (deftype type* `(bs:pointer ,type))))))))
+           (values
+            (dcons name (w/* name) defined)
+            (xcons* seed
+              (deftype type `void)
+              (deftype type* `(bs:pointer ,type)))))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
@@ -912,8 +909,7 @@
                    (values
                     (dcons name defined)
                     (xcons* seed
-                      `(define ,*type (cfunction ,pc->pr ,pr->pc))
-                      (deftype type `(bs:pointer ,*type)))))))))
+                      (deftype type `(bs:pointer 'void)))))))))
 
           (`((pointer-to) (struct-ref (ident ,aggr)))
            (values
@@ -1148,25 +1144,7 @@
 	     (values defined seed)))))
 
         ((enum-def (ident ,enum-name) ,enum-def-list)
-         (let ((enum-name (rename enum-name 'type)))
-           (cond
-	    ((dmem? (w/enum enum-name) defined)
-	     (values defined seed))
-	    (else
-             (let* ((type (sfsym "enum-~a" enum-name))
-                    (defs (canize-enum-def-list
-                           enum-def-list udict (*ddict*)))
-                    (enums (enum-def-list->alist defs)))
-	       (values
-                (dcons (w/enum enum-name) defined)
-                (xcons* seed
-                  (deftype type `(cenum ',enums))
-                  `(define-public ,(sfsym "unwrap-~A" type)
-                     (let ((numf (cenum-numf (ctype-info ,type))))
-                       (lambda (arg) (or (numf arg) arg))))
-                  `(define-public ,(sfsym "wrap-~A" type)
-                     (let ((symf (cenum-symf (ctype-info ,type))))
-                       (lambda (arg) (or (symf arg) arg)))))))))))
+	 (values defined seed))
 
         ((enum-def ,enum-def-list)
 	 (values defined seed))
@@ -1234,7 +1212,6 @@
 	(cond
 	 ((number? arg) arg)
 	 ((symbol? arg) (,sv-name arg))
-	 ((cdata? arg) (cdata-ref arg))
 	 (else (error "type mismatch")))))))
 
 
@@ -1500,7 +1477,7 @@
       (*udict* udict)
       (ppscm '(use-modules ((system foreign) #:prefix ffi:)))
       (ppscm '(use-modules (system foreign-library)))
-      (ppscm '(use-modules (nyacc foreign cdata)))
+      (ppscm '(use-modules (bytestructures guile)))
       (ppscm
        `(define (foreign-pointer-search name)
           (define (flc l)
