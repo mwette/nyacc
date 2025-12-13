@@ -77,7 +77,9 @@
 
 ;; Add #! ... !# to comment format so that we can use shebang scripts.
 (define read-lua-comm
-  (make-comm-reader '(("//" . "\n") ("#!" . "!#")) #:eat-newline #f))
+  (make-comm-reader '(("--" . "\n") ("#!" . "!#")) #:eat-newline #f))
+
+;; TODO: long brackets ([[ ...]])
 
 ;; maybe turn double newline into ';'
 (define-public (make-lua-lexer-generator match-table)
