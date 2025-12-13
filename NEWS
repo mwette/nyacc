@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-12-XX  V3.01.0
+2025-12-13  V3.01.0
         * nyacc/parse.scm(make-lalr-parser): Added option to provide user-hook
           to intercept state transition.   
         * nyacc/lang/c99/parse.scm: removed, back to using nyacc/parse.scm now
