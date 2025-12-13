@@ -27,6 +27,7 @@
   ;;#:use-module (language nx-mlang parser)
   ;;#:use-module (language nx-mlang compile-tree-il)
   #:use-module (system base compile)
+  #:declarative? #f ;; to avoid WARNING from use of load
   )
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
