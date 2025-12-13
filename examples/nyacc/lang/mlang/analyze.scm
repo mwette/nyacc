@@ -4,7 +4,7 @@
 
 ;;; Notes:
 ;; 1) We will create a new form
-;;    appl: appl-item* where appl-item: script-file | function-file
+;;    appl: appl-item* where appl-item: script-file | function-file | classdef-
 ;; 2) also need a universal symbol table
 ;; 3) also need effects record per node
 
@@ -198,6 +198,7 @@
    (sx-match tree
      ((script-file . ,forms) forms)
      ((function-file . ,forms) forms)
+     ((classdef-file . ,forms) forms)
      (,_ (pperr tree) (error "missed form")))))
 
 (define (tree-calls tree)

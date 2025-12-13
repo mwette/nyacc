@@ -1,6 +1,6 @@
 ;; ia-js-tab.scm
 
-;; Copyright (c) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018 Matthew Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -1107,4 +1107,4 @@
    (cons 'pat-v ia-js-pat-v)
    ))
 
-;;; end tables
+;; --- last line ---

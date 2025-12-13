@@ -82,23 +82,21 @@
     (lambda ()
       (let ((bol #t))
         (lambda ()
-          (define (process lexeme) (fluid-set! *insert-semi* #t) lexeme)
-          (process
-           (let loop ((ch (read-char)))
-             (cond
-              ((eof-object? ch) (assc-$ (cons '$end ch)))
-              ((char-set-contains? space-cs ch) (loop (read-char)))
-              ((read-js-comm ch bol) (loop (read-char)))
-              ((read-js-string ch) => assc-$)
-              ((read-js-ident ch) =>
-               (lambda (s)
-                 (or (and=> (assq-ref keytab (string->symbol s))
-                            (lambda (tval) (cons tval s)))
-                     (assc-$ (cons '$ident s)))))
-              ((read-c-num ch) => assc-$)
-              ((read-chseq ch) => identity)
-              ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-              (else (cons ch (string ch))))))))))) ; should be error
+          (let loop ((ch (read-char)))
+            (cond
+             ((eof-object? ch) (assc-$ (cons '$end ch)))
+             ((char-set-contains? space-cs ch) (loop (read-char)))
+             ((read-js-comm ch bol) (loop (read-char)))
+             ((read-js-string ch) => assc-$)
+             ((read-js-ident ch) =>
+              (lambda (s)
+                (or (and=> (assq-ref keytab (string->symbol s))
+                      (lambda (tval) (cons tval s)))
+                    (assc-$ (cons '$ident s)))))
+             ((read-c-num ch) => assc-$)
+             ((read-chseq ch) => identity)
+             ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+             (else (cons ch (string ch)))))))))) ; should be error
 
 
 ;; (InputElementDiv
@@ -125,8 +123,7 @@
 (define* (parse-js #:key debug)
   (catch 'nyacc-error
     (lambda ()
-     (with-fluid* *insert-semi* #t
-       (lambda () (raw-parser (gen-js-lexer) #:debug #f))))
+      (raw-parser (gen-js-lexer) #:debug #f))
     (lambda (key fmt . rest)
       (apply simple-format (current-error-port) fmt rest)
       #f)))
@@ -170,8 +167,7 @@
 (define (parse-js-stmt)
   (catch 'nyacc-error
     (lambda ()
-      (with-fluid* *insert-semi* #t
-        (lambda () (raw-ia-parser (gen-ia-js-lexer) #:debug #f))))
+      (raw-ia-parser (gen-ia-js-lexer) #:debug #f))
     (lambda (key fmt . rest)
       (apply simple-format (current-error-port) fmt rest)
       #f)))

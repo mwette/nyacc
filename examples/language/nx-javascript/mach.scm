@@ -38,7 +38,8 @@
 ;; Exclusion of ObjectLiteral and FunctionExpression at statement scope
 ;; is implemented using precedence for reduction.
 
-;; NSI = "no semi-colon insertion" : not needed for nyacc w/ skip-if-unexpected
+;; NSI = "no semi-colon insertion" has been removed since it's not
+;; needed if using nyacc lalr's skip-if-unexpected option
 
 ;; @subheading Deviations from Ecmascript
 ;; @itemize
