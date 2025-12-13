@@ -155,44 +155,6 @@
       ((attr (ident ,name))
        (sf "~a" name))
 
-      ((classdef-file . ,items)
-        (for-each ppxin items))
-
-      ;;((class-defn (ident ,name) (attr-list . ,attrs) . ,rest)   )
-      ((class-defn (ident ,name) (supers . ,supers) . ,rest)
-       (sf "classdef ~a < ~a\n" name (string-join (map cadr supers) " & "))
-       (push-il) (for-each ppxin rest) (pop-il) (sf "end\n"))
-
-      ;;((properties (attr-list)
-      ((properties . ,items)
-       (sf "properties\n") (push-il)
-       (for-each ppxin items) (pop-il) (sf "end\n"))
-      ((property (ident ,name))
-       (sf "~a\n" name))
-
-      ((methods (attr-list . ,attrs) . ,items)
-       (sf "methods (") (for-each ppxin attrs) (sf ")\n") (push-il)
-       (for-each (lambda (item) (ppxin item) (sf "\n")) items)
-       (pop-il) (sf "end\n"))
-      ((methods . ,items)
-       (sf "methods\n") (push-il)
-       (for-each (lambda (item) (ppxin item) (sf "\n")) items)
-       (pop-il) (sf "end\n"))
-
-      ((function-sig (ident ,name) ,iputs ,oputs ,coml)
-       (case (length (cdr oputs))
-         ((0) #f)
-         ((1) (sf "~a = " (cadar oputs)))
-         (else (sf "[~a] = " (string-join (map cadr oputs) ", "))))
-       (case (length (cdr iputs))
-         ((0) (sf "~a\n" name))
-         (else (sf "~a(" name) (ppx iputs nosp) (sf ")\n"))))
-
-      ((attr (ident ,name) "=" ,expr)
-       (sf "~a = " name) (ppxin expr))
-      ((attr (ident ,name))
-       (sf "~a" name))
-
       ((function-file . ,items)
        (for-each ppxin items))
 
