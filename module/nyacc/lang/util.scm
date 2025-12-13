@@ -318,13 +318,20 @@ See the file COPYING included with the this distribution.")
               (else
                (loop (cons ch chl) (1+ col) (1+ ix)))))))))
 
-;; @deffn {Procedure} make-pp-formatter [port] <[options> => fmtr
+;; @deffn {Procedure} make-pp-formatter [port] [options] => fmtr
 ;; Options
 ;; @table @code
 ;; @item #:per-line-prefix
 ;; string to prefix each line
 ;; @item #:width
 ;; Max width of output.  Default is 79 columns.
+;; @item #:src-fmt
+;; format string to provide source comments, if present, using
+;; source filename and line number
+;; @example
+;;   #:src-fmt "// ~s:~s\n"
+;; @end example
+;; This option is not implemented.
 ;; @end itemize
 ;; @example
 ;; (fmtr 'push) ;; push indent level
@@ -333,28 +340,29 @@ See the file COPYING included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define* (make-pp-formatter #:optional (port (current-output-port))
-                            #:key per-line-prefix (width 79) (basic-offset 2))
+                            #:key per-line-prefix (width 79) (basic-offset 2)
+                            src-fmt)
   (let*
       ((pfxlen (string-length (expand-tabs (or per-line-prefix ""))))
        (maxcol (- width (if per-line-prefix pfxlen 0)))
-       (maxind 36)
+       (maxind 40)                      ; maximum indent
        (column 0)
        (ind-lev 0)
        (ind-len 0)
-       (blanks "                                            ")
+       (blanks (make-string (+ basic-offset maxind) #\space))
        (ind-str (lambda () (substring blanks 0 ind-len)))
        (cnt-str (lambda () (substring blanks 0 (+ basic-offset 2 ind-len))))
-       ;;(sf-nl (lambda () (newline) (set! column 0)))
+       (blc 0)                          ; blank line count
 
        (push-il
         (lambda ()
-          (set! ind-lev (min maxind (1+ ind-lev)))
-          (set! ind-len (* basic-offset ind-lev))))
+          (set! ind-lev (1+ ind-lev))
+          (set! ind-len (min maxind (* basic-offset ind-lev)))))
 
        (pop-il
         (lambda ()
           (set! ind-lev (max 0 (1- ind-lev)))
-          (set! ind-len (* basic-offset ind-lev))))
+          (set! ind-len (min maxind (* basic-offset ind-lev)))))
 
        (inc-column!
         (lambda (inc)
@@ -462,7 +470,8 @@ See the file COPYING included with the this distribution.")
     (system* "mv" src-file dst-file) #t)
 
    ;; both exist, but no changes
-   ((zero? (system* "cmp" src-file dst-file))
+   ((zero? (with-output-to-port (%make-void-port "w")
+             (lambda () (system* "cmp" src-file dst-file))))
     (system* "rm" src-file) #f)
 
    ;; both exist, update

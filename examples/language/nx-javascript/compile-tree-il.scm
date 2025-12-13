@@ -181,7 +181,8 @@
 (define add-lexical nx-add-lexical)
 (define add-lexicals nx-add-lexicals)
 (define add-symbol nx-add-symbol)
-(define (lookup name dict)
+(define lookup nx-lookup)
+#;(define (lookup name dict)
   (or (nx-lookup name dict)
       (nx-lookup-in-env name xlib-module)))
 
@@ -1134,7 +1135,8 @@
 
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
-  (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
+  (let ((cenv (if (module? env)
+                  (cons* '(@top . #t) `(@env. ,env) JSdict))))
     (if exp 
         (call-with-values
             (lambda () (xlang-sxml->xtil exp cenv opts))

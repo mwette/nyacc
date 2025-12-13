@@ -344,9 +344,7 @@
         (values (cons (+SP `(primcall list ,@(rtail kseed))) seed) kdict))
 
        ((last)
-        (values
-         (cons (+SP `(call ,(xlib-ref 'last) . ,(rtail kseed))) seed)
-         kdict))
+        (values (cons (+SP `(begin . ,(rtail kseed))) seed) kdict))
 
        ((expr)
 	;;(sferr "expr:~S\n" kseed)

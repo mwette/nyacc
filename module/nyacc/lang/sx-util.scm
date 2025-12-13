@@ -1,6 +1,6 @@
 ;;; module/nyacc/sx-util.scm - runtime utilities for the parsers
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018,2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -33,6 +33,7 @@
             sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
             sx-find
             sx-split sx-split* sx-join sx-join* sx-cons sx-cons* sx-list
+            sx-cons*/src sx-list/src
             sx-unitize
             sx-match sx-match-tail
             ;; deprecated:
@@ -285,6 +286,18 @@
 (define sx-join sx-cons)
 (define sx-join* sx-list)
 
+;; @deffn {Procedure} sx-cons*/src src tag attr exp ... tail => sexp
+;; @deffnx {Procedure} sx-list/src src tag attr exp ... => sexp
+;; These are like their respective procedures without the @code{/src}
+;; but allow source properties to be transferred from the sx @var{src}.
+;; @end deffn
+(define (sx-cons*/src src tag attr . rest)
+  (let ((sx (apply sx-cons* tag attr rest)))
+    (cons-source src (car sx) (cdr sx))))
+(define (sx-list/src src tag attr . rest)
+  (let ((sx (apply sx-list tag attr rest)))
+    (cons-source src (car sx) (cdr sx))))
+
 ;; @deffn {Procedure} sx-split sexp => tag attr tail
 ;; @deffnx {Procedure} sx-split* sexp => tag attr exp ...
 ;; Split an SXML element into its constituent parts, as a @code{values},
@@ -367,9 +380,9 @@
 ;; kt kf are continuation syntax expresions
 
 ;; @deffn {Syntax} sx-match exp (pat body ...) ...
-;; This syntax will attempt to match @var{expr} against the patterns.
+;; This syntax will attempt to match the SXML @var{exp} against the patterns.
 ;; At runtime, when @var{pat} is matched against @var{exp}, then @var{body ...}
-;; will be evaluated.
+;; will be evaluated.  The pattern @code{()} is also supported.
 ;; @end deffn
 (define-syntax sx-match
   (syntax-rules ()
@@ -424,8 +437,11 @@
                   (let ((vt (sx-tail v)))
                     (sxm-tail vt nl kt kf))
                   kf)
-         kf))))
-
+         kf))
+    ;; allow end-of-list
+    ((_ v () kt kf)
+     (if (null? v) kt kf))))
+ 
 ;; sxml-attr-tail va vt (@ (k v) ...) nl kt kf
 (define-syntax sxm-attr-tail
   (syntax-rules (unquote)

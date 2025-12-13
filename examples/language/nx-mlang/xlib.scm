@@ -1,6 +1,6 @@
 ;; nyacc/lang/mlang/xlib.scm - extension library for the m-language
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -24,9 +24,10 @@
 (define-module (language nx-mlang xlib)
   #:export (xdict)
   #:use-module (srfi srfi-9)
-  #:use-module (language nx-mlang parser)
-  #:use-module (language nx-mlang compile-tree-il)
+  ;;#:use-module (language nx-mlang parser)
+  ;;#:use-module (language nx-mlang compile-tree-il)
   #:use-module (system base compile)
+  #:declarative? #f ;; to avoid WARNING from use of load
   )
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
@@ -34,7 +35,7 @@
 (define (pperr exp)
   (pretty-print exp (current-error-port)))
 
-(define undefined (if #f #f))
+(define unspecified (if #f #f))
 
 (define* (xassert cnd #:optional msg)
   (unless cnd (error (or msg "assertion failed"))))
@@ -111,7 +112,7 @@
 (define-public (ml:narg . args)
   (let loop ((args args))
     (if (null? args) 0
-        (if (eq? (car args) undefined)
+        (if (eq? (car args) unspecified)
             (loop (cdr args))
             (1+ (loop (cdr args)))))))
 
@@ -154,12 +155,21 @@
 (define-public (ml:assn-elt arry expl value)
   #f)
       
-;; @deffn {Procedure} ml:make-struct [args]
+;; @deffn {Procedure} ml:make-struct [key1 val1 key2 val2 ...]
 ;; Generate a struct.  Currently no args are processed.
 ;; The hash size is 31.
 ;; @end deffn
 (define-public (ml:make-struct . args)
-  (make-hash-table 31))
+  (let ((struct (make-hash-table 31)))
+    (let loop ((key #f) (args args))
+      (cond
+       (key
+        (if (null? args) (error "missing arg"))
+        (if (not (string? key)) (error "expect string"))
+        (hash-set! struct key (car args))
+        (loop #f (cddr args)))
+       ((null? args) struct)
+       (else (loop (car args) (cdr args)))))))
 
 ;; @deffn {Procedure} ml:struct-set! expr name
 ;; Get @code{expr.name}.  @var{name} is assumed to be a symbol.
@@ -180,39 +190,20 @@
 
 ;; ===
 
-(define-public (ml:command name . args)
+(define-public (ml:command env name . args)
   (cond
-   ((string=? name "load")
-    (let* ((env (current-module))
-           (file (car args))
-           )
-      #f))
+   ((string=? name "source")
+    (load (car args)))
+   ((string=? name "clear")
+    (sferr "mlang: clear not implemented"))
    (else
     (throw 'mlang-error "unknown command: ~S" name)))
   (if #f #f))
-
-(define-public (ml:source file)
-  (show-mlang-sxml #t)
-  (show-mlang-xtil #t)
-  (let* ((env (current-module))
-         (tree (and (string? file) (access? file R_OK)
-                    (call-with-input-file file
-                      (lambda (port) (read-mlang-file port env)))))
-         (itil (compile-tree-il tree env '()))
-         (base (basename file ".m"))
-         (var (module-variable env (string->symbol base)))
-         )
-    (compile itil #:from 'tree-il #:to 'value #:env env)
-    ;;(sferr "env=~S\n" env)
-    ;;(sferr "var=~S\n" var)
-    ;;(pperr var)
-    ;;(quit)
-    (if #f #f)))
 
 ;; ===
 
 (define xdict
  `(("struct" . (@ (language nx-mlang xlib) ml:make-struct))
-   ("source" . (@ (language nx-mlang xlib) ml:source))))
+   ))
 
 ;; --- last line ---

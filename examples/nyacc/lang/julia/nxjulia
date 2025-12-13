@@ -2,7 +2,7 @@
 # -*- scheme -*-
 exec guile $0 $*
 !#
-;; Copyright (C) 2018,2020 Matthew R. Wette
+;; Copyright (C) 2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -17,18 +17,27 @@ exec guile $0 $*
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(use-modules (nyacc lang mlang mltoc))
+
+(use-modules (nyacc lang julia parser))
+;;(use-modules (nyacc lang julia pprint))
+
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
+
+
+;; =================================
+
 (use-modules (srfi srfi-37))
 
 (define (fail fmt . args)
   (apply simple-format (current-error-port)
-	 (string-append "mltoc: " fmt "\n")
+	 (string-append "nxjulia: " fmt "\n")
 	 args)
   (exit 1))
 
 (define (show-usage)
   (simple-format #t "Usage: mltoc [OPTION] FILE ...
-Convert a mlang dot-m file to c.
+Convert a julia dot-jl file to c.
   -h, --help           print this help message
 
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
@@ -38,9 +47,15 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
    (option '(#\h "help") #f #f
 	   (lambda (opt name arg opts files)
 	     (values (acons 'help #t opts) files)))
-   (option '(#\g "gen") #t #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'gen arg opts) files)))
+   (option '(#\s "sxml") #f #f
+           (lambda (opt name arg opts files)
+             (values (acons 'sxml #t opts) files)))
+   (option '(#\p "pprint") #f #f
+           (lambda (opt name arg opts files)
+             (values (acons 'pprint #t opts) files)))
+   (option '(#\c "c99") #f #f
+           (lambda (opt name arg opts files)
+             (values (acons 'c99 #t opts) files)))
    ))
 
 (define (parse-args args)
@@ -49,19 +64,29 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	       (fail "unrecognized option: ~S" name)
 	       (exit 1))
 	     (lambda (file opts files)
-	       (unless (string-suffix? ".m" file)
-		 (fail "expecting .m file"))
+	       (unless (string-suffix? ".jl" file)
+		 (fail "expecting .jl file"))
 	       (values opts (cons file files)))
 	     '() '()))
 
-(define (do-this . args)
+(define (main . args)
   (call-with-values
       (lambda () (parse-args args))
     (lambda (opts files)
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
-      (for-each (lambda (file) (mlang-to-c99 file opts)) files)))
+      (for-each 
+       (lambda (srcfile)
+         (let ((tree (call-with-input-file srcfile
+                       (lambda (port)
+                         (set-port-filename! port srcfile)
+                         (read-julia-file port '())))))
+           (when (assq-ref opts 'sxml) (pp tree))
+           ;;(when (assq-ref opts 'pprint) (pretty-print-jl tree))
+           ;;(when (assq-ref opts 'c99) (mlang->c99 tree opts))
+           #f))
+       files)))
   0)
 
-(apply do-this (cdr (program-arguments)))
+(apply main (cdr (program-arguments)))
 
 ;; --- last line ---

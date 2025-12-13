@@ -1,4 +1,4 @@
-;;; langauge/nx-mlang/compile-tree-il.scm compile mlang sxml to tree-il
+;;; langauge-mlang/compile-tree-il.scm compile mlang sxml to tree-il
 
 ;; Copyright (C) 2018,2023-2025 Matthew Wette
 ;;
@@ -48,12 +48,17 @@
 (define (op-call op kseed)
   (rev/repl 'call (xlib-ref op) kseed))
 
-(define (lookup name dict)
-  (or (nx-lookup name dict)
-      (nx-lookup-in-env name xlib-module)))
+(define lookup nx-lookup)
+
+;; scopes:
+;; @F function
+;; @L loop
 
 ;; This will push undeclared lexicals up one level.  Needs cleanup?
-(define (pop-scope dict)
+(define push-scope nx-push-scope)
+(define pop-scope nx-pop-scope)
+
+(define (x-pop-scope dict)
   (let ((pdict (nx-pop-scope dict)))
     (let loop ((prev #f) (next dict))
       (cond
@@ -69,29 +74,31 @@
 (define (function-scope? dict)
   (let loop ((dict dict))
     (cond
-     ((nx-top-level? dict) #f)
      ((assq '@F dict) #t)
-     (else (loop (nx-pop-scope dict))))))
-
-(define (maybe-add-symbol name dict)
-  (if (lookup name dict) dict (nx-add-symbol name dict)))
+     ((assq '@P dict) => loop)
+     (else #f))))
 
 ;; Add toplevel def's from dict before evaluating expression.  This puts
 ;; @var{expr} at the end of a chain of @code{seq}'s that execution
 ;; conditional defines to a void.  See @code{make-toplevel-defcheck}.
+;; Effectively, this changes
+;;   (define a 1)
+;;   (define a 2)
+;; to
+;;   (define a (if #f #f))
+;;   (set! a 1)
+;;   (set! a 2)
+;; right?
 (define (add-topdefs dict expr)
+  (define env (nx-lookup-env dict))
   (let loop ((refs dict))
-    (cond
-     ((null? refs) expr)
-     ((string? (caar refs)) ;; add define if not in toplevel
-      (let* ((env0 (lookup '@M dict))
-             (name (caar refs))
-             (ref (nx-lookup-in-env name env0)))
-        (if ref
-            (loop (cdr refs))
-            `(seq (define ,(string->symbol name) (void)) ,(loop (cdr refs))))))
-     ((eq? '@top (caar refs)) expr)
-     (else (loop (cdr refs))))))
+    (match refs
+      ('() expr)
+      (((name 'toplevel ref) . rest)
+       (if (nx-env-lookup name env)
+           (loop (cdr refs))
+           `(seq (define ,ref (void)) ,(loop rest))))
+      (__ (loop (cdr refs))))))
 
 ;; @deffn {Procedure} display-result? tree
 ;; Predicate that looks at @code{term} attribute to determine if user wants
@@ -181,6 +188,10 @@
   
   (define (fD tree seed dict) ;; => tree seed dict
     (define +SP (make-+SP tree))
+    
+    (when #f
+      (sferr "fD: ~S\n" (if (pair? tree) (car tree) tree))
+      )
 
     (sx-match tree
 
@@ -261,7 +272,7 @@
       ;; (assn . ,other) => syntax error
       ((assn (@ . ,attr) (ident ,name) ,rhsx)   ; assign variable
        (values `(var-assn (@ . ,attr) (ident ,name) ,rhsx) '()
-               (maybe-add-symbol name dict)))
+               (nx-ensure name dict)))
       ((assn (@ . ,attr) (aref-or-call ,aexp ,expl) ,rhsx) ; assign element
        (values `(elt-assn (@ . ,attr) ,aexp ,expl ,rhsx) '() dict))
       ((assn (@ . ,attr) (sel (ident ,name) ,expr) ,rhsx) ; assign member
@@ -289,7 +300,7 @@
                (sx-match (car elts)
                  ((ident ,name)
                   (loop (cons `(var-assn (ident ,name) ,rv) lvxl)
-                        (maybe-add-symbol name dict) (cdr elts) (1+ ix)))
+                        (nx-ensure name dict) (cdr elts) (1+ ix)))
                  ((aref-or-call ,ax ,xl)
                   (loop (cons `(elt-assn ,ax ,xl ,rv) lvxl)
                         dict (cdr elts) (1+ ix)))
@@ -396,6 +407,7 @@
                (name (symbol->string (cadadr main)))
                (xdict (nx-add-toplevel name (pop-scope kdict)))
                (nref (lookup name xdict))
+               (nref (cadadr main))
                (body `(set! ,nref ,lrec)))
           (values (cons body seed) xdict)))
 
@@ -420,7 +432,7 @@
                (body (with-escape ptag body))
                ;; The tail expression is return value(s).
                (rval (case (length oargs)
-                       ((0) nx-undefined-xtil)
+                       ((0) nx-unspecified-xtil)
                        ((1) (car oargs))
                        (else `(primcall values ,@oargs))))
                (body `(seq ,body ,rval))
@@ -435,14 +447,14 @@
                                   `(call ,(xlib-ref 'ml:narg) . ,iargs))
                                  ((eq? n 'nargsout)
                                   `(call ,(xlib-ref 'ml:narg) . ,oargs))
-                                 (else nx-undefined-xtil))))
+                                 (else nx-unspecified-xtil))))
                         (loop (cons n nl) (cons l ll) (cons v vl) (cdr vs))))))
-               ;; default value is nx-undefined
+               ;; default value is nx-unspecified
                (fctn
                 `(set! ,n-ref (lambda ((name . ,name) (language . nx-mlang))
                                 (lambda-case
                                  ((() ,(map cadr iargs) #f #f
-                                   ,(map (lambda (v) nx-undefined-xtil) iargs)
+                                   ,(map (lambda (v) nx-unspecified-xtil) iargs)
                                    ,(map caddr iargs)) ,body))))))
           (values (cons fctn seed) (pop-scope kdict))))
 
@@ -561,12 +573,14 @@
          (cons `(abort ,(lookup "return" kdict) () (const ())) seed)
          kdict))
 
-       ((command) ;; TODO
-        (let ((args (rtail kseed)))
-          (values (cons `(call (xlib-ref 'ml:command) ,@args) seed) kdict)))
+       ((cmd-line cmd-call)
+        (let* ((tail (rtail kseed))
+               (tail (map (lambda (a) (if (string? a) `(const ,a) a)) tail)))
+          (values (cons `(call ,(xlib-ref 'ml:command) ,@tail) seed)
+                  kdict)))
 
        ((expr-list)
-        (values (cons (reverse kseed) seed) kdict))
+        (values (cons (cdr (reverse kseed)) seed) kdict))
 
        ((colon-expr fixed-colon-expr)
         (let* ((tail (rtail kseed))
@@ -682,8 +696,8 @@
   (define (fH leaf seed dict)
     (values (if (null? leaf) seed (cons leaf seed)) dict))
 
-  (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
-  )
+  (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
+(export mlang-sxml->xtil)
 
 (define show-sxml #f)
 (define (show-mlang-sxml v) (set! show-sxml v))
@@ -692,15 +706,15 @@
 
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
-  (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
+  (let ((cenv (if (module? env)
+                  (cons* `(@top . #t) `(@env . ,env) xdict)
+                  env)))
     (if exp 
         (call-with-values
             (lambda () (mlang-sxml->xtil exp cenv opts))
           (lambda (exp cenv)
             (when show-xtil (sferr "tree-il:\n") (pperr exp))
-            (values (parse-tree-il exp) env cenv)
-            ;;(values (parse-tree-il '(const "[hello]")) env cenv)
-            ))
+            (values (parse-tree-il exp) env cenv)))
         (values (parse-tree-il '(void)) env cenv))))
 
 ;; --- last line ---

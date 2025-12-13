@@ -448,4 +448,18 @@ int foo() {
   (pperr (get-sys-inc-dirs))
   )
 
+(when #f ;; sv bug 67664
+  (let* ((code "int foo(int *argv[]);")
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (decl (assoc-ref udict "foo"))
+         (pdecl (sx-ref* decl 2 1 2 1))
+         (mdecl (udecl->mdecl pdecl))
+         )
+    ;;(pperr tree)
+    ;;(pperr pdecl)
+    ;;(pperr mdecl)
+    (pperr (ccode->sexp code))
+    ))
+
 ;; --- last line ---

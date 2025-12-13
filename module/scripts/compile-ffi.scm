@@ -29,9 +29,9 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right lset-union every))
   #:use-module (srfi srfi-37)
-  #:version (3 00 2))
+  #:version (3 01 0))
 
-(define *ffi-help-version* "3.00.2")
+(define *ffi-help-version* "3.01.0")
 
 (define (compile-scm file)
   (compile-file file
@@ -95,7 +95,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -w, --no-foreign-library  guile has no (system foreign-library) module
 
 See the FFI-Helper User's Manual for help generating a .ffi file.
-Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
+Report bugs to https://github.com/mwette/nyacc/issues.\n"))
 
 (define options
   ;; specification of command-line options
@@ -155,7 +155,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 (define (parse-args args)
   (args-fold args
              options
-             (lambda (opt name arg files opts)
+             (lambda (opt name arg opts files)
                (fail "unrecognized option: ~S" name)
                (exit 1))
              (lambda (file opts files)

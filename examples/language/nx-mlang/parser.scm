@@ -47,8 +47,8 @@
 
 ;;; === lexical analyzer
 
-(define *src-file* (make-parameter #f))
-(define *src-line* (make-parameter #f))
+;;(define *src-file* (make-parameter #f))
+;;(define *src-line* (make-parameter #f))
 
 ;; @deffn {Procedure} mlang-read-string ch
 ;; Read string and return @code{($string . "string")}.  If @var{ch} is
@@ -80,6 +80,44 @@
   (make-comm-reader '(("%" . "\n") ("#" . "\n") ("#{" . "#}") ("%{" . "%}")
                       ("#!" . "!#"))))
 
+
+(define commands
+  '("clc" "clear" "doc" "drawnow" "format" "global" "grid" "help" "hold"
+    "load" "pause" "rotate3d" "save" "source" "uiimport" "ver"))
+
+;; @deffn {Procedure} mlang-read-cmd ch bol
+;; Given next character @var{ch} and beginning-of-line boolean @var{bol}
+;; return a string if this is the start of a function-type command or
+;; a list of strings if this is a scripting-type command, or @code{#f}.
+;; @end deffn
+(define mlang-read-cmd
+  (let ((read-cmd (make-chseq-reader (map (lambda (s) (cons s #f)) commands))))
+    (lambda (ch bol)
+      (define rls reverse-list->string)
+      (and bol
+           (and=> (read-cmd ch)
+             (lambda (pair)
+               (let ((name (cdr pair)) (ch (skip-ws (read-char))))
+                 (cond
+                  ((eof-object? ch) (list name))
+                  ((char=? ch #\() (unread-char #\() name)
+                  (else
+                   (let loop ((args (list name)) (ch (skip-ws ch)))
+                     (case ch
+                       ((#\newline #\return) (unread-char ch) (reverse args))
+                       ((#\" #\') (loop (cons (cdr (mlang-read-string ch)) args)
+                                        (skip-ws (read-char))))
+                       (else
+                        (let lp ((cl '()) (ch ch))
+                          (cond
+                           ((or (eof-object? ch) (memq ch '(#\newline)))
+                            (if (eq? ch #\newline) (unread-char ch))
+                            (loop (cons (rls cl) args) ch))
+                           ((char-set-contains? space-cs ch)
+                            (loop (cons (rls cl) args) (skip-ws (read-char ch))))
+                           (else (lp (cons ch cl) (read-char)))))))))))))))))
+(export mlang-read-cmd)
+
 ;; elipsis reader "..." whitespace "\n"
 (define (elipsis? ch)
   (if (eqv? ch #\.)
@@ -101,6 +139,12 @@
 
 (define space-cs (string->char-set " \t"))
 
+(define (skip-ws ch)
+  (cond
+   ((eof-object? ch) ch)
+   ((memq ch '(#\space #\t #\return)) (skip-ws (read-char)))
+   (else ch)))
+                                 
 (define (flush-ws)
   (let loop ((ch (read-char)))
     (cond
@@ -130,6 +174,9 @@
          (read-chseq (make-chseq-reader chrseq))
          (nl-val (assoc-ref match-table "\n"))
          (sp-val (assoc-ref match-table 'sp))
+         (cl-val (assoc-ref match-table 'cmd-line))
+         (cc-val (assoc-ref match-table 'cmd-call))
+         (id-val (assoc-ref match-table '$ident))
          (assc-$
           (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (if (not nl-val) (error "mlang setup error"))
@@ -145,6 +192,8 @@
             (set! qms #t) (flush-ws) (cons sp-val " "))
            ((skip-comm ch) (loop (read-char))) ; must be before read-comm
            ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
+           ((mlang-read-cmd ch bol) =>
+            (lambda (cl) (cons (if (string? cl) cc-val cl-val) cl)))
            (bol (set! bol #f) (loop ch))
            ((read-ident ch) =>
             (lambda (s) ;; s is a string
@@ -160,102 +209,87 @@
             (lambda (p) (set! qms (not (memq ch '(#\] #\} #\))))) p))
            ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
            (else (cons ch (string ch)))))
-            (lambda ()
-              (let* ((lxm (loop (read-char)))
-                     (port (current-input-port))
-                     (file (port-filename port))
-                     (line (1+ (port-line port)))
-                     (props `((filename . ,file) (line . ,line) (column . 0))))
-                (set-source-properties! lxm props)
-                lxm))))))
+        (lambda ()
+          (let* ((lxm (loop (read-char)))
+                 (port (current-input-port))
+                 (props `((filename . ,(port-filename port))
+                          (line . ,(1+ (port-line port)))
+                          (column . ,(port-column port)))))
+            (set-source-properties! lxm props)
+            lxm))))))
 
 
 ;; === static semantics
 
-;; This won't be able to resolve all aref-or-call if classes are used.
+;; 1) aref-or-call => array-ref | call
+;; 2) assn: "[ ... ] = expr" => assn-many
+;; 3) can't do: x.a(1) means array if x is struct or call if x is object
+(define (Xapply-mlang-statics tree) tree)
+(define (apply-mlang-statics tree)
 
-;; 1) assn: "[ ... ] = expr" => assn-many
-;; 2) matrix: "[ int, int, int ]" => ivec
-;; 3) matrix: "[ ... (fixed) ... ]" => error
-;; 4) colon-expr => fixed-colon-expr
-;; 5) aref-or-call => array-ref | call
+  (define (tag-source orig pair) (cons-source orig (car pair) (cdr pair)))
 
-(define (fixed-colon-expr? expr)
-  (sx-match expr
-    ((colon-expr) #t)
-    ((colon-expr (fixed ,s) (fixed ,e)) #t)
-    ((colon-expr (fixed ,s) (fixed ,i) (fixed ,e)) #t)
-    (,_ #f)))
+  (define (arg-not-index arg seed)
+    (or seed
+        (sx-match arg
+          ((float ,_) #t)
+          ((string ,_) #t)
+          ((ldiv ,lt ,rt) #t)
+          ((add ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          ((sub ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          ((mul ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          ((div ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
+          (,__ #f))))
 
-(define (fixed-expr? expr)
-  (define (fixed-primary-expr? expr)
-    (sx-match expr
-      ((fixed ,val) #t)
-      ((add ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      ((sub ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      ((mul ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      (,_ #f)))
-  (or (fixed-primary-expr? expr)
-      (eq? 'fixed-colon-expr (sx-tag expr))))
-
-(define (float-expr? expr)
-  (define (float-primary-expr? expr)
-    (sx-match expr
-      ((float ,val) #t)
-      ((add ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((sub ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((mul ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((div ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      (,_ #f)))
-  (float-primary-expr? expr))
-
-(define (fixed-vec? row)
-  (fold (lambda (elt fx) (and fx (fixed-expr? elt))) #t (sx-tail row)))
-
-(define (float-vec? row)
-  (fold (lambda (elt fx) (and fx (float-expr? elt))) #t (sx-tail row)))
-
-(define (float-mat? mat)
-  (fold (lambda (row fx) (and fx (float-vec? row))) #t
-        (map sx-tail (sx-tail mat))))
-
-(define (check-matrix mat)
-  (let* ((rows (sx-tail mat))
-         (nrow (length rows))
-         (row1 (if (positive? nrow) (car rows) #f)))
-    (cond
-     ((zero? nrow) mat)
-     ((and (= 1 nrow) (fixed-vec? row1))
-      (cons-source row1 'fixed-vector (cdr row1)))
-     ((float-mat? mat)
-      (cons-source mat 'float-matrix (cdr mat)))
-     (else mat))))
-
-;; @deffn {Procedure} apply-mlang-statics tree => tree
-;; Apply static semantics for Octave.  Currently, this includes
-;; @itemize
-;; @item Change @code{assn} with matrix expression on LHS to a
-;; multiple value assignment (@code{assn-many}).
-;; @end itemize
-;; TODO: aref-or-call:
-;; @end deffn
-(define (apply-old-mlang-statics tree)
-
-  (define (fU tree)
+  (define (insert-name name list) (cons (cadr name) list)) ;; (ident ,name)
+  
+  ;; (aref-or-call (handle ...) ...) is call
+  ;; vars : variables (e.g., from global or function sig)
+  (define (fD tree seed vars)        ; => tree seed gbl
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (cons-source tree 'assn-many `((@ . ,attr) (lval-list . ,elts) ,rhs)))
-      ((colon-expr . ,rest)
-       (if (fixed-colon-expr? tree)
-           (cons-source tree 'fixed-colon-expr (cdr tree))
-           tree))
-      ((matrix . ,rest)
-       (check-matrix tree))
-      (,_ tree)))
+       (values (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
+               '() vars))
+      ((assn (@ . ,attr) (ident ,name) (handle ,_1))
+       ;; handles will generate calls
+       (values tree '() vars))
+      ((assn (@ . ,attr) (ident ,name) ,rhs)
+       (cond
+        ((member name vars) (values tree '() vars))
+        (else (values tree '() (cons name vars)))))
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs) ,stmts)
+       (values tree '() (fold insert-name (cons "@F" vars)
+                              (append (cdr iargs) (cdr oargs)))))
+      ((command "global" . ,args)
+       (values tree '() (fold insert-name vars args)))
+      (,__ (values tree '() vars))))
+
+  (define (fU tree seed vars kseed kvars) ; => seed vars
+    (let ((form (reverse kseed)))
+      (sx-match form
+        ((*TOP* ,subform) (values (tag-source tree subform) kvars))
+        ((aref-or-call (@ . ,attr) (handle (q-ident . ,_)) . ,rest)
+         (values (cons (cons-source tree 'call (cdr form)) seed)
+                 kvars))
+        ((aref-or-call (@ . ,attr) (ident ,name) ,args)
+         (let ((op (if (member name vars) 'array-ref 'call)) (tail (cdr form)))
+           (values (cons (cons-source tree op (cdr form)) seed) kvars)))
+        #|
+         (if (fold arg-not-index #f args)
+           (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl)
+           (values (cons (cons-source tree form form) seed) gbl lcl)))
+        |#
+        ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
+         (values (cons-source tree form seed) (cdr (member "@F" kvars))))
+        (,__ (values (cons-source tree form seed) kvars)))))
+
+  (define (fH leaf seed vars)
+    (values (cons leaf seed) vars))
   
-  (define (fH tree) tree)
-  
-  (cadr (foldt fU fH `(*TOP* ,tree))))
+  (call-with-values
+      (lambda () (foldts*-values fD fU fH `(*TOP* ,tree) '() '()))
+    (lambda (seed vars) seed)))
+ 
 
 (define (lval-root lval)
   (sx-match lval
@@ -350,7 +384,6 @@
      #f)))
 
 (define (read-mlang-file port env)
-  ;;(sferr "<parse file>\n")
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
@@ -360,6 +393,7 @@
             (if (and sx fn)
                 (cons* (car sx) `(@ (filename ,fn)) (cdr sx))
                 sx))))))
+
 
 ;; === interactive parser
 
@@ -387,19 +421,15 @@
 (define read-mlang-stmt
   (let ((lexer (gen-mlang-ia-lexer)))
     (lambda (port env)
-      ;;(sferr "<parse stmt>\n")
       (cond
        ((eof-object? (peek-char port))
         (read-char port))
        (else
         (let* ((stmt (with-input-from-port port
-                      (lambda () (parse-mlang-stmt lexer))))
+                       (lambda () (parse-mlang-stmt lexer))))
                (stmt (apply-mlang-statics stmt)))
-          ;;(sferr "stmt=~S\n" stmt)
           (cond
            ((equal? stmt '(empty-stmt)) #f)
-           (stmt)
-           ;;(else (flush-input-after-error port) #f)
-           )))))))
+           (stmt))))))))
 
 ;; --- last line ---

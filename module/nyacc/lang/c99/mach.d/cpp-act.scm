@@ -10,120 +10,120 @@
 
 (define cpp-act-v
   (vector
-   ;; $start => conditional-expression
+   ;; 0. $start => conditional-expression
    (lambda ($1 . $rest) $1)
-   ;; conditional-expression => logical-or-expression
+   ;; 1. conditional-expression => logical-or-expression
    (lambda ($1 . $rest) $1)
-   ;; conditional-expression => logical-or-expression "?" logical-or-expres...
+   ;; 2. conditional-expression => logical-or-expression "?" logical-or-expres...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(cond-expr ,$1 ,$3 ,$5))
-   ;; logical-or-expression => logical-and-expression
+   ;; 3. logical-or-expression => logical-and-expression
    (lambda ($1 . $rest) $1)
-   ;; logical-or-expression => logical-or-expression "||" logical-and-expre...
+   ;; 4. logical-or-expression => logical-or-expression "||" logical-and-expre...
    (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
-   ;; logical-and-expression => bitwise-or-expression
+   ;; 5. logical-and-expression => bitwise-or-expression
    (lambda ($1 . $rest) $1)
-   ;; logical-and-expression => logical-and-expression "&&" bitwise-or-expr...
+   ;; 6. logical-and-expression => logical-and-expression "&&" bitwise-or-expr...
    (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
-   ;; bitwise-or-expression => bitwise-xor-expression
+   ;; 7. bitwise-or-expression => bitwise-xor-expression
    (lambda ($1 . $rest) $1)
-   ;; bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expres...
+   ;; 8. bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expres...
    (lambda ($3 $2 $1 . $rest) `(bitwise-or ,$1 ,$3))
-   ;; bitwise-xor-expression => bitwise-and-expression
+   ;; 9. bitwise-xor-expression => bitwise-and-expression
    (lambda ($1 . $rest) $1)
-   ;; bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expr...
+   ;; 10. bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expr...
    (lambda ($3 $2 $1 . $rest)
      `(bitwise-xor ,$1 ,$3))
-   ;; bitwise-and-expression => equality-expression
+   ;; 11. bitwise-and-expression => equality-expression
    (lambda ($1 . $rest) $1)
-   ;; bitwise-and-expression => bitwise-and-expression "&" equality-expression
+   ;; 12. bitwise-and-expression => bitwise-and-expression "&" equality-expression
    (lambda ($3 $2 $1 . $rest)
      `(bitwise-and ,$1 ,$3))
-   ;; equality-expression => relational-expression
+   ;; 13. equality-expression => relational-expression
    (lambda ($1 . $rest) $1)
-   ;; equality-expression => equality-expression "==" relational-expression
+   ;; 14. equality-expression => equality-expression "==" relational-expression
    (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
-   ;; equality-expression => equality-expression "!=" relational-expression
+   ;; 15. equality-expression => equality-expression "!=" relational-expression
    (lambda ($3 $2 $1 . $rest) `(ne ,$1 ,$3))
-   ;; relational-expression => shift-expression
+   ;; 16. relational-expression => shift-expression
    (lambda ($1 . $rest) $1)
-   ;; relational-expression => relational-expression "<" shift-expression
+   ;; 17. relational-expression => relational-expression "<" shift-expression
    (lambda ($3 $2 $1 . $rest) `(lt ,$1 ,$3))
-   ;; relational-expression => relational-expression "<=" shift-expression
+   ;; 18. relational-expression => relational-expression "<=" shift-expression
    (lambda ($3 $2 $1 . $rest) `(le ,$1 ,$3))
-   ;; relational-expression => relational-expression ">" shift-expression
+   ;; 19. relational-expression => relational-expression ">" shift-expression
    (lambda ($3 $2 $1 . $rest) `(gt ,$1 ,$3))
-   ;; relational-expression => relational-expression ">=" shift-expression
+   ;; 20. relational-expression => relational-expression ">=" shift-expression
    (lambda ($3 $2 $1 . $rest) `(ge ,$1 ,$3))
-   ;; shift-expression => additive-expression
+   ;; 21. shift-expression => additive-expression
    (lambda ($1 . $rest) $1)
-   ;; shift-expression => shift-expression "<<" additive-expression
+   ;; 22. shift-expression => shift-expression "<<" additive-expression
    (lambda ($3 $2 $1 . $rest) `(lshift ,$1 ,$3))
-   ;; shift-expression => shift-expression ">>" additive-expression
+   ;; 23. shift-expression => shift-expression ">>" additive-expression
    (lambda ($3 $2 $1 . $rest) `(rshift ,$1 ,$3))
-   ;; additive-expression => multiplicative-expression
+   ;; 24. additive-expression => multiplicative-expression
    (lambda ($1 . $rest) $1)
-   ;; additive-expression => additive-expression "+" multiplicative-expression
+   ;; 25. additive-expression => additive-expression "+" multiplicative-expression
    (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
-   ;; additive-expression => additive-expression "-" multiplicative-expression
+   ;; 26. additive-expression => additive-expression "-" multiplicative-expression
    (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
-   ;; multiplicative-expression => unary-expression
+   ;; 27. multiplicative-expression => unary-expression
    (lambda ($1 . $rest) $1)
-   ;; multiplicative-expression => multiplicative-expression "*" unary-expr...
+   ;; 28. multiplicative-expression => multiplicative-expression "*" unary-expr...
    (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
-   ;; multiplicative-expression => multiplicative-expression "/" unary-expr...
+   ;; 29. multiplicative-expression => multiplicative-expression "/" unary-expr...
    (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
-   ;; multiplicative-expression => multiplicative-expression "%" unary-expr...
+   ;; 30. multiplicative-expression => multiplicative-expression "%" unary-expr...
    (lambda ($3 $2 $1 . $rest) `(mod ,$1 ,$3))
-   ;; unary-expression => postfix-expression
+   ;; 31. unary-expression => postfix-expression
    (lambda ($1 . $rest) $1)
-   ;; unary-expression => "-" unary-expression
+   ;; 32. unary-expression => "-" unary-expression
    (lambda ($2 $1 . $rest) `(neg ,$2))
-   ;; unary-expression => "+" unary-expression
+   ;; 33. unary-expression => "+" unary-expression
    (lambda ($2 $1 . $rest) `(pos ,$2))
-   ;; unary-expression => "!" unary-expression
+   ;; 34. unary-expression => "!" unary-expression
    (lambda ($2 $1 . $rest) `(not ,$2))
-   ;; unary-expression => "~" unary-expression
+   ;; 35. unary-expression => "~" unary-expression
    (lambda ($2 $1 . $rest) `(bitwise-not ,$2))
-   ;; unary-expression => "++" unary-expression
+   ;; 36. unary-expression => "++" unary-expression
    (lambda ($2 $1 . $rest) `(pre-inc ,$2))
-   ;; unary-expression => "--" unary-expression
+   ;; 37. unary-expression => "--" unary-expression
    (lambda ($2 $1 . $rest) `(pre-dec ,$2))
-   ;; postfix-expression => primary-expression
+   ;; 38. postfix-expression => primary-expression
    (lambda ($1 . $rest) $1)
-   ;; postfix-expression => postfix-expression "++"
+   ;; 39. postfix-expression => postfix-expression "++"
    (lambda ($2 $1 . $rest) `(post-inc ,$1))
-   ;; postfix-expression => postfix-expression "--"
+   ;; 40. postfix-expression => postfix-expression "--"
    (lambda ($2 $1 . $rest) `(post-dec ,$1))
-   ;; primary-expression => '$ident
+   ;; 41. primary-expression => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; primary-expression => '$fixed
+   ;; 42. primary-expression => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; primary-expression => '$chlit
+   ;; 43. primary-expression => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
-   ;; primary-expression => '$chlit/L
+   ;; 44. primary-expression => '$chlit/L
    (lambda ($1 . $rest)
      `(char (@ (type "wchar_t")) ,$1))
-   ;; primary-expression => '$chlit/u
+   ;; 45. primary-expression => '$chlit/u
    (lambda ($1 . $rest)
      `(char (@ (type "char16_t")) ,$1))
-   ;; primary-expression => '$chlit/U
+   ;; 46. primary-expression => '$chlit/U
    (lambda ($1 . $rest)
      `(char (@ (type "char32_t")) ,$1))
-   ;; primary-expression => "defined" "(" '$ident ")"
+   ;; 47. primary-expression => "defined" "(" '$ident ")"
    (lambda ($4 $3 $2 $1 . $rest) `(defined ,$3))
-   ;; primary-expression => "defined" '$ident
+   ;; 48. primary-expression => "defined" '$ident
    (lambda ($2 $1 . $rest) `(defined ,$2))
-   ;; primary-expression => "__has_include__" "(" '$string ")"
+   ;; 49. primary-expression => "__has_include__" "(" '$string ")"
    (lambda ($4 $3 $2 $1 . $rest) `(has-include ,$3))
-   ;; primary-expression => "__has_include_next__" "(" '$string ")"
+   ;; 50. primary-expression => "__has_include_next__" "(" '$string ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(has-include-next ,$3))
-   ;; primary-expression => "(" expression-list ")"
+   ;; 51. primary-expression => "(" expression-list ")"
    (lambda ($3 $2 $1 . $rest) $2)
-   ;; expression-list => conditional-expression
+   ;; 52. expression-list => conditional-expression
    (lambda ($1 . $rest) $1)
-   ;; expression-list => expression-list "," conditional-expression
+   ;; 53. expression-list => expression-list "," conditional-expression
    (lambda ($3 $2 $1 . $rest) $3)
    ))
 

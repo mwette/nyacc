@@ -32,7 +32,6 @@
 
 (define-module (nyacc lang c99 mach)
   #:export (c99-spec c99-mach c99x-spec c99x-mach gen-c99-files)
-  #:use-module (nyacc lang c99 parse)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
@@ -907,7 +906,6 @@
    (hashify-machine
     (make-lalr-machine c99x-spec))
    #:keep 2
-   ;; Sync w/ #:skip-if-unexp arg to make-lalr-parser in parser.scm.
    #:keepers '($code-comm $lone-comm $pragma cpp-stmt typename $ident)))
 
 ;;; =====================================

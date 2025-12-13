@@ -1,0 +1,19 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0
+!#
+(use-modules (nyacc lang lua mach))
+(use-modules (nyacc lalr))
+
+(when (gen-lua-files)
+  (system "touch parser.scm")
+  (with-output-to-file ",file.txt"
+    (lambda ()
+      (pp-lalr-grammar lua-spec)
+      (pp-lalr-machine lua-mach)))
+  #;(with-output-to-file ",stmt.txt"
+    (lambda ()
+      (pp-lalr-grammar luaia-spec)
+      (pp-lalr-machine luaia-mach))))
+
+;;; --- last line ---
