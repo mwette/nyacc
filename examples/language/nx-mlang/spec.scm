@@ -40,7 +40,6 @@
                 (lambda ()
                   (let ((env (make-fresh-user-module)))
                     (module-define! env 'current-reader (make-fluid))
-                    env))
-  )
+                    env)))
 
 ;; --- last line ---

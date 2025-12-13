@@ -573,9 +573,11 @@
          (cons `(abort ,(lookup "return" kdict) () (const ())) seed)
          kdict))
 
-       ((command) ;; TODO
-        (let ((args (rtail kseed)))
-          (values (cons `(call (xlib-ref 'ml:command) ,@args) seed) kdict)))
+       ((cmd-line cmd-call)
+        (let* ((tail (rtail kseed))
+               (tail (map (lambda (a) (if (string? a) `(const ,a) a)) tail)))
+          (values (cons `(call ,(xlib-ref 'ml:command) ,@tail) seed)
+                  kdict)))
 
        ((expr-list)
         (values (cons (cdr (reverse kseed)) seed) kdict))

@@ -189,43 +189,20 @@
 
 ;; ===
 
-(define-public (ml:command name . args)
+(define-public (ml:command env name . args)
   (cond
-   ((string=? name "load")
-    (let* ((env (current-module))
-           (file (car args))
-           )
-      #f))
+   ((string=? name "source")
+    (load (car args)))
+   ((string=? name "clear")
+    (sferr "mlang: clear not implemented"))
    (else
     (throw 'mlang-error "unknown command: ~S" name)))
   (if #f #f))
-
-(define-public (ml:source file)
-    (error "not supported yet: source"))
-#|
-(define-public (ml:source file)
-  (show-mlang-sxml #t)
-  (show-mlang-xtil #t)
-  (let* ((env (current-module))
-         (tree (and (string? file) (access? file R_OK)
-                    (call-with-input-file file
-                      (lambda (port) (read-mlang-file port env)))))
-         (itil (compile-tree-il tree env '()))
-         (base (basename file ".m"))
-         (var (module-variable env (string->symbol base)))
-         )
-    (compile itil #:from 'tree-il #:to 'value #:env env)
-    ;;(sferr "env=~S\n" env)
-    ;;(sferr "var=~S\n" var)
-    ;;(pperr var)
-    ;;(quit)
-    (if #f #f)))
-|#
 
 ;; ===
 
 (define xdict
  `(("struct" . (@ (language nx-mlang xlib) ml:make-struct))
-   ("source" . (@ (language nx-mlang xlib) ml:source))))
+   ))
 
 ;; --- last line ---

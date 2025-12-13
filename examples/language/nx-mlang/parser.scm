@@ -83,7 +83,7 @@
 
 (define commands
   '("clc" "clear" "doc" "drawnow" "format" "global" "grid" "help" "hold"
-    "load" "pause" "rotate3d" "save" "uiimport" "ver"))
+    "load" "pause" "rotate3d" "save" "source" "uiimport" "ver"))
 
 ;; @deffn {Procedure} mlang-read-cmd ch bol
 ;; Given next character @var{ch} and beginning-of-line boolean @var{bol}
