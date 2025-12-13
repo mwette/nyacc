@@ -263,7 +263,9 @@
 
       ((cmd-line ,name . ,args)
        (sf "~A" name)
-       (for-each (lambda (arg) (sf " ~A" (sx-ref arg 1))) args)
+       (for-each
+        (lambda (arg) (sf " '~A'" (string->mlang arg)))
+        args)
        (sf "\n"))
 
       ((cmd-call ,name . ,args)
