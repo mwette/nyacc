@@ -132,7 +132,7 @@
                        (if (reserved? term)
                            'terminal
                            'non-terminal)
-                       'non-terminal))
+                       'terminal))
            (quote ,term))))
  (else
   (define-syntax wrap-term
