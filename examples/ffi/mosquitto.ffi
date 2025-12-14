@@ -9,6 +9,7 @@
 
 (define-ffi-module (ffi mosquitto)
   #:pkg-config "libmosquitto"
+  #:cpp-defs '("bool=char" "true=1" "false=0")
   #:include '("mosquitto.h"))
 
 ;; --- last line ---
