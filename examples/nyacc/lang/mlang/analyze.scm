@@ -54,7 +54,8 @@
 ;; 2) then iterate using vector-fold ...
 ;;      (lambda (upd ix te infx infy infz)
 ;;    where ve is the converted tree element and infx infy infz are
-;;    vectors of specid ypes of info (see BETTER below)
+;;    vectors of specid ypes of info (see BETTER below);
+;;    top is last element
 
 ;; number of sub-elements
 (define (sxml-count node)
@@ -63,10 +64,10 @@
    ((string? node) 0)
    (else (error "ha!"))))
 
-(define (sxml->vxml sx-tree)
+(define (sxml->vxml1 sx-tree)
   (let* ((ne (sxml-count sx-tree))
          (vx (make-vector ne)))
-    ;; needs to return the index end
+    ;; no tail recursion here
     (let loop ((ix 0) (node sx-tree)) ;; ix : next avail
       (cond
        ((pair? node)
@@ -83,11 +84,45 @@
        (else ix)))
     vx))
 
-(define (display-vxml vx-tree)
-  (vector-for-each (lambda (ix vx) (sf "~s ~s\n" ix vx)) vx-tree))
+;; @deffn {Procedure} sxml->vxml sx-tree => vxml
+;; Convert an SXML AST to VXML, a vector where each entry
+;; is an element with element nodes replaced by index in the vector.
+;; @end deffn
+(define (sxml->vxml sx-tree)
+  (let* ((ne (sxml-count sx-tree))
+         (vx (make-vector ne)))
+    ;; no tail recursion here
+    (let loop ((ix 0) (node sx-tree))
+      (cond
+       ((pair? node)
+        (let* ((ln (length node))
+               (ev (make-vector ln)))
+          (vector-set! vx ix ev)
+          (fold
+           (lambda (ex el ix)
+             (vector-set! ev ex (if (pair? el) ix el))
+             (loop ix el))
+           (1+ ix) (iota ln) node)))
+       (else ix)))
+    vx))
 
-(define (vxml->sxml vx-tree)
-  #f)
+;; @deffn {Procedure} vxml->sxml vx-tree [index] => sxml
+;; Convert an VXML AST to SXML starting at index @var{index}, default 0.
+;; @end deffn
+(define* (vxml->sxml vx #:optional (ix 0))
+  (let ((ev (vector-ref vx ix)))
+    (map (lambda (ex)
+           (let ((ee (vector-ref ev ex)))
+             (if (integer? ee) (vxml->sxml vx ee) ee)))
+         (iota (vector-length ev)))))
+
+;; @deffn {Procedure} display-vxmll vx-tree [port]
+;; Convert an VXML AST to SXML starting at index @var{index}, default 0.
+;; @end deffn
+(define* (display-vxml vx-tree #:optional (port (current-output-port)))
+  (vector-for-each
+   (lambda (ix vx) (simple-format port "~s ~s\n" ix vx))
+   vx-tree))
 
 
 ;; ============================================================================
