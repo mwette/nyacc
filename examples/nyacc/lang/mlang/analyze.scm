@@ -10,14 +10,14 @@
 
 ;;; Code:
 
-(define-module (nyacc lang mlang mltoc)
-  #:export (mlang->c99))
+#;(define-module (nyacc lang mlang mltoc) #:export (mlang->c99))
 
 (use-modules (ice-9 regex))
 (use-modules (ice-9 match))
 (use-modules ((srfi srfi-1) #:select (fold last lset-union)))
 (use-modules (srfi srfi-9))             ; define-record-type
 (use-modules (srfi srfi-11))
+(use-modules (srfi srfi-43))
 (use-modules (sxml match))
 (use-modules (sxml fold))               ; fold-values
 
@@ -47,6 +47,47 @@
     "sin"
     "struct"
     ))
+
+;; strategy here
+;; 1) convert tree into vector of (tag rx ...)
+;;    where rx is an index in the vector, or a string
+;; 2) then iterate using vector-fold ...
+;;      (lambda (upd ix te infx infy infz)
+;;    where ve is the converted tree element and infx infy infz are
+;;    vectors of specid ypes of info (see BETTER below)
+
+;; number of sub-elements
+(define (sxml-count node)
+  (cond
+   ((pair? node) (fold (lambda (e s) (+ s (sxml-count e))) 1 (sx-tail node)))
+   ((string? node) 0)
+   (else (error "ha!"))))
+
+(define (sxml->vxml sx-tree)
+  (let* ((ne (sxml-count sx-tree))
+         (vx (make-vector ne)))
+    ;; needs to return the index end
+    (let loop ((ix 0) (node sx-tree)) ;; ix : next avail
+      (cond
+       ((pair? node)
+        (let* ((ln (length node))
+               (ev (make-vector ln))
+               (ix (fold
+                    (lambda (ex el ix)
+                      (let ((ix (loop ix el)))
+                        (vector-set! ev ex (if (pair? el) ix el))
+                        ix))
+                   ix (iota ln) node)))
+          (vector-set! vx ix ev)
+          (1+ ix)))
+       (else ix)))
+    vx))
+
+(define (display-vxml vx-tree)
+  (vector-for-each (lambda (ix vx) (sf "~s ~s\n" ix vx)) vx-tree))
+
+(define (vxml->sxml vx-tree)
+  #f)
 
 
 ;; ============================================================================
@@ -238,7 +279,7 @@
           (loop (cons tree trees) (cons (car curr) done) (cdr curr) next)))
        ((pair? next) (loop trees done next '()))
        (else `(program ,@(reverse trees)))))))
-      
+
 
 ;; ============================================================================
 
@@ -490,6 +531,7 @@
       (lambda () (probe tree '() #f #f))
     (lambda (gbl fil lcl) gbl)))
 
+;; ============================================================================
 
 ;;  patterns, first pass:
 ;;    (assn (ident ,n) (call (ident "struct") . ,_) => '((kind . struct))
@@ -509,11 +551,6 @@
 ;;  "In function foo, bar is used as struct, cell, ....
 ;;  Please use different variables.
 
-;;  
-
-
-
-;; ============================================================================
 ;; 3) matrix: "[ int, int, int ]" => ivec
 ;; 4) matrix: "[ ... (fixed) ... ]" => error
 ;; 5) colon-expr => fixed-colon-expr (removed)
@@ -596,33 +633,6 @@
      ((float-mat? mat)
       (cons-source mat 'float-matrix (cdr mat)))
      (else mat))))
-
-;; @deffn {Procedure} apply-mlang-statics tree => tree
-;; Apply static semantics for Octave.  Currently, this includes
-;; @itemize
-;; @item Change @code{assn} with matrix expression on LHS to a
-;; multiple value assignment (@code{assn-many}).
-;; @end itemize
-;; TODO: aref-or-call:
-;; @end deffn
-(define (apply-old-mlang-statics tree)
-
-  (define (fU tree)
-    (sx-match tree
-      ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       (cons-source tree 'assn-many `((@ . ,attr) (lval-list . ,elts) ,rhs)))
-      ((colon-expr . ,rest)
-       (if (fixed-colon-expr? tree)
-           (cons-source tree 'fixed-colon-expr (cdr tree))
-           tree))
-      ((matrix . ,rest)
-       (check-matrix tree))
-      (,_ tree)))
-  
-  (define (fH tree) tree)
-  
-  (cadr (foldt fU fH `(*TOP* ,tree))))
-
 |#
 
 ;; ============================================================================
@@ -707,14 +717,15 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
            (when (assq-ref opts 'tree-il)
              (pp (mlang-sxml->xtil tree (current-module) '())))
            (when (assq-ref opts 'misc)
-             ;;(pp (tree-calls tree))
-             (pp (gen-program srcfile))
+             (let* ((prog (gen-program srcfile))
+                    (nelt (sxml-count prog)))
+               (sf "num elt's=~s\n" nelt))
              #t)
            #f))
        files)))
   0)
 
 
-(apply main (cdr (program-arguments)))
+;;(apply main (cdr (program-arguments)))
 
 ;; --- last line ---
