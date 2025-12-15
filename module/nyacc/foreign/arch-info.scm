@@ -187,7 +187,7 @@
 (define-syntax-rule (with-arch arch body ...)
   (parameterize
       ((*arch* (let ((march (if (arch-info? arch) arch (lookup-arch arch))))
-                 (unless march (error "with-arch: no such arch"))
+                 (unless march (error "with-arch: no such arch: " arch))
                  march)))
     body ...))
 
@@ -529,7 +529,7 @@
 
 ;; 64 bit powerpc, aka ppc64 (big endian)
 (define mtype-map/powerpc64
-  '((void* . u32be)
+  '((void* . u64be)
     (char . s8) (signed-char . s8) (unsigned-char . u8)
     (short . s16be) (unsigned-short . u16be)
     (int . s32be) (unsigned . u32be)
@@ -537,15 +537,15 @@
     (long-long . s64be) (unsigned-long-long . u64be)
     (float . f32be) (double . f64be)
     (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
-    (int32_t . s32be)z (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
     (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
-    (intptr_t . s32be) (uintptr_t . u32be)
+    (intptr_t . s64be) (uintptr_t . u64be)
     (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
-    ;; deprecatedz:
+    ;; deprecated:
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
     (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
@@ -558,7 +558,41 @@
   (make-arch-info 'powerpc64 'big mtype-map/powerpc64 alignof-mtype-map/natural))
 
 (add-to-arch-map "powerpc64" arch/powerpc64)
-(add-to-arch-map "ppc64" arch/powerpc32)
+(add-to-arch-map "ppc64" arch/powerpc64)
+
+
+;; 64 bit powerpc64le, aka ppc64le (little endian)
+(define mtype-map/powerpc64le
+  '((void* . u64le)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s64le) (unsigned-long . u64le)
+    (long-long . s64le) (unsigned-long-long . u64le)
+    (float . f32le) (double . f64le)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
+    (intptr_t . u64le) (uintptr_t . u64le)
+    (_Bool . s8) (bool . s8)
+    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
+    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
+    (float-_Complex . z32le) (double-_Complex . z64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
+    ;; deprecated:
+    (short-int . s16le) (signed-short . s16le)
+    (signed-short-int . s16le) (unsigned-short-int . u16le)
+    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (long-int . s64le) (signed-long . s64le)
+    (signed-long-int . s64le) (unsigned-long-int . u64le)
+    (long-long-int . s64le) (signed-long-long . s64le)
+    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+
+(define arch/powerpc64le
+  (make-arch-info 'powerpc64le 'little mtype-map/powerpc64le alignof-mtype-map/natural))
+
+(add-to-arch-map "powerpc64le" arch/powerpc64le)
+(add-to-arch-map "ppc64le" arch/powerpc64le)
 
 
 ;; riscv 32 bit (little endian)
