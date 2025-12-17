@@ -62,9 +62,6 @@
 
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
-(define *debug-parse* (make-parameter #f)) ; parse debug mode
-(define *show-incs* (make-parameter #f))   ; show include directories
-(define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
 
 (define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
 (define *renamer* (make-parameter default-renamer)) ; renamer from ffi-module
@@ -110,9 +107,6 @@
       (*errmsgs* (cons fmt errmsgs))
       (apply throw 'ffi-help-error fmt args)))))
 
-(define (sfstr fmt . args)
-  (apply simple-format #f fmt args))
-
 (define (sfsym fmt . args)
   (string->symbol (apply simple-format #f fmt args)))
 
@@ -120,13 +114,6 @@
   (call-with-output-string
     (lambda (port)
       (pretty-print exp port #:per-line-prefix "  "))))
-
-(define (make-arg-namer)
-  (let ((ix 0))
-    (lambda ()
-      (let ((iv ix))
-	(set! ix (1+ ix))
-	(simple-format #f "arg~S" iv)))))
 
 ;; strings->symbol
 (define (strings->symbol . string-list)
@@ -136,36 +123,6 @@
 (define (cstrnam->symnam strname)
   (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c))
                               strname)))
-
-;; '(abc def) => "abc-def"
-(define (m-path->name path)
-  (string-join (map symbol->string path) "-"))
-
-;; '(abc def) => "abc/def"
-(define (m-path->f-path path)
-  (string-join (map symbol->string path) "/"))
-
-;; @deffn {Procedure} opts->attrs module-opts script-opts
-;; The values in @var{script-opts} override @var{module-opts}.  That is,
-;; if the value is a list then append, else replace.
-;; @end deffn
-(define (opts->attrs module-opts script-opts)
-  ;; module-opts: inc-dirs pkg-config ...
-  ;; script-opts: inc-dirs
-  (fold-right
-   (lambda (opt seed)
-     (cond
-      ((assq-ref seed (car opt)) =>
-       (lambda (val)
-	 (if (pair? val)
-	     (acons (car opt) (append (cdr opt) val) seed)
-	     (acons (car opt) val seed))))
-      (else (cons opt seed))))
-   (filter (lambda (pair) (symbol? (car pair))) module-opts)
-   script-opts))
-
-(define (opts->mopts opts) ;; module options to pass
-  (filter (lambda (pair) (keyword? (car pair))) opts))
 
 ;; Run pkg-config
 (define (pkg-config name . args)
@@ -386,7 +343,7 @@
 (define (bounding-mtail-for-union-fields fields)
   (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
     (if (null? flds) btail
-	(let* ((udecl (car flds))
+	(let* (;;(udecl (car flds))
                (xdecl (expand-typerefs (car flds) (*udict*)))
                (mtail (cdr (udecl->mdecl xdecl))))
 	  (call-with-values (lambda () (sizeof-mtail mtail (*udict*)))
@@ -398,6 +355,11 @@
 
 ;; === bytestructure support ===================================================
 
+(define (bs-fixed->sym name)
+  (cond
+   ((member name '("unsigned")) 'unsigned-int)
+   (else (cstrnam->symnam name))))
+
 (define (mtail->bsdesc mtail)
   (let ((defined (*defined*)))
     (match mtail
@@ -407,19 +369,19 @@
           ((member name def-def-list) `(bs:pointer name))
           ((dmem? (w/* name) defined) (strings->symbol name "*"))
           (else `(bs:pointer (delay ,(string->symbol name)))))))
-      (`((pointer-to) (void)) `(bs:pointer 'void))
+      (`((pointer-to) (void)) '(bs:pointer 'void))
       (`((pointer-to) (fixed-type "char")) `(bs:pointer char))
-      (`((pointer-to) (fixed-type ,name)) `(bs:pointer ,name))
+      (`((pointer-to) (fixed-type ,name)) `(bs:pointer ,(bs-fixed->sym name)))
       (`((pointer-to) (float-type ,name)) `(bs:pointer ,name))
       (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
-       (bs:pointer 'void))
+       '(bs:pointer 'void))
       (`((pointer-to) (pointer-to) (function-returning . ,_1) . ,_2)
-       `(bs:pointer 'void))
+       '(bs:pointer 'void))
       (`((pointer-to) (struct-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
          (cond ((dmem? (w/struct name) defined) `(bs:pointer ,aggr-name))
 	       (else `(bs:pointer (delay ,aggr-name))))))
-      (`((pointer-to) . ,rest) `(bs:pointer 'void))
+      (`((pointer-to) . ,rest) '(bs:pointer 'void))
       (`((array-of ,n) . ,rest)
        `(bs:vector ,(const-expr->number n) ,(mtail->bsdesc rest)))
       (`((array-of) . ,rest) `(bs:vector ,(mtail->bsdesc rest) 0))
@@ -440,7 +402,7 @@
                           (mdecl (udecl->mdecl xdecl)))
                      (mtail->bsdesc (md-tail mdecl)))))))
          ((void) (fherr "void not expected") #f)
-         ((fixed-type ,name) (cstrnam->symnam name))
+         ((fixed-type ,name) (bs-fixed->sym  name))
          ((float-type ,name) (cstrnam->symnam name))
          ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
           (mtail->bsdesc `((struct-def (@ . ,attr) ,field-list))))
@@ -464,7 +426,7 @@
                 `(cenum ',(enum-def-list->alist def-list) #t)
                 `(cenum ',(enum-def-list->alist def-list)))))
          ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
-         (,otherwise (fherr "mtail->bsdesc missed:\n~A" (ppstr mtail))))))))
+         (,_ (fherr "mtail->bsdesc missed:\n~A" (ppstr mtail))))))))
 (export mtail->bsdesc)
 
 ;; === output ffi-module header ================================================
@@ -509,6 +471,21 @@
     (if (not (assq-ref (*options*) 'no-foreign-library))
         (sfscm "  #:use-module (system foreign-library)\n"))
     (sfscm "  #:use-module (bytestructures guile))\n")
+    (sfscm "\n")
+    (ppscm
+     `(define (arg->number arg)
+        (cond ((number? arg) arg)
+              ((bytestructure? arg) (bytestructure-ref arg))
+              (else (error "arg->number: bad arg:" arg)))))
+    (sfscm "\n")
+    (ppscm
+     `(define (arg->pointer arg)
+        (cond ((ffi:pointer? arg) arg)
+              ((string? arg) (ffi:string->pointer arg))
+              ((equal? 0 arg) ffi:%null-pointer)
+              ((bytestructure? arg)
+               (ffi:make-pointer (bytestructure-ref arg)))
+              (else (error "arg->pointer: bad arg:" arg)))))
     (sfscm "\n")
     (ppscm
      (if (not (assq-ref (*options*) 'no-foreign-library))
@@ -599,7 +576,7 @@
                          (init-declr (ident ,mname))) (*udict*)))
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
-      (`((pointer-to) . ,_1) `(arg->pointer ,mname ,(string->symbol name)))
+      (`((pointer-to) . ,_1) `(arg->pointer ,mname))
       (`((fixed-type ,name)) `(arg->number ,mname))
       (`((float-type ,name)) `(arg->number ,mname))
       ;;(`((enum-def . ,_1)) `(unwrap~enum ,mname))
@@ -619,7 +596,7 @@
 	((dmem? name defined) (defined-type-unwrapper name mname))
 	(else #f)))
       (`(pointer-to) mname)
-      (`(function-returning . _0) `(arg->pointer ,mname))
+      (`(function-returning . ,_0) `(arg->pointer ,mname))
       (`(enum-def (ident ,name) ,_1) mname)
       (`(enum-def ,_1) mname)
       (`(struct-ref (ident ,name)) `(bytestructure-ref ,mname))
@@ -847,7 +824,7 @@
     (and=> (assq-ref attr 'typedef) (lambda (t) (string-split (car t) #\,))))
 
   (define-syntax-rule (deftype name type)
-    `(define-public ,name ',name ,type))
+    `(define-public ,name ,type))
 
   (*defined* defined)                 ; set global for converters
 
@@ -877,14 +854,14 @@
            (values
             (dcons name (w/* name) defined)
             (xcons* seed
-              (deftype type `void)
+              (deftype type ''void)
               (deftype type* `(bs:pointer ,type)))))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (values
             (dcons name (w/* name) defined)
             (xcons* seed
-              (deftype type `void)
+              (deftype type ''void)
               (deftype type* `(bs:pointer ,type)))))
 
           (`((pointer-to) (struct-ref (ident ,aggr)))
@@ -910,7 +887,7 @@
                   (deftype type `(bs:pointer (delay ,aggr-name)))))
                (else
                 (xcons* seed
-                  `(define-public ,aggr-name 'void)
+                  `(define-public ,aggr-name ''void)
                   (deftype type `(bs:pointer (delay ,aggr-name)))))))))
 
           (`((pointer-to) . ,rest)
@@ -981,7 +958,7 @@
                        (deftype type* `(bs:pointer (delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     (deftype type* `(bs:pointer 'void))))))))
+                     (deftype type* '(bs:pointer 'void))))))))
 
              ((union-ref (ident ,agname))
               (let ((agname (rename agname 'type)))
@@ -1000,7 +977,7 @@
                        (deftype type* `(bs:pointer (delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     (deftype type* `(bs:pointer 'void))))))))
+                     (deftype type* '(bs:pointer 'void))))))))
 
              (((fixed-type float-type) ,basename)
               (values (dcons name defined)
@@ -1019,7 +996,7 @@
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
-                 `(define-public ,type 'void)
+                 `(define-public ,type ''void)
                  (deftype type* `(bs:pointer ,type)))))
 
              ((typename ,typename)
@@ -1414,64 +1391,6 @@
              (lambda () (fold-values cnvt udecls '() '()))
            (lambda (defined forms) (reverse forms))))))
 
-;; @deffn {Procedure} load-include-file filename [#pkg-config pkg]
-;; This is the functionality that Ludo was asking for: to be at guile
-;; prompt and be able to issue
-;; @example
-;; (use-modules (nyacc lang c99 ffi-help))
-;; (load-include-file "cairo.h" #:pkg-config "cairo")
-;; @end example
-;; @end deffn
-;; + Right now the only way would be to generate a file and eval it, because
-;;   our code generates strings and not lists.
-;; + and=> with-output-to-string  eval
-;; + first need to cut up intro-ffi
-;; options:
-;;   api-code cpp-defs decl-filter
-;;   inc-dirs inc-filter inc-help include
-;;   library pkg-config renamer
-(define* (load-include-file filename
-			    #:key pkg-config)
-  "- Procedure: load-include-file filename [#:pkg-config pkg]
-     This is the functionality that Ludo was asking for: to be at guile
-     prompt and be able to issue
-          (use-modules (nyacc lang c99 ffi-help))
-          (load-include-file \"cairo.h\" #:pkg-config \"cairo\")"
-  (parameterize ((*options* '()) (*defined* '())
-		 (*renamer* default-renamer) (*errmsgs* '())
-		 (*prefix* "") (*mport* #t) (*udict* '()))
-    (let* ((attrs (acons 'include (list filename) '()))
-	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
-	   (tree (parse-includes attrs))
-	   (udict (c99-trans-unit->udict/deep tree))
-	   (udecls (c99-trans-unit->udict tree))
-	   (decls (map car udecls))
-	   (scmport (mkstemp! (string-copy ",_FH_XXXXXX")))
-	   (scmfile (port-filename scmport))
-	   (compile-file (@@ (system base compile) compile-file)))
-      (*prefix* (symbol->string (gensym "fh-")))
-      (*mport* scmport)
-      (*udict* udict)
-      (ppscm '(use-modules ((system foreign) #:prefix ffi:)))
-      (ppscm '(use-modules (system foreign-library)))
-      (ppscm '(use-modules (bytestructures guile)))
-      (ppscm
-       `(define (foreign-pointer-search name)
-          (define (flc l)
-            (load-foreign-library
-             (car l) #:search-path (list ,@(pkg-config-dirs pkg-config))))
-          (let loop ((libs (list #f ,@(pkg-config-libs pkg-config))))
-            (cond
-             ((null? libs) (fherr "not found: ~s" name))
-             ((false-if-exception (foreign-library-pointer (flc libs) name)))
-             (else (loop (cdr libs)))))))
-      (process-decls decls udict def-defined)
-      (close (*mport*))
-      (simple-format #t "wrote ~S; compile and load: ...\n" scmfile)
-      (load-compiled (compile-file scmfile #:opts '()))
-      (if #f #f))))
-
-
 ;; Return #t when ffi-file has an mtime greater than that of scm-file
 (define (more-recent? ffi-file scm-file)
   ;; copied from ice-9/boot-9.scm
@@ -1566,7 +1485,7 @@
 	    (lambda (oport)
 	      (*mport* oport)
 	      (let ((env (make-fresh-user-module)))
-		(eval '(use-modules (nyacc lang c99 ffi-help-cd)) env)
+		(eval '(use-modules (fhbe fhbe-bytestructures)) env)
 		(let loop ((exp (read iport)))
 		  (cond
 		   ((eof-object? exp)
