@@ -1,4 +1,4 @@
-;;; ffi-help-bs.scm
+;;; fhbe-bytestructures.scm
 
 ;; Copyright (C) 2016-2025 Matthew Wette
 ;;
@@ -25,7 +25,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang c99 ffi-help-bs)
+(define-module (fhbe fhbe-bytestructures)
   #:export (define-ffi-module compile-ffi-file)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
@@ -35,7 +35,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 vlist)
   #:use-module (system base language)
-  #:use-module (system foreign)
+  #:use-module ((system foreign) #:prefix ffi:)
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1)
                 #:select (fold fold-right remove last append-reverse))
@@ -45,7 +45,6 @@
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
 		#:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
-  ;;#:use-module (nyacc foreign arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 pprint)
@@ -57,8 +56,7 @@
   #:use-module ((nyacc lang util) #:select (cintstr->scm))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
-  #:re-export (*nyacc-version*)
-  #:version (3 00 0))
+  #:use-module (bytestructures guile))
 
 (define default-renamer (lambda (name ctxt) name))
 
@@ -301,8 +299,8 @@
                   (string->number value)))))
        (sx-tail enum-def-list)))
 
-(define def-def-list
-  '("void"
+(define base-type-name-list
+  '("void*"
     "char" "signed char" "unsigned char"
     "short" "unsigned short"
     "int" "unsigned"
@@ -317,28 +315,30 @@
     "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
-    "__int128" "unsigned __int128"
+    "__int128" "unsigned __128"
     ;; deprecated
     "short int" "signed short" "signed short int" "unsigned short int"
     "signed" "signed int" "unsigned int"
     "long int" "signed long" "signed long int" "unsigned long int"
     "long long int" "signed long long"
-    "signed long long int" "unsigned long long int"
+    "signed long long int" "unsigned long long int"))
+
+(define def-def-list
+  '("void"
+    "char" "signed char" "unsigned char"
+    "short" "unsigned short"
+    "int" "unsigned"
+    "long" "unsigned long"
+    "float" "double"
+    "int8_t" "uint8_t" "int16_t" "uint16_t"
+    "int32_t" "uint32_t" "int64_t" "uint64_t"
+    "size_t" "ssize_t" "ptrdiff_t"
+    "intptr_t" "uintptr_t"
+    "_Bool" "bool"
+    "wchar_t" "char16_t" "char32_t"
     ))
 
 (define def-defined (alist->vhash (map (lambda (n) (cons n #t)) def-def-list)))
-
-(define ffi-long-long
-  (case (sizeof-basetype 'long-long)
-    ((8) 'ffi:int64)
-    ((4) 'ffi:int32)
-    (else (fherr "can't make long-long FFI type\n"))))
-
-(define ffi-unsigned-long-long
-  (case (sizeof-basetype 'unsigned-long-long)
-    ((8) 'ffi:uint64)
-    ((4) 'ffi:uint32)
-    (else (fherr "can't make unsigned-long-long FFI type\n"))))
 
 (define ffi-typemap
   `(("void" . ffi:void)
@@ -347,8 +347,6 @@
     ("short" . ffi:short) ("unsigned short" . ffi:unsigned-short)
     ("int" . ffi:int) ("unsigned" . ffi:unsigned-int)
     ("long" . ffi:long) ("unsigned long" . ffi:unsigned-long)
-    ("long long" . ,ffi-long-long)
-    ("unsigned long long" . ,ffi-unsigned-long-long)
     ("float" . ffi:float) ("double" . ffi:double)
     ("int8_t" . ffi:int8) ("uint8_t" . ffi:uint8)
     ("int16_t" . ffi:int16) ("uint16_t" . ffi:uint16)
@@ -367,23 +365,22 @@
     ("signed" . ffi:int) ("signed int" . ffi:int)
     ("unsigned int" . ffi:unsigned-int)
     ("long int" . ffi:long) ("signed long" . ffi:long)
-    ("signed long int" . ffi:long) ("unsigned long int" . ffi:unsigned-long)
-    ("long long int" . ,ffi-long-long) ("signed long long" . ,ffi-long-long)
-    ("signed long long int" . ,ffi-long-long)
-    ("unsigned long long int" . ,ffi-unsigned-long-long)))
+    ("signed long int" . ffi:long) ("unsigned long int" . ffi:unsigned-long)))
 
 (define ffi-defined
   (alist->vhash (map (lambda (p) (cons (car p) #t)) ffi-typemap)))
 
 (define ffi-symmap
-  `((ffi:void . ,void) (ffi:float . ,float) (ffi:double . ,double)
-    (ffi:short . ,short) (ffi:int . ,int) (ffi:long . ,long)
-    (ffi:unsigned-short . ,unsigned-short) (ffi:unsigned-int . ,unsigned-int)
-    (ffi:unsigned-long . ,unsigned-long) (ffi:size_t . ,size_t)
-    (ffi:ssize_t . ,ssize_t) (ffi:ptrdiff_t . ,ptrdiff_t) (ffi:int8 . ,int8)
-    (ffi:uint8 . ,uint8) (ffi:int16 . ,int16) (ffi:uint16 . ,uint16)
-    (ffi:int32 . ,int32) (ffi:uint32 . ,uint32) (ffi:int64 . ,int64)
-    (ffi:uint64 . ,uint64) ('* . *)))
+  `((ffi:void . ,ffi:void) (ffi:float . ,ffi:float) (ffi:double . ,ffi:double)
+    (ffi:short . ,ffi:short) (ffi:int . ,ffi:int) (ffi:long . ,ffi:long)
+    (ffi:unsigned-short . ,ffi:unsigned-short)
+    (ffi:unsigned-int . ,ffi:unsigned-int)
+    (ffi:unsigned-long . ,ffi:unsigned-long) (ffi:size_t . ,ffi:size_t)
+    (ffi:ssize_t . ,ffi:ssize_t) (ffi:ptrdiff_t . ,ffi:ptrdiff_t)
+    (ffi:int8 . ,ffi:int8) (ffi:uint8 . ,ffi:uint8) (ffi:int16 . ,ffi:int16)
+    (ffi:uint16 . ,ffi:uint16) (ffi:int32 . ,ffi:int32)
+    (ffi:uint32 . ,ffi:uint32) (ffi:int64 . ,ffi:int64)
+    (ffi:uint64 . ,ffi:uint64) ('* . *)))
 
 ;; a hack: assumes fields are unitized; not sure this works correctly
 (define (bounding-mtail-for-union-fields fields)
@@ -397,22 +394,6 @@
 	      (if (> sz mxsz)
 		  (loop mtail sz (max al mxal) (cdr flds))
 		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
-
-;; I think this can be deprecated.  It's only used once here.
-;; The nyacc C parser now outputs the fixed forms.
-(define cfix
-  (let ((cfix-dict
-         '(("signed char" . "char") ("signed short" . "short")
-           ("short int" . "short") ("signed short int" . "short")
-           ("unsigned short int" . "unsigned short") ("signed" . "int")
-           ("signed int" . "int") ("unsigned" . "unsigned int")
-           ("long int" . "long") ("signed long" . "long")
-           ("signed long int" . "long") ("unsigned long int" . "unsigned long")
-           ("long long int" . "long long") ("signed long long" . "long long")
-           ("signed long long int" . "long long")
-           ("unsigned long long int" . "unsigned long long"))))
-    (lambda (name)
-      (or (assoc-ref cfix-dict name) name))))
 
 
 ;; === bytestructure support ===================================================
@@ -428,7 +409,7 @@
           (else `(bs:pointer (delay ,(string->symbol name)))))))
       (`((pointer-to) (void)) `(bs:pointer 'void))
       (`((pointer-to) (fixed-type "char")) `(bs:pointer char))
-      (`((pointer-to) (fixed-type ,name)) `(bs:pointer (cfix name)))
+      (`((pointer-to) (fixed-type ,name)) `(bs:pointer ,name))
       (`((pointer-to) (float-type ,name)) `(bs:pointer ,name))
       (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
        (bs:pointer 'void))
@@ -613,14 +594,12 @@
     (__ (cnvt mtail))))
 
 (define* (defined-type-unwrapper name mname)
-  (let* () #;((udecl (expand-typerefs
+  (let* ((udecl (expand-typerefs
                  `(udecl (decl-spec-list (type-spec (typename ,name)))
-                         (init-declr (ident ,mname))) (*udict*)
-                         '((enum . "*any*")))) ;; hack provided
+                         (init-declr (ident ,mname))) (*udict*)))
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
-      #;(`((pointer-to) . ,_1)
-       `(arg->pointer ,mname ,(string->symbol name)))
+      (`((pointer-to) . ,_1) `(arg->pointer ,mname ,(string->symbol name)))
       (`((fixed-type ,name)) `(arg->number ,mname))
       (`((float-type ,name)) `(arg->number ,mname))
       ;;(`((enum-def . ,_1)) `(unwrap~enum ,mname))
@@ -679,12 +658,12 @@
         ((dmem? name def-defined) #f)
 	((dmem? name defined) (defined-type-wrapper name mname))
 	(else #f)))
-      (`((enum-def (ident ,name) ,rest)) ,mname)
+      (`((enum-def (ident ,name) ,rest)) mname)
       (`((enum-def ,_1)) #f)
       (`((enum-ref (ident ,name))) mname)
       (`((pointer-to) (typename ,tname)) `(bytestructure ,tname ,mname))
       (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
-        `(bytestructure ,tname ,mname))
+        `(bytestructure ,(sw/struct aggr-name) ,mname))
       (`((pointer-to) (union-ref (ident ,aggr-name) . ,rest)) #f)
       (`((pointer-to) . ,otherwise) #f)
       (`((array-of) . ,rest) (wrap-mdecl (cons* (car mdecl) '(pointer-to) rest)))
@@ -711,7 +690,6 @@
 
 ;; === function types =========================================================
 
-#|
 (define (setup-function return params)
   (define void-param '(param-decl (decl-spec-list (type-spec (void)))))
   (let* ((namer (make-arg-namer))
@@ -737,6 +715,7 @@
   (values (unwrap-udecl return (*defined*))
           (map (lambda (p) (wrap-udecl p (*defined*))) params)))
 
+#|
 ;; @deffn {Procedure} function*-wraps return params => values
 ;; Based on return udecl @var{return} and udecl params @var{params},
 ;; generate two procedures:
@@ -781,6 +760,7 @@
 	        (let ,urap-par
 		  ,(if exec-ret `((lambda (~ret) ,exec-ret) ,call) call)))))))))
 
+|#
 
 (define (cnvt-fctn name return params seed)
   ;; can't use function*-wraps just because of the delay :(
@@ -814,7 +794,6 @@
                           `((lambda (~ret) ,exec-ret) ,call)
                           call)))))))))
 
-|#
 
 ;; === the main conversion driver ==============================================
 
@@ -902,14 +881,11 @@
               (deftype type* `(bs:pointer ,type)))))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
-           (let ((return (mdecl->udecl (cons "~ret" rest))))
-             (call-with-values (lambda () (function*-wraps return params))
-               (let ((*type (strings->symbol "*" name)))
-                 (lambda (pc->pr pr->pc)
-                   (values
-                    (dcons name defined)
-                    (xcons* seed
-                      (deftype type `(bs:pointer 'void)))))))))
+           (values
+            (dcons name (w/* name) defined)
+            (xcons* seed
+              (deftype type `void)
+              (deftype type* `(bs:pointer ,type)))))
 
           (`((pointer-to) (struct-ref (ident ,aggr)))
            (values
@@ -1080,6 +1056,7 @@
              (return (mdecl->udecl (cons "~ret" (cdr (md-tail mdecl)))))
              (params (cdadar (md-tail mdecl))))
         (values defined (cnvt-fctn name return params seed))))
+
 
      ((sx-match tspec
 
