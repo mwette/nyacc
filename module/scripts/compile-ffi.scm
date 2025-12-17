@@ -80,7 +80,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -h, --help            print this help message
   --version             print version number
 
-  -b, --backend=BACKEND back end target: only cdata for now
+  -b, --backend=BACKEND backend (default: nyacc/lang/c99/ffi-help-cd)
   -L, --load-path=DIR   add DIR to the front of the module load path
   -I, --inc-dir=DIR     add DIR to list of dir's to search for C headers
   -o, --output=OFILE    write output to OFILE
@@ -122,7 +122,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
              (values (acons 'output-dir arg opts) files)))
    (option '(#\b "backend") #t #f
            (lambda (opt name arg opts files)
-             (values (acons 'backend (string->symbol arg) opts) files)))
+             (values (acons 'backend arg opts) files)))
    (option '(#\m "machine") #t #f
            (lambda (opt name arg opts files)
              (values (acons 'machine arg opts) files)))
@@ -163,7 +163,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
                    (string-suffix? ".ffi" file)
                    (fail "expecting .ffi suffix"))
                (values opts (cons file files)))
-             `((backend . ,(or (getenv "FFI_HELP_BACKEND") 'cdata))
+             `((backend . ,(or (getenv "FFI_HELP_BACKEND") "cdata"))
                (machine . "native")) '()))
 
 ;; --- check dependencies -------------------------------------------
@@ -299,10 +299,15 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
 
 (define (compile-ffi ffi-file opts)
   (let* ((scm-file (scm-for-ffi ffi-file opts))
-         (mod (case (assq-ref opts 'backend)
-                ((cdata cd) '(nyacc lang c99 ffi-help-cd))
-                (else (fail "bad backend: ~s" (assq-ref opts 'backend)))))
-         (compile-ffi-file (module-ref (resolve-module mod) 'compile-ffi-file)))
+         (fhbe (assq-ref opts 'backend))
+         (mpath (if (member fhbe '("cdata" "cd"))
+                    '(nyacc lang c99 ffi-help-cd)
+                    (map string->symbol (string-split fhbe #\/))))
+         (bemod (resolve-module mpath))
+         (compile-ffi-file (false-if-exception
+                            (module-ref bemod 'compile-ffi-file))))
+    (unless compile-ffi-file
+      (fail "backend not resolved: ~s" fhbe))
     (when (assq-ref opts 'list-deps)
       (for-each
        (lambda (f) (sfmt "~A\n" (fix-path f)))
@@ -333,7 +338,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
     (lambda (opts files)
       (when (or (assq-ref opts 'help) (null? files)) (show-usage) (exit 0))
       (unless (string=? (assq-ref opts 'machine) "native")
-        (unless (memq (assq-ref opts 'backend) '(cdata))
+        (unless (member (assq-ref opts 'backend) '("cdata" "cd"))
           (fail "only cdata supports non-native machines architectures"))
         (unless (getenv "CC")
           (fail "for non-native machine architectures define env var CC")))
