@@ -31,11 +31,10 @@
             load-include-file
             ccode->sexp
             udecl->sexp)
-  #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 pretty-print)
-  #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 rdelim) 
   #:use-module (ice-9 regex)
   #:use-module (ice-9 vlist)
   #:use-module (system base language)
@@ -49,7 +48,6 @@
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
                 #:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
-  #:use-module (nyacc foreign arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 pprint)
@@ -313,14 +311,7 @@
     "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
-    "__int128" "unsigned __int128"
-    ;; deprecated
-    "short int" "signed short" "signed short int" "unsigned short int"
-    "signed" "signed int" "unsigned int"
-    "long int" "signed long" "signed long int" "unsigned long int"
-    "long long int" "signed long long"
-    "signed long long int" "unsigned long long int"
-    ))
+    "__int128" "unsigned __int128"    ))
 
 (define def-defined (alist->vhash (map (lambda (n) (cons n #t)) def-def-list)))
 
@@ -413,6 +404,8 @@
 
 
 ;; === cdata/ctype support =====================================================
+
+(use-modules (nyacc foreign arch-info))
 
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)))
