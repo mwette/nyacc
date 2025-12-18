@@ -34,7 +34,7 @@
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 pretty-print)
-  #:use-module (ice-9 rdelim) 
+  #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 vlist)
   #:use-module (system base language)
@@ -348,17 +348,7 @@
     ("_Bool" . ffi:int8) ("bool" . ffi:int8)
     ("wchar_t" . ffi:int) ("char16_t" . ffi:int16) ("char32_t" . ffi:int32)
     ("float _Complex" . ffi:complex-float)
-    ("double _Complex" . ffi:complex-double)
-    ;; deprecated:
-    ("short int" . ffi:short) ("signed short" . ffi:short)
-    ("signed short int" . ffi:short) ("unsigned short int" . ffi:unsigned-short)
-    ("signed" . ffi:int) ("signed int" . ffi:int)
-    ("unsigned int" . ffi:unsigned-int)
-    ("long int" . ffi:long) ("signed long" . ffi:long)
-    ("signed long int" . ffi:long) ("unsigned long int" . ffi:unsigned-long)
-    ("long long int" . ,ffi-long-long) ("signed long long" . ,ffi-long-long)
-    ("signed long long int" . ,ffi-long-long)
-    ("unsigned long long int" . ,ffi-unsigned-long-long)))
+    ("double _Complex" . ffi:complex-double)))
 
 (define ffi-defined
   (alist->vhash (map (lambda (p) (cons (car p) #t)) ffi-typemap)))
@@ -386,22 +376,6 @@
                   (loop mtail sz (max al mxal) (cdr flds))
                   (loop btail mxsz (max al mxal) (cdr flds)))))))))
 
-;; I think this can be deprecated.  It's only used once here.
-;; The nyacc C parser now outputs the fixed forms.
-(define cfix
-  (let ((cfix-dict
-         '(("signed char" . "char") ("signed short" . "short")
-           ("short int" . "short") ("signed short int" . "short")
-           ("unsigned short int" . "unsigned short") ("signed" . "int")
-           ("signed int" . "int") ("unsigned" . "unsigned int")
-           ("long int" . "long") ("signed long" . "long")
-           ("signed long int" . "long") ("unsigned long int" . "unsigned long")
-           ("long long int" . "long long") ("signed long long" . "long long")
-           ("signed long long int" . "long long")
-           ("unsigned long long int" . "unsigned long long"))))
-    (lambda (name)
-      (or (assoc-ref cfix-dict name) name))))
-
 
 ;; === cdata/ctype support =====================================================
 
@@ -423,7 +397,7 @@
       (`((pointer-to) (fixed-type "char"))
        `(cpointer (cbase 'char)))
       (`((pointer-to) (fixed-type ,name))
-       `(cpointer (cbase ',(cstrnam->symnam (cfix name)))))
+       `(cpointer (cbase ',(cstrnam->symnam name))))
       (`((pointer-to) (float-type ,name))
        `(cpointer (cbase  ',name)))
       (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
