@@ -27,9 +27,9 @@
 
 (define-module (nyacc lang c99 ffi-help-cd)
   #:export (define-ffi-module
-	    compile-ffi-file
-	    load-include-file
-	    ccode->sexp
+            compile-ffi-file
+            load-include-file
+            ccode->sexp
             udecl->sexp)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
@@ -48,7 +48,7 @@
   #:use-module (sxml fold)
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
-		#:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
+                #:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
   #:use-module (nyacc foreign arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
@@ -75,10 +75,10 @@
 (define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
 (define *renamer* (make-parameter default-renamer)) ; renamer from ffi-module
 
-(define *udict* (make-parameter '()))	   ; udecl dict
-(define *ddict* (make-parameter '()))	   ; cpp-def based dict
+(define *udict* (make-parameter '()))      ; udecl dict
+(define *ddict* (make-parameter '()))      ; cpp-def based dict
 
-(define *errmsgs* (make-parameter '()))	; list of warnings
+(define *errmsgs* (make-parameter '())) ; list of warnings
 
 (define *defined* (make-parameter (alist->vhash '())))
 
@@ -116,23 +116,15 @@
       (*errmsgs* (cons fmt errmsgs))
       (apply throw 'ffi-help-error fmt args)))))
 
-(define (sfstr fmt . args)
-  (apply simple-format #f fmt args))
-
 (define (sfsym fmt . args)
   (string->symbol (apply simple-format #f fmt args)))
-
-(define (ppstr exp)
-  (call-with-output-string
-    (lambda (port)
-      (pretty-print exp port #:per-line-prefix "  "))))
 
 (define (make-arg-namer)
   (let ((ix 0))
     (lambda ()
       (let ((iv ix))
-	(set! ix (1+ ix))
-	(simple-format #f "arg~S" iv)))))
+        (set! ix (1+ ix))
+        (simple-format #f "arg~S" iv)))))
 
 ;; strings->symbol
 (define (strings->symbol . string-list)
@@ -163,9 +155,9 @@
      (cond
       ((assq-ref seed (car opt)) =>
        (lambda (val)
-	 (if (pair? val)
-	     (acons (car opt) (append (cdr opt) val) seed)
-	     (acons (car opt) val seed))))
+         (if (pair? val)
+             (acons (car opt) (append (cdr opt) val) seed)
+             (acons (car opt) val seed))))
       (else (cons opt seed))))
    (filter (lambda (pair) (symbol? (car pair))) module-opts)
    script-opts))
@@ -178,13 +170,13 @@
   (if name
       (let* ((pkg-config (or (getenv "PKG_CONFIG") "pkg-config"))
              (cmdstr (string-append pkg-config " "
-				    (string-join args) " " name))
-	     (port (open-input-pipe cmdstr))
-	     (ostr (read-line port))
-	     (status (close-pipe port))
-	     (items (if (eof-object? ostr) '() (string-split ostr #\space))))
-	(unless (zero? status) (fherr "failed: `~A'" cmdstr))
-	items)
+                                    (string-join args) " " name))
+             (port (open-input-pipe cmdstr))
+             (ostr (read-line port))
+             (status (close-pipe port))
+             (items (if (eof-object? ostr) '() (string-split ostr #\space))))
+        (unless (zero? status) (fherr "failed: `~A'" cmdstr))
+        items)
       '()))
 
 ;; use pkg-config to get a list of include dirs
@@ -289,8 +281,8 @@
    (lambda (dent)
      (let* ((name (rename (car dent) 'field)) (udecl (cdr dent))
             (xdecl (expand-typerefs udecl (*udict*) (*defined*)))
-	    (mdecl (udecl->mdecl (udecl-rem-type-qual xdecl)))
-	    (type (expand-tail (md-tail mdecl))))
+            (mdecl (udecl->mdecl (udecl-rem-type-qual xdecl)))
+            (type (expand-tail (md-tail mdecl))))
        (if (and (pair? type) (eq? 'cbitfield (car type)))
            `(,qq (,(and=> name string->symbol) (,uq ,(cadr type)) ,(caddr type)))
            `(,qq (,(and=> name string->symbol) (,uq ,type))))))
@@ -394,14 +386,14 @@
 (define (bounding-mtail-for-union-fields fields)
   (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
     (if (null? flds) btail
-	(let* ((udecl (car flds))
+        (let* ((udecl (car flds))
                (xdecl (expand-typerefs (car flds) (*udict*)))
                (mtail (cdr (udecl->mdecl xdecl))))
-	  (call-with-values (lambda () (sizeof-mtail mtail (*udict*)))
-	    (lambda (sz al)
-	      (if (> sz mxsz)
-		  (loop mtail sz (max al mxal) (cdr flds))
-		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
+          (call-with-values (lambda () (sizeof-mtail mtail (*udict*)))
+            (lambda (sz al)
+              (if (> sz mxsz)
+                  (loop mtail sz (max al mxal) (cdr flds))
+                  (loop btail mxsz (max al mxal) (cdr flds)))))))))
 
 ;; I think this can be deprecated.  It's only used once here.
 ;; The nyacc C parser now outputs the fixed forms.
@@ -453,12 +445,12 @@
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
          (cond
           ((dmem? (w/struct name) defined) `(cpointer ,aggr-name))
-	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
+          (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
       (`((pointer-to) (union-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "union-~a" name)))
          (cond
           ((dmem? (w/struct name) defined) `(cpointer ,aggr-name))
-	  (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
+          (else `(cpointer (delay ,aggr-name)))))) ;; was (cpointer 'void)
       (`((pointer-to) . ,rest)
        `(cpointer ,(mtail->ctype rest)))
       (`((array-of ,n) . ,rest)
@@ -472,7 +464,7 @@
        (sx-match (car mtail)
          ((typename ,name)
           (let ((name (rename name 'type)))
-	    (cond
+            (cond
              ((member name base-type-name-list)
               `(cbase ',(cstrnam->symnam name)))
              ((dmem? name defined) (strings->symbol name))
@@ -506,12 +498,12 @@
                 `(cenum ',(enum-def-list->alist def-list) #t)
                 `(cenum ',(enum-def-list->alist def-list)))))
          ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
-         (,otherwise (fherr "mtail->ctype missed:\n~A" (ppstr mtail))))))))
+         (,otherwise (fherr "mtail->ctype missed:\n") (pperr mtail)))))))
 (export mtail->ctype)
 
 ;; === output ffi-module header ================================================
 
-(define *mport* (make-parameter #t))	   ; output module port
+(define *mport* (make-parameter #t))       ; output module port
 
 (define (sfscm fmt . args)
   (apply simple-format (*mport*) fmt args))
@@ -521,16 +513,16 @@
   (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
 (define (c99scm tree)
   (pretty-print-c99 tree
-		    (*mport*)
-		    #:per-line-prefix ";; "))
+                    (*mport*)
+                    #:per-line-prefix ";; "))
 (define (nlscm) (newline (*mport*)))
 
 (define (ffimod-header path module-opts)
   (let* ((attrs (opts->attrs module-opts '()))
-	 (pkg-config (assq-ref attrs 'pkg-config))
+         (pkg-config (assq-ref attrs 'pkg-config))
          (libs (resolve-attr-val (assq-ref attrs 'library)))
          (libs (if pkg-config (append (pkg-config-libs pkg-config) libs) libs))
- 	 (libs (delete "libm" libs))
+         (libs (delete "libm" libs))
          (dirs (resolve-attr-val (assq-ref attrs 'lib-dirs)))
          (dirs (if pkg-config (append (pkg-config-dirs pkg-config) dirs) dirs)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
@@ -541,8 +533,8 @@
     (for-each ;; ffi-modules
      (lambda (pair)
        (cond
-	((eq? 'use-ffi-module (car pair))
-	 (sfscm "  #:use-module ~S\n" (cdr pair)))))
+        ((eq? 'use-ffi-module (car pair))
+         (sfscm "  #:use-module ~S\n" (cdr pair)))))
      module-opts)
     (for-each ;; output pass-through options
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
@@ -590,13 +582,13 @@
       (`((pointer-to) . ,_1) ''*)
       (`((fixed-type ,name))
        (or (assoc-ref ffi-typemap name)
-	   (fherr/once "no FFI type for ~A" name)))
+           (fherr/once "no FFI type for ~A" name)))
       (`((float-type ,name))
        (or (assoc-ref ffi-typemap name)
-	   (fherr/once "no FFI type for ~S" name)))
+           (fherr/once "no FFI type for ~S" name)))
       (`((typename ,name) . ,_1)
        (or (assoc-ref ffi-typemap name)
-	   (fherr "no FFI type for ~S" name)))
+           (fherr "no FFI type for ~S" name)))
       (`((void)) 'ffi:void)
       (`((enum-def . ,_1) . ,_2) 'ffi:int)
       (`((enum-ref . ,_1) . ,_2) 'ffi:int)
@@ -609,12 +601,12 @@
       (`((struct-def (field-list . ,fields)))
        `(list ,@(map (lambda (fld)
                        (let* ((udict (dictize-comp-decl fld))
-	                      (name (caar udict))
-	                      (udecl (cdar udict))
-	                      (udecl (udecl-rem-type-qual udecl))
-	                      (mdecl (udecl->mdecl udecl)))
+                              (name (caar udict))
+                              (udecl (cdar udict))
+                              (udecl (udecl-rem-type-qual udecl))
+                              (mdecl (udecl->mdecl udecl)))
                          (cnvt (cdr mdecl))))
-	             (clean-and-unitize-fields fields))))
+                     (clean-and-unitize-fields fields))))
       (`((struct-def (ident ,name) ,field-list))
        (cnvt `((struct-def ,field-list))))
 
@@ -628,7 +620,7 @@
       (`((function-returning . ,_0) . ,_1) ''*) ;; alias for ptr-to ftn
 
       (otherwise
-       (fherr "mtail->ffi-decl missed:\n~A" (ppstr mtail)))))
+       (fherr "mtail->ffi-decl missed:\n") (pperr mtail))))
 
   (match mtail
     (`((array-of ,dim) . ,rest) ''*)
@@ -659,9 +651,9 @@
       (`(float-type ,name) `(cdata-arg->number ,mname))
       (`(typename ,name)
        (cond
-	((dmem? name def-defined) `(cdata-arg->number ,mname))
-	((dmem? name defined) (defined-type-unwrapper name mname))
-	(else #f)))
+        ((dmem? name def-defined) `(cdata-arg->number ,mname))
+        ((dmem? name defined) (defined-type-unwrapper name mname))
+        (else #f)))
       (`(pointer-to)
        (match mtail
          (`((pointer-to) (typename ,name))
@@ -686,15 +678,15 @@
        (unwrap-mdecl (cons (md-label mdecl) (cons '(pointer-to) mtail))))
       (`(enum-def (ident ,name) ,_1)
        (cond
-	((dmem? (w/enum name) defined)
+        ((dmem? (w/enum name) defined)
          (list (strings->symbol "unwrap-enum-" name) mname))
-	(else `(unwrap~enum ,mname))))
+        (else `(unwrap~enum ,mname))))
       (`(enum-def ,_1) `(unwrap~enum ,mname))
       (`(enum-ref (ident ,name))
        (cond
-	((dmem? (w/enum name) defined)
+        ((dmem? (w/enum name) defined)
          (list (strings->symbol "unwrap-enum-" name) mname))
-	(else `(unwrap~enum ,mname))))
+        (else `(unwrap~enum ,mname))))
       (`(struct-ref (ident ,name)) `(cdata&-ref ,mname))
       (`(union-ref (ident ,name)) `(cdata&-ref ,mname))
       (`(array-of ,size) `(cdata-arg->pointer ,mname))
@@ -704,7 +696,7 @@
       (`(struct-def . ,_1) `(cdata&-ref ,mname))
       (`(union-def . ,_1) `(cdata&-ref ,mname))
       (otherwise
-       (fherr "unwrap-mdecl: missed:\n~A" (ppstr mtail))))))
+       (fherr "unwrap-mdecl: missed:\n" (pperr mtail))))))
 
 (define* (defined-type-wrapper name mname)
   (let* ((udecl (expand-typerefs
@@ -730,8 +722,8 @@
       (`((typename ,name))
        (cond
         ((dmem? name def-defined) #f)
-	((dmem? name defined) (defined-type-wrapper name mname))
-	(else #f)))
+        ((dmem? name defined) (defined-type-wrapper name mname))
+        (else #f)))
       (`((enum-def (ident ,name) ,rest))
        (and (dmem? (w/enum name) defined)
             (list (sfsym "wrap-enum-~A" name) mname)))
@@ -739,31 +731,31 @@
       (`((enum-ref (ident ,name)))
        (cond
         ((dmem? (w/enum name) defined) (sfsym "wrap-enum-~A" name))
-	(else 'wrap-enum)))
+        (else 'wrap-enum)))
       (`((pointer-to) (typename ,tname))
        (cond
         ((dmem? tname ffi-defined) #f)
-	((dmem? (w/* tname) defined)
+        ((dmem? (w/* tname) defined)
          (let ((sname (sfsym "~A*" tname)))
            `(make-cdata ,sname ,mname)))
-	(else #f)))
+        (else #f)))
       (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
        (cond
         ((dmem? (w/struct aggr-name) defined)
          (let ((sname (sfsym "struct-~A*" aggr-name)))
          `(make-cdata ,sname ,mname)))
-	(else #f)))
+        (else #f)))
       (`((pointer-to) (union-ref (ident ,aggr-name) . ,rest))
        (cond
-	((dmem? (w/union aggr-name) defined)
+        ((dmem? (w/union aggr-name) defined)
          (let ((sname (sfsym "union-~A*" aggr-name)))
          `(make-cdata ,sname ,mname)))
-	(else #f)))
+        (else #f)))
       (`((pointer-to) . ,otherwise) #f)
       (`((array-of) . ,rest)
        (wrap-mdecl (cons* (car mdecl) '(pointer-to) rest)))
       (otherwise
-       (fherr "wrap-mdecl missed:\n~A" (ppstr mtail))))))
+       (fherr "wrap-mdecl missed:\n") (pperr mtail)))))
 
 (define* (udecl->ffi-decl udecl #:optional (keepers ffi-defined))
   (mtail->ffi-decl
@@ -841,19 +833,19 @@
      (if varargs?
          ;; pointer->procedure (varargs)
          `(lambda (~fptr)
-	    (lambda (,@names . ~rest)
-	      (let ((~proc (ffi:pointer->procedure
+            (lambda (,@names . ~rest)
+              (let ((~proc (ffi:pointer->procedure
                             ,decl-ret ~fptr
                             (cons* ,@decl-par (map car ~rest)))
-	                   ,@urap-par))
-		,(if exec-ret `((lambda (~ret) ,exec-ret) ,va-call) va-call))))
+                           ,@urap-par))
+                ,(if exec-ret `((lambda (~ret) ,exec-ret) ,va-call) va-call))))
          ;; pointer->procedure
          `(lambda (~fptr)
-	    (let ((~proc (ffi:pointer->procedure
+            (let ((~proc (ffi:pointer->procedure
                           ,decl-ret ~fptr (list ,@decl-par))))
-	      (lambda ,names
-	        (let ,urap-par
-		  ,(if exec-ret `((lambda (~ret) ,exec-ret) ,call) call)))))))))
+              (lambda ,names
+                (let ,urap-par
+                  ,(if exec-ret `((lambda (~ret) ,exec-ret) ,call) call)))))))))
 
 
 (define (cnvt-fctn name return params seed)
@@ -866,24 +858,24 @@
          (urap-par (fold-right (lambda (n u s) (if u (cons `(,n ,u) s) s))
                                '() names exec-par))
          (call `((force ~proc) ,@names))
-	 (va-call `(apply ~proc ,@names (map cdr ~rest))))
+         (va-call `(apply ~proc ,@names (map cdr ~rest))))
     (xcons* seed
       `(define-public ,(string->symbol rname)
          ,(if varargs?
               `(lambda (,@names . ~rest)
-	         (let ((~proc (ffi:pointer->procedure
+                 (let ((~proc (ffi:pointer->procedure
                                ,decl-ret (foreign-pointer-search ,name)
                                (cons* ,@decl-par (map car ~rest))))
-	               ,@urap-par)
-		   ,(if exec-ret
+                       ,@urap-par)
+                   ,(if exec-ret
                         `((lambda (~ret) ,exec-ret) ,va-call)
                         va-call)))
-	      `(let ((~proc
+              `(let ((~proc
                       (delay (ffi:pointer->procedure
                               ,decl-ret (foreign-pointer-search ,name)
                               (list ,@decl-par)))))
                  (lambda ,names
-	           (let ,urap-par
+                   (let ,urap-par
                      ,(if exec-ret
                           `((lambda (~ret) ,exec-ret) ,call)
                           call)))))))))
@@ -896,10 +888,10 @@
 (define (expand-field-list-typerefs field-list)
   (let ((udict (*udict*)) (defined (*defined*)))
     (cons 'field-list
-	  (fold-right
-	   (lambda (udecl seed)
-	     (cons (expand-typerefs udecl udict defined) seed))
-	   '() (clean-and-unitize-fields (sx-tail field-list))))))
+          (fold-right
+           (lambda (udecl seed)
+             (cons (expand-typerefs udecl udict defined) seed))
+           '() (clean-and-unitize-fields (sx-tail field-list))))))
 
 ;; @deffn {Procedure} udecl->sexp udecl udict defined seed)
 ;; Given @var{udecl} produce scheme FFI wrappers for C types, C functions,
@@ -936,7 +928,7 @@
   (define (bkref-extend! decl typename)
     (let ((aval (sx-attr-ref decl 'typedef)))
       (sx-attr-set! decl 'typedef
-		    (if aval (string-append aval "," typename) typename))))
+                    (if aval (string-append aval "," typename) typename))))
   (define (bkref-getall attr)
     (and=> (assq-ref attr 'typedef) (lambda (t) (string-split (car t) #\,))))
 
@@ -1073,7 +1065,7 @@
                   ((dmem? (w/struct agname) defined) ;; defined previously
                    (xcons* seed
                      (deftype type (mtail->ctype mtail))
-	             (deftype type* (sfsym "struct-~A*" agname))))
+                     (deftype type* (sfsym "struct-~A*" agname))))
                   ((udict-struct-ref udict agname) ;; defined later
                    =>
                    (lambda (decl)
@@ -1092,7 +1084,7 @@
                   ((dmem? (w/union agname) defined) ;; defined previously
                    (xcons* seed
                      (deftype type (mtail->ctype mtail))
-	             (deftype type* (sfsym "union-~A*" agname))))
+                     (deftype type* (sfsym "union-~A*" agname))))
                   ((udict-union-ref udict agname) ;; defined later
                    =>
                    (lambda (decl)
@@ -1139,7 +1131,7 @@
                  (xcons* seed
                    (deftype type (sfsym "enum-~a" enum-name))
                    `(define-public ,(sfsym "wrap-~A" name)
-                      ,(sfstr "wrap-enum-~A" enum-name))
+                      ,(sfsym "wrap-enum-~A" enum-name))
                    `(define-public ,(sfsym "unwrap-~A" name)
                       ,(sfsym "unwrap-enum-~A" enum-name))))))
 
@@ -1153,25 +1145,25 @@
              ((typename ,typename)
               (let ((typerename (rename typename 'type)))
                 (cond
-	         ((dmem? typename def-defined)
-	          (values defined seed))
-	         ((dmem? typerename defined)
+                 ((dmem? typename def-defined)
+                  (values defined seed))
+                 ((dmem? typerename defined)
                   (let* ((typename typerename)
                          (aka (string->symbol typename))
                          (atype (strings->symbol typename))
                          (defined (dcons name defined))
                          (seed (cons (deftype type atype) seed)))
-	            (if (dmem? (w/* typename) defined)
+                    (if (dmem? (w/* typename) defined)
                         (let* ((name* (strings->symbol name "*"))
                                (aka* (strings->symbol typename "*"))
                                (atype* (strings->symbol typename "*")))
-	                  (values
+                          (values
                            (dcons (w/* name) defined)
                            (cons (deftype type* atype*) seed)))
                         (values defined seed))))
-	         (else
-	          (let ((xdecl (expand-typerefs udecl udict defined)))
-	            (udecl->sexp xdecl udict defined seed))))))
+                 (else
+                  (let ((xdecl (expand-typerefs udecl udict defined)))
+                    (udecl->sexp xdecl udict defined seed))))))
 
              (,__
               (sferr "udecl->sexp missed typedef:\n") (pperr mdecl)
@@ -1200,23 +1192,23 @@
             ((bkref-getall attr) =>
              (lambda (name-list)
                (fold-values
-	        (lambda (name defined seed)
+                (lambda (name defined seed)
                   (let ((type (strings->symbol name)))
                     (values (dcons name defined)
                             (cons (deftype type atype) seed))))
-	        name-list
+                name-list
                 (dcons (w/struct agname) defined)
                 (xcons* seed
                   (deftype atype agdef)
                   (deftype atype* `(cpointer ,atype))))))
-	    ((not (dmem? (w/struct agname) defined))
-	     (values
+            ((not (dmem? (w/struct agname) defined))
+             (values
               (dcons (w/struct agname) defined)
               (xcons* seed
                 (deftype atype agdef)
                 (deftype atype* `(cpointer ,atype)))))
-	    (else
-	     (values defined seed)))))
+            (else
+             (values defined seed)))))
 
         ((union-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
          (let* ((agname (rename agname 'type))
@@ -1229,35 +1221,35 @@
             ((bkref-getall attr) =>
              (lambda (name-list)
                (fold-values
-	        (lambda (name defined seed)
+                (lambda (name defined seed)
                   (let ((type (strings->symbol name)))
                     (values (dcons name defined)
                             (cons (deftype type atype) seed))))
-	        name-list
+                name-list
                 (dcons (w/union agname) defined)
                 (xcons* seed
                   (deftype atype agdef)
                   (deftype atype* `(cpointer ,atype))))))
-	    ((not (dmem? (w/union agname) defined))
-	     (values
+            ((not (dmem? (w/union agname) defined))
+             (values
               (dcons (w/union agname) defined)
               (xcons* seed
                 (deftype atype agdef)
                 (deftype atype* `(cpointer ,atype)))))
-	    (else
-	     (values defined seed)))))
+            (else
+             (values defined seed)))))
 
         ((enum-def (ident ,enum-name) ,enum-def-list)
          (let ((enum-name (rename enum-name 'type)))
            (cond
-	    ((dmem? (w/enum enum-name) defined)
-	     (values defined seed))
-	    (else
+            ((dmem? (w/enum enum-name) defined)
+             (values defined seed))
+            (else
              (let* ((type (sfsym "enum-~a" enum-name))
                     (defs (canize-enum-def-list
                            enum-def-list udict (*ddict*)))
                     (enums (enum-def-list->alist defs)))
-	       (values
+               (values
                 (dcons (w/enum enum-name) defined)
                 (xcons* seed
                   (deftype type `(cenum ',enums))
@@ -1269,7 +1261,7 @@
                        (lambda (arg) (or (symf arg) arg)))))))))))
 
         ((enum-def ,enum-def-list)
-	 (values defined seed))
+         (values defined seed))
 
         (,__ (values #f #f))) (lambda (a b) a) => values)
 
@@ -1289,12 +1281,12 @@
          (xcons* seed
            `(define ,name* ,type*)
            `(define-public ,(string->symbol rname)
-	      (let* ((obj
+              (let* ((obj
                       (delay
                         (make-cdata ,name* (foreign-pointer-search ,name)))))
-	        (case-lambda
-	          (() (cdata-sel (force obj) '*))
-	          ((arg) (cdata-set! (force obj) '* arg)))))))))
+                (case-lambda
+                  (() (cdata-sel (force obj) '*))
+                  ((arg) (cdata-set! (force obj) '* arg)))))))))
 
      ((memq 'const sspec)
       (let ((udecl (expand-typerefs udecl udict defined))
@@ -1319,8 +1311,8 @@
 
   (define (eval-code-string code)
     (let* ((tree (with-error-to-port dev/null
-		   (lambda () (parse-c99x code typerefs))))
-	   (value (and tree (eval-c99-cx tree udict ddict))))
+                   (lambda () (parse-c99x code typerefs))))
+           (value (and tree (eval-c99-cx tree udict ddict))))
       value))
 
   ;; @var{mod-dict} is list of CPP defs and enum key/val pairs. It is
@@ -1328,23 +1320,23 @@
   ;; need to first check for integer before trying expand-cpp-macro-ref.
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
   (let ((st-name (string->symbol (string-append (*prefix*) "-symbol-tab")))
-	(sv-name (string->symbol (string-append (*prefix*) "-symbol-val")))
-	(defs
-	  (fold
-	   (lambda (name seed)
-	     (let* ((repl (expand-cpp-name name ddict '()))
-		    (val (and (string? repl)
+        (sv-name (string->symbol (string-append (*prefix*) "-symbol-val")))
+        (defs
+          (fold
+           (lambda (name seed)
+             (let* ((repl (expand-cpp-name name ddict '()))
+                    (val (and (string? repl)
                               (false-if-exception (eval-code-string repl)))))
-	       (if val
+               (if val
                    (acons (string->symbol name) val seed)
-	           seed)))
-	   '() mod-def-names))
-	(ext-ftns			; lookup in use-ffi-modules
-	 (map
-	  (lambda (mod)
-	    (list (string->symbol
-		   (string-append (m-path->name mod) "-symbol-val")) 'k))
-	  ext-mods)))
+                   seed)))
+           '() mod-def-names))
+        (ext-ftns                       ; lookup in use-ffi-modules
+         (map
+          (lambda (mod)
+            (list (string->symbol
+                   (string-append (m-path->name mod) "-symbol-val")) 'k))
+          ext-mods)))
     (ppscm `(define ,st-name '(,@defs)))
     (sfscm "(export ~A)\n" st-name)
     (sfscm "\n")
@@ -1354,11 +1346,11 @@
     (nlscm)
     (ppscm
      `(define (unwrap~enum arg)
-	(cond
-	 ((number? arg) arg)
-	 ((symbol? arg) (,sv-name arg))
-	 ((cdata? arg) (cdata-ref arg))
-	 (else (error "type mismatch")))))))
+        (cond
+         ((number? arg) arg)
+         ((symbol? arg) (,sv-name arg))
+         ((cdata? arg) (cdata-ref arg))
+         (else (error "type mismatch")))))))
 
 
 ;; === Parsing the C header(s)
@@ -1367,13 +1359,13 @@
   (cond
    ((string-contains %host-type "darwin")
     (remove (lambda (s) (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	    (get-sys-cpp-defs)))
+            (get-sys-cpp-defs)))
    (else (get-sys-cpp-defs))))
 
 (define fh-cpp-dict
   (map (lambda (ent)
-	 (let ((elts (string-split ent #\=)))
-	   (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
+         (let ((elts (string-split ent #\=)))
+           (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
        fh-cpp-defs))
 
 (define fh-inc-dirs
@@ -1390,31 +1382,31 @@
 ;; @end deffn
 (define* (parse-code code #:optional (attrs '()))
   (let* ((cpp-defs (resolve-attr-val (assq-ref attrs 'cpp-defs)))
-	 (inc-dirs (resolve-attr-val (assq-ref attrs 'inc-dirs)))
-	 (inc-help (resolve-attr-val (assq-ref attrs 'inc-help)))
-	 ;;
-	 (pkg-config (assq-ref attrs 'pkg-config))
-	 (cpp-defs (append (pkg-config-defs pkg-config) cpp-defs))
-	 (inc-dirs (append (pkg-config-incs pkg-config) inc-dirs))
-	 ;;
-	 (cpp-defs (append cpp-defs fh-cpp-defs))
-	 (inc-dirs (append inc-dirs fh-inc-dirs))
-	 (inc-help (append inc-help fh-inc-help)))
+         (inc-dirs (resolve-attr-val (assq-ref attrs 'inc-dirs)))
+         (inc-help (resolve-attr-val (assq-ref attrs 'inc-help)))
+         ;;
+         (pkg-config (assq-ref attrs 'pkg-config))
+         (cpp-defs (append (pkg-config-defs pkg-config) cpp-defs))
+         (inc-dirs (append (pkg-config-incs pkg-config) inc-dirs))
+         ;;
+         (cpp-defs (append cpp-defs fh-cpp-defs))
+         (inc-dirs (append inc-dirs fh-inc-dirs))
+         (inc-help (append inc-help fh-inc-help)))
     (or (with-input-from-string code
-	  (lambda ()
-	    (call-with-values
-		(lambda ()
-		  (parse-c99 #:cpp-defs cpp-defs
-			     #:inc-dirs inc-dirs
-			     #:inc-help inc-help
-			     #:mode 'decl
-			     #:xdef? #t	; expand CPP-defines (dev-1.02)
-			     #:return-defs #t
-			     #:show-incs (*show-incs*)
-			     #:debug (*debug-parse*)))
-	      (lambda (tree defs)
-		(*ddict* defs) tree))))
-	(fherr "parse failed"))))
+          (lambda ()
+            (call-with-values
+                (lambda ()
+                  (parse-c99 #:cpp-defs cpp-defs
+                             #:inc-dirs inc-dirs
+                             #:inc-help inc-help
+                             #:mode 'decl
+                             #:xdef? #t ; expand CPP-defines (dev-1.02)
+                             #:return-defs #t
+                             #:show-incs (*show-incs*)
+                             #:debug (*debug-parse*)))
+              (lambda (tree defs)
+                (*ddict* defs) tree))))
+        (fherr "parse failed"))))
 
 ;; @deffn parse-includes attrs
 ;; This routine generates a top-level source string-file with all the includes,
@@ -1423,53 +1415,53 @@
 ;; @end deffn
 (define parse-includes
   (let* ((p (node-join
-	     (select-kids (node-typeof? 'cpp-stmt))
-	     (select-kids (node-typeof? 'include))
-	     (select-kids (node-typeof? 'trans-unit))))
-	 (merge-inc-bodies
-	  (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
+             (select-kids (node-typeof? 'cpp-stmt))
+             (select-kids (node-typeof? 'include))
+             (select-kids (node-typeof? 'trans-unit))))
+         (merge-inc-bodies
+          (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
     (lambda (attrs)
       (let* ((inc-files (resolve-attr-val (assq-ref attrs 'include)))
-	     (prog (string-join
-		    (map
-		     (lambda (inc-file)
-		       (string-append "#include \"" inc-file "\"\n"))
-		     inc-files) "")))
-	(and=> (parse-code prog attrs) merge-inc-bodies)))))
+             (prog (string-join
+                    (map
+                     (lambda (inc-file)
+                       (string-append "#include \"" inc-file "\"\n"))
+                     inc-files) "")))
+        (and=> (parse-code prog attrs) merge-inc-bodies)))))
 
 ;; === main converter ==================
 
 ;; => (values defined forms)
 (define* (process-decls decls udict
-			#:optional (defined '())
-			#:key (declf (lambda (k) #t)))
+                        #:optional (defined '())
+                        #:key (declf (lambda (k) #t)))
   (fold-values
    (lambda (name defined seed) ; name: "foo_t", (enum . "foo"), ...
      (catch 'ffi-help-error
        (lambda ()
-	 (cond
-	  ((and ;; Process the declaration if all conditions met:
-	    (declf name)		  ; 1) user wants it
-	    (not (dmem? name defined))    ; 2) not already defined
-	    (not (if (pair? name)	  ; 3) not anonymous
-		     (string=? "*anon*" (cdr name))
-		     (string=? "" name))))
-	   (let ((udecl (udict-ref udict name)))
-	     (nlscm) (c99scm udecl)
-	     (if (*echo-decls*)
-		 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
+         (cond
+          ((and ;; Process the declaration if all conditions met:
+            (declf name)                  ; 1) user wants it
+            (not (dmem? name defined))    ; 2) not already defined
+            (not (if (pair? name)         ; 3) not anonymous
+                     (string=? "*anon*" (cdr name))
+                     (string=? "" name))))
+           (let ((udecl (udict-ref udict name)))
+             (nlscm) (c99scm udecl)
+             (if (*echo-decls*)
+                 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
              (call-with-values
                  (lambda () (udecl->sexp udecl udict defined seed))
                (lambda (defined forms)
                  (for-each ppscm (reverse forms))
                  (values defined seed)))))
-	  (else (values defined seed))))
+          (else (values defined seed))))
        ;; exception handler:
        (lambda (key fmt . args)
-	 (if fmt (apply simple-format (current-error-port)
-			(string-append "ffi-help: " fmt "\n") args))
-	 (sfscm ";; ... failed.\n")
-	 (values defined seed))))
+         (if fmt (apply simple-format (current-error-port)
+                        (string-append "ffi-help: " fmt "\n") args))
+         (sfscm ";; ... failed.\n")
+         (values defined seed))))
    decls defined '()))
 
 ;; "abc,def" => '(abc def)
@@ -1480,46 +1472,46 @@
 ;; was intro-ffi
 (define (expand-ffi-module-spec path module-options)
   (let* ((script-options (*options*))
-	 (dbugl (or (and=> (assq-ref script-options 'debug) comma-split) '()))
-	 (attrs (opts->attrs module-options script-options))
-	 (incf (or (assq-ref attrs 'inc-filter) #f))
-	 (declf (or (assq-ref attrs 'decl-filter) identity))
+         (dbugl (or (and=> (assq-ref script-options 'debug) comma-split) '()))
+         (attrs (opts->attrs module-options script-options))
+         (incf (or (assq-ref attrs 'inc-filter) #f))
+         (declf (or (assq-ref attrs 'decl-filter) identity))
          ;; renamer was of one arg, now two; make it backwards compatible
-	 (renamer (let ((rn (or (assq-ref attrs 'renamer) (lambda (n c) n))))
+         (renamer (let ((rn (or (assq-ref attrs 'renamer) (lambda (n c) n))))
                     (if (false-if-exception (rn "foo" 'type))
                         rn (lambda (n c) (rn n)))))
-	 ;;
-	 (tree (begin
-		 (if (memq 'parse dbugl) (*debug-parse* #t))
-		 (and (assq-ref script-options 'show-incs) (*show-incs* #t))
-		 (cond
-		  ((assq-ref attrs 'include) (parse-includes attrs))
-		  ((assq-ref attrs 'api-code) =>
-		   (lambda (code) (parse-code code attrs)))
-		  (else (fherr "expecing #:include or #:api-code")))))
-	 (udict (c99-trans-unit->udict/deep tree))
-	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
-	 (ffi-decls (map car udecls))	; just the names, get decls from udict
+         ;;
+         (tree (begin
+                 (if (memq 'parse dbugl) (*debug-parse* #t))
+                 (and (assq-ref script-options 'show-incs) (*show-incs* #t))
+                 (cond
+                  ((assq-ref attrs 'include) (parse-includes attrs))
+                  ((assq-ref attrs 'api-code) =>
+                   (lambda (code) (parse-code code attrs)))
+                  (else (fherr "expecing #:include or #:api-code")))))
+         (udict (c99-trans-unit->udict/deep tree))
+         (udecls (c99-trans-unit->udict tree #:inc-filter incf))
+         (ffi-decls (map car udecls))   ; just the names, get decls from udict
 
-	 ;; the list of typedefs we will generate (later):
-	 (ffimod-defined #f)
-	 ;; ext modules [from #:use-modules (ffi cairo)]
-	 (ext-mods
-	  (fold-right
-	   (lambda (opt seed)
-	     (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
-	   '() module-options))
-	 (ext-defd
-	  (fold
-	   (lambda (upath seed)
-	     (unless (resolve-module upath)
-	       (fherr "module not defined: ~S" upath))
-	     (let* ((modul (resolve-module upath #:ensure #f))
-		    (pname (m-path->name upath))
-		    (vname (string->symbol (string-append pname "-types")))
-		    (var (module-ref modul vname)))
-	       (append var seed)))
-	   '() ext-mods))
+         ;; the list of typedefs we will generate (later):
+         (ffimod-defined #f)
+         ;; ext modules [from #:use-modules (ffi cairo)]
+         (ext-mods
+          (fold-right
+           (lambda (opt seed)
+             (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
+           '() module-options))
+         (ext-defd
+          (fold
+           (lambda (upath seed)
+             (unless (resolve-module upath)
+               (fherr "module not defined: ~S" upath))
+             (let* ((modul (resolve-module upath #:ensure #f))
+                    (pname (m-path->name upath))
+                    (vname (string->symbol (string-append pname "-types")))
+                    (var (module-ref modul vname)))
+               (append var seed)))
+           '() ext-mods))
          (init-defd (alist->vhash
                      (map (lambda (n) (cons n #t))
                           (append-reverse def-def-list ext-defd)))))
@@ -1536,9 +1528,9 @@
 
     ;; Convert and output foreign declarations.
     (call-with-values
-	(lambda () (process-decls ffi-decls udecls init-defd #:declf declf))
+        (lambda () (process-decls ffi-decls udecls init-defd #:declf declf))
       (lambda (defined seed)
-	;; Set ffimod-defined for including, but removed built-in types.
+        ;; Set ffimod-defined for including, but removed built-in types.
         (set! ffimod-defined
               (vhash-fold
                (lambda (k v s) (if (vhash-assoc k init-defd) s (cons k s)))
@@ -1546,9 +1538,9 @@
 
     ;; output global constants (from enum and #define)
     (let* ((modd (c99-trans-unit->ddict tree #:inc-filter incf #:skip-fdefs #t))
-	   (modd (udict-enums->ddict udecls modd))
-	   (xtra (or (assq-ref module-options 'def-keepers) '()))
-	   (mod-def-names (fold (lambda (p s) (cons (car p) s)) xtra modd)))
+           (modd (udict-enums->ddict udecls modd))
+           (xtra (or (assq-ref module-options 'def-keepers) '()))
+           (mod-def-names (fold (lambda (p s) (cons (car p) s)) xtra modd)))
       (gen-lookup-proc mod-def-names udict (*ddict*) ext-mods))
 
     ;; output list of defined types
@@ -1571,9 +1563,9 @@
 ;; @end deffn
 (define* (ccode->sexp code #:optional attrs)
   (let* ((tree (parse-code code attrs))
-	 (udict (c99-trans-unit->udict/deep tree))
-	 (udecls (c99-trans-unit->udict tree))
-	 (ffi-decls (map car udecls))
+         (udict (c99-trans-unit->udict/deep tree))
+         (udecls (c99-trans-unit->udict tree))
+         (ffi-decls (map car udecls))
          (cnvt (lambda (udent defined seed)
                  (udecl->sexp (cdr udent) udict defined seed))))
     (*udict* udict)
@@ -1600,24 +1592,24 @@
 ;;   inc-dirs inc-filter inc-help include
 ;;   library pkg-config renamer
 (define* (load-include-file filename
-			    #:key pkg-config)
+                            #:key pkg-config)
   "- Procedure: load-include-file filename [#:pkg-config pkg]
      This is the functionality that Ludo was asking for: to be at guile
      prompt and be able to issue
           (use-modules (nyacc lang c99 ffi-help))
           (load-include-file \"cairo.h\" #:pkg-config \"cairo\")"
   (parameterize ((*options* '()) (*defined* '())
-		 (*renamer* default-renamer) (*errmsgs* '())
-		 (*prefix* "") (*mport* #t) (*udict* '()))
+                 (*renamer* default-renamer) (*errmsgs* '())
+                 (*prefix* "") (*mport* #t) (*udict* '()))
     (let* ((attrs (acons 'include (list filename) '()))
-	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
-	   (tree (parse-includes attrs))
-	   (udict (c99-trans-unit->udict/deep tree))
-	   (udecls (c99-trans-unit->udict tree))
-	   (decls (map car udecls))
-	   (scmport (mkstemp! (string-copy ",_FH_XXXXXX")))
-	   (scmfile (port-filename scmport))
-	   (compile-file (@@ (system base compile) compile-file)))
+           (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
+           (tree (parse-includes attrs))
+           (udict (c99-trans-unit->udict/deep tree))
+           (udecls (c99-trans-unit->udict tree))
+           (decls (map car udecls))
+           (scmport (mkstemp! (string-copy ",_FH_XXXXXX")))
+           (scmfile (port-filename scmport))
+           (compile-file (@@ (system base compile) compile-file)))
       (*prefix* (symbol->string (gensym "fh-")))
       (*mport* scmport)
       (*udict* udict)
@@ -1646,31 +1638,31 @@
   ;; copied from ice-9/boot-9.scm
   (let ((stat1 (stat ffi-file)) (stat2 (stat scm-file)))
     (or (> (stat:mtime stat1) (stat:mtime stat2))
-	(and (= (stat:mtime stat1) (stat:mtime stat2))
-	     (>= (stat:mtimensec stat1)
-		 (stat:mtimensec stat2))))))
+        (and (= (stat:mtime stat1) (stat:mtime stat2))
+             (>= (stat:mtimensec stat1)
+                 (stat:mtimensec stat2))))))
 
 ;; given modules spec, determine if any ffi-module dependencies are
 ;; outdated
 (define (check-deps module-options)
   (let ((ext-modz ;; use filter?
-	 (fold-right
-	  (lambda (opt seed)
-	    (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
-	  '() module-options))
-	(ext-mods (map cdr (filter
-			    (lambda (opt) (eq? (car opt) 'use-ffi-module))
-			    module-options))))
+         (fold-right
+          (lambda (opt seed)
+            (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
+          '() module-options))
+        (ext-mods (map cdr (filter
+                            (lambda (opt) (eq? (car opt) 'use-ffi-module))
+                            module-options))))
     (for-each
      (lambda (fmod)
        (let* ((base (string-join (map symbol->string fmod) "/"))
-	      (xffi (string-append base ".ffi"))
-	      (xscm (string-append base ".scm")))
-	 (when (not (access? xscm R_OK))
-	   (fherr "compiled dependent ~S not found" fmod))
-	 (when (more-recent? xffi xscm)
-	   (fherr "dependent ~S needs recompile" xffi)
-	   (sleep 2))))
+              (xffi (string-append base ".ffi"))
+              (xscm (string-append base ".scm")))
+         (when (not (access? xscm R_OK))
+           (fherr "compiled dependent ~S not found" fmod))
+         (when (more-recent? xffi xscm)
+           (fherr "dependent ~S needs recompile" xffi)
+           (sleep 2))))
      ext-mods)))
 
 (define-syntax parse-module-options
@@ -1679,30 +1671,30 @@
       (datum->syntax stx (keyword->symbol (syntax->datum stx))))
     (define (ffimod-option? key)
       (and (keyword? key)
-	   (member key '(#:api-code
-			 #:cpp-defs #:decl-filter #:inc-dirs #:inc-filter
-			 #:inc-help #:include #:library #:pkg-config #:renamer
-			 #:use-ffi-module #:def-keepers #:lib-dirs))))
+           (member key '(#:api-code
+                         #:cpp-defs #:decl-filter #:inc-dirs #:inc-filter
+                         #:inc-help #:include #:library #:pkg-config #:renamer
+                         #:use-ffi-module #:def-keepers #:lib-dirs))))
     (define (module-option? key) (keyword? key))
 
     (syntax-case x ()
       ((_ key val option ...)
        (eq? (syntax->datum #'key) #:use-ffi-module)
        #`(cons
-	  (cons (quote #,(key->sym #'key)) (quote val))
-	  (parse-module-options option ...)))
+          (cons (quote #,(key->sym #'key)) (quote val))
+          (parse-module-options option ...)))
 
       ((_ key val option ...)
        (ffimod-option? (syntax->datum #'key))
        #`(cons
-	  (cons (quote #,(key->sym #'key)) val)
-	  (parse-module-options option ...)))
+          (cons (quote #,(key->sym #'key)) val)
+          (parse-module-options option ...)))
 
       ((_ key val option ...)
        (module-option? (syntax->datum #'key))
        #`(cons
-	  (cons key (quote val))
-	  (parse-module-options option ...)))
+          (cons key (quote val))
+          (parse-module-options option ...)))
 
       ((_ key val option ...)
        #'(syntax-error "compile-ffi: expecting keyword"))
@@ -1722,32 +1714,33 @@
 ;; @end deffn
 (define* (compile-ffi-file filename #:optional (options '()))
   (parameterize ((*options* options) (*defined* '())
-		 (*renamer* default-renamer) (*errmsgs* '()) (*prefix* "")
-		 (*mport* #t) (*udict* '()) (*ddict* '()))
+                 (*renamer* default-renamer) (*errmsgs* '()) (*prefix* "")
+                 (*mport* #t) (*udict* '()) (*ddict* '()))
     (if (not (access? filename R_OK))
-	(fherr "ERROR: not found: ~S" filename))
+        (fherr "ERROR: not found: ~S" filename))
     (call-with-input-file filename
       (lambda (iport)
-	(let ((output (or (assq-ref options 'output)
-			  (string-append (dirname filename) "/"
-					 (basename filename ".ffi") ".scm"))))
-	  (call-with-output-file/atomic output
-	    (lambda (oport)
-	      (*mport* oport)
-	      (let ((env (make-fresh-user-module)))
-		(eval '(use-modules (nyacc lang c99 ffi-help-cd)) env)
-		(let loop ((exp (read iport)))
-		  (cond
-		   ((eof-object? exp)
-		    (display "\n;; --- last line ---\n" oport)
-		    output)
-		   ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
-		    (eval exp env)
-		    (loop (read iport)))
-		   (else
-		    (newline oport)
-		    (pretty-print exp oport)
-		    (loop (read iport)))))))))))))
+        (let ((output (or (assq-ref options 'output)
+                          (string-append (dirname filename) "/"
+                                         (basename filename ".ffi") ".scm")))
+              (fhbe-module (assq-ref options 'fhbe-module)))
+          (call-with-output-file/atomic output
+            (lambda (oport)
+              (*mport* oport)
+              (let ((env (make-fresh-user-module)))
+                (eval `(use-modules ,fhbe-module) env)
+                (let loop ((exp (read iport)))
+                  (cond
+                   ((eof-object? exp)
+                    (display "\n;; --- last line ---\n" oport)
+                    output)
+                   ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
+                    (eval exp env)
+                    (loop (read iport)))
+                   (else
+                    (newline oport)
+                    (pretty-print exp oport)
+                    (loop (read iport)))))))))))))
 
 ;; Local variables:
 ;; eval: (put 'xcons* 'scheme-indent-function 1)
