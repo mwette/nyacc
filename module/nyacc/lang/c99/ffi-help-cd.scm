@@ -38,7 +38,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 vlist)
   #:use-module (system base language)
-  #:use-module (system foreign)
+  #:use-module ((system foreign) #:prefix ffi:)
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1)
                 #:select (fold fold-right remove last append-reverse))
@@ -272,7 +272,7 @@
 ;; The @var{fields} is the tail of the form @code{(field-list field ...)}
 ;; The procedure @var{expand-tail} will expand the type in the field.
 ;; @end deffn
-(define-public (cnvt-fields fields expand-tail)
+(define (cnvt-fields fields expand-tail)
   (define qq 'quasiquote)
   (define uq 'unquote)
   (map
@@ -311,7 +311,7 @@
     "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
-    "__int128" "unsigned __int128"    ))
+    "__int128" "unsigned __int128"))
 
 (define def-defined (alist->vhash (map (lambda (n) (cons n #t)) def-def-list)))
 
@@ -354,14 +354,16 @@
   (alist->vhash (map (lambda (p) (cons (car p) #t)) ffi-typemap)))
 
 (define ffi-symmap
-  `((ffi:void . ,void) (ffi:float . ,float) (ffi:double . ,double)
-    (ffi:short . ,short) (ffi:int . ,int) (ffi:long . ,long)
-    (ffi:unsigned-short . ,unsigned-short) (ffi:unsigned-int . ,unsigned-int)
-    (ffi:unsigned-long . ,unsigned-long) (ffi:size_t . ,size_t)
-    (ffi:ssize_t . ,ssize_t) (ffi:ptrdiff_t . ,ptrdiff_t) (ffi:int8 . ,int8)
-    (ffi:uint8 . ,uint8) (ffi:int16 . ,int16) (ffi:uint16 . ,uint16)
-    (ffi:int32 . ,int32) (ffi:uint32 . ,uint32) (ffi:int64 . ,int64)
-    (ffi:uint64 . ,uint64) ('* . *)))
+  `((ffi:void . ,ffi:void) (ffi:float . ,ffi:float) (ffi:double . ,ffi:double)
+    (ffi:short . ,ffi:short) (ffi:int . ,ffi:int) (ffi:long . ,ffi:long)
+    (ffi:unsigned-short . ,ffi:unsigned-short)
+    (ffi:unsigned-int . ,ffi:unsigned-int)
+    (ffi:unsigned-long . ,ffi:unsigned-long) (ffi:size_t . ,ffi:size_t)
+    (ffi:ssize_t . ,ffi:ssize_t) (ffi:ptrdiff_t . ,ffi:ptrdiff_t)
+    (ffi:int8 . ,ffi:int8) (ffi:uint8 . ,ffi:uint8) (ffi:int16 . ,ffi:int16)
+    (ffi:uint16 . ,ffi:uint16) (ffi:int32 . ,ffi:int32)
+    (ffi:uint32 . ,ffi:uint32) (ffi:int64 . ,ffi:int64)
+    (ffi:uint64 . ,ffi:uint64) ('* . *)))
 
 ;; a hack: assumes fields are unitized; not sure this works correctly
 (define (bounding-mtail-for-union-fields fields)
@@ -466,7 +468,7 @@
                 `(cenum ',(enum-def-list->alist def-list)))))
          ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
          (,otherwise (fherr "mtail->ctype missed:\n") (pperr mtail)))))))
-(export mtail->ctype)
+;;(export mtail->ctype)
 
 ;; === output ffi-module header ================================================
 
