@@ -7,6 +7,7 @@
 ;;    appl: appl-item* where appl-item: script-file | function-file | classdef-
 ;; 2) also need a universal symbol table
 ;; 3) also need effects record per node
+;; 4) idea: if struct member reference by key not in original struct() abort
 
 ;;; Code:
 
@@ -20,6 +21,7 @@
 (use-modules (srfi srfi-43))
 (use-modules (sxml match))
 (use-modules (sxml fold))               ; fold-values
+(use-modules (sxml xpath))
 
 (use-modules (nyacc foreign cdata))
 (use-modules (nyacc lang sx-util))
@@ -44,6 +46,7 @@
 (define builtins
   '(
     "cos"
+    "deg2rad"
     "sin"
     "struct"
     ))
@@ -243,14 +246,22 @@
 (define *path* (make-parameter '("." "ex")))
 (define *trees* (make-parameter '())) ;; alist of basename, tree
 
+;; in a file containing "addpath" calls add the paths
+(define (pathload filename)
+  (let* ((tree (read-mfile filename))
+         (calls ((sxpath '(script-file expr-stmt call)) `(*TOP* ,tree)))
+         (dirs (map (lambda (sx) (sx-ref* sx 2 1 1)) calls)))
+    (*path* (append (*path*) dirs))
+    dirs))
+
 (define (find-in-path file-name dirl)
   "file-name is never a path"
   (if (null? dirl) #f
       (let ((path (string-append (car dirl) "/" file-name)))
         (if (access? path R_OK) path (find-in-path file-name (cdr dirl))))))
 
-(define (find-file file-name)
-  (find-in-path file-name (*path*)))
+(define (find-file filename)
+  (find-in-path filename (*path*)))
 
 (define (load-function name)
   (let* ((path (find-in-path (string-append name ".m") (*path*)))
@@ -284,10 +295,12 @@
   (foldts
    (lambda (seed tree) tree)
    (lambda (seed kseed tree)
+     (sferr "tree ~s\n" tree)
      (sx-match tree
+       ((assn (ident ,name) (handle ,_0)) (cons `(skip ,name) seed))
        ((call (ident ,name) . ,_) (cons name seed))
        ((aref-or-call (ident ,name) . ,_) (cons name seed))
-       (,__ (lset-union string=? kseed seed))))
+       (,__ (lset-union equal? kseed seed))))
    (lambda (seed leaf) '())
    '() tree))
 
@@ -297,35 +310,70 @@
   ;; add to next refs w/ .m
   ;; assumes tree-calls provides no duplicates (hence lset-union there)
   (parameterize ((*path* (cons (dirname script-file) (*path*))))
-    (let loop ((trees '()) (done builtins) (curr '())
+    (let loop ((trees '()) (done builtins) (curr '()) (skip '())
                (next (list (basename script-file ".m"))))
+      (sferr "loop curr=~s  vs  skip=~s\n" curr skip)
       (cond
        ((pair? curr)
-        (let* ((file (find-file (string-append (car curr) ".m")))
-               (tree (call-with-input-file file
-                       (lambda (port)
-                         (set-port-filename! port file)
-                         (read-mlang-file port '()))))
-               (next (fold (lambda (fn nx)
-                             (if (or (member fn done) (member fn nx))
-                                 nx (cons fn nx)))
-                           next (tree-calls tree))))
-          ;; tree has file as attribute
-          (loop (cons tree trees) (cons (car curr) done) (cdr curr) next)))
-       ((pair? next) (loop trees done next '()))
+        (cond
+         ((match (car curr) (`(skip ,name) name) (_ #f))
+          => (lambda (name) (loop trees done next (cons name skip) next)))
+         ((member (car curr) skip)
+          (loop trees (cons (car curr) done) (cdr curr) skip next))
+         (else
+          (sferr "TRY ~s\n" (car curr))
+          (let* ((file (find-file (string-append (car curr) ".m")))
+                 (tree (call-with-input-file file
+                         (lambda (port)
+                           (set-port-filename! port file)
+                           (read-mlang-file port '()))))
+                 (next (fold (lambda (fn nx)
+                               (if (or (member fn done) (member fn nx))
+                                   nx (cons fn nx)))
+                             next (tree-calls tree))))
+            ;; tree has file as attribute
+            (loop (cons tree trees) (cons (car curr) done)
+                  (cdr curr) skip next)))))
+       ((pair? next) (loop trees done next skip '()))
        (else `(program ,@(reverse trees)))))))
 
+;; inline: (inline (@ (filename "foo.m") (function "foo"))
+;;                 assn-ins body assn-outs)
+;;   (assn-many a b c (call foo) -> replace assn many
+;;   (assn a b c (call foo) -> replace assn
+;;   (call foo) -> replace call w/ new "tmp"
+#|
+(define (inline-program prog)
+  (let* ((progd (map (match-lambda
+                       (`(script-file (@ (filename ,fn) . ,_1) . ,stmts)
+                        (cons fn stmts))
+                       (`(function-file
+                          ,_1 (fctn-defn (fctn-decl ,name . ,_2) . ,_3))
+                        (cons name 
+  prog)
+(define (inline-fctn-file tree)
+
+  (define (fD tree seed)
+    (value '()  seed))
+
+  (define (fU tree seed kseed)
+    seed)
+
+  (define (fH leaf seed)
+    (cons leaf seed))
+  
+  (let* ((file (sx-attr-ref tree 'filename))
+         (ftns ((sxpath '(function-file fctn-defn)) `(*TOP* ,tree)))
+         (dict (map (lambda (f) (cons (sx-ref* f 1 1 1) f))))
+         (head (car ftns)))
+    (sferr "filename=~s\n" file)
+    )
+
+  #f)
+|#
 
 ;; ============================================================================
-
-(define (ident-name id)
-  (sx-match id
-    ((toplevel ,name) name)
-    ((lexical ,name ,lname) lname)
-    (,_ #f)))
-
-;; A variable is a unique symbol, a string name and a list of uses.
-;; var : (x-123 "x" () ((kind . struct) (rank . 2) (type . float))
+;; attempt to do the effects analysis
 
 ;; I think the first thing to do is convert all identifiers to unique
 ;; ones.  (ident "foo") => (ftn|fil|gbl foo foo-123)
@@ -335,11 +383,64 @@
 ;; what about
 ;; multiple function calls => overloading
 
+(define (ident-name id)
+  (sx-match id
+    ((toplevel ,name) name)
+    ((lexical ,name ,lname) lname)
+    (,_ #f)))
+
+;; used?? structs ...
+(define (struct-sig fields)
+  ;; determine struct signature
+  ;; sum of hash of fields
+  ;; use size 999983 <= largest prime under 1,000,000
+  (map + (lambda (f) (hash f 999983)) fields))
+
+;; need symbol tables : global, per-file, per-function
+(define (cstring len)
+  (carray (cbase 'char) len))
+
+
+;; ============================================================================
+
 ;; BETTER:
 ;; struct { num: 1, str: 1, sym: 1, obj: 1 }  use-flags only one of these
 ;; struct { int: 1, flt: 1, cpx: 1 }          num-flags any of these
 ;; struct { rk0: 1, rk1: 1, rk2: ... rk7: 1 } rnk-flags of these
-;; size : prod of dims                        nelt
+
+;; dims : list of dims only for rk > 0
+;; challenge is to map expressions to transformation of dims
+
+;;(define zero-flags 
+
+(define (flags-sup a b) ;; or #f if they are the same
+  (logior a b))
+
+#|
+(define (tryme tree)
+  (let ((vx (sxml->vxml tree))
+        (vln (vector-length vx))
+        (tx (1- vl))                     ; top / last index
+        (flv (make-vector vl zero-flags)) ; flag vector
+        (szv (make-vector vl 0))          ; max size of array data
+        )
+    (let loop ((changed #t))
+      (if changed
+          (fold
+           (lambda (ix ch)
+             (vx-match (vector-ref vx ix)
+               ((add ,lt ,rt) (fl-union lt rt) ...)
+               ))
+           #f (iota vln))
+          'DONE))))
+|#
+
+
+;; ============================================================================
+#|
+;; A variable is a unique symbol, a string name and a list of uses.
+;; var : (x-123 "x" () ((kind . struct) (rank . 2) (type . float))
+
 ;; OLD BAD:
 ;; mlang expression usage (include identifiers)
 (define-record-type <mlxuse>
@@ -355,10 +456,6 @@
 ;; field with an alist
 (define* (make-use #:key kind rank dims type var?)
   (%make-mlxuse kind rank dims type var?))
-
-;; need symbol tables : global, per-file, per-function
-(define (cstring len)
-  (carray (cbase 'char) len))
 
 (define ml-uses (make-object-property))
 ;; (set! (ml-uses expr) (list (make-mlxuse x x x)))
@@ -435,15 +532,7 @@
 ;;(sf "type-in int num => ~s\n" (type-in 'int 'num))
 ;;(sf "type-in num int => ~s\n" (type-in 'num 'int))
 
-;; structs ...
-(define (struct-sig fields)
-  ;; determine struct signature
-  ;; sum of hash of fields
-  ;; use size 999983 <= largest prime under 1,000,000
-  (map + (lambda (f) (hash f 999983)) fields))
-
 ;; objects ...
-
 
 (define* (used-as? sx #:key kind rank dims type var?)
   (let ((uses (ml-uses sx)))
@@ -526,7 +615,7 @@
 (define (probe-fctn tree)
   #f) ;; ==> ("name" . info)
 
-(define (probe-tree tree)
+(define (probe-tree-2 tree)
 
   (define (make-struct-type args) ;; make struct type from struct() call
     (let loop ((names '()) (vals '()) (args args))
@@ -565,6 +654,8 @@
   (call-with-values
       (lambda () (probe tree '() #f #f))
     (lambda (gbl fil lcl) gbl)))
+|#
+
 
 ;; ============================================================================
 
@@ -698,6 +789,9 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
    (option '(#\p "pprint") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'pprint #t opts) files)))
+   (option '(#\e "envload") #t #f
+           (lambda (opt name arg opts files)
+             (values (acons 'envload arg opts) files)))
    (option '(#\t "tree-il") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'tree-il #t opts) files)))
@@ -723,44 +817,45 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
                (values opts (cons file files)))
              '() '()))
 
+(define (read-mfile srcfile)
+  (call-with-input-file srcfile
+    (lambda (port)
+      (set-port-filename! port srcfile)
+      (read-mlang-file port '()))))
+      
+
 (define (main . args)
   (call-with-values
       (lambda () (parse-args args))
     (lambda (opts files)
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
+      (and=> (assq-ref opts 'envload) (lambda (file) (pathload file)))
       (for-each 
        (lambda (srcfile)
-         (let ((tree (call-with-input-file srcfile
-                       (lambda (port)
-                         (set-port-filename! port srcfile)
-                         (read-mlang-file port '())))))
-           (when (assq-ref opts 'sxml) (pp tree))
-           (when (assq-ref opts 'pprint) (pretty-print-ml tree))
-           (when (assq-ref opts 'identify)
-             (pp (identify-tree tree '((@top . #t)))))
-           (when (assq-ref opts 'probe)
-             (let* ((tree (identify-tree tree '((@top . #t)))))
-               (*trees* (acons (basename srcfile) tree (*trees*)))
-               (let loop ((done #f) (trees (*trees*)))
-                 (cond
-                  (done #t)
-                  ((null? trees) (loop done (*trees*)))
-                  (else
-                   (probe-tree (cdar trees))
-                   ;; until we find how to terminate
-                   (loop #t (cdr trees)))))))
-           (when (assq-ref opts 'tree-il)
-             (pp (mlang-sxml->xtil tree (current-module) '())))
-           (when (assq-ref opts 'misc)
-             (let* ((prog (gen-program srcfile))
-                    (nelt (sxml-count prog)))
-               (sf "num elt's=~s\n" nelt))
-             #t)
-           #f))
+         (and (assq-ref opts 'sxml)
+              (pp (read-mfile srcfile)))
+         (and (assq-ref opts 'pprint)
+              (pretty-print-ml (read-mfile srcfile)))
+         (and (assq-ref opts 'identify)
+              (pp (identify-tree (read-mfile srcfile) '((@top . #t)))))
+         (and (assq-ref opts 'tree-il)
+              (pp (mlang-sxml->xtil (read-mfile srcfile) (current-module) '())))
+         (and (assq-ref opts 'misc)
+              (let* ((tree (read-mfile srcfile))
+                     (prog (gen-program srcfile))
+                     ;;(idsx (identify-tree prog))
+                     ;;(nelt (sxml-count prog))
+                     )
+                ;;(pp prog)
+                ;;(pp (inline-fctn-file tree))
+                ;;(sf "num elt's=~s\n" nelt)
+                ;;(pp idsx)
+                #t))
+         #f)
        files)))
   0)
 
 
-;;(apply main (cdr (program-arguments)))
+(apply main (cdr (program-arguments)))
 
 ;; --- last line ---

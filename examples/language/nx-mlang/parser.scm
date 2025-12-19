@@ -241,15 +241,24 @@
           ((div ,lt ,rt) (or (arg-not-index lt #f) (arg-not-index rt #f)))
           (,__ #f))))
 
-  (define (insert-name name list) (cons (cadr name) list)) ;; (ident ,name)
+  (define (insert-name name list)
+    (sx-match name
+      ((ident ,name)
+       (if (member name list) list (cons name list)))
+      (,_ list)))
   
   ;; (aref-or-call (handle ...) ...) is call
   ;; vars : variables (e.g., from global or function sig)
+  ;; WE HAVE
+  ;;   foo = @foo1;
+  ;;   x = foo(1) => (call (ident "foo") ...)
+  ;; BUT MAYBE WANT
+  ;;   x = foo(1) => (hcall (ident "foo") ...)
   (define (fD tree seed vars)        ; => tree seed gbl
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
        (values (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
-               '() vars))
+               '() (fold insert-name elts vars)))
       ((assn (@ . ,attr) (ident ,name) (handle ,_1))
        ;; handles will generate calls
        (values tree '() vars))
@@ -318,14 +327,11 @@
 (define (read-mlang-file port env)
   (with-input-from-port port
     (lambda ()
-      (if (eof-object? (peek-char port))
-          (read-char port)
-          (let ((sx (parse-mlang #:debug #f))
-                (fn (port-filename port)))
-            (if (and sx fn)
-                (cons* (car sx) `(@ (filename ,fn)) (cdr sx))
-                sx))))))
-
+      (let ((sx (parse-mlang #:debug #f))
+            (fn (port-filename port)))
+        (if (and sx fn)
+            (cons* (car sx) `(@ (filename ,fn)) (cdr sx))
+            sx)))))
 
 ;; === interactive parser
 

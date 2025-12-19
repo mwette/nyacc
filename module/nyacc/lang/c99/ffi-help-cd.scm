@@ -117,6 +117,11 @@
 (define (sfsym fmt . args)
   (string->symbol (apply simple-format #f fmt args)))
 
+(define (ppstr exp)
+  (call-with-output-string
+    (lambda (port)
+      (pretty-print exp port #:per-line-prefix "  "))))
+
 (define (make-arg-namer)
   (let ((ix 0))
     (lambda ()
@@ -467,72 +472,7 @@
                 `(cenum ',(enum-def-list->alist def-list) #t)
                 `(cenum ',(enum-def-list->alist def-list)))))
          ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
-         (,otherwise (fherr "mtail->ctype missed:\n") (pperr mtail)))))))
-;;(export mtail->ctype)
-
-;; === output ffi-module header ================================================
-
-(define *mport* (make-parameter #t))       ; output module port
-
-(define (sfscm fmt . args)
-  (apply simple-format (*mport*) fmt args))
-(define* (ppscm tree #:key (per-line-prefix ""))
-  (pretty-print tree (*mport*) #:per-line-prefix per-line-prefix))
-(define* (upscm tree #:key (per-line-prefix ""))
-  (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
-(define (c99scm tree)
-  (pretty-print-c99 tree
-                    (*mport*)
-                    #:per-line-prefix ";; "))
-(define (nlscm) (newline (*mport*)))
-
-(define (ffimod-header path module-opts)
-  (let* ((attrs (opts->attrs module-opts '()))
-         (pkg-config (assq-ref attrs 'pkg-config))
-         (libs (resolve-attr-val (assq-ref attrs 'library)))
-         (libs (if pkg-config (append (pkg-config-libs pkg-config) libs) libs))
-         (libs (delete "libm" libs))
-         (dirs (resolve-attr-val (assq-ref attrs 'lib-dirs)))
-         (dirs (if pkg-config (append (pkg-config-dirs pkg-config) dirs) dirs)))
-    (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
-           (m-path->f-path path))
-    (sfscm ";; using nyacc version ~a\n" *nyacc-version*)
-    (nlscm)
-    (sfscm "(define-module ~S\n" path)
-    (for-each ;; ffi-modules
-     (lambda (pair)
-       (cond
-        ((eq? 'use-ffi-module (car pair))
-         (sfscm "  #:use-module ~S\n" (cdr pair)))))
-     module-opts)
-    (for-each ;; output pass-through options
-     (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
-     (opts->mopts module-opts))
-    (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
-    (if (not (assq-ref (*options*) 'no-foreign-library))
-        (sfscm "  #:use-module (system foreign-library)\n"))
-    (sfscm "  #:use-module (nyacc foreign cdata))\n")
-    (sfscm "\n")
-    (ppscm
-     (if (not (assq-ref (*options*) 'no-foreign-library))
-         `(define (foreign-pointer-search name)
-            (define (flc l)
-              (load-foreign-library (car l) #:search-path (list ,@dirs)))
-            (let loop ((libs (list #f ,@libs)))
-              (cond
-               ((null? libs) (error "no library for ~s" name))
-               ((false-if-exception (foreign-library-pointer (flc libs) name)))
-               (else (loop (cdr libs))))))
-         `(define (foreign-pointer-search name)
-            (let loop ((dll (cons (dynamic-link)
-                                  (map dynamic-link (list ,@libs)))))
-              (cond
-               ((null? dll) (error "no library for ~s" name))
-               ((false-if-exception (dynamic-func name (car dll))))
-               (else (loop (cdr dll))))))))
-    (sfscm "\n")
-    (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
-
+         (,otherwise (fherr "mtail->ctype missed:\n~A" (ppstr mtail))))))))
 
 ;; === ffi-helper code gen =====================================================
 
@@ -589,7 +529,7 @@
       (`((function-returning . ,_0) . ,_1) ''*) ;; alias for ptr-to ftn
 
       (otherwise
-       (fherr "mtail->ffi-decl missed:\n") (pperr mtail))))
+       (fherr "mtail->ffi-decl missed:\n~A" (ppstr mtail)))))
 
   (match mtail
     (`((array-of ,dim) . ,rest) ''*)
@@ -665,7 +605,7 @@
       (`(struct-def . ,_1) `(cdata&-ref ,mname))
       (`(union-def . ,_1) `(cdata&-ref ,mname))
       (otherwise
-       (fherr "unwrap-mdecl: missed:\n" (pperr mtail))))))
+       (fherr "unwrap-mdecl: missed:\n") (pperr mtail)))))
 
 (define* (defined-type-wrapper name mname)
   (let* ((udecl (expand-typerefs
@@ -721,10 +661,10 @@
          `(make-cdata ,sname ,mname)))
         (else #f)))
       (`((pointer-to) . ,otherwise) #f)
-      (`((array-of) . ,rest)
+      (`((array-of . ,_1) . ,rest)
        (wrap-mdecl (cons* (car mdecl) '(pointer-to) rest)))
       (otherwise
-       (fherr "wrap-mdecl missed:\n") (pperr mtail)))))
+       (fherr "wrap-mdecl missed:\n~A" (ppstr mdecl))))))
 
 (define* (udecl->ffi-decl udecl #:optional (keepers ffi-defined))
   (mtail->ffi-decl
@@ -1266,6 +1206,70 @@
      (else
       (sferr "udecl->sexp: total miss\n") (pperr udecl)
       (values defined seed)))))
+
+
+;; === output ffi-module header ================================================
+
+(define *mport* (make-parameter #t))       ; output module port
+
+(define (sfscm fmt . args)
+  (apply simple-format (*mport*) fmt args))
+(define* (ppscm tree #:key (per-line-prefix ""))
+  (pretty-print tree (*mport*) #:per-line-prefix per-line-prefix))
+(define* (upscm tree #:key (per-line-prefix ""))
+  (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
+(define (c99scm tree)
+  (pretty-print-c99 tree
+                    (*mport*)
+                    #:per-line-prefix ";; "))
+(define (nlscm) (newline (*mport*)))
+
+(define (ffimod-header path module-opts)
+  (let* ((attrs (opts->attrs module-opts '()))
+         (pkg-config (assq-ref attrs 'pkg-config))
+         (libs (resolve-attr-val (assq-ref attrs 'library)))
+         (libs (if pkg-config (append (pkg-config-libs pkg-config) libs) libs))
+         (libs (delete "libm" libs))
+         (dirs (resolve-attr-val (assq-ref attrs 'lib-dirs)))
+         (dirs (if pkg-config (append (pkg-config-dirs pkg-config) dirs) dirs)))
+    (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
+           (m-path->f-path path))
+    (sfscm ";; using nyacc version ~a\n" *nyacc-version*)
+    (nlscm)
+    (sfscm "(define-module ~S\n" path)
+    (for-each ;; ffi-modules
+     (lambda (pair)
+       (cond
+        ((eq? 'use-ffi-module (car pair))
+         (sfscm "  #:use-module ~S\n" (cdr pair)))))
+     module-opts)
+    (for-each ;; output pass-through options
+     (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
+     (opts->mopts module-opts))
+    (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
+    (if (not (assq-ref (*options*) 'no-foreign-library))
+        (sfscm "  #:use-module (system foreign-library)\n"))
+    (sfscm "  #:use-module (nyacc foreign cdata))\n")
+    (sfscm "\n")
+    (ppscm
+     (if (not (assq-ref (*options*) 'no-foreign-library))
+         `(define (foreign-pointer-search name)
+            (define (flc l)
+              (load-foreign-library (car l) #:search-path (list ,@dirs)))
+            (let loop ((libs (list #f ,@libs)))
+              (cond
+               ((null? libs) (error "no library for ~s" name))
+               ((false-if-exception (foreign-library-pointer (flc libs) name)))
+               (else (loop (cdr libs))))))
+         `(define (foreign-pointer-search name)
+            (let loop ((dll (cons (dynamic-link)
+                                  (map dynamic-link (list ,@libs)))))
+              (cond
+               ((null? dll) (error "no library for ~s" name))
+               ((false-if-exception (dynamic-func name (car dll))))
+               (else (loop (cdr dll))))))))
+    (sfscm "\n")
+    (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
 
 ;; === enums and #defined => lookup
