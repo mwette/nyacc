@@ -127,13 +127,7 @@
     "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
-    "__int128" "unsigned __128"
-    ;; deprecated
-    "short int" "signed short" "signed short int" "unsigned short int"
-    "signed" "signed int" "unsigned int"
-    "long int" "signed long" "signed long int" "unsigned long int"
-    "long long int" "signed long long"
-    "signed long long int" "unsigned long long int"))
+    "__int128" "unsigned __128"))
 
 (define base-type-symbol-list
   '(void*
@@ -151,16 +145,7 @@
     wchar_t char16_t char32_t
     long-double _Float16 _Float128
     float-_Complex double-_Complex long-double-_Complex
-    __int128 unsigned-__int128
-    ;; deprecated:
-    short-int signed-short
-    signed-short-int unsigned-short-int
-    signed signed-int unsigned-int
-    long-int signed-long
-    signed-long-int unsigned-long-int
-    long-long-int signed-long-long
-    signed-long-long-int unsigned-long-long-int
-    ))
+    __int128 unsigned-__int128))
 
 (define *arch-map* (make-parameter '()))
 

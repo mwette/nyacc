@@ -388,10 +388,12 @@
 
 (use-modules (nyacc foreign arch-info))
 
-(define* (impl-header #:optional)
-  `((use-modules (nyacc foreign cdata))
-    (define arg->number cdata-arg->number)
-    (define arg->pointer cdata-arg->pointer)))
+(define (cdata-header)
+  `(begin
+     (use-modules (nyacc foreign cdata))
+     (define arg->number cdata-arg->number)
+     (define arg->pointer cdata-arg->pointer)))
+
 
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)))
@@ -479,6 +481,9 @@
          ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
          (,otherwise (fherr "mtail->ctype missed:\n~A" (ppstr mtail))))))))
 
+(define impl-header cdata-header)
+(define mtail->itype mtail->ctype)
+
 ;; === ffi-helper code gen =====================================================
 
 ;; Dealing with functions requires for each parameter and the return:
@@ -496,7 +501,7 @@
       (`((pointer-to) . ,_1) ''*)
       (`((fixed-type ,name))
        (or (assoc-ref ffi-typemap name)
-           (fherr/once "no FFI type for ~A" name)))
+           (fherr/once "no FFI type for ~S" name)))
       (`((float-type ,name))
        (or (assoc-ref ffi-typemap name)
            (fherr/once "no FFI type for ~S" name)))
@@ -869,7 +874,7 @@
            (values
             (dcons name defined)
             (xcons* seed
-              (deftype type (mtail->ctype mtail))
+              (deftype type (mtail->itype mtail))
               (deftype type* `(cpointer ,type)))))
 
           (`((function-returning (param-list . ,params)) . ,rest)
@@ -925,7 +930,7 @@
               ((fixed-type float-type) defined)
               (else (dcons name defined)))
             (xcons* seed
-              (deftype type (mtail->ctype mtail)))))
+              (deftype type (mtail->itype mtail)))))
 
           (__
            (sx-match (car mtail)
@@ -938,7 +943,7 @@
                  (let ((aname (strings->symbol "struct-" agname))
                        (aname* (strings->symbol "struct-" agname "*")))
                    (xcons* seed
-                     (deftype type (mtail->ctype mtail))
+                     (deftype type (mtail->itype mtail))
                      (deftype type* `(cpointer ,type))
                      (deftype aname type)
                      (deftype aname* type*))))))
@@ -947,7 +952,7 @@
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
-                 (deftype type (mtail->ctype mtail))
+                 (deftype type (mtail->itype mtail))
                  (deftype type* `(cpointer ,type)))))
 
              ((union-def (ident ,agname) ,field-list)
@@ -958,7 +963,7 @@
                  (let ((aname (strings->symbol "union-" agname))
                        (aname* (strings->symbol "union-" agname "*")))
                    (xcons* seed
-                     (deftype type (mtail->ctype mtail))
+                     (deftype type (mtail->itype mtail))
                      (deftype type* `(cpointer ,type))
                      (deftype aname type)
                      (deftype aname* type*))))))
@@ -967,7 +972,7 @@
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
-                 (deftype type (mtail->ctype mtail))
+                 (deftype type (mtail->itype mtail))
                  (deftype type* `(cpointer ,type)))))
 
              ((struct-ref (ident ,agname))
@@ -977,7 +982,7 @@
                  (cond
                   ((dmem? (w/struct agname) defined) ;; defined previously
                    (xcons* seed
-                     (deftype type (mtail->ctype mtail))
+                     (deftype type (mtail->itype mtail))
                      (deftype type* (sfsym "struct-~A*" agname))))
                   ((udict-struct-ref udict agname) ;; defined later
                    =>
@@ -996,7 +1001,7 @@
                  (cond
                   ((dmem? (w/union agname) defined) ;; defined previously
                    (xcons* seed
-                     (deftype type (mtail->ctype mtail))
+                     (deftype type (mtail->itype mtail))
                      (deftype type* (sfsym "union-~A*" agname))))
                   ((udict-union-ref udict agname) ;; defined later
                    =>
@@ -1010,13 +1015,13 @@
 
              (((fixed-type float-type) ,basename)
               (values (dcons name defined)
-                      (cons (deftype type (mtail->ctype mtail)) seed)))
+                      (cons (deftype type (mtail->itype mtail)) seed)))
 
              ((enum-def ,enum-def-list)
               (values
                (dcons name defined)
                (xcons* seed
-                 (deftype type (mtail->ctype mtail))
+                 (deftype type (mtail->itype mtail))
                  `(define-public ,(sfsym "unwrap-~A" name)
                     (let ((numf (cenum-numf (ctype-info ,type))))
                       (lambda (arg) (or (numf arg) arg))))
@@ -1029,7 +1034,7 @@
                 (values
                  (dcons name (w/enum enum-name) defined)
                  (xcons* seed
-                   (deftype type (mtail->ctype mtail))
+                   (deftype type (mtail->itype mtail))
                    `(define-public ,(sfsym "unwrap-~A" name)
                       (let ((numf (cenum-numf (ctype-info ,type))))
                         (lambda (arg) (or (numf arg) arg))))
@@ -1097,7 +1102,7 @@
                 (atype (strings->symbol "struct-" agname))
                 (atype* (strings->symbol "struct-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
-                (sflds (cnvt-fields (sx-tail field-list) mtail->ctype))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->itype))
                 (agdef (if (packed? aggr-attr)
                            `(cstruct (list ,@sflds) #t)
                            `(cstruct (list ,@sflds)))))
@@ -1128,7 +1133,7 @@
                 (atype (strings->symbol "union-" agname))
                 (atype* (strings->symbol "union-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
-                (sflds (cnvt-fields (sx-tail field-list) mtail->ctype))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->itype))
                 (agdef `(cunion (list ,@sflds))))
            (cond
             ((bkref-getall attr) =>
@@ -1185,8 +1190,8 @@
              (rname (rename name 'variable))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
              ;;(mtail* `((pointer-to) . ,mtail))
-             ;;(type* (mtail->ctype mtail*))
-             (ctype (mtail->ctype mtail))
+             ;;(type* (mtail->itype mtail*))
+             (ctype (mtail->itype mtail))
              (type* `(cpointer ,ctype))
              (name* (strings->symbol name "*")))
         (values
@@ -1250,10 +1255,11 @@
     (for-each ;; output pass-through options
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
      (opts->mopts module-opts))
-    (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
-    (if (not (assq-ref (*options*) 'no-foreign-library))
-        (sfscm "  #:use-module (system foreign-library)\n"))
-    (sfscm "  #:use-module (nyacc foreign cdata))\n")
+    (unless (assq-ref (*options*) 'no-foreign-library)
+      (sfscm "  #:use-module (system foreign-library)\n"))
+    (sfscm "  #:use-module ((system foreign) #:prefix ffi:))\n")
+    (sfscm "\n")
+    (ppscm (impl-header))
     (sfscm "\n")
     (ppscm
      (if (not (assq-ref (*options*) 'no-foreign-library))
@@ -1592,7 +1598,7 @@
       (*udict* udict)
       (ppscm '(use-modules ((system foreign) #:prefix ffi:)))
       (ppscm '(use-modules (system foreign-library)))
-      (ppscm '(use-modules (nyacc foreign cdata)))
+      (ppscm (impl-header))
       (ppscm
        `(define (foreign-pointer-search name)
           (define (flc l)
