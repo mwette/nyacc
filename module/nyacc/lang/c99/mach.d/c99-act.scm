@@ -293,9 +293,9 @@
    ;; 128. fixed-type-specifier => "int"
    (lambda ($1 . $rest) '(fixed-type "int"))
    ;; 129. fixed-type-specifier => "signed"
-   (lambda ($1 . $rest) '(fixed-type "signed"))
+   (lambda ($1 . $rest) '(fixed-type "int"))
    ;; 130. fixed-type-specifier => "signed" "int"
-   (lambda ($2 $1 . $rest) '(fixed-type "signed"))
+   (lambda ($2 $1 . $rest) '(fixed-type "int"))
    ;; 131. fixed-type-specifier => "long"
    (lambda ($1 . $rest) '(fixed-type "long"))
    ;; 132. fixed-type-specifier => "long" "int"
