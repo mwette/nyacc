@@ -1,4 +1,4 @@
-;;; fhbe-bytestructures.scm
+;;; bytestructures.scm
 
 ;; Copyright (C) 2016-2025 Matthew Wette
 ;;
@@ -25,7 +25,7 @@
 
 ;;; Code:
 
-(define-module (fhbe fhbe-bytestructures)
+(define-module (fhbe bytestructures)
   #:export (define-ffi-module
             compile-ffi-file
             load-include-file
