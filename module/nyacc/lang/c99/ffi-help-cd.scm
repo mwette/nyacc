@@ -760,7 +760,7 @@
          `(make-cdata ,sname ,mname)))
 	(else #f)))
       (`((pointer-to) . ,otherwise) #f)
-      (`((array-of) . ,rest)
+      (`((array-of . ,_1) . ,rest)
        (wrap-mdecl (cons* (car mdecl) '(pointer-to) rest)))
       (otherwise
        (fherr "wrap-mdecl missed:\n~A" (ppstr mtail))))))
