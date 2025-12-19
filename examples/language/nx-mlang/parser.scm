@@ -258,7 +258,7 @@
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
        (values (sx-list/src tree 'assn-many attr `(lval-list . ,elts) rhs)
-               '() (fold insert-name elts vars)))
+               '() (fold insert-name vars elts)))
       ((assn (@ . ,attr) (ident ,name) (handle ,_1))
        ;; handles will generate calls
        (values tree '() vars))
