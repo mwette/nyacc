@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2026-XX-XX  V3.02.0
+	* Working to make "easy" to add more backends (e.g, for bstruct,
+	  bytestructures).  Other back ends won't provide features the
+	  cdata one provides, and won't be well supported. 
+
 2025-XX-XX  V3.01.1
 	* lalr.scm(wrap-term/MES): make final return 'terminal 
 
