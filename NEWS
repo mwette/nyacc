@@ -6,9 +6,11 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2026-XX-XX  V3.02.0
-	* Working to make "easy" to add more backends (e.g, for bstruct,
-	  bytestructures).  Other back ends won't provide features the
-	  cdata one provides, and won't be well supported. 
+	* Updated ffi-helper to allow more backends (e.g, bstruct,
+	  bytestructures).  See github.com/mwette/guile-fhbe. This was
+	  accomplished by adding a layer of indirection and several
+	  backend specific procedures.
+	  + compile time for gtk2.ffi: v3.02=9m19s, v3.01:8m53 => 5% longer
 
 2025-XX-XX  V3.01.1
 	* lalr.scm(wrap-term/MES): make final return 'terminal 
