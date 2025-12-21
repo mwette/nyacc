@@ -398,9 +398,9 @@
      (use-modules (nyacc foreign cdata))
      (define arg->number cdata-arg->number)
      (define arg->pointer cdata-arg->pointer)
-     (define (extern-ref ptr) (cdata-sel obj '*))
-     (define (extern-set! ptr val) (cdata-set! obj '* val))
-     (define backend 'cdata)))
+     (define (extern-ref obj) (cdata-sel obj '*))
+     (define (extern-set! obj val) (cdata-set! obj '* val))
+     (eval-when (expand load eval) (define backend 'cdata))))
 
 ;; sym->val-proc-name is symbolic value of function mapping symbol to value
 (define (cdata-trailer defs)
@@ -933,13 +933,13 @@
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
              (call-with-values (lambda () (function*-wraps return params))
-               (let ((*type (strings->symbol "*" name)))
+               (let ((ptype (strings->symbol "*" name)))
                  (lambda (pc->pr pr->pc)
                    (values
                     (dcons name defined)
                     (xcons* seed
-                      `(define ,*type ,(be-function pc->pr pr->pc))
-                      (be-typedef type (be-pointer *type)))))))))
+                      `(define ,ptype ,(be-function pc->pr pr->pc))
+                      (be-typedef type (be-pointer ptype)))))))))
 
           (`((pointer-to) (struct-ref (ident ,aggr)))
            (values
@@ -1252,8 +1252,8 @@
                       (delay
                         ,(be-makeobj name* `(foreign-pointer-search ,name)))))
                 (case-lambda
-                  (() (extern-ref (force obj) '*))
-                  ((arg) (extern-set! (force obj) '* arg)))))))))
+                  (() (extern-ref (force obj)))
+                  ((arg) (extern-set! (force obj) arg)))))))))
 
      ((memq 'const sspec)
       (let ((udecl (expand-typerefs udecl udict defined))
