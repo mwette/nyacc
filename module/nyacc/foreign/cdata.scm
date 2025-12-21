@@ -365,6 +365,7 @@
 ;; @example
 ;; (define double-type (cbase 'double))
 ;; @end example
+;; For input of @code{'void}, @code{'void} is returned.
 ;; @end deffn
 (define (cbase name)
   "- Procedure: cbase name => <ctype>
@@ -382,6 +383,7 @@
                      cmap))))
     (or (hashq-ref cmap name)
         (and (memq name cbase-symbols) name)
+        (and (eq? name 'void) 'void)
         (error "cbase: not found:" name))))
 
 ;; @deffn {Procedure} cpointer type => <ctype>

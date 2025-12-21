@@ -951,7 +951,7 @@
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))
                (else
                 (xcons* seed
-                  `(define-public ,aggr-name 'void) ; FIXME
+                  `(define-public ,aggr-name ,(be-base 'void)) ; FIXME
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))))))
 
           (`((pointer-to) (union-ref (ident ,aggr)))
@@ -964,7 +964,7 @@
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))
                (else
                 (xcons* seed
-                  `(define-public ,aggr-name 'void) ; FIXME
+                  `(define-public ,aggr-name ,(be-base 'void)) ; FIXME
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))))))
 
           (`((pointer-to) . ,rest)
@@ -1106,7 +1106,7 @@
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
-                 `(define-public ,type 'void)
+                 `(define-public ,type ,(be-base 'void))
                  (be-typedef type* (be-pointer type)))))
 
              ((typename ,typename)
