@@ -30,7 +30,8 @@
             compile-ffi-file
             load-include-file
             ccode->sexp
-            udecl->sexp)
+            udecl->sexp
+            make-fh-backend)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 pretty-print)
@@ -42,6 +43,7 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1)
                 #:select (fold fold-right remove last append-reverse))
+  #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-37)
   #:use-module (srfi srfi-71)
   #:use-module (sxml fold)
@@ -79,6 +81,36 @@
 (define *errmsgs* (make-parameter '())) ; list of warnings
 
 (define *defined* (make-parameter (alist->vhash '())))
+
+(define-record-type <fh-backend>
+  (make-fh-backend header trailer
+                   mt-base mt-array mt-pointer mt-struct
+                   mt-bitfield mt-union mt-function mt-enum
+                   make-type-defn)
+  fhbe-impl?
+  (header fhbe-hdr)
+  (trailer fhbe-tlr)
+  (mt-base fhbe-bas)
+  (mt-array fhbe-ary)
+  (mt-pointer fhbe-ptr)
+  (mt-struct fhbe-str)
+  (mt-bitfield fhbe-bit)
+  (mt-union fhbe-uni)
+  (mt-function fhbe-ftn)
+  (mt-enum fhbe-enu)
+  (make-type-defn fhbe-def))
+
+(define-syntax be-header (identifier-syntax (fhbe-hdr (*impl*))))
+(define-syntax be-trailer (identifier-syntax (fhbe-tlr (*impl*))))
+(define-syntax be-base (identifier-syntax (fhbe-bas (*impl*))))
+(define-syntax be-array (identifier-syntax (fhbe-ary (*impl*))))
+(define-syntax be-pointer (identifier-syntax (fhbe-ptr (*impl*))))
+(define-syntax be-struct (identifier-syntax (fhbe-str (*impl*))))
+(define-syntax be-bitfield (identifier-syntax (fhbe-bit (*impl*))))
+(define-syntax be-union (identifier-syntax (fhbe-uni (*impl*))))
+(define-syntax be-function (identifier-syntax (fhbe-ftn (*impl*))))
+(define-syntax be-enum (identifier-syntax (fhbe-enu (*impl*))))
+(define-syntax make-type-defn (identifier-syntax (fhbe-def (*impl*))))
 
 ;; === utilities
 
@@ -395,14 +427,16 @@
      (define arg->pointer cdata-arg->pointer)))
 
 ;; sym->val-proc-name is symbolic value of function mapping symbol to value
-(define (cdata-trailer sym->val-proc-name)
-  `(define (unwrap-enum arg)
-     (cond
-      ((number? arg) arg)
-      ((symbol? arg) (,sym->val-proc-name arg))
-      ((cdata? arg) (cdata-ref arg))
-      (else (error "type mismatch")))))
+(define (cdata-trailer defs)
+  (let ((sym->val (or (assq-ref defs 'sym->val) '(const #f))))
+    `(define (unwrap-enum arg)
+       (cond
+        ((number? arg) arg)
+        ((symbol? arg) (,sym->val arg))
+        ((cdata? arg) (cdata-ref arg))
+        (else (error "type mismatch"))))))
 
+#|
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)))
     (match mtail
@@ -410,7 +444,7 @@
        (let ((name (rename name 'type)))
          (cond
           ((member name def-def-list)
-           `(cpointer (cbase ',(string->symbol name))))
+           `(cpointer (cbase ',(cstrnam->symnam name))))
           ((dmem? (w/* name) defined)
            (strings->symbol name "*"))
           (else `(cpointer (delay ,(string->symbol name)))))))
@@ -488,28 +522,122 @@
                 `(cenum ',(enum-def-list->alist def-list)))))
          ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
          (,otherwise (fherr "mtail->ctype missed:\n~A" (ppstr mtail))))))))
+|#
 
-(define impl-header cdata-header)
-(define impl-trailer cdata-trailer)
-(define mtail->itype mtail->ctype)
+(define cdata-backend
+  (make-fh-backend
+   cdata-header                         ; hdr: header
+   cdata-trailer                        ; trl: trailer
+   (lambda (name)                       ; bas: make base type
+     `(cbase ',name))
+   (lambda (type dim)                   ; ary: make array type
+     `(carray ,type ,dim))
+   (lambda (type)                       ; ptr: make pointer type
+     `(cpointer ,type)) 
+   (lambda* (flds #:optional packed)    ; str: make struct type
+     (if packed `(cstruct (list ,@flds) #t) `(cstruct (list ,@flds))))
+   (lambda (type size)                  ; bit: make bitfield
+     `(cbitfield ,type ,size))
+   (lambda (flds)                       ; uni: make union type
+     `(cunion (list ,@flds)))
+   (lambda (pr->pc pc->pr)              ; ftn: make function type
+     `(cfunction ,pr->pc ,pc->pr))
+   (lambda* (alist #:optional packed)   ; enu: make enum type
+     (if packed `(cenum ,alist #t) `(cenum ,alist)))
+   (lambda (name type)                  ; def: make type defn
+     `(define-public ,name (name-ctype ',name ,type)))))
 
-(define (ipointer type) `(cpointer ,type))
+(define *impl* (make-parameter cdata-backend))
 
-(define* (istruct flds #:optional packed)
-  (if packed `(cstruct (list ,@flds) #t) `(cstruct (list ,@flds))))
 
-(define (iunion flds) `(cunion (list ,@flds)))
+;; === this goes somewhere =====================================================
 
-;; for ifunction, if not implented, return your void type
-(define (ifunction ptr->prc prc->ptr)
-  `(cfunction ,ptr->prc ,prc->ptr))
+(define (mtail->be-type mtail)
+  (let ((defined (*defined*)))
+    (match mtail
+      (`((pointer-to) (typename ,name))
+       (let ((name (rename name 'type)))
+         (cond
+          ((member name def-def-list)
+           (be-pointer (be-base (cstrnam->symnam name))))
+          ((dmem? (w/* name) defined)
+           (strings->symbol name "*"))
+          (else (be-pointer `(delay ,(cstrnam->symnam name)))))))
+      (`((pointer-to) (void))
+       (be-pointer ''void))
+      (`((pointer-to) (fixed-type "char"))
+       (be-pointer (be-base 'char)))
+      (`((pointer-to) (fixed-type ,name))
+       (be-pointer (be-base (cstrnam->symnam name))))
+      (`((pointer-to) (float-type ,name))
+       (be-pointer (be-base  (cstrnam->symnam name))))
+      (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
+       (call-with-values
+           (lambda () (let ((return (mdecl->udecl (cons "~ret" tail))))
+                        (function*-wraps return params)))
+         (lambda (pc->pr pr->pc)
+           (be-pointer (be-function pc->pr pr->pc)))))
+      (`((pointer-to) (pointer-to) (function-returning . ,_1) . ,_2)
+       (be-pointer (be-pointer ''void)))
+      (`((pointer-to) (struct-ref (ident ,name)))
+       (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
+         (cond
+          ((dmem? (w/struct name) defined) (be-pointer aggr-name))
+          (else (be-pointer `(delay ,aggr-name))))))
+      (`((pointer-to) (union-ref (ident ,name)))
+       (let* ((name (rename name 'type)) (aggr-name (sfsym "union-~a" name)))
+         (cond
+          ((dmem? (w/struct name) defined) (be-pointer aggr-name))
+          (else (be-pointer `(delay ,aggr-name))))))
+      (`((pointer-to) . ,rest)
+       (be-pointer (mtail->be-type rest)))
+      (`((array-of ,n) . ,rest)
+       (be-array (mtail->be-type rest) (const-expr->number n)))
+      (`((array-of) . ,rest)
+       (be-array (mtail->be-type rest) 0))
+      (`((bit-field ,size) . ,rest)
+       (be-bitfield (mtail->be-type rest) (const-expr->number size)))
+      (`((extern) . ,rest) (mtail->be-type rest))
+      (__
+       (sx-match (car mtail)
+         ((typename ,name)
+          (let ((name (rename name 'type)))
+            (cond
+             ((member name base-type-name-list)
+              (be-base (cstrnam->symnam name)))
+             ((dmem? name defined) (strings->symbol name))
+             (else (let* ((udecl `(udecl (decl-spec-list (type-spec . ,mtail))
+                                         (init-declr (ident "_"))))
+                          (xdecl (expand-typerefs udecl (*udict*) defined))
+                          (mdecl (udecl->mdecl xdecl)))
+                     (mtail->be-type (md-tail mdecl)))))))
+         ((void) (fherr "void not expected") #f)
+         ((fixed-type ,name) (be-base (cstrnam->symnam name)))
+         ((float-type ,name) (be-base (cstrnam->symnam name)))
+         ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
+          (mtail->be-type `((struct-def (@ . ,attr) ,field-list))))
+         ((struct-def (@ . ,attr) (field-list . ,fields))
+          (let ((fields (cnvt-fields fields mtail->be-type)))
+            (if (packed? attr)
+                (be-struct fields #t)
+                (be-struct fields))))
+         ((struct-ref (ident ,struct-name))
+          (strings->symbol "struct-" struct-name))
+         ((union-def (ident ,name) ,field-list)
+          (mtail->be-type `((union-def ,field-list))))
+         ((union-def (field-list . ,fields))
+          (be-union (cnvt-fields fields mtail->be-type)))
+         ((union-ref (ident ,name)) (strings->symbol "union-" name))
+         ((enum-def (@ . ,attr) (ident ,ident) ,rest)
+          (mtail->be-type `((enum-def (@ . ,attr) ,rest))))
+         ((enum-def (@ . ,attr) ,edl)
+          (let ((def-list (canize-enum-def-list edl (*udict*) (*ddict*))))
+            (if (packed? attr)
+                (be-enum ',(enum-def-list->alist def-list) #t)
+                (be-enum ',(enum-def-list->alist def-list)))))
+         ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
+         (,otherwise (fherr "mtail->be-type missed:\n~A" (ppstr mtail))))))))
 
-;; for ienum, if not implented, return your int type
-(define* (ienum alist #:optional packed)
-  (if packed `(cenum ,alist #t) `(cenum ,alist)))
-
-(define (make-itype-defn name type)
-  `(define-public ,name (name-ctype ',name ,type)))
 
 ;; === ffi-helper code gen =====================================================
 
@@ -898,8 +1026,8 @@
            (values
             (dcons name defined)
             (xcons* seed
-              (make-itype-defn type (mtail->itype mtail))
-              (make-itype-defn type* (ipointer type)))))
+              (make-type-defn type (mtail->be-type mtail))
+              (make-type-defn type* (be-pointer type)))))
 
           (`((function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
@@ -908,8 +1036,8 @@
                  (values
                   (dcons name (w/* name) defined)
                   (xcons* seed
-                    (make-itype-defn type (ifunction proc->ptr ptr->proc))
-                    (make-itype-defn type* (ipointer type))))))))
+                    (make-type-defn type (be-function proc->ptr ptr->proc))
+                    (make-type-defn type* (be-pointer type))))))))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "~ret" rest))))
@@ -919,8 +1047,8 @@
                    (values
                     (dcons name defined)
                     (xcons* seed
-                      `(define ,*type ,(ifunction pc->pr pr->pc))
-                      (make-itype-defn type (ipointer *type)))))))))
+                      `(define ,*type ,(be-function pc->pr pr->pc))
+                      (make-type-defn type (be-pointer *type)))))))))
 
           (`((pointer-to) (struct-ref (ident ,aggr)))
            (values
@@ -929,11 +1057,11 @@
               (cond
                ((dmem? (w/struct aggr) defined)
                 (xcons* seed
-                  (make-itype-defn type (ipointer `(delay ,aggr-name)))))
+                  (make-type-defn type (be-pointer `(delay ,aggr-name)))))
                (else
                 (xcons* seed
                   `(define-public ,aggr-name 'void) ; FIXME
-                  (make-itype-defn type (ipointer `(delay ,aggr-name)))))))))
+                  (make-type-defn type (be-pointer `(delay ,aggr-name)))))))))
 
           (`((pointer-to) (union-ref (ident ,aggr)))
            (values
@@ -942,11 +1070,11 @@
               (cond
                ((dmem? (w/union aggr) defined)
                 (xcons* seed
-                  (make-itype-defn type (ipointer `(delay ,aggr-name)))))
+                  (make-type-defn type (be-pointer `(delay ,aggr-name)))))
                (else
                 (xcons* seed
                   `(define-public ,aggr-name 'void) ; FIXME
-                  (make-itype-defn type (ipointer `(delay ,aggr-name)))))))))
+                  (make-type-defn type (be-pointer `(delay ,aggr-name)))))))))
 
           (`((pointer-to) . ,rest)
            (values
@@ -954,7 +1082,7 @@
               ((fixed-type float-type) defined)
               (else (dcons name defined)))
             (xcons* seed
-              (make-itype-defn type (mtail->itype mtail)))))
+              (make-type-defn type (mtail->be-type mtail)))))
 
           (__
            (sx-match (car mtail)
@@ -967,17 +1095,17 @@
                  (let ((aname (strings->symbol "struct-" agname))
                        (aname* (strings->symbol "struct-" agname "*")))
                    (xcons* seed
-                     (make-itype-defn type (mtail->itype mtail))
-                     (make-itype-defn type* (ipointer type))
-                     (make-itype-defn aname type)
-                     (make-itype-defn aname* type*))))))
+                     (make-type-defn type (mtail->be-type mtail))
+                     (make-type-defn type* (be-pointer type))
+                     (make-type-defn aname type)
+                     (make-type-defn aname* type*))))))
 
              ((struct-def ,field-list)
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
-                 (make-itype-defn type (mtail->itype mtail))
-                 (make-itype-defn type* (ipointer type)))))
+                 (make-type-defn type (mtail->be-type mtail))
+                 (make-type-defn type* (be-pointer type)))))
 
              ((union-def (ident ,agname) ,field-list)
               (let ((agname (rename agname 'type)))
@@ -987,17 +1115,17 @@
                  (let ((aname (strings->symbol "union-" agname))
                        (aname* (strings->symbol "union-" agname "*")))
                    (xcons* seed
-                     (make-itype-defn type (mtail->itype mtail))
-                     (make-itype-defn type* (ipointer type))
-                     (make-itype-defn aname type)
-                     (make-itype-defn aname* type*))))))
+                     (make-type-defn type (mtail->be-type mtail))
+                     (make-type-defn type* (be-pointer type))
+                     (make-type-defn aname type)
+                     (make-type-defn aname* type*))))))
 
              ((union-def ,field-list)
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
-                 (make-itype-defn type (mtail->itype mtail))
-                 (make-itype-defn type* (ipointer type)))))
+                 (make-type-defn type (mtail->be-type mtail))
+                 (make-type-defn type* (be-pointer type)))))
 
              ((struct-ref (ident ,agname))
               (let ((agname (rename agname 'type)))
@@ -1006,17 +1134,17 @@
                  (cond
                   ((dmem? (w/struct agname) defined) ;; defined previously
                    (xcons* seed
-                     (make-itype-defn type (mtail->itype mtail))
-                     (make-itype-defn type* (sfsym "struct-~A*" agname))))
+                     (make-type-defn type (mtail->be-type mtail))
+                     (make-type-defn type* (sfsym "struct-~A*" agname))))
                   ((udict-struct-ref udict agname) ;; defined later
                    =>
                    (lambda (decl)
                      (bkref-extend! decl name)
                      (xcons* seed
-                       (make-itype-defn type* (ipointer `(delay ,type))))))
+                       (make-type-defn type* (be-pointer `(delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     (make-itype-defn type* (ipointer ''void))))))))
+                     (make-type-defn type* (be-pointer ''void))))))))
 
              ((union-ref (ident ,agname))
               (let ((agname (rename agname 'type)))
@@ -1025,21 +1153,21 @@
                  (cond
                   ((dmem? (w/union agname) defined) ;; defined previously
                    (xcons* seed
-                     (make-itype-defn type (mtail->itype mtail))
-                     (make-itype-defn type* (sfsym "union-~A*" agname))))
+                     (make-type-defn type (mtail->be-type mtail))
+                     (make-type-defn type* (sfsym "union-~A*" agname))))
                   ((udict-union-ref udict agname) ;; defined later
                    =>
                    (lambda (decl)
                      (bkref-extend! decl name)
                      (xcons* seed
-                       (make-itype-defn type* (ipointer `(delay ,type))))))
+                       (make-type-defn type* (be-pointer `(delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     (make-itype-defn type* (ipointer ''void))))))))
+                     (make-type-defn type* (be-pointer ''void))))))))
 
              (((fixed-type float-type) ,basename)
               (values (dcons name defined)
-                      (cons (make-itype-defn type (mtail->itype mtail)) seed)))
+                      (cons (make-type-defn type (mtail->be-type mtail)) seed)))
 
              ((enum-def ,enum-def-list)
               (let* ((defs (canize-enum-def-list enum-def-list udict (*ddict*)))
@@ -1049,7 +1177,7 @@
                  (dcons name defined)
                  (xcons* seed
                    `(define ,al-name ',enums)
-                   (make-itype-defn type (ienum al-name))
+                   (make-type-defn type (be-enum al-name))
                    `(define-public ,(sfsym "unwrap-~A" name)
                       (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                    `(define-public ,(sfsym "wrap-~A" name)
@@ -1065,7 +1193,7 @@
                  (dcons name (w/enum enum-name) defined)
                  (xcons* seed
                    `(define ,al-name ',enums)
-                   (make-itype-defn type (ienum al-name))
+                   (make-type-defn type (be-enum al-name))
                    `(define-public ,(sfsym "unwrap-~A" name)
                       (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                    `(define-public ,(sfsym "wrap-~A" name)
@@ -1077,7 +1205,7 @@
                 (values
                  (dcons (w/enum enum-name) defined)
                  (xcons* seed
-                   (make-itype-defn type (sfsym "enum-~a" enum-name))
+                   (make-type-defn type (sfsym "enum-~a" enum-name))
                    `(define-public ,(sfsym "wrap-~A" name)
                       ,(sfsym "wrap-enum-~A" enum-name))
                    `(define-public ,(sfsym "unwrap-~A" name)
@@ -1088,7 +1216,7 @@
                (dcons name (w/* name) defined)
                (xcons* seed
                  `(define-public ,type 'void)
-                 (make-itype-defn type* (ipointer type)))))
+                 (make-type-defn type* (be-pointer type)))))
 
              ((typename ,typename)
               (let ((typerename (rename typename 'type)))
@@ -1100,14 +1228,14 @@
                          (aka (string->symbol typename))
                          (atype (strings->symbol typename))
                          (defined (dcons name defined))
-                         (seed (cons (make-itype-defn type atype) seed)))
+                         (seed (cons (make-type-defn type atype) seed)))
                     (if (dmem? (w/* typename) defined)
                         (let* ((name* (strings->symbol name "*"))
                                (aka* (strings->symbol typename "*"))
                                (atype* (strings->symbol typename "*")))
                           (values
                            (dcons (w/* name) defined)
-                           (cons (make-itype-defn type* atype*) seed)))
+                           (cons (make-type-defn type* atype*) seed)))
                         (values defined seed))))
                  (else
                   (let ((xdecl (expand-typerefs udecl udict defined)))
@@ -1132,10 +1260,10 @@
                 (atype (strings->symbol "struct-" agname))
                 (atype* (strings->symbol "struct-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
-                (sflds (cnvt-fields (sx-tail field-list) mtail->itype))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->be-type))
                 (agdef (if (packed? aggr-attr)
-                           (istruct sflds #t)
-                           (istruct sflds))))
+                           (be-struct sflds #t)
+                           (be-struct sflds))))
            (cond
             ((bkref-getall attr) =>
              (lambda (name-list)
@@ -1143,18 +1271,18 @@
                 (lambda (name defined seed)
                   (let ((type (strings->symbol name)))
                     (values (dcons name defined)
-                            (cons (make-itype-defn type atype) seed))))
+                            (cons (make-type-defn type atype) seed))))
                 name-list
                 (dcons (w/struct agname) defined)
                 (xcons* seed
-                  (make-itype-defn atype agdef)
-                  (make-itype-defn atype* (ipointer atype))))))
+                  (make-type-defn atype agdef)
+                  (make-type-defn atype* (be-pointer atype))))))
             ((not (dmem? (w/struct agname) defined))
              (values
               (dcons (w/struct agname) defined)
               (xcons* seed
-                (make-itype-defn atype agdef)
-                (make-itype-defn atype* (ipointer atype)))))
+                (make-type-defn atype agdef)
+                (make-type-defn atype* (be-pointer atype)))))
             (else
              (values defined seed)))))
 
@@ -1163,8 +1291,8 @@
                 (atype (strings->symbol "union-" agname))
                 (atype* (strings->symbol "union-" agname "*"))
                 (field-list (expand-field-list-typerefs field-list))
-                (sflds (cnvt-fields (sx-tail field-list) mtail->itype))
-                (agdef (iunion sflds)))
+                (sflds (cnvt-fields (sx-tail field-list) mtail->be-type))
+                (agdef (be-union sflds)))
            (cond
             ((bkref-getall attr) =>
              (lambda (name-list)
@@ -1172,18 +1300,18 @@
                 (lambda (name defined seed)
                   (let ((type (strings->symbol name)))
                     (values (dcons name defined)
-                            (cons (make-itype-defn type atype) seed))))
+                            (cons (make-type-defn type atype) seed))))
                 name-list
                 (dcons (w/union agname) defined)
                 (xcons* seed
-                  (make-itype-defn atype agdef)
-                  (make-itype-defn atype* (ipointer atype))))))
+                  (make-type-defn atype agdef)
+                  (make-type-defn atype* (be-pointer atype))))))
             ((not (dmem? (w/union agname) defined))
              (values
               (dcons (w/union agname) defined)
               (xcons* seed
-                (make-itype-defn atype agdef)
-                (make-itype-defn atype* (ipointer atype)))))
+                (make-type-defn atype agdef)
+                (make-type-defn atype* (be-pointer atype)))))
             (else
              (values defined seed)))))
 
@@ -1201,7 +1329,7 @@
                 (dcons (w/enum enum-name) defined)
                 (xcons* seed
                   `(define ,al-name ',enums)
-                  (make-itype-defn type (ienum al-name))
+                  (make-type-defn type (be-enum al-name))
                   `(define-public ,(sfsym "unwrap-~A" type)
                      (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                   `(define-public ,(sfsym "wrap-~A" type)
@@ -1220,9 +1348,9 @@
              (rname (rename name 'variable))
              (mtail (cdr (md-tail mdecl))) ; remove (extern)
              ;;(mtail* `((pointer-to) . ,mtail))
-             ;;(type* (mtail->itype mtail*))
-             (ctype (mtail->itype mtail))
-             (type* (ipointer ctype))
+             ;;(type* (mtail->be-type mtail*))
+             (ctype (mtail->be-type mtail))
+             (type* (be-pointer ctype))
              (name* (strings->symbol name "*")))
         (values
          defined
@@ -1531,7 +1659,7 @@
     ;; file and module header
     (ffimod-header path module-options)
     (sfscm "\n")
-    (ppscm (impl-header))
+    (ppscm (be-header))
     (sfscm "\n")
 
     ;; Convert and output foreign declarations.
@@ -1558,7 +1686,10 @@
     (sfscm "\n")
 
     ;; output trailer
-    (ppscm (impl-trailer (sfsym "~a-symbol-val" (*prefix*))))
+    (ppscm (be-trailer
+            (list
+             (cons 'sym->val (sfsym "~a-symbol-val" (*prefix*)))
+             )))
     #t))
 
 
@@ -1625,7 +1756,7 @@
       (*udict* udict)
       (ppscm '(use-modules ((system foreign) #:prefix ffi:)))
       (ppscm '(use-modules (system foreign-library)))
-      (ppscm (impl-header))
+      (ppscm (be-header))
       (ppscm
        `(define (foreign-pointer-search name)
           (define (flc l)
@@ -1638,7 +1769,8 @@
              (else (loop (cdr libs)))))))
       (ppscm `(define (rev-alist l) (map (lambda (p) (cons (cdr p) (car p))) l)))
       (process-decls decls udict def-defined)
-      (ppscm (impl-header))
+      (ppscm (be-trailer
+              (list (cons 'sym->val (sfsym "~a-symbol-val" (*prefix*))))))
       (close (*mport*))
       (simple-format #t "wrote ~S; compile and load: ...\n" scmfile)
       (load-compiled (compile-file scmfile #:opts '()))
@@ -1734,13 +1866,12 @@
       (lambda (iport)
         (let ((output (or (assq-ref options 'output)
                           (string-append (dirname filename) "/"
-                                         (basename filename ".ffi") ".scm")))
-              (fhbe-module (assq-ref options 'fhbe-module)))
+                                         (basename filename ".ffi") ".scm"))))
           (call-with-output-file/atomic output
             (lambda (oport)
               (*mport* oport)
               (let ((env (make-fresh-user-module)))
-                (eval `(use-modules ,fhbe-module) env)
+                (eval `(use-modules (nyacc lang c99 ffi-help)) env)
                 (let loop ((exp (read iport)))
                   (cond
                    ((eof-object? exp)
