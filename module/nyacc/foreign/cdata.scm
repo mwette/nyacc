@@ -340,6 +340,7 @@
 
 ;;.@deffn {Procedure} make-cbase-map arch => hashq-table
 ;; Create a hashq table for @var{arch} mapping base C types to cdata types.
+;; A special 'void type is included, which has zero size and alignment.
 ;;.@end deffn
 (define (make-cbase-map arch)
   (define (make-cbase name)
@@ -349,8 +350,9 @@
       (%make-ctype size align 'base mtype #f)))
   (with-arch arch
     (alist->hashq-table
-     (map (lambda (name) (cons name (make-cbase name)))
-          base-type-symbol-list))))
+     (cons (cons 'void (%make-ctype 0 0 'base #f #f))
+           (map (lambda (name) (cons name (make-cbase name)))
+                base-type-symbol-list)))))
 
 (define cbase-symbols
   '(s8 u8 s16 s32 s64 i128 u16 u32 u64 u128 f16 f32 f64 f128

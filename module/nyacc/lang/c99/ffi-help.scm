@@ -455,7 +455,7 @@
            (strings->symbol name "*"))
           (else (be-pointer `(delay ,(cstrnam->symnam name)))))))
       (`((pointer-to) (void))
-       (be-pointer ''void))
+       (be-pointer (be-base 'void)))
       (`((pointer-to) (fixed-type "char"))
        (be-pointer (be-base 'char)))
       (`((pointer-to) (fixed-type ,name))
@@ -469,7 +469,7 @@
          (lambda (pc->pr pr->pc)
            (be-pointer (be-function pc->pr pr->pc)))))
       (`((pointer-to) (pointer-to) (function-returning . ,_1) . ,_2)
-       (be-pointer (be-pointer ''void)))
+       (be-pointer (be-pointer (be-base 'void))))
       (`((pointer-to) (struct-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
          (cond
@@ -938,7 +938,7 @@
                    (values
                     (dcons name defined)
                     (xcons* seed
-                      `(define ,ptype ,(be-function pc->pr pr->pc))
+                      (be-typedef ptype (be-function pc->pr pr->pc))
                       (be-typedef type (be-pointer ptype)))))))))
 
           (`((pointer-to) (struct-ref (ident ,aggr)))
@@ -951,7 +951,7 @@
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))
                (else
                 (xcons* seed
-                  `(define-public ,aggr-name ,(be-base 'void)) ; FIXME
+                  (be-typedef aggr-name (be-base 'void))
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))))))
 
           (`((pointer-to) (union-ref (ident ,aggr)))
@@ -964,7 +964,7 @@
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))
                (else
                 (xcons* seed
-                  `(define-public ,aggr-name ,(be-base 'void)) ; FIXME
+                  (be-typedef aggr-name (be-base 'void))
                   (be-typedef type (be-pointer `(delay ,aggr-name)))))))))
 
           (`((pointer-to) . ,rest)
@@ -1035,7 +1035,7 @@
                        (be-typedef type* (be-pointer `(delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     (be-typedef type* (be-pointer ''void))))))))
+                     (be-typedef type* (be-pointer (be-base 'void)))))))))
 
              ((union-ref (ident ,agname))
               (let ((agname (rename agname 'type)))
@@ -1054,7 +1054,7 @@
                        (be-typedef type* (be-pointer `(delay ,type))))))
                   (else ;; not defined
                    (xcons* seed
-                     (be-typedef type* (be-pointer ''void))))))))
+                     (be-typedef type* (be-pointer (be-base 'void)))))))))
 
              (((fixed-type float-type) ,basename)
               (values (dcons name defined)
@@ -1106,7 +1106,7 @@
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
-                 `(define-public ,type ,(be-base 'void))
+                 (be-typedef type (be-base 'void))
                  (be-typedef type* (be-pointer type)))))
 
              ((typename ,typename)
