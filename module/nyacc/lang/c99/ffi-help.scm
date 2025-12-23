@@ -61,6 +61,7 @@
   #:use-module ((nyacc lang util) #:select (cintstr->scm))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
+  #:use-module (nyacc foreign arch-info)
   #:use-module (nyacc lang c99 fh-utils)
   #:re-export (*nyacc-version*)
   #:version (3 01 0))
@@ -391,8 +392,6 @@
 
 
 ;; === cdata/ctype support =====================================================
-
-(use-modules (nyacc foreign arch-info))
 
 (define (cdata-header)
   `(begin
