@@ -19,7 +19,7 @@
 
 (define-module (nyacc lang c99 fh-utils)
   #:export (make-fh-backend
-            fhbe-header fhbe-trailer
+            fhbe-name fhbe-header fhbe-trailer
             fhbe-base fhbe-array fhbe-pointer
             fhbe-struct fhbe-bitfield fhbe-union
             fhbe-function fhbe-enum
@@ -31,11 +31,12 @@
 (define *errmsgs* (make-parameter '())) ; list of warnings
 
 (define-record-type <fh-backend>
-  (make-fh-backend header trailer
+  (make-fh-backend name header trailer
                    mt-base mt-array mt-pointer mt-struct
                    mt-bitfield mt-union mt-function mt-enum
                    make-type-defn make-object)
   fhbe-impl?
+  (name fhbe-name)
   (header fhbe-header)
   (trailer fhbe-trailer)
   (mt-base fhbe-base)

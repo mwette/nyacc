@@ -83,6 +83,7 @@
 
 (define *backend* (make-parameter #f))
 
+(define-syntax be-name (identifier-syntax (fhbe-name (*backend*))))
 (define-syntax be-header (identifier-syntax (fhbe-header (*backend*))))
 (define-syntax be-trailer (identifier-syntax (fhbe-trailer (*backend*))))
 (define-syntax be-base (identifier-syntax (fhbe-base (*backend*))))
@@ -399,8 +400,7 @@
      (define arg->number cdata-arg->number)
      (define arg->pointer cdata-arg->pointer)
      (define (extern-ref obj) (cdata-sel obj '*))
-     (define (extern-set! obj val) (cdata-set! obj '* val))
-     (eval-when (expand load eval) (define backend 'cdata))))
+     (define (extern-set! obj val) (cdata-set! obj '* val))))
 
 ;; sym->val-proc-name is symbolic value of function mapping symbol to value
 (define (cdata-trailer defs)
@@ -414,8 +414,9 @@
 
 (define cdata-backend
   (make-fh-backend
-   cdata-header                         ; header
-   cdata-trailer                        ; trailer
+   'cdata                               ; name
+   cdata-header
+   cdata-trailer
    (lambda (name)                       ; base
      `(cbase ',name))
    (lambda (type dim)                   ; array
@@ -1293,6 +1294,7 @@
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
            (m-path->f-path path))
     (sfscm ";; using nyacc version ~a\n" *nyacc-version*)
+
     (nlscm)
     (sfscm "(define-module ~S\n" path)
     (for-each ;; ffi-modules
@@ -1307,11 +1309,13 @@
     (unless (assq-ref (*options*) 'no-foreign-library)
       (sfscm "  #:use-module (system foreign-library)\n"))
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:))\n")
-    (sfscm "\n")
+    (nlscm)
     (ppscm (be-header))
-    (sfscm "\n")
+    (nlscm)
+    (ppscm `(eval-when (expand load eval) (define backend ',be-name)))
+    (nlscm)
     (ppscm `(define (rev-alist l) (map (lambda (p) (cons (cdr p) (car p))) l)))
-    (sfscm "\n")
+    (nlscm)
     (if (*echo-decls*) (sfscm "\n(define echo-decls #t)\n"))
     (ppscm
      (if (not (assq-ref (*options*) 'no-foreign-library))
@@ -1371,7 +1375,7 @@
           ext-mods)))
     (ppscm `(define ,st-name '(,@defs)))
     (sfscm "(export ~A)\n" st-name)
-    (sfscm "\n")
+    (nlscm)
     (ppscm `(define ,sv-name (lambda (k) (or (assq-ref ,st-name k) ,@ext-ftns))))
     (sfscm "(export ~A)\n" sv-name)
     ;;
@@ -1550,7 +1554,7 @@
 
     ;; file and module header
     (ffimod-header path module-options)
-    (sfscm "\n")
+    (nlscm)
 
     ;; Convert and output foreign declarations.
     (call-with-values
@@ -1573,13 +1577,28 @@
     (sfscm "\n(define ~A-types\n  '" (m-path->name path))
     (ugly-print ffimod-defined (*mport*) #:per-line-prefix "   " #:trim-ends #t)
     (sfscm ")\n(export ~A-types)\n" (m-path->name path))
-    (sfscm "\n")
+    (nlscm)
 
     ;; output trailer
-    (ppscm (be-trailer
-            (list
-             (cons 'sym->val (sfsym "~a-symbol-val" (*prefix*)))
-             )))
+    (ppscm
+     (be-trailer (list (cons 'sym->val (sfsym "~a-symbol-val" (*prefix*))))))
+    (nlscm)
+
+    ;; output utilities for included code
+    (ppscm
+     '(define-syntax case-backend
+        (lambda (x)
+          (syntax-case x (else)
+            ((_ ((sym ...) exp ...) nxt ...)
+             (let loop ((syms #'(sym ...)))
+               (if (null? syms)
+                   #'(case-backend nxt ...)
+                   (if (eq? backend (syntax->datum (car syms)))
+                       #'(begin exp ...)
+                       (loop (cdr syms))))))
+            ((_) '#(begin #t))
+            ((_ (else exp ...)) #'(begin #t exp ...))))))
+    (nlscm)
     #t))
 
 

@@ -20,30 +20,48 @@
   #:include '("cairo.h")
   #:export (M_PI M_2PI make-cairo-unit-matrix))
 
-#|
-(define-syntax cond-backend
-  (lambda ()
-    (syntax-case x ()
-      ((_ arg 
+(case-backend
 
-(eval-when (expand load eval)
-  (case backend
-   ((cdata)
-    (define-public cairo_raster_source_acquire_func_t*
-      (cpointer cairo_raster_source_acquire_func_t)))
-    (else)))
-
+ ((cdata)
+  (define-public cairo_raster_source_acquire_func_t*
+    (cpointer cairo_raster_source_acquire_func_t))
+  
   (define-public cairo_raster_source_release_func_t*
-    (case backend
-      ((cdata) (cpointer cairo_raster_source_release_func_t))
-      (else #f)))
+    (cpointer cairo_raster_source_release_func_t))
 
   (define (make-cairo-unit-matrix)
-    (case backend
-      ((cdata) (make-cdata cairo_matrix_t `((xx 1.0) (yx 0.0) (xy 0.0)
-                                            (yy 1.0) (x0 0.0) (y0 0.0))))
-      (else #f))))
-|#
+    (make-cdata cairo_matrix_t `((xx 1.0) (yx 0.0) (xy 0.0)
+                                 (yy 1.0) (x0 0.0) (y0 0.0)))))
+
+
+ ((bytestructures)
+  (define-public cairo_raster_source_acquire_func_t*
+    (bs:pointer cairo_raster_source_acquire_func_t))
+  
+  (define-public cairo_raster_source_release_func_t*
+    (bs:pointer cairo_raster_source_release_func_t))
+
+  (define (make-cairo-unit-matrix)
+    (bytestructure cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0))))
+
+
+ ((bstructs)
+  (define-bstruct cairo_raster_source_acquire_func_t*
+    (* cairo_raster_source_acquire_func_t))
+  (export cairo_raster_source_acquire_func_t*)
+  
+  (define-bstruct cairo_raster_source_release_func_t*
+    (bs:pointer cairo_raster_source_release_func_t))
+  (export cairo_raster_source_release_func_t*)
+
+  (define (make-cairo-unit-matrix)
+    (bstruct-alloc cairo_matrix_t
+                   (xx 1.0) (yx 0.0) (xy 0.0)
+                   (yy 1.0) (x0 0.0) (y0 0.0))))
+ 
+
+ (else))
+
 
 (define M_PI 3.14159265358979323846)
 (define M_2PI 6.28318530717958647692)
