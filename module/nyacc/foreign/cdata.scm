@@ -87,15 +87,15 @@
             cstruct cunion cpointer carray cenum cfunction
             make-cdata cdata-ref cdata-set! cdata&-ref ccast
             pretty-print-ctype
-            
+
             ctype-size ctype-align ctype-kind ctype-info ctype-name
             ctype? ctype-equal?
             cdata? cdata-bv cdata-ix cdata-ct
             cdata-copy name-ctype
 
             Xcdata-ref Xcdata-set!
-            
-            cdata-kind cdata& cdata* cdata-sel 
+
+            cdata-kind cdata& cdata* cdata-sel
             cdata*-sel cdata*-ref cdata&-sel cdata&-ref
             ctype-sel make-cdata-getter make-cdata-setter
             ctype->ffi
@@ -362,7 +362,7 @@
 
 ;; @deffn {Procedure} cbase name => <ctype>
 ;; Given symbolic @var{name} generate a base ctype.   The name can
-;; be something like @code{unsigned-int}, @code{double}, or can be a
+;; be something like @code{unsigned}, @code{double}, or can be a
 ;; @emph{cdata} machine type like @code{u64le}.  For example,
 ;; @example
 ;; (define double-type (cbase 'double))
@@ -670,7 +670,7 @@
 ;; associated number of elements referenced.
 ;; @end deffn
 ;; MAYBE JUST MAYBE make this return a list of (ix ct) (ix ct) ...
-;; 
+;;
 (define (ctype-detag ct ix tag)
   (assert-ctype 'ctype-detag ct) ;; not needed assuming stable mod
   (unless (integer? ix) (error "ctype-detag: expecting integer, got" ix))
@@ -1090,7 +1090,7 @@
          (bvdst (make-bytevector sz)))
     (bytevector-copy! bv ix bvdst 0 (ctype-size ct))
     (%make-cdata bvdst 0 ct #f)))
-    
+
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
 ;; bytevector.
@@ -1213,8 +1213,8 @@
 
 ;;.@deffn {Procedure} Xloop sel offset data tags
 ;; Defined internally for @code{make-cdata-getter} and @code{make-cdata-setter}.
-;; @var{offset} is a base address offset for pointer dereferencing. 
-;;.@end deffn 
+;; @var{offset} is a base address offset for pointer dereferencing.
+;;.@end deffn
 (define (Xloop sel offset data tags) ;; => bv ix ct
   (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
              (head (car sel)) (tail (cdr sel)))
@@ -1242,7 +1242,7 @@
 ;; Pointer dereference tags (@code{'*'}) are not allowed.
 ;; The optional @var{offset} argument (default 0), is used for cross
 ;; target use: it is the offset of the address in the host context.
-;; @end deffn 
+;; @end deffn
 (define* (make-cdata-getter sel #:optional (offset 0))
   "- Procedure: make-cdata-getter sel [offset] => lambda
      Genererate a procedure that given a cdata object will fetch the
@@ -1266,7 +1266,7 @@
 ;; Pointer dereference tags (@code{'*'}) are not allowed.
 ;; The optional @var{offset} argument (default 0), is used for cross
 ;; target use: it is the offset of the address in the host context.
-;; @end deffn 
+;; @end deffn
 (define* (make-cdata-setter sel #:optional (offset 0))
   "- Procedure: make-cdata-setter sel [offset] => lambda
      Genererate a procedure that given a cdata object will set the value

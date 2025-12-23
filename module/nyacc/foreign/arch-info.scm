@@ -127,9 +127,14 @@
     "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
-    "__int128" "unsigned __128"))
+    "__int128" "unsigned __128"
+    "unsigned int"))
 
 (define base-type-symbol-list
+  #;(map
+   (lambda (s)
+     (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c)) s)))
+   base-type-name-list)
   '(void*
     char signed-char unsigned-char
     short unsigned-short
@@ -145,7 +150,8 @@
     wchar_t char16_t char32_t
     long-double _Float16 _Float128
     float-_Complex double-_Complex long-double-_Complex
-    __int128 unsigned-__int128))
+    __int128 unsigned-__int128
+    unsigned-int))
 
 (define *arch-map* (make-parameter '()))
 
@@ -202,12 +208,12 @@
 (define-syntax le (identifier-syntax (endianness little)))
 
 ;; @deffn {Procedure} sizeof-basetype name
-;; @var{name} can be string (e.g., @code{"short int"}) or
+;; @var{name} can be string (e.g., @code{"short"}) or
 ;; symbol (e.g., @code{short-int}).
 ;; Return the size in bytes of the basetype @var{type}, a string, based on
 ;; the global parameter @var{*arch*}.
 ;; @example
-;; (sizeof-basetype "unsigned int") => 4
+;; (sizeof-basetype "unsigned") => 4
 ;; @end example
 ;; @end deffn
 (define (sizeof-basetype name)
@@ -217,7 +223,7 @@
            sizeof-mtype)))
 
 ;; @deffn {Procedure} alignof-basetype name
-;; @var{name} can be string (e.g., @code{"short int"}) or
+;; @var{name} can be string (e.g., @code{"short"}) or
 ;; symbol (e.g., @code{short-int}).
 ;; Return the alignment of the basetype @var{type-name} based on
 ;; the global parameter @var{*arch*}.
@@ -311,8 +317,6 @@
       (bytevector-s16-set! bv (+ ix 2) lo be)
       (bytevector-s16-set! bv ix hi be))
      (else (error "bv-s32-set!: bad endianness")))))
-#|
-|#
 
 ;; => arch-info
 (define (mtype-bv-ref mtype bv ix)
@@ -395,9 +399,10 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
+    (unsigned-int . u32le)
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (signed . s32le) (signed-int . s32le)
     (long-int . s64le) (signed-long . s64le)
     (signed-long-int . s64le) (unsigned-long-int . u64le)
     (long-long-int . s64le) (signed-long-long . s64le)
@@ -427,9 +432,10 @@
     (float-_Complex . z32le) (double-_Complex . z32le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
+     (unsigned-int . u16le)
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u8)
-    (signed . s16le) (signed-int . s16le) (unsigned-int . u16le)
+    (signed . s16le) (signed-int . s16le)
     (long-int . s32le) (signed-long . s32le)
     (signed-long-int . s32le) (unsigned-long-int . u32le)
     (long-long-int . s64le) (signed-long-long . s64le)
@@ -462,9 +468,10 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
+     (unsigned-int . u32le)
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (signed . s32le) (signed-int . s32le)
     (long-int . s32le) (signed-long . s32le)
     (signed-long-int . s32le) (unsigned-long-int . u32le)
     (long-long-int . s64le) (signed-long-long . s64le)
@@ -496,9 +503,10 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
+     (unsigned-int . u32be)
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (signed . s32be) (signed-int . s32be)
     (long-int . s64be) (signed-long . s64be)
     (signed-long-int . s64le) (unsigned-long-int . u64be)
     (long-long-int . s64be) (signed-long-long . s64be)
@@ -531,9 +539,10 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
+     (unsigned-int . u32be)
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (signed . s32be) (signed-int . s32be)
     (long-int . s64be) (signed-long . s64be)
     (signed-long-int . s64be) (unsigned-long-int . u64be)
     (long-long-int . s64be) (signed-long-long . s64be)
@@ -565,9 +574,10 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
+     (unsigned-int . u32le)
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (signed . s32le) (signed-int . s32le)
     (long-int . s64le) (signed-long . s64le)
     (signed-long-int . s64le) (unsigned-long-int . u64le)
     (long-long-int . s64le) (signed-long-long . s64le)
@@ -600,9 +610,10 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
+     (unsigned-int . u32le)
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (signed . s32le) (signed-int . s32le)
     (long-int . s32le) (signed-long . s32le)
     (signed-long-int . s32le) (unsigned-long-int . u32le)
     (long-long-int . s64le) (signed-long-long . s64le)
@@ -634,9 +645,10 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
+    (unsigned-int . u32le)
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (signed . s32le) (signed-int . s32le)
     (long-int . s64le) (signed-long . s64le)
     (signed-long-int . s64le) (unsigned-long-int . u64le)
     (long-long-int . s64le) (signed-long-long . s64le)
@@ -667,9 +679,10 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
+    (unsigned-int . u32be)
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (signed . s32be) (signed-int . s32be)
     (long-int . s32be) (signed-long . s32be)
     (signed-long-int . s32be) (unsigned-long-int . u32be)
     (long-long-int . s64be) (signed-long-long . s64be)
@@ -700,9 +713,10 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
+    (unsigned-int . u32be)
     (short-int . s16be) (signed-short . s16be)
     (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be) (unsigned-int . u32be)
+    (signed . s32be) (signed-int . s32be)
     (long-int . s64be) (signed-long . s64be)
     (signed-long-int . s64be) (unsigned-long-int . u64be)
     (long-long-int . s64be) (signed-long-long . s64be)
@@ -733,9 +747,10 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
+    (unsigned-int . u32le)
     (short-int . s16le) (signed-short . s16le)
     (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le) (unsigned-int . u32le)
+    (signed . s32le) (signed-int . s32le)
     (long-int . s64le) (signed-long . s64le)
     (signed-long-int . s64le) (unsigned-long-int . u64le)
     (long-long-int . s64le) (signed-long-long . s64le)
