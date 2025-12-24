@@ -106,14 +106,15 @@
 (define tmap-fmt
   '(("char" "%hhd")
     ("unsigned char" "%hhu")
-    ("short int" "%hd")
-    ("unsigned short int" "%hu")
+    ("signed char" "%hhd")
+    ("short" "%hd")
+    ("unsigned short" "%hu")
     ("int" "%d")
-    ("unsigned int" "%u")
-    ("long int" "%ld")
-    ("unsigned long int" "%lu")
-    ("long long int" "%lld")
-    ("unsigned long long int" "%llu")))
+    ("unsigned" "%u")
+    ("long" "%ld")
+    ("unsigned long" "%lu")
+    ("long long" "%lld")
+    ("unsigned long long" "%llu")))
 
 ;; @deffn {Procedure} attr-append . attr-lists
 ;; This is hack for now: it is @code{append}. It needs to be set up to combine
@@ -135,13 +136,13 @@
 ;; @end example
 
 ;; mdecl is
-;; ("foo" (pointer-to) (ary-declr 3) (fixed-type "unsigned int"))
+;; ("foo" (pointer-to) (ary-declr 3) (fixed-type "unsigned"))
 ;; which can be converted to
-;; ("(*foo) (ary-declr 3) (fixed-type "unsigned int"))
+;; ("(*foo) (ary-declr 3) (fixed-type "unsigned"))
 ;; which can be converted to
-;; (("((*foo)[0])" (fixed-type "unsigned int"))
-;;  ("((*foo)[1])" (fixed-type "unsigned int"))
-;;  ("((*foo)[2])" (fixed-type "unsigned int"))
+;; (("((*foo)[0])" (fixed-type "unsigned"))
+;;  ("((*foo)[1])" (fixed-type "unsigned"))
+;;  ("((*foo)[2])" (fixed-type "unsigned"))
 
 ;; may need to replace (typename "int32_t") with (fixed-type "int32_t")
 

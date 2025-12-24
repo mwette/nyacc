@@ -140,10 +140,8 @@
 (define (strings->symbol . string-list)
   (string->symbol (apply string-append string-list)))
 
-;; "unsigned int" => unsigned-int
-(define (cstrnam->symnam strname)
-  (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c))
-                              strname)))
+;; "unsigned long long" => unsigned-long-long
+(define cstrnam->symnam c-strname->symname)
 
 ;; '(abc def) => "abc-def"
 (define (m-path->name path)
@@ -308,22 +306,13 @@
        (sx-tail enum-def-list)))
 
 (define def-def-list
-  '("void"
-    "char" "signed char" "unsigned char"
-    "short" "unsigned short"
-    "int" "unsigned"
-    "long" "unsigned long"
-    "long long" "unsigned long long"
-    "float" "double"
-    "int8_t" "uint8_t" "int16_t" "uint16_t"
-    "int32_t" "uint32_t" "int64_t" "uint64_t"
-    "size_t" "ssize_t" "ptrdiff_t"
-    "intptr_t" "uintptr_t"
-    "_Bool" "bool"
-    "wchar_t" "char16_t" "char32_t"
-    "long double" "_Float16" "_Float128"
-    "float _Complex" "double _Complex" "long double _Complex"
-    "__int128" "unsigned __int128"))
+  '("void" "char" "signed char" "unsigned char" "short" "unsigned short"
+    "int" "unsigned" "long" "unsigned long" "long long" "unsigned long long"
+    "float" "double" "int8_t" "uint8_t" "int16_t" "uint16_t"
+    "int32_t" "uint32_t" "int64_t" "uint64_t" "size_t" "ssize_t" "ptrdiff_t"
+    "intptr_t" "uintptr_t" "_Bool" "bool" "wchar_t" "char16_t" "char32_t"
+    "long double" "_Float16" "_Float128" "float _Complex" "double _Complex"
+    "long double _Complex" "__int128" "unsigned __int128" "unsigned int"))
 
 (define def-defined (alist->vhash (map (lambda (n) (cons n #t)) def-def-list)))
 
