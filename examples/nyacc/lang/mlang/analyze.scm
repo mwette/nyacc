@@ -44,12 +44,11 @@
 ;; info on builtins
 
 (define builtins
-  '(
-    "cos"
-    "deg2rad"
-    "sin"
-    "struct"
-    ))
+  '("abs" "acos" "any" "atan2" "blkdiag" "cos" "cosd" "cross"
+    "deg2rad" "diag" "double" "exp" "eye" "false" "find" "flipud"
+    "interp1" "length" "logical" "min" "norm" "ones" "pagemtimes"
+    "permute" "pinv" "rad2deg" "reshape" "sign" "sin" "sind"
+    "size" "sqrt" "squeeze" "struct" "sum" "vecnorm" "zeros"))
 
 ;; strategy here
 ;; 1) convert tree into vector of (tag rx ...)
@@ -61,39 +60,23 @@
 ;;    top is last element
 
 ;; number of sub-elements
+;; Q: should we retain @ or not?
 (define (sxml-count node)
   (cond
-   ((pair? node) (fold (lambda (e s) (+ s (sxml-count e))) 1 (sx-tail node)))
+   ;;((pair? node) (fold (lambda (e s) (+ (sxml-count e) s)) 1 (sx-tail node)))
+   ((pair? node) (fold (lambda (e s) (+ (sxml-count e) s)) 1 (cdr node)))
    ((string? node) 0)
-   (else (error "ha!"))))
-
-(define (sxml->vxml1 sx-tree)
-  (let* ((ne (sxml-count sx-tree))
-         (vx (make-vector ne)))
-    ;; no tail recursion here
-    (let loop ((ix 0) (node sx-tree)) ;; ix : next avail
-      (cond
-       ((pair? node)
-        (let* ((ln (length node))
-               (ev (make-vector ln))
-               (ix (fold
-                    (lambda (ex el ix)
-                      (let ((ix (loop ix el)))
-                        (vector-set! ev ex (if (pair? el) ix el))
-                        ix))
-                   ix (iota ln) node)))
-          (vector-set! vx ix ev)
-          (1+ ix)))
-       (else ix)))
-    vx))
+   (else (error "not an sxml node!"))))
 
 ;; @deffn {Procedure} sxml->vxml sx-tree => vxml
 ;; Convert an SXML AST to VXML, a vector where each entry
 ;; is an element with element nodes replaced by index in the vector.
+;; Q: should we retain @ or not?
 ;; @end deffn
 (define (sxml->vxml sx-tree)
   (let* ((ne (sxml-count sx-tree))
          (vx (make-vector ne)))
+    (sferr "sxml->vxml count=~s\n" ne)
     ;; no tail recursion here
     (let loop ((ix 0) (node sx-tree))
       (cond
@@ -124,7 +107,13 @@
 ;; @end deffn
 (define* (display-vxml vx-tree #:optional (port (current-output-port)))
   (vector-for-each
-   (lambda (ix vx) (simple-format port "~s ~s\n" ix vx))
+   (lambda (ix vx)
+     (simple-format port "~s ~s\n" ix vx)
+     #;(cond
+      ((< ix 2) (simple-format port "~s ~s\n" ix vx))
+      ((= ix (1- (vector-length vx-tree))) (simple-format port "~s ~s\n" ix vx))
+      (else #f))
+     )
    vx-tree))
 
 
@@ -295,9 +284,8 @@
   (foldts
    (lambda (seed tree) tree)
    (lambda (seed kseed tree)
-     (sferr "tree ~s\n" tree)
      (sx-match tree
-       ((assn (ident ,name) (handle ,_0)) (cons `(skip ,name) seed))
+       ;;((assn (ident ,name) (handle ,_0)) (cons `(skip ,name) seed))
        ((call (ident ,name) . ,_) (cons name seed))
        ((aref-or-call (ident ,name) . ,_) (cons name seed))
        (,__ (lset-union equal? kseed seed))))
@@ -310,31 +298,27 @@
   ;; add to next refs w/ .m
   ;; assumes tree-calls provides no duplicates (hence lset-union there)
   (parameterize ((*path* (cons (dirname script-file) (*path*))))
-    (let loop ((trees '()) (done builtins) (curr '()) (skip '())
+    (let loop ((trees '()) (done builtins) (curr '())
                (next (list (basename script-file ".m"))))
-      (sferr "loop curr=~s  vs  skip=~s\n" curr skip)
       (cond
        ((pair? curr)
         (cond
-         ((match (car curr) (`(skip ,name) name) (_ #f))
-          => (lambda (name) (loop trees done next (cons name skip) next)))
-         ((member (car curr) skip)
-          (loop trees (cons (car curr) done) (cdr curr) skip next))
+         ((member (car curr) done) (loop trees done (cdr curr) next))
+         ((find-file (string-append (car curr) ".m")) =>
+          (lambda (file)
+            (let* ((tree (call-with-input-file file
+                           (lambda (port)
+                             (set-port-filename! port file)
+                             (read-mlang-file port '()))))
+                   (next (fold (lambda (fn nx)
+                                 (if (or (member fn done) (member fn nx))
+                                     nx (cons fn nx)))
+                               next (tree-calls tree))))
+              (loop (cons tree trees) (cons (car curr) done) (cdr curr) next))))
          (else
-          (sferr "TRY ~s\n" (car curr))
-          (let* ((file (find-file (string-append (car curr) ".m")))
-                 (tree (call-with-input-file file
-                         (lambda (port)
-                           (set-port-filename! port file)
-                           (read-mlang-file port '()))))
-                 (next (fold (lambda (fn nx)
-                               (if (or (member fn done) (member fn nx))
-                                   nx (cons fn nx)))
-                             next (tree-calls tree))))
-            ;; tree has file as attribute
-            (loop (cons tree trees) (cons (car curr) done)
-                  (cdr curr) skip next)))))
-       ((pair? next) (loop trees done next skip '()))
+          (sferr "gen-program: not found: ~s\n" (car curr))
+          (loop trees done (cdr curr) next))))
+       ((pair? next) (loop trees done next '()))
        (else `(program ,@(reverse trees)))))))
 
 ;; inline: (inline (@ (filename "foo.m") (function "foo"))
@@ -375,6 +359,16 @@
 ;; ============================================================================
 ;; attempt to do the effects analysis
 
+;; strategy here
+;; 1) convert tree into vector of (tag rx ...)
+;;    where rx is an index in the vector, or a string
+;; 2) then iterate using vector-fold ...
+;;      (lambda (upd ix te infx infy infz)
+;;    where ve is the converted tree element and infx infy infz are
+;;    vectors of specid ypes of info (see BETTER below);
+;;    top is last element
+
+
 ;; I think the first thing to do is convert all identifiers to unique
 ;; ones.  (ident "foo") => (ftn|fil|gbl foo foo-123)
 ;; ??? and keep a global symbol table w/ uses ???
@@ -401,8 +395,6 @@
   (carray (cbase 'char) len))
 
 
-;; ============================================================================
-
 ;; BETTER:
 ;; struct { num: 1, str: 1, sym: 1, obj: 1 }  use-flags only one of these
 ;; struct { int: 1, flt: 1, cpx: 1 }          num-flags any of these
@@ -411,355 +403,65 @@
 ;; dims : list of dims only for rk > 0
 ;; challenge is to map expressions to transformation of dims
 
-;;(define zero-flags 
-
-(define (flags-sup a b) ;; or #f if they are the same
+(define (fl-join a b) ;; or #f if they are the same
   (logior a b))
 
-#|
-(define (tryme tree)
-  (let ((vx (sxml->vxml tree))
-        (vln (vector-length vx))
-        (tx (1- vl))                     ; top / last index
-        (flv (make-vector vl zero-flags)) ; flag vector
-        (szv (make-vector vl 0))          ; max size of array data
-        )
+(define-syntax vx-match
+  (syntax-rules ()
+    ((_ vx ix c0 c1 ...)
+     (let ((vy (vector-ref vx ix)))
+        (vx-m-case vx vy c0 c1 ...)))))
+
+(define-syntax vx-m-case
+  (syntax-rules (else)
+    ((_ vx vy ((tag n1 ...) ex ...) c1 ...)
+     (let ((kf (lambda () (vx-m-case vx vy c1 ...))))
+        (if (eq? (vector-ref vy 0) 'tag)
+            (vx-m-exp vx vy 1 (n1 ...) (begin (if #f #f) ex ...) (kf))
+            (kf))))
+    ((_ vx vy (else ex ...)) (begin (if #f #f) ex ...))
+    ((_ vx vy) (error "vx-match: nothing matches"))))
+
+(define-syntax vx-m-exp
+  (syntax-rules (unquote)
+    ((_ vx vy iy () kt kf)
+     kt)
+    ((_ vx vy iy (unquote v) kt kf)
+     (let ((v (vector-ref vy iy))) kt))
+    ((_ vx vy iy (n1 n2 ...) kt kf)
+     (vx-m-exp vx vy iy n1 (vx-m-exp vx vy (1+ iy) (n2 ...) kt kf) kf))
+    ((_ vx vy iy u kt kf)
+     (let ((vyi (vector-ref vy iy)))
+       (cond
+        ((and (integer? vyi) (symbol? u))
+         (if (eq? (vector-ref (vector-ref vx vyi) 0) u) kt))
+        ((and (string? u) (string=? vyi u)) kt)
+        (else kf))))))
+
+
+(define (tryme vx)
+  (let* ((nx (vector-length vx))
+         (flv (make-vector nx 0))       ; flag vector
+         ;;(szv (make-vector vl 0))       ; max size of array data
+         )
     (let loop ((changed #t))
       (if changed
           (fold
            (lambda (ix ch)
-             (vx-match (vector-ref vx ix)
-               ((add ,lt ,rt) (fl-union lt rt) ...)
-               ))
-           #f (iota vln))
-          'DONE))))
-|#
-
-
-;; ============================================================================
+             (sf "~s ~s\n" ix (vector-ref vx ix))
+             (vx-match vx ix
+               ((add ,lt ,rt)
+                ;;(fl-join/lit 'num (fl-join lt rt))
+                (display "ADD\n")
+                )
+               (else))
+             #f) ;; fixme
+           #f
+           '(1443) ;;(iota nx)
+           )))))
 #|
-;; A variable is a unique symbol, a string name and a list of uses.
-;; var : (x-123 "x" () ((kind . struct) (rank . 2) (type . float))
-
-;; OLD BAD:
-;; mlang expression usage (include identifiers)
-(define-record-type <mlxuse>
-  (%make-mlxuse kind rank dims type var?)
-  mlxuse?
-  (kind mlxuse-kind set-mlxuse-kind!)   ; ftn num flt int struct dict var
-  (rank mlxuse-rank set-mlxuse-rank!)
-  (dims mlxuse-dims set-mlxuse-dims!)
-  (type mlxuse-type set-mlxuse-type!)   ; element type: ctype !!
-  (var? mlxuse-var? set-mlxuse-var?!)   ; used as variable #f does not ftn
-  )
-;; NEEDED: something to denote struct type.   Maybe we add `info'
-;; field with an alist
-(define* (make-use #:key kind rank dims type var?)
-  (%make-mlxuse kind rank dims type var?))
-
-(define ml-uses (make-object-property))
-;; (set! (ml-uses expr) (list (make-mlxuse x x x)))
-
-;; need idea here
-;; go through uses
-;; if uses[ix].key matches +1 & go on, if uses[ix].key is #f go on,
-;;    else reject
-(define (find-use obj use)
-  (let* ((uses (ml-uses obj))
-         )
-    #f))
-
-(define (use-equal? a b)
-  (if (or (not (mlxuse? a)) (not (mlxuse? b))) (error "bad call: use-equal?"))
-  (cond
-   ((not (eq? (mlxuse-kind a) (mlxuse-kind b))) #f)
-   ((not (eq? (mlxuse-rank a) (mlxuse-rank b))) #f)
-   ((not (equal? (mlxuse-dims a) (mlxuse-dims b))) #f)
-   ((not (equal? (mlxuse-type a) (mlxuse-type b))) #f)
-   ((not (eq? (mlxuse-var? a) (mlxuse-var? b))) #f)
-   (else #t)))
-
-(define* (new-use*? obj #:key kind rank dims type var?)
-  (and (ml-uses obj)
-       (fold
-        (lambda (use new?)
-          (and new?
-               (not (and (eq? (mlxuse-kind use) kind)
-                         (eq? (mlxuse-rank use) rank)
-                         (equal? (mlxuse-dims use) dims)
-                         (equal? (mlxuse-type use) type)
-                         (eq? (mlxuse-var? use) var?)
-                         ))))
-        #t (ml-uses obj))))
-
-;; maybe kind is symbol or expr
-(define* (add-use*! sx #:key kind rank dims type var?)
-  (if (new-use*? sx #:kind kind #:rank rank #:dims dims #:type type #:var? var?)
-      (set! (ml-uses sx)
-            (cons (%make-mlxuse kind rank dims type var?) (ml-uses sx)))))
-
-(define (new-use? obj use)
-  (and (ml-uses obj)
-       (fold
-        (lambda (use new?) (and new? (not (equal? obj use))))
-        #t (ml-uses obj))))
-
-(define (add-use! sx use)
-  (if sx
-      (if (new-use? sx use)
-          (let ((uses (ml-uses sx)))
-            (set! (ml-uses sx)
-                  (if (ml-uses sx) (cons use (ml-uses sx)) (list use)))))))
-
-(define (used-as-var sx)
-  ;; need to rethink all this
-  #f)
-
-(define typein-dict
-  '((int int num)                   ; int is int or num
-    (flt flt num)                   ; flt is flt or num
-    ;;(cpl cpl num)
-    ;;(str str)
-    (class class)
-    (struct struct) (cell cell) (var var) (ftn ftn) (num num)))
-
-(define (type-in a b)
-  (or (eq? a b)
-      (and (memq b (assq-ref typein-dict a)) #t)))
-
-;; (define (type-compat a b) ...
-
-;;(sf "type-in int num => ~s\n" (type-in 'int 'num))
-;;(sf "type-in num int => ~s\n" (type-in 'num 'int))
-
-;; objects ...
-
-(define* (used-as? sx #:key kind rank dims type var?)
-  (let ((uses (ml-uses sx)))
-    (cond
-     ;;(kind
-     (type (fold
-            (lambda (use ans)
-              (or ans
-                  (memq (mlxuse-type use) (assq-ref typein-dict type))))
-            #f uses))
-     (else #f)))
-  )
-
-;; try w/o struct or class at first
-(define (unop-use op ex)
-  ;; transpose swaps dims
-  #f)
-  
-(define (binop-use op lt rt)
-  "use of binary operation"
-  ;; scalar*array ->
-  (let* ((lkind (mlxuse-kind lt)) (rkind (mlxuse-kind rt))
-         (lrank (mlxuse-rank lt)) (rrank (mlxuse-rank rt))
-         (ldims (mlxuse-dims lt)) (rdims (mlxuse-dims rt))
-         (ltype (mlxuse-type lt)) (rtype (mlxuse-type rt))
-         (rkind (cond
-                 ((eq? lkind rkind) lkind)
-                 ((or (and (eq? lkind 'int) (eq? rkind 'flt))
-                      (and (eq? lkind 'flt) (eq? rkind 'int)))
-                  'flt)
-                 ((type-in lkind rkind) lkind)
-                 ((type-in rkind lkind) rkind)
-                 (else #f)))
-         (rrank (let ((pr (cons lrank rrank)))
-                  (cond
-                   ((equal? pr '(#f . #f)) #f)
-                   ((equal? pr '(0 . 0)) 0)
-                   ((member pr '((0 . 2) (2 . 0))) 2)
-                   ((member pr '((1 . 2) (2 . 1))) 1)
-                   (else
-                    ;; need to look at dims nx1*1xm vs 1xn*nx1
-                    #f))))
-         (rdims #f)
-         (rtype #f))
-    (make-use #:kind rkind #:rank rrank #:dims rdims #:type rtype)))
-
-(define (uses-cover uses)
-  ;; reduce a list of uses to something minimal.
-  (car uses))
-
-
-;; return 
-(define (expr-use expr)
-  (sx-match expr
-    ((fixed ,v) (make-use #:kind 'int #:rank 0 #:type (cbase 'int)))
-    ((float ,v) (make-use #:kind 'flt #:rank 0 #:type (cbase 'double)))
-    ;;((lexical ,g ,l) 
-    ((add ,l ,r) (binop-use 'add l r))
-    ((sub ,l ,r) (binop-use 'sub l r))
-    ((mul ,l ,r) (binop-use 'mul l r))
-    ((div ,l ,r) (binop-use 'div l r))
-    ;;((neg ,x) (add-use! expr (x))
-
-    ((call (toplevel "struct") (expr-list . ,expr-list))
-     (let loop ((key #f) (xl expr-list))
-       (cond
-        ((null? xl) #f)
-        ((not key) (loop (car xl) (cdr xl)))
-        (else (add-use! (ident-name key) (expr-use (car xl)))
-              (loop #f (cdr xl))))))
-    
-    ((call (toplevel ,name) (expr-list . ,exprs))
-     ;;(maybe-add-to-trees name)
-     #f)
-    
-    (,__ (sferr "expr-use missed:\n") (pperr expr) (quit))))
-
-;; conjecture: expressions have one use; identifiers maybe multiple uses
-
-(define (probe-fctn tree)
-  #f) ;; ==> ("name" . info)
-
-(define (probe-tree-2 tree)
-
-  (define (make-struct-type args) ;; make struct type from struct() call
-    (let loop ((names '()) (vals '()) (args args))
-      #f))
-
-  ;; need to add var
-  (define (probe tree gbl fil ftn)
-    ;; fil means function file; script file goes to gbl
-    (sx-match tree
-      ((script-file (@ (filename ,filename)) . ,stmts)
-       (call-with-values
-           (lambda () (fold-values probe stmts gbl #f #f))
-         (lambda (gbl fil ftn)
-           (values (acons filename fil gbl) '() '()))))
-      ;;((assn (ident ,name) ,rhs)
-      ;;((call (toplevel ,name) . ,_)
-        
-      ((assn ,ident ,rhs)
-       (let* ((name (ident-name ident))
-              (use (expr-use rhs)))
-         (used-as-var ident)
-         (add-use! name use)
-         (cond
-          (ftn (values gbl fil (cons name ftn)))
-          (fil (values gbl (cons name fil) ftn))
-          (else (values (cons name gbl) fil ftn)))))
-      ((empty-stmt) (values gbl fil ftn))
-      (,_ (sferr "missed:\n") (pperr tree)
-          (values gbl fil ftn))))
-
-  (sf "TODO: set up code to deal with structures\n") (quit)
-  ;; needs list of fields => struct type (struct-123)
-  ;; need then to tune use to be of int flt struct-123, struct-124, ...
-  ;; matching proc: (match-struct fields) => list of struct-types
-
-  (call-with-values
-      (lambda () (probe tree '() #f #f))
-    (lambda (gbl fil lcl) gbl)))
 |#
 
-
-;; ============================================================================
-
-;;  patterns, first pass:
-;;    (assn (ident ,n) (call (ident "struct") . ,_) => '((kind . struct))
-;;    (assn (ident ,n) (call (ident "cell") . ,_) => kind = cell
-;;    (assn (ident ,n) (cell-array . ,_) => kind = cell
-;;    (assn (ident ,n) (float . ,_) => '((kind . float) (rank . 0))
-;;    (assn (ident ,n) (call (ident "zeros") . ,_) => ...
-;;    (assn (ident ,n) (call (ident "ones") . ,_) => ...
-;;    (assn (ident ,n) (matrix . ,_) => ... maybe rank, dims, type
-
-;;  patterns, multi pass:
-;;    (assn (ident ,n) (call (ident ,f) . ,_)  if f out has use use it
-
-;;    (if (call (ident "isstruct") (ident ,n) ...
-;;    (if (call (ident "iscell") (ident ,n) ...
-
-;;  "In function foo, bar is used as struct, cell, ....
-;;  Please use different variables.
-
-;; 3) matrix: "[ int, int, int ]" => ivec
-;; 4) matrix: "[ ... (fixed) ... ]" => error
-;; 5) colon-expr => fixed-colon-expr (removed)
-;; dot notation: obj.meth(args ...) | obj.(property)
-
-#|
-(define (lval-root lval)
-  (sx-match lval
-    ((ident ,name) lval)
-    ((aref-or-call ,par ,exl) (lval-root par))
-    ((cell-ref ,par ,exl) (lval-root par))
-    ((sel ,kid ,par) (lval-root par))
-    (,otherwise #f)))
-
-(define (lval-name lval)
-  (and=> (lval-root lval) cadr))
-
-(define (fix-lval lval)
-  (sx-match lval
-    ((aref-or-call ,par ,exl) `(array-ref ,par ,exl))
-    (,__ lval)))
-|#
-
-#|
-((colon-expr . ,rest)
- (let ((form (reverse kseed)))
-   (values (if (fixed-colon-expr? tree)
-               (cons-source tree 'fixed-colon-expr (cdr form))
-               form) gbl lcl)))
-((matrix . ,rest)
- (values (cons (check-matrix form seed) gbl lcl)))
-
-(define (fixed-colon-expr? expr)
-  (sx-match expr
-    ((colon-expr) #t)
-    ((colon-expr (fixed ,s) (fixed ,e)) #t)
-    ((colon-expr (fixed ,s) (fixed ,i) (fixed ,e)) #t)
-    (,_ #f)))
-
-(define (fixed-expr? expr)
-  (define (fixed-primary-expr? expr)
-    (sx-match expr
-      ((fixed ,val) #t)
-      ((add ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      ((sub ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      ((mul ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      (,_ #f)))
-  (or (fixed-primary-expr? expr)
-      (eq? 'fixed-colon-expr (sx-tag expr))))
-
-(define (float-expr? expr)
-  (define (float-primary-expr? expr)
-    (sx-match expr
-      ((float ,val) #t)
-      ((add ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((sub ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((mul ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      ((div ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      (,_ #f)))
-  (float-primary-expr? expr))
-
-(define (fixed-vec? row)
-  (fold (lambda (elt fx) (and fx (fixed-expr? elt))) #t (sx-tail row)))
-
-(define (float-vec? row)
-  (fold (lambda (elt fx) (and fx (float-expr? elt))) #t (sx-tail row)))
-
-(define (float-mat? mat)
-  (fold (lambda (row fx) (and fx (float-vec? row))) #t
-        (map sx-tail (sx-tail mat))))
-
-(define (check-matrix mat)
-  (let* ((rows (sx-tail mat))
-         (nrow (length rows))
-         (row1 (if (positive? nrow) (car rows) #f)))
-    (cond
-     ((zero? nrow) mat)
-     ((and (= 1 nrow) (fixed-vec? row1))
-      (cons-source row1 'fixed-vector (cdr row1)))
-     ((float-mat? mat)
-      (cons-source mat 'float-matrix (cdr mat)))
-     (else mat))))
-|#
 
 ;; ============================================================================
 
@@ -843,13 +545,15 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
          (and (assq-ref opts 'misc)
               (let* ((tree (read-mfile srcfile))
                      (prog (gen-program srcfile))
-                     ;;(idsx (identify-tree prog))
+                     (idsx (identify-tree prog))
                      ;;(nelt (sxml-count prog))
+                     (idvx (sxml->vxml idsx))
                      )
                 ;;(pp prog)
-                ;;(pp (inline-fctn-file tree))
-                ;;(sf "num elt's=~s\n" nelt)
                 ;;(pp idsx)
+                ;;(pp idvx)
+                ;;(display-vxml idvx)
+                (pp (tryme idvx))
                 #t))
          #f)
        files)))

@@ -131,27 +131,7 @@
     "unsigned int"))
 
 (define base-type-symbol-list
-  #;(map
-   (lambda (s)
-     (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c)) s)))
-   base-type-name-list)
-  '(void*
-    char signed-char unsigned-char
-    short unsigned-short
-    int unsigned
-    long unsigned-long
-    long-long unsigned-long-long
-    float double
-    int8_t uint8_t int16_t uint16_t
-    int32_t uint32_t int64_t uint64_t
-    size_t ssize_t ptrdiff_t
-    intptr_t uintptr_t
-    _Bool bool
-    wchar_t char16_t char32_t
-    long-double _Float16 _Float128
-    float-_Complex double-_Complex long-double-_Complex
-    __int128 unsigned-__int128
-    unsigned-int))
+  (map strname->symname base-type-name-list))
 
 (define *arch-map* (make-parameter '()))
 
@@ -399,14 +379,7 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
-    (unsigned-int . u32le)
-    (short-int . s16le) (signed-short . s16le)
-    (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s64le) (signed-long . s64le)
-    (signed-long-int . s64le) (unsigned-long-int . u64le)
-    (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+    (unsigned-int . u32le)))
 
 (define arch/aarch64
   (make-arch-info "aarch64" 'little mtype-map/aarch64 alignof-mtype-map/natural))
@@ -432,14 +405,7 @@
     (float-_Complex . z32le) (double-_Complex . z32le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
-     (unsigned-int . u16le)
-    (short-int . s16le) (signed-short . s16le)
-    (signed-short-int . s16le) (unsigned-short-int . u8)
-    (signed . s16le) (signed-int . s16le)
-    (long-int . s32le) (signed-long . s32le)
-    (signed-long-int . s32le) (unsigned-long-int . u32le)
-    (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+    (unsigned-int . u16le)))
 
 (define alignof-mtype-map/avr
   (map (lambda (pair) (cons (car pair) 1)) sizeof-mtype-map))
@@ -468,14 +434,7 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
-     (unsigned-int . u32le)
-    (short-int . s16le) (signed-short . s16le)
-    (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s32le) (signed-long . s32le)
-    (signed-long-int . s32le) (unsigned-long-int . u32le)
-    (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+    (unsigned-int . u32le)))
 
 (define arch/i686
   (make-arch-info 'i686 'little mtype-map/i686 alignof-mtype-map/natural))
@@ -503,15 +462,7 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
-     (unsigned-int . u32be)
-    (short-int . s16be) (signed-short . s16be)
-    (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be)
-    (long-int . s64be) (signed-long . s64be)
-    (signed-long-int . s64le) (unsigned-long-int . u64be)
-    (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be)
-    (unsigned-long-long-int . u64be)))
+    (unsigned-int . u32be)))
 
 (define arch/powerpc32
   (make-arch-info 'powerpc32 'big mtype-map/powerpc32 alignof-mtype-map/natural))
@@ -539,14 +490,7 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
-     (unsigned-int . u32be)
-    (short-int . s16be) (signed-short . s16be)
-    (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be)
-    (long-int . s64be) (signed-long . s64be)
-    (signed-long-int . s64be) (unsigned-long-int . u64be)
-    (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be) (unsigned-long-long-int . u64be)))
+    (unsigned-int . u32be)))
 
 (define arch/powerpc64
   (make-arch-info 'powerpc64 'big mtype-map/powerpc64 alignof-mtype-map/natural))
@@ -574,14 +518,7 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
-     (unsigned-int . u32le)
-    (short-int . s16le) (signed-short . s16le)
-    (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s64le) (signed-long . s64le)
-    (signed-long-int . s64le) (unsigned-long-int . u64le)
-    (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+    (unsigned-int . u32le)))
 
 (define arch/powerpc64le
   (make-arch-info 'powerpc64le 'little mtype-map/powerpc64le alignof-mtype-map/natural))
@@ -610,14 +547,7 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
-     (unsigned-int . u32le)
-    (short-int . s16le) (signed-short . s16le)
-    (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s32le) (signed-long . s32le)
-    (signed-long-int . s32le) (unsigned-long-int . u32le)
-    (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+    (unsigned-int . u32le)))
 
 (define arch/riscv32
   (make-arch-info 'riscv32 'little mtype-map/riscv32 alignof-mtype-map/natural))
@@ -645,14 +575,7 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
-    (unsigned-int . u32le)
-    (short-int . s16le) (signed-short . s16le)
-    (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s64le) (signed-long . s64le)
-    (signed-long-int . s64le) (unsigned-long-int . u64le)
-    (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+    (unsigned-int . u32le)))
 
 (define arch/riscv64
   (make-arch-info "riscv64" 'little mtype-map/riscv64 alignof-mtype-map/natural))
@@ -679,14 +602,7 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
-    (unsigned-int . u32be)
-    (short-int . s16be) (signed-short . s16be)
-    (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be)
-    (long-int . s32be) (signed-long . s32be)
-    (signed-long-int . s32be) (unsigned-long-int . u32be)
-    (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be) (unsigned-long-long-int . u64be)))
+    (unsigned-int . u32be)))
 
 (define arch/sparc32
   (make-arch-info 'sparc32 'big mtype-map/sparc32 alignof-mtype-map/natural))
@@ -713,14 +629,7 @@
     (float-_Complex . z32be) (double-_Complex . z64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
-    (unsigned-int . u32be)
-    (short-int . s16be) (signed-short . s16be)
-    (signed-short-int . s16be) (unsigned-short-int . u16be)
-    (signed . s32be) (signed-int . s32be)
-    (long-int . s64be) (signed-long . s64be)
-    (signed-long-int . s64be) (unsigned-long-int . u64be)
-    (long-long-int . s64be) (signed-long-long . s64be)
-    (signed-long-long-int . s64be) (unsigned-long-long-int . u64be)))
+    (unsigned-int . u32be)))
 
 (define arch/sparc64
   (make-arch-info 'sparc64 'big mtype-map/sparc64 alignof-mtype-map/natural))
@@ -747,14 +656,7 @@
     (float-_Complex . z32le) (double-_Complex . z64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
-    (unsigned-int . u32le)
-    (short-int . s16le) (signed-short . s16le)
-    (signed-short-int . s16le) (unsigned-short-int . u16le)
-    (signed . s32le) (signed-int . s32le)
-    (long-int . s64le) (signed-long . s64le)
-    (signed-long-int . s64le) (unsigned-long-int . u64le)
-    (long-long-int . s64le) (signed-long-long . s64le)
-    (signed-long-long-int . s64le) (unsigned-long-long-int . u64le)))
+    (unsigned-int . u32le)))
 
 (define arch/x86_64
   (make-arch-info "x86_64" 'little mtype-map/x86_64 sizeof-mtype-map))
