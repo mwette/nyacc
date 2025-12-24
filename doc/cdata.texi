@@ -98,7 +98,7 @@ want on your first approach.
 
 @deffn {Procedure} cbase name
 Given symbolic @var{name} generate a base ctype.   The name can
-be a symbol like @code{unsigned-int}, @code{double}, or can be a
+be a symbol like @code{unsigned}, @code{double}, or can be a
 @emph{arch-info} machine type symbol like @code{u64le}.
 @end deffn
 
@@ -531,17 +531,20 @@ More to come.
 
 @subheading Base Types
 
+Base types are the following, along with the pseudo-type @code{void}
+
 @example
-void*
-char short int long float double unsigned-short unsigned unsigned-long
-size_t ssize_t ptrdiff_t int8_t uint8_t int16_t uint16_t int32_t
-uint32_t int64_t uint64_t signed-char unsigned-char short-int
-signed-short signed-short-int signed signed-int long-int signed-long
-signed-long-int unsigned-short-int unsigned-int unsigned-long-int
-_Bool bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
-long-long long-long-int signed-long-long signed-long-long-int
-unsigned-long-long unsigned-long-long-int
+void* char signed-char unsigned-char short unsigned-short
+float double int unsigned long unsigned-long long-long unsigned-long-long
+int8_t uint8_t int16_t uint16_t int32_t uint32_t int64_t uint64_t
+size_t ssize_t ptrdiff_t intptr_t uintptr_t _Bool bool
+wchar_t char16_t char32_t long-double _Float16 _Float128
+float-_Complex double-_Complex __int128 unsigned-__int128
 @end example
+
+When it come to multi-named types like ``long long int'' cdata wants
+to see the shorted variant, here ``long long''.   Likewise, use
+``unsigned'' for ``unsigned int'', ``short'' for ``short int'', etc.
 
 @subheading Other Procedures
 
