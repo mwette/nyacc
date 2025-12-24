@@ -245,11 +245,13 @@
     ;; The switch case for this mlang only allows case-expr of form
     ;; @code{fixed}, @code{string}, @code{fixed-list} or @code{string-list}.
     (case-list
+     (case-list-1 ($$ (tl->list $1))))
+    (case-list-1
      ($empty ($$ (make-tl 'case-list)))
-     (case-list "case" case-expr term stmt-list
-                ($$ (tl-append $1 `(case ,$3 ,$5)))))
+     (case-list-1 "case" case-expr term stmt-list
+                  ($$ (tl-append $1 `(case ,$3 ,$5)))))
     (case-expr
-     (fixed) (string)
+     (fixed) (string) (q-ident)
      ("{" fixed-list "}" ($$ (tl->list $2)))
      ("{" string-list "}" ($$ (tl->list $2))))
     (fixed-list
@@ -258,12 +260,16 @@
     (string-list
      (string ($$ (make-tl 'string-list $1)))
      (string-list string ($$ (tl-append $1 $2))))
-     
+
+    ;; inserting (end) here seems a little kludgy
     (expr-list
      (expr-list-1 ($$ (tl->list $1))))
     (expr-list-1
      (expr ($$ (make-tl 'expr-list $1)))
-     (expr-list-1 "," expr ($$ (tl-append $1 $3))))
+     ("end" ($$ (make-tl 'expr-list '(end))))
+     (expr-list-1 "," expr ($$ (tl-append $1 $3)))
+     (expr-list-1 "," "end" ($$ (tl-append $1 '(end))))
+     )
 
     ;; We need separate expr and expr w/o space to avoid picking up
     ;; machine that accepts all partial expressions followed by 'sp.
