@@ -51,7 +51,7 @@
   (export cairo_raster_source_acquire_func_t*)
   
   (define-bstruct cairo_raster_source_release_func_t*
-    (bs:pointer cairo_raster_source_release_func_t))
+    (* cairo_raster_source_release_func_t))
   (export cairo_raster_source_release_func_t*)
 
   (define (make-cairo-unit-matrix)
