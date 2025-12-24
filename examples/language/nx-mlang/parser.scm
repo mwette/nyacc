@@ -266,7 +266,7 @@
        (cond
         ((member name vars) (values tree '() vars))
         (else (values tree '() (cons name vars)))))
-      ((fctn-defn (fctn-decl ,name ,iargs ,oargs) ,stmts)
+      ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_1) ,stmts)
        (values tree '() (fold insert-name (cons "@F" vars)
                               (append (cdr iargs) (cdr oargs)))))
       ((command "global" . ,args)
@@ -283,12 +283,13 @@
         ((aref-or-call (@ . ,attr) (ident ,name) ,args)
          (let ((op (if (member name vars) 'array-ref 'call)) (tail (cdr form)))
            (values (cons (cons-source tree op (cdr form)) seed) kvars)))
+        ;; hey if any arg is (end) then it's an array-ref, I think
         #|
          (if (fold arg-not-index #f args)
            (values (cons (cons-source tree 'call (cdr form)) seed) gbl lcl)
            (values (cons (cons-source tree form form) seed) gbl lcl)))
         |#
-        ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_) ,stmts)
+        ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_1) ,stmts)
          (values (cons-source tree form seed) (cdr (member "@F" kvars))))
         (,__ (values (cons-source tree form seed) kvars)))))
 
