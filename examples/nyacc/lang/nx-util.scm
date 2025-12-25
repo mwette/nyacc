@@ -316,18 +316,6 @@
       (nx-add-taglevel (cons str `(toplevel ,sym)) dict '@top))))
 
 
-;; @deffn {Procedure} nx-add-lexicals name1 ... nameN dict
-;; A fold-right with @code{nx-add-lexical}, equivalent to
-;; @example
-;; (fold-right nx-add-lexical dict (name1 ... nameN))
-;; @end example
-;; @end deffn
-(define (nx-add-lexicals . args)
-  (let iter ((args args))
-    (if (null? (cddr args)) (nx-add-lexical (car args) (cadr args))
-        (nx-add-lexical (car args) (iter (cdr args))))))
-
-
 ;; @deffn {Procedure} nx-lexical-symbol? name dict
 ;; This is a predicate to indicate if @var{name} is a lexical symbol.
 ;; @end deffn
@@ -347,6 +335,18 @@
 ;; @end deffn
 (define (nx-add-lexical name dict)
   (acons name `(lexical ,(string->symbol name) ,(genxsym name)) dict))
+
+
+;; @deffn {Procedure} nx-add-lexicals name1 ... nameN dict
+;; A fold-right with @code{nx-add-lexical}, equivalent to
+;; @example
+;; (fold-right nx-add-lexical dict (name1 ... nameN))
+;; @end example
+;; @end deffn
+(define (nx-add-lexicals . args)
+  (let iter ((args args))
+    (if (null? (cddr args)) (nx-add-lexical (car args) (cadr args))
+        (nx-add-lexical (car args) (iter (cdr args))))))
 
 
 ;; @deffn nx-lookup name dict
