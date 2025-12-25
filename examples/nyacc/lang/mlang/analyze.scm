@@ -13,6 +13,7 @@
 
 #;(define-module (nyacc lang mlang mltoc) #:export (mlang->c99))
 
+(use-modules (ice-9 format))
 (use-modules (ice-9 regex))
 (use-modules (ice-9 match))
 (use-modules ((srfi srfi-1) #:select (fold last lset-union)))
@@ -44,7 +45,7 @@
 ;; info on builtins
 
 (define builtins
-  '("abs" "acos" "any" "atan2" "blkdiag" "cos" "cosd" "cross"
+  '("abs" "acos" "any" "atan2" "blkdiag" "cart2sph" "cos" "cosd" "cross"
     "deg2rad" "diag" "double" "exp" "eye" "false" "find" "flipud"
     "interp1" "length" "logical" "min" "norm" "ones" "pagemtimes"
     "permute" "pinv" "rad2deg" "reshape" "sign" "sin" "sind"
@@ -403,9 +404,6 @@
 ;; dims : list of dims only for rk > 0
 ;; challenge is to map expressions to transformation of dims
 
-(define (fl-join a b) ;; or #f if they are the same
-  (logior a b))
-
 (define-syntax vx-match
   (syntax-rules ()
     ((_ vx ix c0 c1 ...)
@@ -433,34 +431,67 @@
     ((_ vx vy iy u kt kf)
      (let ((vyi (vector-ref vy iy)))
        (cond
-        ((and (integer? vyi) (symbol? u))
-         (if (eq? (vector-ref (vector-ref vx vyi) 0) u) kt))
+        ((and (integer? vyi) (symbol? u)
+              (eq? (vector-ref (vector-ref vx vyi) 0) u)) kt)
         ((and (string? u) (string=? vyi u)) kt)
         (else kf))))))
 
+
+;; @deffn {Syntax} gen-flags flag-set flag1 flag2 ...
+;; Define a set of variables with name @var{flag-set}-@var{flag1} ....
+;; @end deffn
+(define-syntax gen-flags
+  (lambda (x)
+    (define (genid ctx pfx id)
+      (datum->syntax
+       ctx (symbol-append (syntax->datum pfx) '- (syntax->datum id))))
+    (syntax-case x ()
+      ((_ name flag0 ...)
+       #`(begin .
+           #,(let loop ((ids #'(flag0 ...)) (ofx 0))
+               (if (null? ids) '()
+                   (cons #`(define #,(genid x #'name (car ids)) #,(ash 1 ofx))
+                         (loop (cdr ids) (1+ ofx))))))))))
+  
+(define (set-flag flags flag)
+  (logior flags flag))
+(define (clr-flag flags flag)
+  (logand flags (lognot flag)))
+(define (flag-set? flags flag)
+  (not (zero? (logand flags flag))))
+
+(gen-flags USE
+           NUM STR SYM OBJ
+           INT FLT CPX
+           RK0 RK1 RK2 RK3 RK4 RK5 RK6 RK7)
+
+(define (fl-join fv ix seed . vl) ;; or #f if they are the same
+  #;(let ((v0 (vector-ref fv ix)))
+    (cond
+     ((eq? v0 v1) #f)
+  (else (vector-set fv ix (logior v0 v1)) #t)))
+  #f
+  )
 
 (define (tryme vx)
   (let* ((nx (vector-length vx))
          (flv (make-vector nx 0))       ; flag vector
          ;;(szv (make-vector vl 0))       ; max size of array data
          )
+
     (let loop ((changed #t))
       (if changed
           (fold
            (lambda (ix ch)
-             (sf "~s ~s\n" ix (vector-ref vx ix))
+             ;; (sf "~s ~s\n" ix (vector-ref vx ix))
              (vx-match vx ix
                ((add ,lt ,rt)
                 ;;(fl-join/lit 'num (fl-join lt rt))
-                (display "ADD\n")
-                )
-               (else))
-             #f) ;; fixme
+                ;;(display "ADD\n")
+                #f)
+               (else)))
            #f
-           '(1443) ;;(iota nx)
-           )))))
-#|
-|#
+           (iota nx))))))
 
 
 ;; ============================================================================
@@ -553,7 +584,8 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
                 ;;(pp idsx)
                 ;;(pp idvx)
                 ;;(display-vxml idvx)
-                (pp (tryme idvx))
+                ;;(tryme idvx)
+                (format #t "~b\n" USE-INT)
                 #t))
          #f)
        files)))
