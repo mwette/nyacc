@@ -246,7 +246,7 @@
       ((ident ,name)
        (if (member name list) list (cons name list)))
       (,_ list)))
-  
+
   ;; (aref-or-call (handle ...) ...) is call
   ;; vars : variables (e.g., from global or function sig)
   ;; WE HAVE
@@ -269,8 +269,8 @@
       ((fctn-defn (fctn-decl ,name ,iargs ,oargs . ,_1) ,stmts)
        (values tree '() (fold insert-name (cons "@F" vars)
                               (append (cdr iargs) (cdr oargs)))))
-      ((command "global" . ,args)
-       (values tree '() (fold insert-name vars args)))
+      ((command "global" . ,names)
+       (values tree '() (fold cons vars names)))
       (,__ (values tree '() vars))))
 
   (define (fU tree seed vars kseed kvars) ; => seed vars

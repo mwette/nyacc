@@ -26,7 +26,7 @@
 
 (use-modules (nyacc foreign cdata))
 (use-modules (nyacc lang sx-util))
-(use-modules (nyacc lang nx-util))
+;;(use-modules (nyacc lang nx-util))
 
 (use-modules (language nx-mlang parser))
 (use-modules (language nx-mlang pprint))
@@ -51,6 +51,20 @@
     "permute" "pinv" "rad2deg" "reshape" "sign" "sin" "sind"
     "size" "sqrt" "squeeze" "struct" "sum" "vecnorm" "zeros"))
 
+;;(define (builtin-out name)
+(define-syntax string-case
+  (let-syntax
+      ((check-str-case
+        (syntax-rules (else)
+          ((_ str (set ex ...) kt kf)
+           (if (member str 'set) kt kf)))))
+    (syntax-rules (else)
+      ((_ str (set ex ...) c1 ...)
+       (let ((kf (lambda () (string-case str c1 ...))))
+         (check-str-case str set (ex ...) kf)))
+      ((_ str (else ex ...)) (begin (if #f #f) ex ...))
+      ((_ str) (error "no match")))))
+
 ;; strategy here
 ;; 1) convert tree into vector of (tag rx ...)
 ;;    where rx is an index in the vector, or a string
@@ -72,7 +86,8 @@
 ;; @deffn {Procedure} sxml->vxml sx-tree => vxml
 ;; Convert an SXML AST to VXML, a vector where each entry
 ;; is an element with element nodes replaced by index in the vector.
-;; Q: should we retain @ or not?
+;; @*Q: should we retain @ or not?
+;; @*TODO: add source properties to each entry
 ;; @end deffn
 (define (sxml->vxml sx-tree)
   (let* ((ne (sxml-count sx-tree))
@@ -130,45 +145,51 @@
 ;;     if ident convert to lexical|toplevel
 ;;     function call and implies file, add file to next
 
-(define (sx-ize nref)
-  (match nref
-    (`(toplevel ,n)
-     (set-cdr! nref (list (symbol->string n))))
-    (`(lexical ,n ,r)
-     (set-cdr! nref (list (symbol->string n) (symbol->string r))))
-    (__
-     (pperr nref)
-     (error "add-variable error")))
-  nref)
+(define lvl 0)
 
-(define (add-variable name dict)
-  (let* ((dict (or (nx-add-framelevel name dict)
-                   (nx-add-toplevel name dict)))
-         (nref (nx-lookup name dict)))
-    (sx-ize nref)
+(define (push-scope dict)
+  (set! lvl (1+ lvl))
+  ;;(sferr "lvl=~s\n" lvl)
+  (list (cons '@P dict)))
+
+(define (pop-scope dict)
+  (set! lvl (1- lvl))
+  ;;(sferr "lvl=~s\n" lvl)
+  (when (negative? lvl) (error "yuck"))
+  (unless (assoc-ref dict '@P) (error "yukkie"))
+  (assoc-ref dict '@P))
+
+(define (lookup name dict)
+  (cond
+   ((not dict) (error "not dict") #f)
+   ((assoc-ref dict name))
+   ((assoc-ref dict '@P) => (lambda (dict) (lookup name dict)))
+   (else #f)))
+
+(define (ensure-lexical ident dict)
+  (let* ((name (sx-ref ident 1)))
+    (cond
+     ((assoc-ref dict name) dict)
+     (else 
+      (set-car! (cdr ident) (symbol->string (gensym (string-append name "-"))))
+      (acons name ident dict)))))
+
+(define (ensure-toplevel ident dict)
+  (let ((name (sx-ref ident 1))
+        (topd (let loop ((dict dict))
+                (or (and=> (assq-ref dict '@P) loop) dict))))
+    (unless (assoc-ref topd name)
+      (set-cdr! topd (acons name ident (cdr topd))))
     dict))
+         
+(define (ensure-variable ident dict)
+  (let* ((name (sx-ref ident 1)))
+    (if (lookup name dict)
+        dict
+        (if (assq-ref dict '@P)
+            (ensure-lexical ident dict)
+            (ensure-toplevel ident dict)))))
 
-(define (add-lexical name dict)
-  (let* ((dict (nx-add-lexical name dict))
-         (nref (nx-lookup name dict)))
-    (sx-ize nref)
-    dict))
-
-(define (add-toplevel name dict)
-  (let* ((dict (nx-add-toplevel name dict))
-         (nref (nx-lookup name dict)))
-    (sx-ize nref)
-    dict))
-
-(define (ensure-variable name dict)
-  (if (nx-lookup name dict)
-      dict
-      (add-variable name dict)))
-
-(define (ensure-variable/frame name dict)
-  (if (nx-lookup-in-frame name dict)
-      dict
-      (add-variable name dict)))
 
 ;; convert (ident ,name) to one of
 ;;   (toplevel ,name)
@@ -185,43 +206,60 @@
     ;; Here we update symbol table where identifiers are defined.
     (sx-match tree
       ((fctn-defn (fctn-decl (ident ,name) (ident-list . ,inargs)
-                             (ident-list . ,outargs) . ,comms) ,stmt-list)
-       (let* ((dict (ensure-variable name dict))
-              (dict (nx-push-scope dict))
-              (dict (fold add-lexical dict (map cadr inargs)))
-              (dict (fold add-lexical dict (map cadr outargs)))
-              (dict (nx-add-tag dict name)))
+                             (ident-list . ,outargs) . ,_) ,stmt-list)
+       (let* ((dict (ensure-variable (sx-ref* tree 1 1) dict))
+              (dict (push-scope dict))
+              (dict (fold ensure-lexical dict inargs))
+              (dict (fold ensure-lexical dict outargs))
+              (dict (acons '@F #t dict)))
          (values tree '() dict)))
-      ((assn (@ . ,attr) (ident ,name) ,rhsx)
-       (values tree '() (ensure-variable name dict)))
-      ((assn (@ . ,attr) (aref-or-call (ident ,name) ,expl) ,rhsx)
-       (values tree '() (ensure-variable name dict)))
-      ((assn (@ . ,attr) (sel (ident ,name) ,expr) ,rhsx)
-       (values tree '() (ensure-variable name dict)))
+      ((fctn-defn . ,_)
+       (error "missed fctn-defn"))
+      ((assn (ident ,name) ,rhsx)
+       (values tree '() (ensure-variable (sx-ref tree 1) dict)))
+      ((assn (aref-or-call (ident ,name) ,expl) ,rhsx)
+       (values tree '() (ensure-variable (sx-ref* tree 1 1) dict)))
+      ((assn (sel (ident ,name) ,expr) ,rhsx)
+       (values tree '() (ensure-variable (sx-ref* tree 1 1) dict)))
       ;;((multi-assn ,
-      ((for (ident ,name) ,range ,stmt-list) 
-       (values tree '() (add-lexical name dict)))
+      #;((for (ident ,name) . ,_)
+       (values tree '() (ensure-lexical (sx-ref tree 1) (push-scope dict))))
       ((call (ident ,name) . ,_)
-       (values tree '() (add-toplevel name dict)))
+       (values tree '() (ensure-toplevel (sx-ref tree 1) dict)))
       ;; ident used as name
-      ((sel (ident ,name) ,expr)
+      ((sel (ident ,name) ,expr)        ; TODO: src-props
        (values `(sel (name ,name) ,expr) '() dict))
-      ((obj-prop (ident ,name) ,expr)
+      ((obj-prop (ident ,name) ,expr)        ; TODO: src-props
        (values `(obj-prop (name ,name) ,expr) '() dict))
-      (,_ (values tree '() dict))))
+      ((command "global" . ,names)
+       ;; (assert (assoc-ref '@F dict))
+       (values tree '() (fold (lambda (name)
+                                (let* ((ident `(ident ,name))
+                                       (dict (ensure-toplevel ident dict)))
+                                  (acons name ident dict)))
+                              dict names)))
+      (,_
+       (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
-    (let ((form (reverse kseed)))
+    (let ((form (reverse kseed)))        ; TODO: src-props
       ;; Here we update identifiers where they are used.
       (sx-match form
-        ((*TOP* ,subform) (values subform kdict))
+        ((*TOP* ,subform)
+         (values subform kdict))
         ((ident ,name)
-         (values (cons (or (nx-lookup name kdict) form) seed) kdict))
-        ((fctn-defn . ,_)
-         (values (cons form seed) (nx-pop-scope kdict)))
+         (values (cons (or (lookup name kdict) form) seed) kdict))
+        ((fctn-defn (fctn-decl (ident ,name) (ident-list . ,inargs)
+                               (ident-list . ,outargs) . ,_) ,stmt-list)
+         (values (cons form seed) (pop-scope kdict)))
         ((assn . ,_)
          (values (cons form seed) kdict))
-        (,_ (values (cons form seed) kdict)))))
+        #;((for (ident ,name) . ,_)
+         (values (cons form seed) (pop-scope kdict)))
+        ;; todo branch completion
+        ;;  (if exp (assn x 1)) => (if exp (assn x 1) (assn x x))
+        (,_
+         (values (cons form seed) kdict)))))
 
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))
@@ -322,40 +360,6 @@
        ((pair? next) (loop trees done next '()))
        (else `(program ,@(reverse trees)))))))
 
-;; inline: (inline (@ (filename "foo.m") (function "foo"))
-;;                 assn-ins body assn-outs)
-;;   (assn-many a b c (call foo) -> replace assn many
-;;   (assn a b c (call foo) -> replace assn
-;;   (call foo) -> replace call w/ new "tmp"
-#|
-(define (inline-program prog)
-  (let* ((progd (map (match-lambda
-                       (`(script-file (@ (filename ,fn) . ,_1) . ,stmts)
-                        (cons fn stmts))
-                       (`(function-file
-                          ,_1 (fctn-defn (fctn-decl ,name . ,_2) . ,_3))
-                        (cons name 
-  prog)
-(define (inline-fctn-file tree)
-
-  (define (fD tree seed)
-    (value '()  seed))
-
-  (define (fU tree seed kseed)
-    seed)
-
-  (define (fH leaf seed)
-    (cons leaf seed))
-  
-  (let* ((file (sx-attr-ref tree 'filename))
-         (ftns ((sxpath '(function-file fctn-defn)) `(*TOP* ,tree)))
-         (dict (map (lambda (f) (cons (sx-ref* f 1 1 1) f))))
-         (head (car ftns)))
-    (sferr "filename=~s\n" file)
-    )
-
-  #f)
-|#
 
 ;; ============================================================================
 ;; attempt to do the effects analysis
@@ -466,12 +470,13 @@
            RK0 RK1 RK2 RK3 RK4 RK5 RK6 RK7)
 
 (define (fl-join fv ix seed . vl) ;; or #f if they are the same
-  #;(let ((v0 (vector-ref fv ix)))
-    (cond
-     ((eq? v0 v1) #f)
-  (else (vector-set fv ix (logior v0 v1)) #t)))
-  #f
-  )
+  (let ((v0 (vector-ref fv ix)))
+    (let loop ((v1 v0) (vl vl))
+      (if (pair? vl)
+          (loop (set-flag v0 (car vl)) (cdr vl))
+          (cond
+           ((eq? v0 v1) seed)
+           (else (vector-set! fv ix v1) #t))))))
 
 (define (tryme vx)
   (let* ((nx (vector-length vx))
@@ -482,16 +487,27 @@
     (let loop ((changed #t))
       (if changed
           (fold
-           (lambda (ix ch)
+           (lambda (ix c?) ;; c? = changed?
              ;; (sf "~s ~s\n" ix (vector-ref vx ix))
              (vx-match vx ix
+               ((fixed ,v)
+                (fl-join flv ix c? USE-NUM USE-INT))
+               ((float ,v)
+                (fl-join flv ix c? USE-NUM USE-FLT))
+               ((string ,v)
+                (fl-join flv ix c? USE-STR))
                ((add ,lt ,rt)
-                ;;(fl-join/lit 'num (fl-join lt rt))
-                ;;(display "ADD\n")
-                #f)
+                (fl-join flv ix c? USE-NUM))
+               ((sub ,lt ,rt)
+                (fl-join flv ix c? USE-NUM))
+               ((mul ,lt ,rt)
+                (fl-join flv ix c? USE-NUM))
+               ((div ,lt ,rt)
+                (fl-join flv ix c? USE-NUM))
+               ((assn ,lval ,rval)
+                (fl-join flv lval (vector-ref flv rval)))
                (else)))
-           #f
-           (iota nx))))))
+           #f (iota nx))))))
 
 
 ;; ============================================================================
@@ -584,8 +600,8 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
                 ;;(pp idsx)
                 ;;(pp idvx)
                 ;;(display-vxml idvx)
-                ;;(tryme idvx)
-                (format #t "~b\n" USE-INT)
+                (tryme idvx)
+                ;;(format #t "~b\n" USE-INT)
                 #t))
          #f)
        files)))
