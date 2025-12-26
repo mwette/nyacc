@@ -1462,7 +1462,7 @@
             (not (dmem? name defined))    ; 2) not already defined
             (not (if (pair? name)         ; 3) not anonymous
                      (string=? "*anon*" (cdr name))
-                     (string=? "" name))))
+                     (string=? "*unspecified*" name))))
            (let ((udecl (udict-ref udict name)))
              (nlscm) (c99scm udecl)
              (if (*echo-decls*)
