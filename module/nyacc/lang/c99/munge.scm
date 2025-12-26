@@ -27,7 +27,7 @@
 ;;    a) unitize: (int (x y)) -> ((int x) (int y))
 ;;    b) dictize: (int (x y)) -> (("x" . (int x)) ("y" . (int y)))
 ;; 6) In places where a name does not exist (e.g., bitfield)
-;;    "*unspecified*" is the key.
+;;    "*anon*" is the key.
 
 ;; Todo:
 ;; 2) I want a way to keep named enums in expand-typerefs.
@@ -173,7 +173,7 @@
        (lambda (declr seed)
          (acons (declr-name declr) (sx-list tag attr specl declr) seed))
        seed declrs)
-      (acons "*unspecified*" (sx-list tag attr specl) seed)))
+      (acons "*anon*" (sx-list tag attr specl) seed)))
 
 ;; @deffn {Procedure} split-decl decl => values
 ;; This routine splits a declaration (or comp-decl or param-decl) into
@@ -437,7 +437,7 @@
 ;; solution: unitize-decl => '(struct . "foo") then filter to generate
 ;; ("struct" ("foo" . decl) ("bar" . decl) ...)
 ;; ("union" ("bar" . decl) ("bar" . decl) ...)
-;; ("enum" ("*unspecified*" . decl) ("foo" . decl) ("bar" . decl) ...)
+;; ("enum" ("*anon*" . decl) ("foo" . decl) ("bar" . decl) ...)
 ;; @end example
 ;; So globals could be in udict, udefs or anon-enum.
 ;; @example

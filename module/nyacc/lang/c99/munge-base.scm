@@ -69,7 +69,7 @@
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     ((bit-field ,ident ,size) ident)
-    ((bit-field ,size) `(ident "*unspecified*"))
+    ((bit-field ,size) `(ident "*anon*"))
     (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
 ;; @deffn {Procedure} declr-name declr => "name"
@@ -663,7 +663,7 @@
        (cons* (namer) `(function-returning ,param-list) tail))
       ((scope ,expr) (unwrap-declr expr tail))
       ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
-      ((bit-field ,size) (cons* "*unspecified*" declr tail))
+      ((bit-field ,size) (cons* "*anon*" declr tail))
       (,_
        (sferr "munge-base/unwrap-declr missed:\n") (pperr declr)
        (throw 'c99-error "munge-base/unwrap-declr failed")
