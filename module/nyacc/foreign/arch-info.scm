@@ -33,7 +33,7 @@
             base-type-name-list base-type-symbol-list
             c-strname->symname c-symname->strname
             mtype-bv-ref mtype-bv-set!
-            bv-z32-ref bv-z32-set! bv-z64-ref bv-z64-set!
+            bv-z32-ref bv-z32-set! bv-c64-ref bv-c64-set!
             bv-s128-ref bv-s128-set! bv-u128-ref bv-u128-set!
             mtype-signed?)
   #:declarative? #t
@@ -90,7 +90,7 @@
     (s16be . 2) (s32be . 4) (s64be . 8) (s128be . 16)
     (u16be . 2) (u32be . 4) (u64be . 8) (u128be . 16)
     (f16be . 2) (f32be . 4) (f64be . 8) (f128be . 16)
-    (z32le . 8) (z64le . 16) (z32be . 8) (z64be . 16)))
+    (c32le . 8) (c64le . 16) (c32be . 8) (c64be . 16)))
 
 (define endianness-mtype-map
   (let ((le 'little) (be 'big))
@@ -101,13 +101,13 @@
       (s16be . ,be) (s32be . ,be) (s64be . ,be) (s128be . ,be)
       (u16be . ,be) (u32be . ,be) (u64be . ,be) (u128be . ,be)
       (f16be . ,be) (f32be . ,be) (f64be . ,be) (f128be . ,be)
-      (z32le . ,le) (z64le . ,le) (z32be . ,be) (z64be . ,be))))
+      (c32le . ,le) (c64le . ,le) (c32be . ,be) (c64be . ,be))))
 
 (define alignof-mtype-map/natural
   (map (lambda (p)
          (case (car p)
            ((z32le z32be) (cons (car p) 4))
-           ((z64le z64be) (cons (car p) 8))
+           ((c64le c64be) (cons (car p) 8))
            (else p)))
        sizeof-mtype-map))
 
@@ -226,11 +226,11 @@
   (bytevector-ieee-single-set! bv ix (real-part value) en)
   (bytevector-ieee-single-set! bv (+ ix 4) (imag-part value) en))
 
-(define (bv-z64-ref bv ix en)
+(define (bv-c64-ref bv ix en)
   (make-rectangular (bytevector-ieee-double-ref bv ix en)
                     (bytevector-ieee-double-ref bv (+ ix 8) en)))
 
-(define (bv-z64-set! bv ix value en)
+(define (bv-c64-set! bv ix value en)
   (bytevector-ieee-double-set! bv ix (real-part value) en)
   (bytevector-ieee-double-set! bv (+ ix 8) (imag-part value) en))
 
@@ -323,10 +323,10 @@
     ((u128le) (bv-u128-ref bv ix le))
     ((s128be) (bv-s128-ref bv ix be))
     ((u128be) (bv-u128-ref bv ix be))
-    ((z32le) (bv-z32-ref bv ix le))
-    ((z64le) (bv-z64-ref bv ix le))
-    ((z32be) (bv-z32-ref bv ix be))
-    ((z64be) (bv-z64-ref bv ix be))
+    ((c32le) (bv-c32-ref bv ix le))
+    ((c64le) (bv-c64-ref bv ix le))
+    ((c32be) (bv-c32-ref bv ix be))
+    ((c64be) (bv-c64-ref bv ix be))
     (else (error "mtype-bv-ref: bad type " mtype))))
 
 ;; => arch-info
@@ -354,10 +354,10 @@
     ((u128le) (bv-u128-set! bv ix value le))
     ((s128be) (bv-s128-set! bv ix value be))
     ((u128be) (bv-u128-set! bv ix value be))
-    ((z32le) (bv-z32-set! bv ix value le))
-    ((z64le) (bv-z64-set! bv ix value le))
-    ((z32be) (bv-z32-set! bv ix value be))
-    ((z64be) (bv-z64-set! bv ix value be))
+    ((c32le) (bv-c32-set! bv ix value le))
+    ((c64le) (bv-c64-set! bv ix value le))
+    ((c32be) (bv-c32-set! bv ix value be))
+    ((c64be) (bv-c64-set! bv ix value be))
     (else (error "mtype-bv-set!: bad type " mtype))))
 
 ;; === maps ====================================================================
@@ -378,7 +378,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
-    (float-_Complex . z32le) (double-_Complex . z64le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
     (unsigned-int . u32le)))
@@ -404,7 +404,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . #f) (char16_t . #f) (char32_t . #f)
     (long-double . f32le) (_Float16 . f16le) (_Float128 . f64le)
-    (float-_Complex . z32le) (double-_Complex . z32le)
+    (float-_Complex . c32le) (double-_Complex . c32le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u16le)))
@@ -433,7 +433,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-    (float-_Complex . z32le) (double-_Complex . z64le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
     (unsigned-int . u32le)))
@@ -461,7 +461,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . z32be) (double-_Complex . z64be)
+    (float-_Complex . c32be) (double-_Complex . c64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (unsigned-int . u32be)))
@@ -489,7 +489,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . z32be) (double-_Complex . z64be)
+    (float-_Complex . c32be) (double-_Complex . c64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (unsigned-int . u32be)))
@@ -517,7 +517,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-    (float-_Complex . z32le) (double-_Complex . z64le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
@@ -546,7 +546,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-    (float-_Complex . z32le) (double-_Complex . z64le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
@@ -574,7 +574,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-    (float-_Complex . z32le) (double-_Complex . z64le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
@@ -601,7 +601,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . z32be) (double-_Complex . z64be)
+    (float-_Complex . c32be) (double-_Complex . c64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (unsigned-int . u32be)))
@@ -628,7 +628,7 @@
     (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . z32be) (double-_Complex . z64be)
+    (float-_Complex . c32be) (double-_Complex . c64be)
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (unsigned-int . u32be)))
@@ -655,7 +655,7 @@
     (_Bool . u8) (bool . s8)
     (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
     (long-double . f128) (_Float16 . f16le) (_Float128 . f128le)
-    (float-_Complex . z32le) (double-_Complex . z64le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
@@ -679,7 +679,7 @@
     (s64le . s64) (u64le . u64) (f32le . f32) (f64le . f64)
     (s16be . s16) (u16be . u16) (s32be . s32) (u32be . u32)
     (s64be . s64) (u64be . u64) (f32be . f32) (f64be . f64)
-    (z32le . z32) (u64le . z64) (z32be . z32) (u64be . z64)))
+    (c32le . c32) (u64le . c64) (c32be . c32) (u64be . c64)))
 |#
 
 (define native-arch

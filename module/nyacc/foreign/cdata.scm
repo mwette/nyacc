@@ -734,8 +734,8 @@
 ;; For base types, the symbolic mtype must be equal; this includes
 ;; size, integer versus float, and signed versus unsigned.
 ;; For struct and union kinds, the names and types of all fields
-;; must be equal.
-;; @* WARNING: To avoid inifinite loops, this procedure skips checks
+;; must be equal, with the following exception:
+;; @* NOTE: To avoid inifinite loops, this procedure skips checks
 ;; on pointer fields with delays.
 ;; @end deffn
 (define (ctype-equal? a b)
