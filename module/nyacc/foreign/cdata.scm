@@ -312,8 +312,7 @@
   cdata?
   (bv cdata-bv)                         ; bvec
   (ix cdata-ix)                         ; index
-  (ct cdata-ct)                         ; type
-  (pl cdata-pl))                        ; pointers
+  (ct cdata-ct))                        ; type
 
 (set-record-type-printer! <cdata>
   (lambda (data port)
