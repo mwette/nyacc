@@ -326,7 +326,8 @@
     ((z32le) (bv-z32-ref bv ix le))
     ((z64le) (bv-z64-ref bv ix le))
     ((z32be) (bv-z32-ref bv ix be))
-    ((z64be) (bv-z64-ref bv ix be))))
+    ((z64be) (bv-z64-ref bv ix be))
+    (else (error "mtype-bv-ref: bad type " mtype))))
 
 ;; => arch-info
 (define (mtype-bv-set! mtype bv ix value)
@@ -356,7 +357,8 @@
     ((z32le) (bv-z32-set! bv ix value le))
     ((z64le) (bv-z64-set! bv ix value le))
     ((z32be) (bv-z32-set! bv ix value be))
-    ((z64be) (bv-z64-set! bv ix value be))))
+    ((z64be) (bv-z64-set! bv ix value be))
+    (else (error "mtype-bv-set!: bad type " mtype))))
 
 ;; === maps ====================================================================
 

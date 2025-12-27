@@ -85,7 +85,7 @@
 (define-module (nyacc foreign cdata)
   #:export (cbase
             cstruct cunion cpointer carray cenum cfunction
-            make-cdata cdata-ref cdata-set! cdata&-ref ccast
+            make-cdata make-cdata/* cdata-ref cdata-set! cdata&-ref ccast
             pretty-print-ctype
 
             ctype-size ctype-align ctype-kind ctype-info ctype-name
@@ -350,7 +350,7 @@
       (%make-ctype size align 'base mtype #f)))
   (with-arch arch
     (alist->hashq-table
-     (cons (cons 'void (%make-ctype 0 0 'base #f #f))
+     (cons (cons 'void (%make-ctype 0 0 'base 'void #f))
            (map (lambda (name) (cons name (make-cbase name)))
                 base-type-symbol-list)))))
 
@@ -361,20 +361,21 @@
        u16be u32be u64be u128be f16be f32be f64be f128be))
 
 ;; @deffn {Procedure} cbase name => <ctype>
-;; Given symbolic @var{name} generate a base ctype.   The name can
+;; Given symbolic @var{name}, generate a base ctype.   The name can
 ;; be something like @code{unsigned}, @code{double}, or can be a
 ;; @emph{cdata} machine type like @code{u64le}.  For example,
 ;; @example
 ;; (define double-type (cbase 'double))
 ;; @end example
-;; For input of @code{'void}, @code{'void} is returned.
+;; There is a pseudo-type @code{void}.
 ;; @end deffn
 (define (cbase name)
   "- Procedure: cbase name => <ctype>
-     Given symbolic NAME generate a base ctype.  The name can be
-     something like ‘unsigned-int’, ‘double’, or can be a _cdata_
-     machine type like ‘u64le’.  For example,
-          (define double-type (cbase 'double))"
+     Given symbolic NAME, generate a base ctype.  The name can be
+     something like ‘unsigned’, ‘double’, or can be a _cdata_ machine
+     type like ‘u64le’.  For example,
+          (define double-type (cbase 'double))
+     There is a pseudo-type ‘void’."
   (let* ((arch (*arch*))
          (name (cond ((symbol? name) name)
                      ((string? name) (strname->symname name))
@@ -853,6 +854,18 @@
          (make-data type value)))))
     (else (make-data type value))))
 
+;; @deffn {Procedure} make-cdata/* type pointer
+;; Make a cdata object from a pointer.   That is, instead of creating a
+;; bytevector to hold the data use the memory at the pointer using
+;; @code{pointer->bytevector}.
+;; @end deffn
+(define (make-cdata/* type pointer)
+  (assert-ctype 'make-cdata/* type)
+  (let* ((size (ctype-size type))
+         (bvec (pointer->bytevector pointer size))
+         (data (%make-cdata bvec 0 type #f)))
+    data))
+
 ;; @deffn {Procedure} cdata-sel data tag ... => cdata
 ;; Return a new @code{cdata} object representing the associated selection.
 ;; Note this is different from @code{cdata-ref}: it always returns a cdata
@@ -1061,19 +1074,6 @@
         value))
       (else
        (Xcdata-set! (cdata-bv data) (cdata-ix data) (cdata-ct data) value)))))
-
-;; @deffn {Procedure} make-cdata/* type pointer
-;; Make a cdata object from a pointer.   That is, instead of creating a
-;; bytevector to hold the data use the memory at the pointer using
-;; @code{pointer->bytevector}.
-;; @* Maybe ccast can do this?
-;; @end deffn
-(define (make-cdata/* type pointer)
-  (assert-ctype 'make-cdata/* type)
-  (let* ((size (ctype-size type))
-         (bvec (pointer->bytevector pointer size))
-         (data (%make-cdata bvec 0 type #f)))
-    data))
 
 ;; @deffn {Procedure} cdata-copy src) => <cdata>
 ;; Copy a data object (which might be a reference from another data object).
@@ -1298,7 +1298,7 @@
     (let ((info (ctype-info type)))
       (case (ctype-kind type)
         ((base)
-         info)
+         `',info)
         ((struct)
          `(cstruct
            ,(map
@@ -1319,7 +1319,6 @@
         ((pointer)
          (cond
           ((promise? (%cpointer-type info)) `(cpointer (delay ...)))
-          ((eq? 'void (cpointer-type info)) `(cpointer 'void))
           ((ctype-name (%cpointer-type info)) => (lambda (n) `(cpointer ,n)))
           (else `(cpointer ,(cnvt (cpointer-type info))))))
         ((array)
