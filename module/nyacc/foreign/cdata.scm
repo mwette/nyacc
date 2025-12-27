@@ -735,9 +735,8 @@
 ;; size, integer versus float, and signed versus unsigned.
 ;; For struct and union kinds, the names and types of all fields
 ;; must be equal.
-;; @* WARNING: Currently equality of pointers uses @code{eq?} (with
-;; forced promises).  Fixme is to create algorithm to chase down pointers
-;; without infinite search.
+;; @* WARNING: To avoid inifinite loops, this procedure skips checks
+;; on pointer fields with delays.
 ;; @end deffn
 (define (ctype-equal? a b)
   "- Procedure: ctype-equal? a b
@@ -766,7 +765,7 @@
              (let* ((at (%cpointer-type a))
                     (bt (%cpointer-type b)))
                (cond
-                ((and (promise? at) (promise? bt)) (eq? (force at) (force bt)))
+                ((and (promise? at) (promise? bt)) #t)
                 ((promise? at) (eq? (force at) bt))
                 ((promise? bt) (eq? at (force bt)))
                 ((eq? at bt))
