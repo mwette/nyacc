@@ -393,7 +393,6 @@
 ;; Generate a C pointer type for @var{type}. To reference or de-reference
 ;; cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
-;; @*note: Should we allow @var{type} to be a promise?
 ;; @example
 ;; (define foo_t (cbase 'int))
 ;; (cpointer (delay foo_t))
@@ -404,7 +403,6 @@
      Generate a C pointer type for TYPE.  To reference or de-reference
      cdata object see ‘cdata&’ and ‘cdata*’.  TYPE can be the symbol
      ‘void’ or a symbolic name used as argument to ‘cbase’.
-     note: Should we allow TYPE to be a promise?
           (define foo_t (cbase 'int))
           (cpointer (delay foo_t))"
   (let ((type (cond
@@ -472,7 +470,7 @@
 ;; of the associated bitfield.
 ;; @end deffn
 (define* (cstruct fields #:optional packed?)
-  "- Procedure: cstruct fields [packed] => ctype
+  "- Procedure: cstruct fields [packed] => <ctype>
      Construct a struct ctype with given FIELDS.  If PACKED, ‘#f’ by
      default, is ‘#t’, create a packed structure.  FIELDS is a list with
      entries of the form ‘(name type)’ or ‘(name type lenth)’ where
@@ -633,8 +631,8 @@
           (_ (error "cenum: bad enum def'n"))))))
 
 ;; @deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?] => <ctype>
-;; Generate a C function type to be used with @code{cpointer}.  You must
-;; pass the @var{wrapper} and @var{unwrapper} procedures that convert a
+;; Generate a C function type to be used with @code{cpointer}. The arguments
+;; @var{proc->ptr} and @var{ptr->proc} are procedures that convert a
 ;; procedure to a pointer, and pointer to procedure, respectively.  The
 ;; optional argument @var{#:variadic}, if @code{#t},  indicates the function
 ;; uses variadic arguments.  For this case (I need to add documention).
@@ -646,20 +644,26 @@
 ;;   (ffi:pointer->procedure ffi:void fptr (list)))
 ;; (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))
 ;; @end example
+;; The thinking here is that a @code{cfunction} type is a proxy for a
+;; C function in memory, with a getter and setter to read from or write
+;; to memory.
 ;; @end deffn
 (define* (cfunction proc->ptr ptr->proc #:optional variadic?)
   "- Procedure: cfunction proc->ptr ptr->proc [variadic?] => <ctype>
-     Generate a C function type to be used with ‘cpointer’.  You must
-     pass the WRAPPER and UNWRAPPER procedures that convert a procedure
-     to a pointer, and pointer to procedure, respectively.  The optional
-     argument #:VARIADIC, if ‘#t’, indicates the function uses variadic
-     arguments.  For this case (I need to add documention).  Here is an
-     example:
+     Generate a C function type to be used with ‘cpointer’.  The
+     arguments PROC->PTR and PTR->PROC are procedures that convert a
+     procedure to a pointer, and pointer to procedure, respectively.
+     The optional argument #:VARIADIC, if ‘#t’, indicates the function
+     uses variadic arguments.  For this case (I need to add
+     documention).  Here is an example:
           (define (f-proc->ptr proc)
             (ffi:procedure->pointer ffi:void proc (list)))
           (define (f-ptr->proc fptr)
             (ffi:pointer->procedure ffi:void fptr (list)))
-          (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))"
+          (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))
+     The thinking here is that a ‘cfunction’ type is a proxy for a C
+     function in memory, with a getter and setter to read from or write
+     to memory."
   (let ((type (cbase 'void*)) (mtype (mtypeof-basetype 'void*)))
     (%make-ctype (ctype-size type) (ctype-align type) 'function
                  (%make-cfunction proc->ptr ptr->proc variadic? mtype) #f)))
@@ -793,7 +797,8 @@
 ;; Create a new named version of the type.  The name is useful when the type
 ;; is printed.  This procedure does not mutate: a new type object is created.
 ;; If a specific type is used by multiple names the names can share
-;; the underlying type guts.  The following generates two named types.
+;; the underlying type guts.  The following examples shows how one type
+;; can have two names:
 ;; @example
 ;; (define raw (cstruct '((a 'int) (b 'double))))
 ;; (define foo_t (name-ctype 'foo_t raw))
@@ -803,6 +808,8 @@
 ;; @example
 ;; (ctype-equal? foo_t struct-foo) => #t
 ;; @end example
+;; It is recommended that one use symbols for names rather than strings,
+;; so that @code{pretty-print-ctype} will use names effectively.
 ;; @end deffn
 (define (name-ctype name type)
   "- Procedure: name-ctype name type -> <ctype>
@@ -810,12 +817,14 @@
      the type is printed.  This procedure does not mutate: a new type
      object is created.  If a specific type is used by multiple names
      the names can share the underlying type guts.  The following
-     generates two named types.
+     examples shows how one type can have two names:
           (define raw (cstruct '((a 'int) (b 'double))))
           (define foo_t (name-ctype 'foo_t raw))
           (define struct-foo (name-ctype 'struct-foo raw))
      These types are equal:
-          (ctype-equal? foo_t struct-foo) => #t"
+          (ctype-equal? foo_t struct-foo) => #t
+     It is recommended that one use symbols for names rather than
+     strings, so that ‘pretty-print-ctype’ will use names effectively."
   (%make-ctype (ctype-size type) (ctype-align type)
                (ctype-kind type) (ctype-info type)
                name))
@@ -1054,16 +1063,18 @@
 ;; @example
 ;; (cdata-set! my-struct-data 42 'a 'b 'c))
 ;; @end example
-;; If @var{value} is a @code{<cdata>} object copy that, if types match.
-;; @*The @var{value} argument can be a procedure when the associated ctype
-;; is a pointer to function.
-;; value.
+;; If @var{value} is a @code{<cdata>} object then copy that (if types match).
+;; @*The @var{value} argument can be a Scheme procedure when the associated
+;; ctype is a pointer to function.
 ;; @end deffn
 (define (cdata-set! data value . tags)
   "- Procedure: cdata-set! data value [tag ...]
      Set slot for selcted TAG ... with respect to cdata DATA to VALUE.
      Example:
-          (cdata-set! my-struct-data 42 'a 'b 'c))"
+          (cdata-set! my-struct-data 42 'a 'b 'c))
+     If VALUE is a ‘<cdata>’ object then copy that (if types match).
+     The VALUE argument can be a Scheme procedure when the associated
+     ctype is a pointer to function."
   (assert-cdata 'cdata-set! data)
   (let ((data (apply cdata-sel data tags)))
     (case (cdata-kind data)
