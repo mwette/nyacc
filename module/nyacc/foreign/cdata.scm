@@ -308,7 +308,7 @@
 ;; Record to hold C data.  Underneath it's a bytevector, index and type.
 ;; @end deftp
 (define-record-type <cdata>
-  (%make-cdata bv ix ct pl)
+  (%make-cdata bv ix ct)
   cdata?
   (bv cdata-bv)                         ; bvec
   (ix cdata-ix)                         ; index
@@ -488,9 +488,14 @@
     ;; cfl: C field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl)
-        (let* ((ral (reverse ral))
-               (lkup (case-lambda ((sym) (assq-ref ral sym))
-                                  (() (map car ral)))))
+        (let* ((fal (reverse ral))
+               (lkup (case-lambda
+                       ((arg)
+                        (cond
+                         ((symbol? arg) (assq-ref fal arg))
+                         ((string? arg) (assq-ref fal (string->symbol arg)))
+                         (else (error "cstruct-sel: bad arg" arg))))
+                       (() (map car fal)))))
           (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
                        (%make-cstruct (reverse cfl) lkup) #f))
         (match (car sfl)
@@ -739,13 +744,15 @@
 ;; on pointer fields with delays.
 ;; @end deffn
 (define (ctype-equal? a b)
-  "- Procedure: ctype-equal? a b
-     This predicate assesses equality of it’s arguments.  Two types are
+  "- Procedure: ctype-equal? a b => #t|#f
+     This predicate assesses equality of it's arguments.  Two types are
      considered equal if they have the same size, alignment, kind, and
      eqivalent kind-specific properties.  For base types, the symbolic
      mtype must be equal; this includes size, integer versus float, and
      signed versus unsigned.  For struct and union kinds, the names and
-     types of all fields must be equal."
+     types of all fields must be equal, with the following exception:
+     NOTE: To avoid inifinite loops, this procedure skips checks on
+     pointer fields with delays."
   (letrec*
       ((fields-equal?
         (lambda (fl gl)
@@ -843,23 +850,19 @@
      storage for that many items, associating it with an array type of
      that size."
   (define (make-data type value)
-    (let* ((data (%make-cdata (make-bytevector (ctype-size type) 0) 0 type #f)))
+    (let* ((data (%make-cdata (make-bytevector (ctype-size type) 0) 0 type)))
       (if value (cdata-set! data value))
       data))
   (assert-ctype 'make-cdata type)
-  (case (ctype-kind type)
-    ((array)
-     (let* ((ca (ctype-info type)) (ln (carray-length ca)))
-       (cond
-        ((zero? ln)
-         (unless (and (integer? value) (positive? value))
-           (error "make-cdata: zero sized array type"))
-         (let* ((et (carray-type ca)) (sz (ctype-size et))
-                (bv (make-bytevector (* value sz) 0)))
-           (%make-cdata bv 0 (carray et value) #f)))
-        (else
-         (make-data type value)))))
-    (else (make-data type value))))
+  (if (and value
+           (integer? value)
+           (eq? 'array (ctype-kind type)))
+      (let* ((et (carray-type (ctype-info type))) (sz (ctype-size et))
+             (bv (make-bytevector (* value sz) 0)))
+        (unless (positive? value)
+          (error "make-cdata: for zero-sized array, size must be >0"))
+        (%make-cdata bv 0 (carray et value)))
+      (make-data type value)))
 
 ;; @deffn {Procedure} make-cdata/* type pointer
 ;; Make a cdata object from a pointer.   That is, instead of creating a
@@ -870,7 +873,7 @@
   (assert-ctype 'make-cdata/* type)
   (let* ((size (ctype-size type))
          (bvec (pointer->bytevector pointer size))
-         (data (%make-cdata bvec 0 type #f)))
+         (data (%make-cdata bvec 0 type)))
     data))
 
 ;; @deffn {Procedure} cdata-sel data tag ... => cdata
@@ -905,7 +908,7 @@
                  (tags tags))
         (cond
          ((null? tags)
-          (%make-cdata bv ix ct #f))
+          (%make-cdata bv ix ct))
          ((eq? 'pointer (ctype-kind ct))
           (if (eq? 'void (cpointer-type (ctype-info ct)))
               (error "cdata-sel: attempt to deference void*"))
@@ -928,6 +931,75 @@
          (else
           (call-with-values (lambda () (ctype-detag ct ix (car tags)))
             (lambda (ct ix) (loop bv ix ct (cdr tags)))))))))
+
+;; @deffn {Procedure} ctype-array-dims/type ct => (ct . dims)
+;; Look for multi-dimensioned array and return the element type and dims.
+;; @end deffn
+(define (ctype-array-dims/type ct)
+  (let loop ((sd '()) (ct ct))
+    (cond
+     ((eq? 'array (ctype-kind ct))
+      (let ((ti (ctype-info ct)))
+        (loop (cons (carray-length ti) sd) (carray-type ti))))
+     (else (cons ct (reverse sd))))))
+
+;; @deffn {Procedure} next-indx indx dims -> next-indx
+;; Given a list of indices and list of dimentions, return the next index list.
+;; For example,
+;; @example
+;; (next-indx (1 0 1) (2 3 4)) => (0 1 1)
+;; @end example
+;; Note that the leading dimension changes most rapidly.
+;; @end deffn
+(define (next-indx indx dims)
+  (if (null? indx)
+      '()
+      (if (= (1+ (car indx)) (car dims))
+          (if (null? (cdr indx))
+              #f
+              (and=> (next-indx (cdr indx) (cdr dims)) (lambda (t) (cons 0 t))))
+          (cons (1+ (car indx)) (cdr indx)))))
+
+;; A mutating version of next-indx.
+;; Challenge is to rework to make trailing index change most rapidly.
+(define (next-indx! indx dims)
+  (if (null? indx)
+      '()
+      (if (= (1+ (car indx)) (car dims))
+          (if (null? (cdr indx))
+              #f
+              (and (next-indx! (cdr indx) (cdr dims)) (set-car! indx 0) indx))
+          (begin (set-car! indx (1+ (car indx))) indx))))
+
+;; not efficient, but creating a array->bytevector is too messy for now
+(define (cdata->array data) ;; md:cdata mv:array
+  (unless (and (cdata? data) (eq? 'array (ctype-kind (cdata-ct data))))
+    (error "expecting cdata of array kind"))
+  (let* ((ct (cdata-ct data)) (bv (cdata-bv data)) (ix (cdata-ix data))
+         (ti (ctype-info ct)) (al (carray-length ti)) (at (carray-type ti))
+         (inf (ctype-array-dims/type ct)) (aty (car inf)) (dims (cdr inf))
+         (array (if (eq? 'base (ctype-kind aty))
+                    (apply make-typed-array (mtype-noendian (ctype-info aty))
+                           0 dims)
+                    (apply make-array
+                           #f dims))))
+    (let loop ((indx (map (const 0) dims)))
+      (when indx
+        (apply array-set! array (apply cdata-ref data indx) indx)
+        (loop (next-indx indx dims))))
+    array))
+
+(define (cdata-set-from-array! data value)
+  (unless (and (cdata? data) (eq? 'array (ctype-kind (cdata-ct data)))
+               (array? value))
+    (error "cdata-set!: expect carray data type and array value"))
+  (let* ((dims (cdr (ctype-array-dims/type (cdata-ct data)))))
+    (unless (equal? dims (array-dimensions value))
+      (error "cdata-set!: expect matching array dimensions"))
+    (let loop ((indx (map (const 0) dims)))
+      (when indx
+        (apply cdata-set! data (apply array-ref value indx) indx)
+        (loop (next-indx indx dims))))))
 
 ;; @deffn {Procedure} Xcdata-ref bv ix ct -> value
 ;; Reference a deconstructed cdata object. See @emph{cdata-ref}.
@@ -952,7 +1024,15 @@
               (mtype (cenum-mtype info))
               (symf (cenum-symf info)))
          (symf (mtype-bv-ref mtype bv ix))))
-      ((array struct union) (%make-cdata bv ix ct #f))
+      ((array)
+       (cdata->array (%make-cdata bv ix ct)))
+      ((struct)
+       (let* ((info (ctype-info ct))
+              (sel (cstruct-select info)))
+         (map (lambda (m) (let* ((fld (sel m)) (ix (+ ix (cfield-offset fld))))
+                            (cons m (Xcdata-ref bv ix (cfield-type fld)))))
+              (sel))))
+      ((union) (error "cdata-ref: can't deref unions: use cdata-sel"))
       ((function)
        (let* ((ti (ctype-info ct))
               (mtype (cfunction-ptr-mtype ti))
@@ -972,10 +1052,12 @@
      are extracted from a cdata objerct.  See _cdata-set!_."
   (let* ()
     (if (cdata? value)
+        ;; cdata value
         (let ((sz (ctype-size ct)))
           (unless (ctype-equal? (cdata-ct value) ct)
             (error "cdata-set!: bad arg:" value))
           (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
+        ;; guile value
         (case (ctype-kind ct)
           ((base)
            (mtype-bv-set! (ctype-info ct) bv ix value))
@@ -1016,22 +1098,23 @@
               (else
                (error "cdata-set! bad value arg: ~s" value)))))
           ((array)
+           (cdata-set-from-array! (%make-cdata bv ix ct) value))
+          ((struct)
            (let* ((ti (ctype-info ct))
-                  (at (carray-type ti))
-                  (al (carray-length ti)))
-             (if (and (array? value)
-                      (eqv? 1 (array-rank value))
-                      (eq? 'base (ctype-kind at))
-                      (= (array-length value) al))
-                 (let* ((mt (ctype-info at)) (sz (sizeof-mtype mt)))
-                   (do ((i 0 (1+ i)) (ix ix (+ ix sz)))
-                       ((>= i al) (if #f #f))
-                     (mtype-bv-set! mt bv ix (array-ref value i))))
-                 (error "cdata-set!: can't set! this array value"))))
-          ((function) (error "cdata-set!: can't set! function value"))
-          ((struct) (error "cdata-set!: can't set! struct value"))
+                  (flds (cstruct-fields ti))
+                  (sel (cstruct-select ti)))
+             (cond
+              ((list? value)
+               (unless (fold (lambda (p s) (and s (sel (car p)))) #t value)
+                 (error "cdata-set!: bad arg: " value))
+               (for-each
+                (lambda (p)
+                  (Xcdata-set! (cfield-type (sel (car p))) bv ix (cdr p)))
+                value))
+              (else (error "cdata-set!: bad arg: " value)))))
           ((union) (error "cdata-set!: can't set! union value"))
-          (else (error "cdata-set!: bad arg 2" value))))))
+          ((function) (error "cdata-set!: can't set! function value"))
+          (else (error "cdata-set!: bad arg: " value))))))
 
 ;; @deffn {Procedure} cdata-ref data [tag ...] => value
 ;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
@@ -1040,8 +1123,9 @@
 ;; (cdata-ref my-struct-value 'a 'b 'c))
 ;; @end example
 ;; This procedure returns Guile values for cdata kinds @emph{base},
-;; @emph{pointer} and @emph{procedure}.   For other cases, a @emph{cdata}
-;; object is returned.  If you always want a cdata object, use @code{cdata-sel}.
+;; @emph{pointer}, @emph{procedure}, @emph{array} (an array) and @emph{struct}
+;; (an alist).  For @emph{union} an exception is raised.   The returned values
+;; are freshly allocated copies. If want a cdata object, use @code{cdata-sel}.
 ;; @end deffn
 (define (cdata-ref data . tags)
   "- Procedure: cdata-ref data [tag ...] => value
@@ -1049,8 +1133,9 @@
      respect to the cdata object DATA.
           (cdata-ref my-struct-value 'a 'b 'c))
      This procedure returns Guile values for cdata kinds _base_,
-     _pointer_ and _procedure_.  For other cases, a _cdata_ object is
-     returned.  If you always want a cdata object, use ‘cdata-sel’."
+     _pointer_, _procedure_, _array_ (an array) and _struct_ (an alist).
+     For _union_ an exception is raised.  The returned values are
+     freshly allocated copies.  If want a cdata object, use ‘cdata-sel’."
   (assert-cdata 'cdata-ref data)
   (let ((data (apply cdata-sel data tags)))
     (Xcdata-ref (cdata-bv data) (cdata-ix data) (cdata-ct data))))
@@ -1098,7 +1183,7 @@
          (sz (ctype-size ct))
          (bvdst (make-bytevector sz)))
     (bytevector-copy! bv ix bvdst 0 (ctype-size ct))
-    (%make-cdata bvdst 0 ct #f)))
+    (%make-cdata bvdst 0 ct)))
 
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
@@ -1136,7 +1221,7 @@
     (case kind
       ((function) #f)
       (else
-       (%make-cdata (pointer->bytevector pntr (ctype-size type)) 0 type #f)))))
+       (%make-cdata (pointer->bytevector pntr (ctype-size type)) 0 type)))))
 
 ;; @deffn {Procedure} cdata-kind data
 ;; Return the kind of @var{data}: pointer, base, struct, ...
@@ -1189,15 +1274,43 @@
     (make-pointer addr)))
 
 ;; @deffn {Procedure} ccast type data [do-check] => <cdata>
-;; need to be able to cast array to pointer
+;; Cast a cdata object of one (pointer) type to another (pointer) type.
+;; This routine creates a new cdata object with the target type, but
+;; same bytevector and index.
+;; In the example below we cast a child structure type to its
+;; (base) parent.
 ;; @example
-;; (ccast Target* val)
+;; > (define t1 (cstruct '((a int) (b int))))
+;; > (define t2 (cstruct `((base ,t1) (c int))))
+;; > (define d2 (make-cdata t2))
+;; > (cdata-set! d2 42 'base 'a)
+;; > (define p2 (cdata& d2))
+;; > p2
+;; $1 = #<cdata pointer 0x7c5b59dfac20>
+;; > (define p1 (ccast (cpointer t1) p2))
+;; > (cdata-ref p1 '* 'a)
+;; $2 = 42
+;; > (cdata-ref p2 '* 'base 'a)
+;; $3 = 42
 ;; @end example
 ;; @end deffn
 (define* (ccast type data #:key do-check)
   "- Procedure: ccast type data [do-check] => <cdata>
-     need to be able to cast array to pointer
-          (ccast Target* val)"
+     Cast a cdata object of one (pointer) type to another (pointer)
+     type.  This routine creates a new cdata object with the target
+     type, but same bytevector and index.  
+          > (define t1 (cstruct '((a int) (b int))))
+          > (define t2 (cstruct `((base ,t1) (c int))))
+          > (define d2 (make-cdata t2))
+          > (cdata-set! d2 42 'base 'a)
+          > (define p2 (cdata& d2))
+          > p2
+          $1 = #<cdata pointer 0x7c5b59dfac20>
+          > (define p1 (ccast (cpointer t1) p2))
+          > (cdata-ref p1 '* 'a)
+          $2 = 42
+          > (cdata-ref p2 '* 'base 'a)
+          $3 = 42"
   (assert-ctype 'cdata-cast type)
   (assert-cdata 'cdata-cast data)
   (define (type-miss)
@@ -1207,7 +1320,7 @@
   (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
     (case (ctype-kind ct)
       ((base) (make-cdata type (cdata-ref data)))
-      ((pointer) (%make-cdata bv ix type #f))
+      ((pointer) (%make-cdata bv ix type))
       ((array)
        (case (ctype-kind type)
          ((pointer)
@@ -1216,7 +1329,7 @@
                  (ptype (cpointer-type (ctype-info type))))
             (type-check (carray-type (ctype-info ct))
                         (cpointer-type (ctype-info type)))
-            (%make-cdata bv ix type #f)))
+            (%make-cdata bv ix type)))
          (else (type-miss))))
       (else (type-miss)))))
 
