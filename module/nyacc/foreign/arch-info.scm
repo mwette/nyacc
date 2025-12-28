@@ -27,13 +27,14 @@
   #:export (lookup-arch
             *arch* with-arch native-arch
             arch-cbase-map set-arch-cbase-map!
+            arch-name arch-endianness
             mtype-size mtype-alignment mtype-endianness
             sizeof-basetype alignof-basetype
             mtypeof-basetype sizeof-mtype alignof-mtype
             base-type-name-list base-type-symbol-list
             c-strname->symname c-symname->strname
             mtype-bv-ref mtype-bv-set!
-            bv-z32-ref bv-z32-set! bv-c64-ref bv-c64-set!
+            bv-c32-ref bv-c32-set! bv-c64-ref bv-c64-set!
             bv-s128-ref bv-s128-set! bv-u128-ref bv-u128-set!
             mtype-signed? mtype-noendian)
   #:declarative? #t
@@ -106,7 +107,7 @@
 (define alignof-mtype-map/natural
   (map (lambda (p)
          (case (car p)
-           ((z32le z32be) (cons (car p) 4))
+           ((c32le c32be) (cons (car p) 4))
            ((c64le c64be) (cons (car p) 8))
            (else p)))
        sizeof-mtype-map))
@@ -218,11 +219,11 @@
 (define (mtype-signed? mtype)
   (and (member mtype '(s8 s16 s32 s64 s16le s32le s64le s16be s32be s64be)) #t))
 
-(define (bv-z32-ref bv ix en)
+(define (bv-c32-ref bv ix en)
   (make-rectangular (bytevector-ieee-single-ref bv ix en)
                     (bytevector-ieee-single-ref bv (+ ix 4) en)))
 
-(define (bv-z32-set! bv ix value en)
+(define (bv-c32-set! bv ix value en)
   (bytevector-ieee-single-set! bv ix (real-part value) en)
   (bytevector-ieee-single-set! bv (+ ix 4) (imag-part value) en))
 
@@ -668,8 +669,8 @@
 
 ;; === native =================================================================
 
-(define host-arch-name
-  (eval-when (expand eval compile)
+(eval-when (expand load eval)
+  (define host-arch-name
     (and=> (string-split %host-type #\-) car)))
 
 (define mtype-noendian-map
@@ -680,6 +681,13 @@
     (s64be . s64) (u64be . u64) (f32be . f32) (f64be . f64)
     (c32le . c32) (u64le . c64) (c32be . c32) (u64be . c64)))
 
+;; @deffn {Procedure} mtype-noendian mtype => type symbol
+;; Strip the endianness part of an arch-info mtype symbol.
+;; For example,
+;; @example
+;; (mtype-noendian 'u64le) => u64
+;; @end example
+;; @end deffn
 (define (mtype-noendian mtype)
   (assq-ref mtype-noendian-map mtype))
 
