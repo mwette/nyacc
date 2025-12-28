@@ -18,7 +18,7 @@
 ;;; Notes:
 ;; 1) We have defined arch's i686 ppc riscv32 riscv64 sparc x86_64
 ;; 2) Can we remove non-le/be mtypes?
-;; 3) The complex type z32le means each part (real, imag) are each 32 bits.
+;; 3) The complex type c32le means each part (real, imag) are each 32 bits.
 ;;
 
 ;;; Code:
@@ -35,7 +35,7 @@
             mtype-bv-ref mtype-bv-set!
             bv-z32-ref bv-z32-set! bv-c64-ref bv-c64-set!
             bv-s128-ref bv-s128-set! bv-u128-ref bv-u128-set!
-            mtype-signed?)
+            mtype-signed? mtype-noendian)
   #:declarative? #t
   #:use-module (srfi srfi-9)
   #:use-module (rnrs bytevectors))
@@ -672,7 +672,6 @@
   (eval-when (expand eval compile)
     (and=> (string-split %host-type #\-) car)))
 
-#|
 (define mtype-noendian-map
   '((s8 . s8) (u8 . u8)
     (s16le . s16) (u16le . u16) (s32le . s32) (u32le . u32)
@@ -680,7 +679,9 @@
     (s16be . s16) (u16be . u16) (s32be . s32) (u32be . u32)
     (s64be . s64) (u64be . u64) (f32be . f32) (f64be . f64)
     (c32le . c32) (u64le . c64) (c32be . c32) (u64be . c64)))
-|#
+
+(define (mtype-noendian mtype)
+  (assq-ref mtype-noendian-map mtype))
 
 (define native-arch
   (assoc-ref (*arch-map*) host-arch-name))
