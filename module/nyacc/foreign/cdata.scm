@@ -971,8 +971,11 @@
               (and (next-indx! (cdr indx) (cdr dims)) (set-car! indx 0) indx))
           (begin (set-car! indx (1+ (car indx))) indx))))
 
-;; not efficient, but creating a array->bytevector is too messy for now
-(define (cdata->array data) ;; md:cdata mv:array
+;; @deffn {Procedure} cdata->array data => array
+;; This is an inefficient procedure to copy a multi-dimensioned cdata
+;; array to a Guile array value.
+;; @end deffn
+(define (cdata->array data)
   (unless (and (cdata? data) (eq? 'array (ctype-kind (cdata-ct data))))
     (error "expecting cdata of array kind"))
   (let* ((ct (cdata-ct data)) (bv (cdata-bv data)) (ix (cdata-ix data))
@@ -989,6 +992,10 @@
         (loop (next-indx indx dims))))
     array))
 
+;; @deffn {Procedure} cdata-set-from-array! data value
+;; This is an inefficient procedure to set a multi-dimensioned cdata
+;; array from into cdata.
+;; @end deffn
 (define (cdata-set-from-array! data value)
   (unless (and (cdata? data) (eq? 'array (ctype-kind (cdata-ct data)))
                (array? value))
