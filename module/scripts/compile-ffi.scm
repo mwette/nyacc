@@ -29,7 +29,8 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right lset-union every))
   #:use-module (srfi srfi-37)
   #:use-module (nyacc foreign arch-info)
-  #:use-module ((nyacc lang c99 ffi-help) #:select (compile-ffi-file *backend*))
+  #:use-module ((nyacc lang c99 ffi-help)
+                #:select (compile-ffi-file *fh-backend*))
   #:version (3 01 0))
 
 (define *ffi-help-version* "3.01.0")
@@ -312,7 +313,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
     (if fhbe
         (if (not backend)
             (fail "backend not resolved: ~s" fhbe)
-            (*backend* backend)))
+            (*fh-backend* backend)))
     (catch 'ffi-help-error
       (lambda ()
         (catch 'c99-error

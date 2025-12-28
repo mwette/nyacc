@@ -31,7 +31,7 @@
             load-include-file
             ccode->sexp
             udecl->sexp
-            *backend*)
+            *fh-backend*)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 pretty-print)
@@ -82,21 +82,21 @@
 
 (define *defined* (make-parameter (alist->vhash '())))
 
-(define *backend* (make-parameter #f))
+(define *fh-backend* (make-parameter #f))
 
-(define-syntax be-name (identifier-syntax (fhbe-name (*backend*))))
-(define-syntax be-header (identifier-syntax (fhbe-header (*backend*))))
-(define-syntax be-trailer (identifier-syntax (fhbe-trailer (*backend*))))
-(define-syntax be-base (identifier-syntax (fhbe-base (*backend*))))
-(define-syntax be-array (identifier-syntax (fhbe-array (*backend*))))
-(define-syntax be-pointer (identifier-syntax (fhbe-pointer (*backend*))))
-(define-syntax be-struct (identifier-syntax (fhbe-struct (*backend*))))
-(define-syntax be-bitfield (identifier-syntax (fhbe-bitfield (*backend*))))
-(define-syntax be-union (identifier-syntax (fhbe-union (*backend*))))
-(define-syntax be-function (identifier-syntax (fhbe-function (*backend*))))
-(define-syntax be-enum (identifier-syntax (fhbe-enum (*backend*))))
-(define-syntax be-typedef (identifier-syntax (fhbe-typedef (*backend*))))
-(define-syntax be-makeobj (identifier-syntax (fhbe-makeobj (*backend*))))
+(define-syntax be-name (identifier-syntax (fhbe-name (*fh-backend*))))
+(define-syntax be-header (identifier-syntax (fhbe-header (*fh-backend*))))
+(define-syntax be-trailer (identifier-syntax (fhbe-trailer (*fh-backend*))))
+(define-syntax be-base (identifier-syntax (fhbe-base (*fh-backend*))))
+(define-syntax be-array (identifier-syntax (fhbe-array (*fh-backend*))))
+(define-syntax be-pointer (identifier-syntax (fhbe-pointer (*fh-backend*))))
+(define-syntax be-struct (identifier-syntax (fhbe-struct (*fh-backend*))))
+(define-syntax be-bitfield (identifier-syntax (fhbe-bitfield (*fh-backend*))))
+(define-syntax be-union (identifier-syntax (fhbe-union (*fh-backend*))))
+(define-syntax be-function (identifier-syntax (fhbe-function (*fh-backend*))))
+(define-syntax be-enum (identifier-syntax (fhbe-enum (*fh-backend*))))
+(define-syntax be-typedef (identifier-syntax (fhbe-typedef (*fh-backend*))))
+(define-syntax be-makeobj (identifier-syntax (fhbe-makeobj (*fh-backend*))))
 
 
 ;; === utilities
@@ -427,7 +427,7 @@
      (if value `(make-cdata ,type ,value) `(make-cdata ,type)))
    ))
 
-(*backend* cdata-backend)
+(*fh-backend* cdata-backend)
 
 
 ;; === this goes somewhere =====================================================
@@ -1582,10 +1582,10 @@
                (if (null? syms)
                    #'(case-backend nxt ...)
                    (if (eq? backend (syntax->datum (car syms)))
-                       #'(begin exp ...)
+                       #'(begin (if #f #f) exp ...)
                        (loop (cdr syms))))))
-            ((_) '#(begin #t))
-            ((_ (else exp ...)) #'(begin #t exp ...))))))
+            ((_) '#(if #f #f))
+            ((_ (else exp ...)) #'(begin (if #f #f) exp ...))))))
     (nlscm)
     #t))
 
