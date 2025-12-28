@@ -5,7 +5,7 @@
 @clear no-skip
 
 @copying
-Copyright (C) 2024 -- Matthew Wette
+Copyright (C) 2024-2025 -- Matthew Wette
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -42,7 +42,7 @@ October 2024
 @heading Introduction
 
 The @emph{cdata} module and its partner @emph{arch-info} provide a
-way to work with data originating from C libraries.  We hope module
+way to work with data originating from C libraries.  We hope the module
 is reasonably easy to understand and use.  Size and alignment is
 tracked for all types.  Types are classified into the following kinds:
 base, struct, union, array, pointer, enum and function.  The procedures
@@ -53,16 +53,16 @@ objects based on these.  The underlying bits of data are stored in Scheme
 bytevectors.  Access to component data is provided by the
 @code{cdata-ref} procedure and mutation is 
 accomplished via the @code{cdata-set!} procedure.  
-The modules support non-native machine architectures via a
-global parameter called @code{*arch*}.
+The modules support non-native machine architectures via the
+global parameter @code{*arch*}.
 
 Beyond size and
 alignment, base type objects carry a symbolic tag to determine the
 appropriate low level machine type.
 The low level machine types map directly to bytevector setters
 and getters.  Support for C base types is handled by the @code{cbase}
-procedure which converts them to underlying types.  For example, on a
-64 bit little endian architecture, @code{(cbase 'uintptr_t)} would
+procedure which converts them to underlying types.  For example, for a
+64 bit little endian machine architecture, @code{(cbase 'uintptr_t)} would
 generate a type with underlying symbol @code{u64le}.
 
 Here is a simple example of using @emph{cdata} for structures:
@@ -72,7 +72,8 @@ Here is a simple example of using @emph{cdata} for structures:
 (use-modules (system foreign-library))
 (use-modules (nyacc foreign cdata))
 
-(define timeval_t (cstruct '((tv_sec long) (tv_usec long))))
+(define timeval_t
+  (cstruct `((tv_sec ,(cbase 'long)) (tv_usec ,(cbase 'long)))))
 
 (define gettimeofday
   (foreign-library-function
@@ -88,25 +89,28 @@ Here is a simple example of using @emph{cdata} for structures:
         (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
 time: 1719062561 676365
 @end example
-In the above @code{cdata&} generates a cdata pointer to @code{d1} and
-@code{cdata-ref} extracts the Guile value.
+In the above @code{cdata&} generates a cpointer type for @code{d1} and
+@code{cdata-ref} extracts the Guile (@code{pointer}) value.
 
 @heading Basic Usage
 
 This section provides an introduction to procedures you are likely to
 want on your first approach.
 
-@deffn {Procedure} cbase name
-Given symbolic @var{name} generate a base ctype.   The name can
-be a symbol like @code{unsigned}, @code{double}, or can be a
-@emph{arch-info} machine type symbol like @code{u64le}.
+@deffn {Procedure} cbase name => <ctype>
+Given symbolic @var{name}, generate a base ctype.   The name can
+be something like @code{unsigned}, @code{double}, or can be a
+@emph{cdata} machine type like @code{u64le}.  For example,
+@example
+(define double-type (cbase 'double))
+@end example
+There is a pseudo-type @code{void}.
 @end deffn
 
 @deffn {Procedure} cpointer type => <ctype>
 Generate a C pointer type for @var{type}. To reference or de-reference
 cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
 the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
-@*note: Should we allow @var{type} to be a promise?
 @example
 (define foo_t (cbase 'int))
 (cpointer (delay foo_t))
@@ -134,23 +138,22 @@ If @var{length} is zero, the array length is unbounded: it's length
 can be specified as argument to @code{make-cdata}.
 @end deffn
 
-
 @deffn {Procedure} cenum enum-list [packed] => <ctype>
 @var{enum-list} is a list of name or name-value pairs
 @example
 (cenum '((a 1) b (c 4))
 @end example
-If @var{packed} is @code{#t} the size will be smallest that can hold it.
+If @var{packed} is @code{#t} the size will be smallest that can hold it,
+as if defined in C with @code{__attribute__((packed))}.
 @end deffn
 
-
 @deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?] => <ctype>
-Generate a C function type to be used with @code{cpointer}.  You must
-pass the @var{wrapper} and @var{unwrapper} procedures that convert a
+Generate a C function type to be used with @code{cpointer}. The arguments
+@var{proc->ptr} and @var{ptr->proc} are procedures that convert a
 procedure to a pointer, and pointer to procedure, respectively.  The
 optional argument @var{#:variadic}, if @code{#t},  indicates the function
 uses variadic arguments.  For this case (I need to add documention).
-Here is an example:
+ Here is an example:
 @example
 (define (f-proc->ptr proc)
   (ffi:procedure->pointer ffi:void proc (list)))
@@ -158,6 +161,9 @@ Here is an example:
   (ffi:pointer->procedure ffi:void fptr (list)))
 (define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))
 @end example
+The thinking here is that a @code{cfunction} type is a proxy for a
+C function in memory, with a getter and setter to read from or write
+to memory.
 @end deffn
 
 @deffn {Procedure} make-cdata type [value]
@@ -168,6 +174,12 @@ allocate storage for that many items, associating it with an array type of
 that size.
 @end deffn
 
+@deffn {Procedure} make-cdata/* type pointer
+Make a cdata object from a pointer.   That is, instead of creating a
+bytevector to hold the data use the memory at the pointer using
+@code{pointer->bytevector}.
+@end deffn
+
 @deffn {Procedure} cdata-ref data [tag ...] => value
 Return the Scheme (scalar) slot value for selected @var{tag ...} with
 respect to the cdata object @var{data}.
@@ -175,8 +187,9 @@ respect to the cdata object @var{data}.
 (cdata-ref my-struct-value 'a 'b 'c))
 @end example
 This procedure returns Guile values for cdata kinds @emph{base},
-@emph{pointer} and @emph{procedure}.   For other cases, a @emph{cdata}
-object is returned.  If you always want a cdata object, use @code{cdata-sel}.
+@emph{pointer}, @emph{procedure}, @emph{array} (an array) and @emph{struct}
+(an alist).  For @emph{union} an exception is raised.   The returned values
+are freshly allocated copies. If want a cdata object, use @code{cdata-sel}.
 @end deffn
 
 
@@ -186,10 +199,34 @@ Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
 @example
 (cdata-set! my-struct-data 42 'a 'b 'c))
 @end example
-If @var{value} is a @code{<cdata>} object copy that, if types match.
-@*If @var{value} can be a procedure used to set a cfunction pointer
-value.
+If @var{value} is a @code{<cdata>} object then copy that (if types match).
+@*The @var{value} argument can be a Scheme procedure when the associated
+ctype is a pointer to function.
 @end deffn
+
+Values accepted by @code{cdata-set!} and @code{make-cdata} are as follows,
+based on the cdata target ctype.
+@enumerated
+@item
+If the type is a base machine type, then the argument must be an associated
+Scheme numeric type.
+@item
+If the type is a pointer type, the value can be a Guile pointer, an integer
+(address), a string, or a procedure (for the case where the type is a function
+pointer).
+@item
+If the type is an array type, TO BE CONTINUED.
+@item
+If the type is a function type, then an error is returned.  See above
+for pointer (to function) types.
+@item
+If a struct, and the value is
+@end enumerated
+In addition, if the value is of ctype, a copy of the underlying bytevector
+contents will be performed.  An error will be thrown if the types are not equal.
+Also, if the value argument to @code{make-cdata} is an integer and
+the type argument is an array of length zero, then space is allocated to
+accomodate that length array.
 
 @deffn {Procedure} cdata& data => cdata
 Generate a reference (i.e., cpointer) to the contents in the underlying
@@ -244,6 +281,12 @@ This always returns a Guile @emph{pointer}.
 Shortcut for @code{(cdata-ref (cdata* data tag ...))}
 @end deffn
 
+Underneath, cdata data is a triple of bytevector, offset, and
+ctype.  In some cases it may be more efficient to work with the
+deconstructed triple.  The following two procedures are
+provided for working at that level, in addition to the @code{ctype-sel}
+procedure described below.
+
 @deffn {Procedure} Xcdata-ref bv ix ct -> value
 Reference a deconstructed cdata object. See @emph{cdata-ref}.
 @end deffn
@@ -254,11 +297,12 @@ Set the value of a deconstructed cdata object. See @emph{cdata-set!}.
 
 @heading Working with Types
 
-@deffn {Procedure} name-ctype name type => <ctype>
+@deffn {Procedure} name-ctype name type -> <ctype>
 Create a new named version of the type.  The name is useful when the type
 is printed.  This procedure does not mutate: a new type object is created.
 If a specific type is used by multiple names the names can share
-the underlying type guts.  The following generates two named types.
+the underlying type guts.  The following examples shows how one type
+can have two names:
 @example
 (define raw (cstruct '((a 'int) (b 'double))))
 (define foo_t (name-ctype 'foo_t raw))
@@ -268,17 +312,20 @@ These types are equal:
 @example
 (ctype-equal? foo_t struct-foo) => #t
 @end example
+It is recommended that one use symbols for names rather than strings,
+so that @code{pretty-print-ctype} will use names effectively.
 @end deffn
 
-@deffn {Procedure} ctype-equal? a b
+@deffn {Procedure} ctype-equal? a b => #t|#f
 This predicate assesses equality of it's arguments.
 Two types are considered equal if they have the same size,
 alignment, kind, and eqivalent kind-specific properties.
 For base types, the symbolic mtype must be equal; this includes
 size, integer versus float, and signed versus unsigned.
 For struct and union kinds, the names and types of all fields
-must be equal.
-@*TODO: algorithm to prevent infinite search for recursive structs
+must be equal, with the following exception:
+@* NOTE: To avoid inifinite loops, this procedure skips checks
+on pointer fields with delays.
 @end deffn
 
 @deffn {Procedure} ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
@@ -308,14 +355,27 @@ target use: it is the offset of the address in the host context.
 
 @heading Working with C Function Calls
 
-The procedure
-@code{ctype->ffi} is a helper for using Guile's
-@emph{pointer->procedure}.
+The procedure @code{ctype->ffi} is a helper for using Guile's
+@emph{pointer->procedure}.  It generates an appropriate
+@code{(system foreign)} ffi-type for the given cdata type.
 
 @deffn {Procedure} ccast type data [do-check] => <cdata>
-need to be able to cast array to pointer
+Cast a cdata object of one (pointer) type to another (pointer) type.
+This routine creates a new cdata object with the target type, but
+same bytevector and index.
 @example
-(ccast Target* val)
+> (define t1 (cstruct '((a int) (b int))))
+> (define t2 (cstruct `((base ,t1) (c int))))
+> (define d2 (make-cdata t2))
+> (cdata-set! d2 42 'base 'a)
+> (define p2 (cdata& d2))
+> p2
+$1 = #<cdata pointer 0x7c5b59dfac20>
+> (define p1 (ccast (cpointer t1) p2))
+> (cdata-ref p1 '* 'a)
+$2 = 42
+> (cdata-ref p2 '* 'base 'a)
+$3 = 42
 @end example
 @end deffn
 
@@ -387,7 +447,11 @@ $2 = base
 $3 = s32le
 @end example
 
-Structs are more involved.
+Structs are more complex.  A struct type object includes a member
+@code{cstruct-fields}, list of
+it's fields (@code{cfield}), and a member @code{cstruct-select}, a procedure
+to lookup fields based on symbolic or string name.  In addition, with
+no arg, the select procedure will return a symbolic list of member names.
 @example
 > (define bar-s
     (cstruct `((a int) (b float) (#f ,(cstruct '(x int) (y int))))))
