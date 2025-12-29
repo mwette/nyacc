@@ -128,7 +128,7 @@
     "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
-    "__int128" "unsigned __128"
+    "__int128" "unsigned __int128"
     "unsigned int"))
 
 (define base-type-symbol-list
