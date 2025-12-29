@@ -1057,71 +1057,72 @@
   "- Procedure: Xcdata-set! bv ix ct value
      Set the value of a deconstructed cdata object, where BV, IX and CT
      are extracted from a cdata objerct.  See _cdata-set!_."
-  (let* ()
-    (if (cdata? value)
-        ;; cdata value
-        (let ((sz (ctype-size ct)))
-          (unless (ctype-equal? (cdata-ct value) ct)
-            (error "cdata-set!: bad arg:" value))
-          (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
-        ;; guile value
-        (case (ctype-kind ct)
-          ((base)
-           (mtype-bv-set! (ctype-info ct) bv ix value))
-          ((pointer)
-           (let* ((pi (ctype-info ct))
-                  (pt (cpointer-type pi))
-                  (mtype (cpointer-mtype pi)))
-             (cond
-              ((pointer? value)
-               (mtype-bv-set! mtype bv ix (pointer-address value)))
-              ((integer? value)
-               (mtype-bv-set! mtype bv ix value))
-              ((string? value)
-               (mtype-bv-set! mtype bv ix
-                              (pointer-address (string->pointer value))))
-              ((procedure? value)
-               (unless (eq? (ctype-kind pt) 'function)
-                 (error "cdata: expecting pointer to function, got" pt))
-               (mtype-bv-set! mtype bv ix
-                              (pointer-address
-                               ((cfunction-proc->ptr (ctype-info pt)) value))))
-              (else (error "cdata-set!: bad arg:" value)))))
-          ((bitfield)
-           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
-                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                  (sx (cbitfield-signed? bi)) (am (1- (expt 2 wd)))
-                  (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
-                  (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
-             (mtype-bv-set! mt bv ix (logior (logand mx dmi)
-                                             (ash value sh)))))
-          ((enum)
-           (let* ((info (ctype-info ct)) (mtype (cenum-mtype info)))
-             (cond
-              ((integer? value)
-               (mtype-bv-set! mtype bv ix value))
-              ((symbol? value)
-               (mtype-bv-set! mtype bv ix ((cenum-numf info) value)))
-              (else
-               (error "cdata-set! bad value arg: ~s" value)))))
-          ((array)
-           (cdata-set-from-array! (%make-cdata bv ix ct) value))
-          ((struct)
-           (let* ((ti (ctype-info ct))
-                  (flds (cstruct-fields ti))
-                  (sel (cstruct-select ti)))
-             (cond
-              ((list? value)
-               (unless (fold (lambda (p s) (and s (sel (car p)))) #t value)
-                 (error "cdata-set!: bad arg: " value))
-               (for-each
-                (lambda (p)
-                  (Xcdata-set! (cfield-type (sel (car p))) bv ix (cdr p)))
-                value))
-              (else (error "cdata-set!: bad arg: " value)))))
-          ((union) (error "cdata-set!: can't set! union value"))
-          ((function) (error "cdata-set!: can't set! function value"))
-          (else (error "cdata-set!: bad arg: " value))))))
+  (if (cdata? value)
+      ;; cdata value
+      (let ((sz (ctype-size ct)))
+        (unless (ctype-equal? (cdata-ct value) ct)
+          (error "cdata-set!: bad arg:" value))
+        (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
+      ;; guile value
+      (case (ctype-kind ct)
+        ((base)
+         (mtype-bv-set! (ctype-info ct) bv ix value))
+        ((pointer)
+         (let* ((pi (ctype-info ct))
+                (pt (cpointer-type pi))
+                (mtype (cpointer-mtype pi)))
+           (cond
+            ((pointer? value)
+             (mtype-bv-set! mtype bv ix (pointer-address value)))
+            ((integer? value)
+             (mtype-bv-set! mtype bv ix value))
+            ((string? value)
+             (mtype-bv-set! mtype bv ix
+                            (pointer-address (string->pointer value))))
+            ((procedure? value)
+             (unless (eq? (ctype-kind pt) 'function)
+               (error "cdata: expecting pointer to function, got" pt))
+             (mtype-bv-set! mtype bv ix
+                            (pointer-address
+                             ((cfunction-proc->ptr (ctype-info pt)) value))))
+            (else (error "cdata-set!: bad arg:" value)))))
+        ((bitfield)
+         (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+                (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+                (sx (cbitfield-signed? bi)) (am (1- (expt 2 wd)))
+                (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
+                (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
+           (mtype-bv-set! mt bv ix (logior (logand mx dmi)
+                                           (ash value sh)))))
+        ((enum)
+         (let* ((info (ctype-info ct)) (mtype (cenum-mtype info)))
+           (cond
+            ((integer? value)
+             (mtype-bv-set! mtype bv ix value))
+            ((symbol? value)
+             (mtype-bv-set! mtype bv ix ((cenum-numf info) value)))
+            (else
+             (error "cdata-set! bad value arg: ~s" value)))))
+        ((array)
+         (cdata-set-from-array! (%make-cdata bv ix ct) value))
+        ((struct)
+         (let* ((ti (ctype-info ct))
+                (flds (cstruct-fields ti))
+                (sel (cstruct-select ti)))
+           (cond
+            ((list? value)
+             (unless (fold (lambda (p s) (and s (sel (car p)))) #t value)
+               (error "cdata-set!: bad arg: " value))
+             (for-each
+              (lambda (p)
+                (let* ((fld (sel (car p))))
+                  (Xcdata-set! bv (+ ix (cfield-offset fld))
+                               (cfield-type fld) (cdr p))))
+              value))
+            (else (error "cdata-set!: bad arg: " value)))))
+        ((union) (error "cdata-set!: can't set! union value"))
+        ((function) (error "cdata-set!: can't set! function value"))
+        (else (error "cdata-set!: bad arg: " value)))))
 
 ;; @deffn {Procedure} cdata-ref data [tag ...] => value
 ;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
@@ -1167,14 +1168,7 @@
      ctype is a pointer to function."
   (assert-cdata 'cdata-set! data)
   (let ((data (apply cdata-sel data tags)))
-    (case (cdata-kind data)
-      ((struct union)
-       (unless (pair? value) (error "cdata-set!: bad arg:" value))
-       (for-each
-        (lambda (field) (cdata-set! data (cadr field) (car field)))
-        value))
-      (else
-       (Xcdata-set! (cdata-bv data) (cdata-ix data) (cdata-ct data) value)))))
+    (Xcdata-set! (cdata-bv data) (cdata-ix data) (cdata-ct data) value)))
 
 ;; @deffn {Procedure} cdata-copy src) => <cdata>
 ;; Copy a data object (which might be a reference from another data object).
