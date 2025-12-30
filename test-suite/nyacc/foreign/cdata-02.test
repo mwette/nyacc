@@ -50,6 +50,37 @@
            (s3 (ctype-sel t1 0 'b 'd 'f '* 'h 'j 'l '* 'n 'p))
            (g3 (make-cdata-getter s3)))
       (and (equal? (g1 d1) 12) (equal? (g2 d1) 23) (equal? (g3 d1) 34))))
+
+
+  (pass-if "cdata make, ref, set!: multi-dimensioned arrays"
+    (let* ((tri1-t (carray (carray (cbase 'double) 2) 3))
+           (tval1 (make-cdata tri1-t #2f64((1.0 2.0) (3.0 4.0) (2.0 5.0)))))
+      (for-each
+       (lambda (ix)
+         (for-each
+          (lambda (jx)
+            (cdata-set! tval1 (+ 0.5 (cdata-ref tval1 ix jx)) ix jx))
+          (iota 2)))
+       (iota 3))
+      (array-equal? (cdata-ref tval1) #2f64((1.5 2.5) (3.5 4.5) (2.5 5.5)))))
+
+  (pass-if "cdata make, ref, set!: array of structs"
+    (let* ((loc-t (cstruct `((x double) (y double))))
+           (tri2-t (carray loc-t 3))
+           (tval2 (make-cdata tri2-t (vector '((x . 1.0) (y . 2.0))
+                                             '((x . 3.0) (y . 4.0))
+                                             '((x . 2.0) (y . 5.0))))))
+      (for-each
+       (lambda (ix)
+         (for-each
+          (lambda (m)
+            (cdata-set! tval2 (+ 0.5 (cdata-ref tval2 ix m)) ix m))
+          '(x y)))
+       (iota 3))
+      (equal? (cdata-ref tval2) #(((x . 1.5) (y . 2.5))
+                                  ((x . 3.5) (y . 4.5))
+                                  ((x . 2.5) (y . 5.5))))))
+
   )
       
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
