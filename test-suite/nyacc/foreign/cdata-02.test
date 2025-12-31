@@ -1,6 +1,6 @@
 ;; nyacc/foreign/cdata-02.test		-*- scheme -*-
 ;;
-;; Copyright (C) 2024 Matthew Wette
+;; Copyright (C) 2024-2025 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -9,6 +9,8 @@
 
 (define-module (cdata-01)
   #:use-module (nyacc foreign cdata)
+  #:use-module ((srfi srfi-1) #:select (fold))
+  #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (test-suite lib))
 
 (define ctr
@@ -51,6 +53,26 @@
            (g3 (make-cdata-getter s3)))
       (and (equal? (g1 d1) 12) (equal? (g2 d1) 23) (equal? (g3 d1) 34))))
 
+  (pass-if "ctype-ref, -set!, with anonymous structs/unions"
+    (let* ((ct (cstruct
+                (list `(#f
+                        ,(cunion
+                          (list `(a ,(cbase 'int))
+                                `(#f ,(cstruct
+                                       (list `(b ,(cbase 'int))
+                                             `(c ,(cbase 'int))))))))
+                      `(d ,(cbase 'int)))))
+           (cd (make-cdata ct))
+           (sz (ffi:sizeof ffi:int))
+           (st (ctype-info ct))
+           (sel (cstruct-select st))
+           (nl (sel)))
+      (cdata-set! cd 42 'a)
+      (and
+       (memq 'a nl) (memq 'b nl) (memq 'c nl) (memq 'd nl)
+       (eq? 42 (cdata-ref cd 'a)) (eq? 42 (cdata-ref cd 'b))
+       (fold (lambda (f o s) (and s (eq? (cfield-offset (sel f)) o)))
+             #t '(a b c d) `(0 0 ,(* 1 sz) ,(* 2 sz))))))
 
   (pass-if "cdata make, ref, set!: multi-dimensioned arrays"
     (let* ((tri1-t (carray (carray (cbase 'double) 2) 3))
