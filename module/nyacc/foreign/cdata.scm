@@ -220,6 +220,9 @@
   (fields cunion-fields)           ; list of fields
   (select cunion-select))          ; proc: symbol => field
 
+(define (aggr-fields info kind)
+  (case kind ((struct) (cstruct-fields info)) ((union) (cunion-fields info))))
+
 ;; @deftp {Record} <carray> type length
 ;; XXX
 ;; @table @var
@@ -415,6 +418,9 @@
     (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
                  'pointer (%make-cpointer type (mtypeof-basetype 'void*)) #f)))
 
+
+;; The following procedures before `cstruct' are cstruct/cunion helpers.
+
 ;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
   (+ fs (* fa (quotient (+ ss (1- fa)) fa))))
@@ -437,29 +443,40 @@
   (let* ((a (* 8 a)) (s (* 8 s)) (u (roundup-bits a s)))
     (/ (cond ((> (+ s w) u) u) (else (- u a))) 8)))
 
-(define (add-fields fields offset dict)
-  (define (cfield/moved-offset field extra)
-    (%make-cfield (cfield-name field) (cfield-type field)
-                  (+ extra (cfield-offset field))))
+;; add fields to dict, maybe adding extra offset (to make new field)
+(define (add-fields fields extra dict)
+  (define (maybe-move field)
+    (if (zero? extra)
+        field
+        (%make-cfield (cfield-name field) (cfield-type field)
+                      (+ extra (cfield-offset field)))))
   (fold (lambda (field seed)
-          (acons (cfield-name field) (cfield/moved-offset field offset) seed))
+          (let* ((name (cfield-name field)) (type (cfield-type field))
+                 (kind (ctype-kind type)) (info (ctype-info type)))
+            (cond
+             (name
+              (acons name (maybe-move field) seed))
+             ((memq kind '(struct union))
+              (add-fields (aggr-fields info kind)
+                          (+ extra (cfield-offset field)) seed))
+             (else seed))))
         dict fields))
 
-;; convert alist to perfect hash lookup : work in progress
-(define (alist->phlkup alist)
-  (define (nextn n) (+ n (/ (if (odd? n) (1+ n) n) 2)))
-  (let loop ((kl '()) (n (length alist)) (mx -1) (mn #xffffffff) (al alist))
-    (if (pair? al)
-        (let ((hv (hash (caar al) n)))
-          (if (memq hv kl)
-              (loop '() (nextn n) -1 #xffffffff alist)
-              (loop (cons hv kl) n (max mx hv) (min mn hv) (cdr al))))
-        (let* ((sz (- mx mn -1))
-               (hv (make-vector sz #f)))
-          (for-each (lambda (k kv) (vector-set! hv (- k mn) (cdr kv))) kl alist)
-          ;; to finish need lambda:
-          (sferr "ral size =~s ph len=~s min=~s\n" (length alist) sz mn)
-          (lambda (sym) (vector-ref hv (- (hash sym n) mn)))))))
+(define (check-type type)
+  (cond ((symbol? type) (cbase type))
+        ((ctype? type) type)
+        ;; ??? ((promise? type) (force type))
+        (else (error "cstruct/cunion: bad type" type))))
+
+(define (make-selector ral)
+  (case-lambda
+    ((arg)
+     (cond
+      ((symbol? arg) (assq-ref ral arg))
+      ((string? arg) (assq-ref ral (string->symbol arg)))
+      (else (error "cstruct/cunion-sel/ref: bad arg" arg))))
+    (()
+     (map car ral))))
 
 ;; @deffn {Procedure} cstruct fields [packed] => <ctype>
 ;; Construct a struct ctype with given @var{fields}.  If @var{packed},
@@ -486,35 +503,24 @@
   ;; 4) bitfield, no name, zero size => round-up, not transferred
   ;; 5) bitfield, no name, positive size => padding, not transferred
   ;; cases 4&5 can be combined easily, I think
-  (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
-    ;; cfl: C field list; ral: reified a-list; ssz: struct size;
+  (let loop ((cfl '()) (ssz 0) (sal 0) (sfl fields))
+    ;; cfl: C field list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (pair? sfl)
         (match (car sfl)
 
           ((name type)                  ; normal (no bitfield)
-           (let* ((type (cond ((symbol? type) (cbase type))
-                              ((ctype? type) type)
-                              (else (error "cstruct: bad type" type))))
+           (let* ((type (check-type type))
                   (fsz (ctype-size type))
                   (fal (if packed? 1 (ctype-align type)))
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
                   (ssz (incr-bit-size 0 fal ssz))
                   (cf (%make-cfield name type ssz)))
              (loop (cons cf cfl)
-                   (cond
-                    (name (acons name cf ral))
-                    ((eq? 'struct (ctype-kind type))
-                     (add-fields (cstruct-fields (ctype-info type)) ssz ral))
-                    ((eq? 'union (ctype-kind type))
-                     (add-fields (cunion-fields (ctype-info type)) ssz ral))
-                    (else (error "bad field")))
                    (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))
 
           ((name type width)            ; bitfield
-           (let* ((type (cond ((symbol? type) (cbase type))
-                              ((ctype? type) type)
-                              (else (error "cstruct: bad type" type))))
+           (let* ((type (check-type type))
                   (fsz (ctype-size type))
                   (fal (if packed? 1 (ctype-align type)))
                   (mty (ctype-info type))
@@ -527,24 +533,17 @@
                  (let* ((bf (%make-cbitfield mty bfo width sx?))
                         (ty (%make-ctype fsz fal 'bitfield bf #f))
                         (cf (%make-cfield name ty cio)))
-                   (loop (cons cf cfl) (acons name cf ral)
-                         ssz (max fal sal) (cdr sfl)))
-                 (loop cfl ral ssz sal (cdr sfl)))))
+                   (loop (cons cf cfl) ssz (max fal sal) (cdr sfl)))
+                 (loop cfl ssz sal (cdr sfl)))))
+
           (otherwize
            (sferr "cstruct: bad form: ~s" (car sfl))
            (error "yuck")))
 
         ;; done
-        (let* ((fal (reverse ral))
-               (lkup (case-lambda
-                       ((arg)
-                        (cond
-                         ((symbol? arg) (assq-ref fal arg))
-                         ((string? arg) (assq-ref fal (string->symbol arg)))
-                         (else (error "cstruct-sel: bad arg" arg))))
-                       (() (map car fal)))))
+        (let* ((select (make-selector (add-fields cfl 0 '()))))
           (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
-                       (%make-cstruct (reverse cfl) lkup) #f)))))
+                       (%make-cstruct (reverse cfl) select) #f)))))
 
 ;; @deffn {Procedure} cunion fields => <ctype>
 ;; Construct a union ctype with given @var{fields}.
@@ -554,32 +553,21 @@
   "- Procedure: cunion fields
      Construct a union ctype with given FIELDS.  See _cstruct_ for a
      description of the FIELDS argument."
-  (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
+  (let loop ((cfl '()) (ssz 0) (sal 0) (sfl fields))
     (if (pair? sfl)
         (let* ((name (caar sfl))
                (type (cadar sfl))
-               (type (cond ((symbol? type)
-                            (cbase type))
-                           ((ctype? type) type)
-                           ((promise? type) (force type))
-                           (else (error "cunion: bad type"))))
+               (type (check-type type))
                (fsz (ctype-size type))
                (fal (ctype-align type))
                (ssz (maxi-size 0 fal ssz))
                (cf (%make-cfield name type 0)))
           (loop (cons cf cfl)
-                (cond
-                 (name (acons name cf ral))
-                 ((eq? 'struct (ctype-kind type))
-                  (add-fields (cstruct-fields (ctype-info type)) ssz ral))
-                 ((eq? 'union (ctype-kind type))
-                  (add-fields (cunion-fields (ctype-info type)) ssz ral))
-                 (else (error "cunion: bad field" cf)))
                 (maxi-size fsz fal ssz) (max fal sal) (cdr sfl)))
         ;; done
-        (let* ((ral (reverse ral)) (lkup (lambda (sym) (assq-ref ral sym))))
+        (let* ((select (make-selector (add-fields cfl 0 '()))))
           (%make-ctype (incr-size 0 sal ssz) sal 'union
-                       (%make-cunion (reverse cfl) lkup) #f)))))
+                       (%make-cunion (reverse cfl) select) #f)))))
 
 
 ;; @deffn {Procedure} carray type n => <ctype>
@@ -1609,6 +1597,26 @@
      Check if argument is null Guile pointer, or a cdata form of the
      same."
   (equal? (if (cdata? arg) (cdata-ref arg) arg) %null-pointer))
+
+
+;; --- unused ------------------------------------------------------------------
+
+;; work in progress: convert alist to perfect hash lookup
+;; intended as fast lookup for struct/union references
+(define (alist->phlkup alist)
+  (define (nextn n) (+ n (/ (if (odd? n) (1+ n) n) 2)))
+  (let loop ((kl '()) (n (length alist)) (mx -1) (mn #xffffffff) (al alist))
+    (if (pair? al)
+        (let ((hv (hash (caar al) n)))
+          (if (memq hv kl)
+              (loop '() (nextn n) -1 #xffffffff alist)
+              (loop (cons hv kl) n (max mx hv) (min mn hv) (cdr al))))
+        (let* ((sz (- mx mn -1))
+               (hv (make-vector sz #f)))
+          (for-each (lambda (k kv) (vector-set! hv (- k mn) (cdr kv))) kl alist)
+          ;; to finish need lambda:
+          (sferr "ral size =~s ph len=~s min=~s\n" (length alist) sz mn)
+          (lambda (sym) (vector-ref hv (- (hash sym n) mn)))))))
 
 
 ;; --- deprecated --------------------------------------------------------------
