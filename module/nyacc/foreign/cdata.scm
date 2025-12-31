@@ -43,6 +43,7 @@
 ;; working with types
 ;; (name-ctype name type)
 ;; (ctype-equal? a b)
+;; (ctype-eqv? a b)
 ;; (ctype-sel type ix tag ...) -> ((ix . ct) (ix . ct) ...)
 ;; (make-cdata-getter sel [offset]) => (proc data) -> value
 ;; (make-cdata-setter sel [offset]) => (proc data value) -> undefined
@@ -89,7 +90,7 @@
             pretty-print-ctype
 
             ctype-size ctype-align ctype-kind ctype-info ctype-name
-            ctype? ctype-equal?
+            ctype? ctype-eqv? ctype-equal?
             cdata? cdata-bv cdata-ix cdata-ct
             cdata-copy name-ctype
 
@@ -124,8 +125,9 @@
   #:use-module ((system foreign)
                 #:select (%null-pointer
                           make-pointer pointer? pointer-address
-                          pointer->bytevector bytevector->pointer
-                          scm->pointer string->pointer float double
+                          pointer->bytevector
+                          bytevector->pointer scm->pointer string->pointer
+                          float double complex-float complex-double
                           int8 uint8 int16 uint16 int32 uint32 int64 uint64))
   #:use-module (nyacc foreign arch-info))
 
@@ -487,19 +489,10 @@
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     ;; cfl: C field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
-    (if (null? sfl)
-        (let* ((fal (reverse ral))
-               (lkup (case-lambda
-                       ((arg)
-                        (cond
-                         ((symbol? arg) (assq-ref fal arg))
-                         ((string? arg) (assq-ref fal (string->symbol arg)))
-                         (else (error "cstruct-sel: bad arg" arg))))
-                       (() (map car fal)))))
-          (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
-                       (%make-cstruct (reverse cfl) lkup) #f))
+    (if (pair? sfl)
         (match (car sfl)
-          ((name type)                  ; non-bitfield
+
+          ((name type)                  ; normal (no bitfield)
            (let* ((type (cond ((symbol? type) (cbase type))
                               ((ctype? type) type)
                               (else (error "cstruct: bad type" type))))
@@ -521,13 +514,13 @@
           ((name type width)            ; bitfield
            (let* ((type (cond ((symbol? type) (cbase type))
                               ((ctype? type) type)
-                              (else (error "bad type:" type))))
+                              (else (error "cstruct: bad type" type))))
                   (fsz (ctype-size type))
                   (fal (if packed? 1 (ctype-align type)))
                   (mty (ctype-info type))
                   (sx? (mtype-signed? mty))
                   ;; order is critical here:
-                  (cio (bf-offset width fal ssz)) ; ci struct offset
+                  (cio (bf-offset width fal ssz))      ; ci struct offset
                   (ssz (incr-bit-size width fal ssz))  ; moved
                   (bfo (- (* 8 ssz) width (* 8 cio)))) ; offset wrt ci
              (if name
@@ -539,8 +532,20 @@
                  (loop cfl ral ssz sal (cdr sfl)))))
           (otherwize
            (sferr "cstruct: bad form: ~s" (car sfl))
-           (error "yuck"))))))
-
+           (error "yuck")))
+        
+        ;; done
+        (let* ((fal (reverse ral))
+               (lkup (case-lambda
+                       ((arg)
+                        (cond
+                         ((symbol? arg) (assq-ref fal arg))
+                         ((string? arg) (assq-ref fal (string->symbol arg)))
+                         (else (error "cstruct-sel: bad arg" arg))))
+                       (() (map car fal)))))
+          (sferr "fal:\n") (pperr fal)
+          (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
+                       (%make-cstruct (reverse cfl) lkup) #f)))))
 
 ;; @deffn {Procedure} cunion fields => <ctype>
 ;; Construct a union ctype with given @var{fields}.
@@ -551,10 +556,7 @@
      Construct a union ctype with given FIELDS.  See _cstruct_ for a
      description of the FIELDS argument."
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
-    (if (null? sfl)
-        (let* ((ral (reverse ral)) (lkup (lambda (sym) (assq-ref ral sym))))
-          (%make-ctype (incr-size 0 sal ssz) sal 'union
-                       (%make-cunion (reverse cfl) lkup) #f))
+    (if (pair? sfl)
         (let* ((name (caar sfl))
                (type (cadar sfl))
                (type (cond ((symbol? type)
@@ -574,7 +576,11 @@
                  ((eq? 'union (ctype-kind type))
                   (add-fields (cunion-fields (ctype-info type)) ssz ral))
                  (else (error "bad field")))
-                (maxi-size fsz fal ssz) (max fal sal) (cdr sfl))))))
+                (maxi-size fsz fal ssz) (max fal sal) (cdr sfl)))
+        ;; done
+        (let* ((ral (reverse ral)) (lkup (lambda (sym) (assq-ref ral sym))))
+          (%make-ctype (incr-size 0 sal ssz) sal 'union
+                       (%make-cunion (reverse cfl) lkup) #f)))))
 
 
 ;; @deffn {Procedure} carray type n => <ctype>
@@ -732,27 +738,29 @@
           (loop res ct ix (cdr tags))))))))
 
 
-;; @deffn {Procedure} ctype-equal? a b => #t|#f
-;; This predicate assesses equality of it's arguments.
-;; Two types are considered equal if they have the same size,
-;; alignment, kind, and eqivalent kind-specific properties.
-;; For base types, the symbolic mtype must be equal; this includes
-;; size, integer versus float, and signed versus unsigned.
-;; For struct and union kinds, the names and types of all fields
-;; must be equal, with the following exception:
-;; @* NOTE: To avoid inifinite loops, this procedure skips checks
-;; on pointer fields with delays.
+;; @deffn {Procedure} ctype-eqv? a b => #t|#f
+;; @deffnx {Procedure} ctype-equal? a b => #t|#f
+;; The @code{ctype-eqv?} and @code{ctype-equal?} predicates assesses equality
+;; of their arguments.  Two types are considered equvalent if they have the
+;; same size, alignment, kind, and eqivalent kind-specific properties.  For
+;; base types, the symbolic mtype must be equal; this includes size, integer
+;; versus float, and signed versus unsigned.  For struct and union kinds, the
+;; names and types of all fields must be equal, unless, for @code{ctype-eqv?}
+;; they are pointer types with delays.  The implementation of
+;; @code{ctype-equal?} is not complete: it is currently the same as
+;; @code{ctype-eqv?}.
 ;; @end deffn
-(define (ctype-equal? a b)
-  "- Procedure: ctype-equal? a b => #t|#f
-     This predicate assesses equality of it's arguments.  Two types are
-     considered equal if they have the same size, alignment, kind, and
-     eqivalent kind-specific properties.  For base types, the symbolic
-     mtype must be equal; this includes size, integer versus float, and
-     signed versus unsigned.  For struct and union kinds, the names and
-     types of all fields must be equal, with the following exception:
-     NOTE: To avoid inifinite loops, this procedure skips checks on
-     pointer fields with delays."
+(define (ctype-eqv? a b)
+  "- Procedure: ctype-eqv? a b => #t|#f
+     The ‘ctype-eqv?’ and ‘ctype-equal?’ predicates assesses equality of
+     their arguments.  Two types are considered equvalent if they have
+     the same size, alignment, kind, and eqivalent kind-specific
+     properties.  For base types, the symbolic mtype must be equal; this
+     includes size, integer versus float, and signed versus unsigned.
+     For struct and union kinds, the names and types of all fields must
+     be equal, unless, for ‘ctype-eqv?’ they are pointer types with
+     delays.  The implementation of ‘ctype-equal?’ is not complete: it
+     is currently the same as ‘ctype-eqv?’."
   (letrec*
       ((fields-equal?
         (lambda (fl gl)
@@ -797,6 +805,18 @@
      ((not (eqv? (ctype-size a) (ctype-size b))) #f)
      ((not (eqv? (ctype-align a) (ctype-align b))) #f)
      (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b))))))
+(define (ctype-equal? a b)
+  "- Procedure: ctype-equal? a b => #t|#f
+     The ‘ctype-eqv?’ and ‘ctype-equal?’ predicates assesses equality of
+     their arguments.  Two types are considered equvalent if they have
+     the same size, alignment, kind, and eqivalent kind-specific
+     properties.  For base types, the symbolic mtype must be equal; this
+     includes size, integer versus float, and signed versus unsigned.
+     For struct and union kinds, the names and types of all fields must
+     be equal, unless, for ‘ctype-eqv?’ they are pointer types with
+     delays.  The implementation of ‘ctype-equal?’ is not complete: it
+     is currently the same as ‘ctype-eqv?’."
+  (ctype-eqv? a b))
 
 ;; @deffn {Procedure} name-ctype name type -> <ctype>
 ;; Create a new named version of the type.  The name is useful when the type
@@ -1014,6 +1034,12 @@
 (define (Xcdata-ref bv ix ct)
   "- Procedure: Xcdata-ref bv ix ct -> value
      Reference a deconstructed cdata object.  See _cdata-ref_."
+
+  (define (aggr-ref sel)
+    (map (lambda (m) (let* ((fld (sel m)) (ix (+ ix (cfield-offset fld))))
+                       (cons m (Xcdata-ref bv ix (cfield-type fld)))))
+         (sel)))
+
   (let* ((ti (ctype-info ct)))
     (case (ctype-kind ct)
       ((base)
@@ -1034,12 +1060,9 @@
       ((array)
        (cdata->array (%make-cdata bv ix ct)))
       ((struct)
-       (let* ((info (ctype-info ct))
-              (sel (cstruct-select info)))
-         (map (lambda (m) (let* ((fld (sel m)) (ix (+ ix (cfield-offset fld))))
-                            (cons m (Xcdata-ref bv ix (cfield-type fld)))))
-              (sel))))
-      ((union) (error "cdata-ref: can't deref unions: use cdata-sel"))
+       (aggr-ref (cstruct-select (ctype-info ct))))
+      ((union)
+       (aggr-ref (cstruct-select (ctype-info ct))))
       ((function)
        (let* ((ti (ctype-info ct))
               (mtype (cfunction-ptr-mtype ti))
@@ -1047,7 +1070,7 @@
               (ptr->proc (cfunction-ptr->proc ti)))
          (if (zero? addr) (error "cdata-ref: null function address"))
          (ptr->proc (make-pointer addr))))
-      (else (error "cdata-ref: giving up")))))
+      (else (error "cdata-ref: coding error")))))
 
 ;; @deffn {Procedure} Xcdata-set! bv ix ct value
 ;; Set the value of a deconstructed cdata object, where @var{bv}, @var{ix}
@@ -1057,6 +1080,16 @@
   "- Procedure: Xcdata-set! bv ix ct value
      Set the value of a deconstructed cdata object, where BV, IX and CT
      are extracted from a cdata objerct.  See _cdata-set!_."
+  
+  (define (aggr-set! sel value) 
+    (unless (fold (lambda (p s) (and s (sel (car p)))) #t value)
+      (error "cdata-set!: bad arg: " value))
+    (for-each
+     (lambda (p)
+       (let* ((fld (sel (car p))))
+         (Xcdata-set! bv (+ ix (cfield-offset fld)) (cfield-type fld) (cdr p))))
+     value))
+  
   (if (cdata? value)
       ;; cdata value
       (let ((sz (ctype-size ct)))
@@ -1106,33 +1139,33 @@
         ((array)
          (cdata-set-from-array! (%make-cdata bv ix ct) value))
         ((struct)
-         (let* ((ti (ctype-info ct))
-                (flds (cstruct-fields ti))
-                (sel (cstruct-select ti)))
-           (cond
-            ((list? value)
-             (unless (fold (lambda (p s) (and s (sel (car p)))) #t value)
-               (error "cdata-set!: bad arg: " value))
-             (for-each
-              (lambda (p)
-                (let* ((fld (sel (car p))))
-                  (Xcdata-set! bv (+ ix (cfield-offset fld))
-                               (cfield-type fld) (cdr p))))
-              value))
-            (else (error "cdata-set!: bad arg: " value)))))
-        ((union) (error "cdata-set!: can't set! union value"))
-        ((function) (error "cdata-set!: can't set! function value"))
+         (cond
+          ((list? value) (aggr-set! (cstruct-select (ctype-info ct)) value))
+          (else (error "cdata-set!: bad arg: " value))))
+        ((union)
+         (cond
+          ((list? value) (aggr-set! (cunion-select (ctype-info ct)) value))
+          (else (error "cdata-set!: bad arg: " value))))
+        ((function)
+         (cond
+          ((procedure? value)
+           (let* ((ti (ctype-info ct))
+                  (mtype (cfunction-ptr-mtype ti))
+                  (proc->ptr (cfunction-proc->ptr (ctype-info ct)))
+                  (fptr (proc->ptr value)))
+             (mtype-bv-set! mtype bv ix (pointer-address fptr))))
+          (else (error "cdata-set!: bad arg: " value))))
         (else (error "cdata-set!: bad arg: " value)))))
 
 ;; @deffn {Procedure} cdata-ref data [tag ...] => value
-;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
+;; Return the Scheme value for the selected @var{tag ...} with
 ;; respect to the cdata object @var{data}.
 ;; @example
 ;; (cdata-ref my-struct-value 'a 'b 'c))
 ;; @end example
 ;; This procedure returns Guile values for cdata kinds @emph{base},
 ;; @emph{pointer}, @emph{procedure}, @emph{array} (an array) and @emph{struct}
-;; (an alist).  For @emph{union} an exception is raised.   The returned values
+;; (an alist).  For @emph{union} TBD (concept in work).   The returned values
 ;; are freshly allocated copies. If want a cdata object, use @code{cdata-sel}.
 ;; @end deffn
 (define (cdata-ref data . tags)
@@ -1407,53 +1440,67 @@
     (call-with-values (lambda () (Xloop sel offset data tags))
       (lambda (bv ix ct) (Xcdata-set! bv ix ct value)))))
 
-;; @deffn {Procedure} pretty-print-ctype type [port]
+
+;; @deffn {Procedure} pretty-print-ctype type [port] [options]
 ;; Converts type to a literal tree and uses Guile's pretty-print function
 ;; to display it.  The default port is the current output port.
+;; Keyword options are:
+;; @table @code
+;; @item #:with-offsets
+;; Show offsets in struct and union fields.  The offsets are with
+;; respect to ...
+;; @end table
 ;; @end deffn
-(define* (pretty-print-ctype type #:optional (port (current-output-port)))
+(define* (pretty-print-ctype type
+                             #:optional (port (current-output-port))
+                             #:key with-offsets)
   "- Procedure: pretty-print-ctype type [port]
      Converts type to a literal tree and uses Guile’s pretty-print
      function to display it.  The default port is the current output
      port."
+  (define qq 'quasiquote)
+  (define uq 'unquote)
+  
+  (define* (pp-field field #:optional with-offsets)
+    (let* ((name (cfield-name field)) (type (cfield-type field))
+           (kind (ctype-kind type)) (info (ctype-info type))
+           (offs (cfield-offset field)))
+      (if (eq? 'bitfield kind)
+          (let ((mtype (cbitfield-mtype info)) (width (cbitfield-width info)))
+            (if with-offsets
+                `(,name ,mtype ,width #:offset ,offs)
+                `(,name ,mtype ,width)))
+          (let* ((texp (cnvt type))
+                 (call (if (pair? texp) `(,uq ,texp) texp)))
+            (if with-offsets
+                  `(,name ,call #:offset ,offs)
+                  `(,name ,call))))))
+
   (assert-ctype 'pretty-print-ctype type)
   (define (cnvt type)
-    (let ((info (ctype-info type)))
+    (let ((info (ctype-info type)) (name (ctype-name type)))
+
       (case (ctype-kind type)
         ((base)
-         `',info)
+         ;;`(cbase ,info))
+         info)
         ((struct)
-         `(cstruct
-           ,(map
-             (lambda (fld)
-               (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
-                   (list (cfield-name fld)
-                         (cbitfield-mtype (ctype-info (cfield-type fld)))
-                         (cbitfield-width (ctype-info (cfield-type fld)))
-                         #:offset (cfield-offset fld))
-                   (list (cfield-name fld) (cnvt (cfield-type fld))
-                         #:offset (cfield-offset fld))))
-             (cstruct-fields info))))
+         `(cstruct (,qq (,@(map (lambda (f) (pp-field f with-offsets))
+                                (cstruct-fields info))))))
         ((union)
-         `(cunion
-           ,(map
-             (lambda (fld) (list (cfield-name fld) (cnvt (cfield-type fld))))
-             (cunion-fields info))))
+         `(cunion (,qq (,@(map (lambda (f) (pp-field f with-offsets))
+                               (cunion-fields info))))))
         ((pointer)
-         (cond
-          ((promise? (%cpointer-type info)) `(cpointer (delay ...)))
-          ((ctype-name (%cpointer-type info)) => (lambda (n) `(cpointer ,n)))
-          (else `(cpointer ,(cnvt (cpointer-type info))))))
+         (let* ((type (%cpointer-type info)) (name (ctype-name type)))
+           (if (promise? type)
+               `(cpointer (delay (uq ,(or name '_))))
+               `(cpointer (uq ,(or name (cnvt type)))))))
         ((array)
-         `(carray ,(cnvt (carray-type info)) ,(carray-length info)))
+         `(carray (,uq ,(cnvt (carray-type info))) ,(carray-length info)))
         ((enum)
-         (cond
-          ((ctype-name type) => identity)
-          (else `(enum ...))))
+         `(cenum (,uq ,(or name '_))))
         ((function)
-         (cond
-          ((ctype-name type) => identity)
-          (else `(function ...))))
+         (if name `(,uq ,name) `(function _ _)))
         (else (error "pretty-print-ctype: needs work:" (ctype-kind type))))))
   (pretty-print (cnvt type) port))
 
@@ -1467,11 +1514,16 @@
       (s16le . ,int16) (s32le . ,int32) (s64le . ,int64)
       (u16le . ,uint16) (u32le . ,uint32) (u64le . ,uint64)
       (f32le . ,float) (f64le . ,double)
+      (c32le . ,complex-float) (c64le . ,complex-double)
+      
       (s16be . ,int16) (s32be . ,int32) (s64be . ,int64)
       (u16be . ,uint16) (u32be . ,uint32) (u64be . ,uint64)
       (f32be . ,float) (f64be . ,double)
+      (c32be . ,complex-float) (c64be . ,complex-double)
+      
       (u128le . #f) (f16le . #f) (f128le . #f) (s128be . #f)
       (i128le . #f) (u128be . #f) (f16be . #f) (f128be . #f)
+      
       ;;(s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
       ;;(u16 . ,uint16) (u32 . ,uint32) (u64 . ,uint64)
       ;;(f32 . ,float) (f64 . ,double)
