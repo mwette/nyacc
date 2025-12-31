@@ -1101,8 +1101,10 @@
              ((typename ,typename)
               (let ((typerename (rename typename 'type)))
                 (cond
+                 #|
                  ((dmem? typename def-defined)
                   (values defined seed))
+                 |#
                  ((dmem? typerename defined)
                   (let* ((typename typerename)
                          (aka (string->symbol typename))
