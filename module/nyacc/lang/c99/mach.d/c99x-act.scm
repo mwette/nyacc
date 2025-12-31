@@ -483,8 +483,8 @@
    (lambda $rest
      '(field-list
         (comp-decl
-          (decl-spec-list (type-spec "char"))
-          (comp-decl-list
+          (decl-spec-list (type-spec (fixed-type "char")))
+          (comp-declr-list
             (comp-declr (ary-declr (ident "*anon*")))))))
    ;; 202. struct-declaration-list-1 => struct-declaration
    (lambda ($1 . $rest) (make-tl 'field-list $1))

@@ -379,8 +379,8 @@
      (struct-declaration-list-1 ($$ (tl->list $1)))
      ;; GNU extension empty struct; we use "char _[];" where _ => *anon*
      ($empty ($$ '(field-list (comp-decl
-                               (decl-spec-list (type-spec "char"))
-                               (comp-decl-list
+                               (decl-spec-list (type-spec (fixed-type "char")))
+                               (comp-declr-list
                                 (comp-declr (ary-declr (ident "*anon*")))))))))
     (struct-declaration-list-1
      (struct-declaration ($$ (make-tl 'field-list $1)))

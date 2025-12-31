@@ -29,6 +29,7 @@
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 util))
 (use-modules (nyacc foreign arch-info))
+(use-modules (nyacc foreign cdata))
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
@@ -461,5 +462,25 @@ int foo() {
     ;;(pperr mdecl)
     (pperr (ccode->sexp code))
     ))
+
+;; issue 24
+;;#define __DECLARE_FLEX_ARRAY(TYPE, NAME)        \
+;;        struct { \
+;;                struct { } __empty_ ## NAME; \
+;;                TYPE NAME[]; \
+;;        }
+;;#endif
+(when #f
+  (let* ((code "struct foo { struct {} __empty_bufs; int bufs[]; };")
+         (tree (parse-string code))
+         (sexp (ccode->sexp code))
+         (ct (eval (caddr (cadr sexp)) (current-module))))
+    ;;(pp tree)
+    ;;(pp sexp)
+    (pp (caddr (cadr sexp)))
+    (sf "ct=~s\n" ct)
+    (sf "size=~s\n" (ctype-size ct)) 
+    (pretty-print-ctype ct)
+    #f))
 
 ;; --- last line ---
