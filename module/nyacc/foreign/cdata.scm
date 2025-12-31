@@ -543,7 +543,6 @@
                          ((string? arg) (assq-ref fal (string->symbol arg)))
                          (else (error "cstruct-sel: bad arg" arg))))
                        (() (map car fal)))))
-          (sferr "fal:\n") (pperr fal)
           (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
                        (%make-cstruct (reverse cfl) lkup) #f)))))
 
@@ -575,7 +574,7 @@
                   (add-fields (cstruct-fields (ctype-info type)) ssz ral))
                  ((eq? 'union (ctype-kind type))
                   (add-fields (cunion-fields (ctype-info type)) ssz ral))
-                 (else (error "bad field")))
+                 (else (error "cunion: bad field" cf)))
                 (maxi-size fsz fal ssz) (max fal sal) (cdr sfl)))
         ;; done
         (let* ((ral (reverse ral)) (lkup (lambda (sym) (assq-ref ral sym))))
