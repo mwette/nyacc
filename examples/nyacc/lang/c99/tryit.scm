@@ -20,7 +20,7 @@
 (use-modules (sxml fold))
 (use-modules ((sxml xpath) #:hide (filter)))
 
-(use-modules (nyacc lang c99 ffi-help-cd))
+(use-modules (nyacc lang c99 ffi-help))
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
 (use-modules (nyacc lang c99 pprint))
