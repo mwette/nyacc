@@ -353,15 +353,15 @@
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier
      ("struct" opt-attr-specs ident-like "{" struct-declaration-list "}"
-      ($$ (sx-list 'struct-def $2 $3 (tl->list $5))))
+      ($$ (sx-list 'struct-def $2 $3 $5)))
      ("struct" opt-attr-specs "{" struct-declaration-list "}"
-      ($$ (sx-list 'struct-def $2 (tl->list $4))))
+      ($$ (sx-list 'struct-def $2 $4)))
      ("struct" opt-attr-specs ident-like
       ($$ (sx-list 'struct-ref $2 $3)))
      ("union" opt-attr-specs ident-like "{" struct-declaration-list "}"
-      ($$ (sx-list 'union-def $2 $3 (tl->list $5))))
+      ($$ (sx-list 'union-def $2 $3 $5)))
      ("union" opt-attr-specs "{" struct-declaration-list "}"
-      ($$ (sx-list 'union-def $2 (tl->list $4))))
+      ($$ (sx-list 'union-def $2 $4)))
      ("union" opt-attr-specs ident-like
       ($$ (sx-list 'union-ref $2 $3))))
 
@@ -376,15 +376,22 @@
 
     ;; Calling this field-list in the parse tree.
     (struct-declaration-list		; S 6.7.2.1
+     (struct-declaration-list-1 ($$ (tl->list $1)))
+     ;; GNU extension empty struct; we use "char _[];" where _ => *anon*
+     ($empty ($$ '(field-list (comp-decl
+                               (decl-spec-list (type-spec "char"))
+                               (comp-decl-list
+                                (comp-declr (ary-declr (ident "*anon*")))))))))
+    (struct-declaration-list-1
      (struct-declaration ($$ (make-tl 'field-list $1)))
+     (struct-declaration-list-1 struct-declaration ($$ (tl-append $1 $2)))
      (lone-comment ($$ (make-tl 'field-list $1)))
-     (struct-declaration-list struct-declaration ($$ (tl-append $1 $2)))
-     (struct-declaration-list lone-comment ($$ (tl-append $1 $2)))
+     (struct-declaration-list-1 lone-comment ($$ (tl-append $1 $2)))
      ;;(cpp-statement ($$ (make-tl 'field-list $1)))
      ;;(struct-declaration-list cpp-statement ($$ (tl-append $1 $2)))
      ;; Not in C99, but allowed by GNU, I believe:
      (";" ($$ (make-tl 'field-list)))
-     (struct-declaration-list ";" ($$ $1)))
+     (struct-declaration-list-1 ";" ($$ $1)))
 
     (struct-declaration			; S 6.7.2.1
      (struct-declaration-no-comment ";")
