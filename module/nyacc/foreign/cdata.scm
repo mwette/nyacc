@@ -533,7 +533,7 @@
           (otherwize
            (sferr "cstruct: bad form: ~s" (car sfl))
            (error "yuck")))
-        
+
         ;; done
         (let* ((fal (reverse ral))
                (lkup (case-lambda
@@ -1079,8 +1079,8 @@
   "- Procedure: Xcdata-set! bv ix ct value
      Set the value of a deconstructed cdata object, where BV, IX and CT
      are extracted from a cdata objerct.  See _cdata-set!_."
-  
-  (define (aggr-set! sel value) 
+
+  (define (aggr-set! sel value)
     (unless (fold (lambda (p s) (and s (sel (car p)))) #t value)
       (error "cdata-set!: bad arg: " value))
     (for-each
@@ -1088,7 +1088,7 @@
        (let* ((fld (sel (car p))))
          (Xcdata-set! bv (+ ix (cfield-offset fld)) (cfield-type fld) (cdr p))))
      value))
-  
+
   (if (cdata? value)
       ;; cdata value
       (let ((sz (ctype-size ct)))
@@ -1331,7 +1331,7 @@
   "- Procedure: ccast type data [do-check] => <cdata>
      Cast a cdata object of one (pointer) type to another (pointer)
      type.  This routine creates a new cdata object with the target
-     type, but same bytevector and index.  
+     type, but same bytevector and index.
           > (define t1 (cstruct '((a int) (b int))))
           > (define t2 (cstruct `((base ,t1) (c int))))
           > (define d2 (make-cdata t2))
@@ -1459,7 +1459,7 @@
      port."
   (define qq 'quasiquote)
   (define uq 'unquote)
-  
+
   (define* (pp-field field #:optional with-offsets)
     (let* ((name (cfield-name field)) (type (cfield-type field))
            (kind (ctype-kind type)) (info (ctype-info type))
@@ -1514,15 +1514,15 @@
       (u16le . ,uint16) (u32le . ,uint32) (u64le . ,uint64)
       (f32le . ,float) (f64le . ,double)
       (c32le . ,complex-float) (c64le . ,complex-double)
-      
+
       (s16be . ,int16) (s32be . ,int32) (s64be . ,int64)
       (u16be . ,uint16) (u32be . ,uint32) (u64be . ,uint64)
       (f32be . ,float) (f64be . ,double)
       (c32be . ,complex-float) (c64be . ,complex-double)
-      
+
       (u128le . #f) (f16le . #f) (f128le . #f) (s128be . #f)
       (i128le . #f) (u128be . #f) (f16be . #f) (f128be . #f)
-      
+
       ;;(s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
       ;;(u16 . ,uint16) (u32 . ,uint32) (u64 . ,uint64)
       ;;(f32 . ,float) (f64 . ,double)
