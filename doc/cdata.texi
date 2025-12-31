@@ -30,7 +30,7 @@ October 2024
 @top CData Reference Manual
 @* Matt Wette
 @* October 2024
-@* 
+@*
 @* This is a user guide for the NYACC CData module for Guile.
 @end ifnottex
 
@@ -41,7 +41,8 @@ October 2024
 @node Introduction
 @heading Introduction
 
-The @emph{cdata} module and its partner @emph{arch-info} provide a
+The @emph{cdata} module (@code{(nyacc foreign cdata)} and its
+partner @emph{arch-info} (@code{(nyacc foreign arch-info)} provide a
 way to work with data originating from C libraries.  We hope the module
 is reasonably easy to understand and use.  Size and alignment is
 tracked for all types.  Types are classified into the following kinds:
@@ -51,8 +52,8 @@ base, struct, union, array, pointer, enum and function.  The procedures
 objects, and the procedure @code{make-cdata} will generate data
 objects based on these.  The underlying bits of data are stored in Scheme
 bytevectors.  Access to component data is provided by the
-@code{cdata-ref} procedure and mutation is 
-accomplished via the @code{cdata-set!} procedure.  
+@code{cdata-ref} procedure and mutation is
+accomplished via the @code{cdata-set!} procedure.
 The modules support non-native machine architectures via the
 global parameter @code{*arch*}.
 
@@ -226,7 +227,35 @@ In addition, if the value is of ctype, a copy of the underlying bytevector
 contents will be performed.  An error will be thrown if the types are not equal.
 Also, if the value argument to @code{make-cdata} is an integer and
 the type argument is an array of length zero, then space is allocated to
-accomodate that length array.
+accomodate that length array.  Here are some examples:
+@example
+> (define tri1-t (carray (carray (cbase 'double) 2) 3))
+> (define tval1 (make-cdata tri1-t #2f64((1.0 2.0) (3.0 4.0) (5.0 6.0))))
+> (cdata-ref tval1)
+$1 = #2f64((1.0 2.0) (3.0 4.0) (5.0 6.0))
+> (cdata-set! tval1 1.5 0 1)
+> (cdata-ref tval1)
+$2 = #2f64((1.0 1.5) (3.0 4.0) (5.0 6.0))
+>
+@end example
+and
+@example
+> (define loc-t (cstruct `((x double) (y double))) 3)
+> (define tri2-t (carray loc-t 3))
+> (define tval2 (make-cdata tri2-t (vector '((x . 1.0) (y . 2.0))
+                                           '((x . 3.0) (y . 4.0))
+                                           '((x . 2.0) (y . 5.0)))))
+> tval2
+$3 = #<cdata array 0x79ae9a077200>
+> (cdata-ref tval2)
+$4 = #(((x . 1.0) (y . 2.0)) ((x . 3.0) (y . 4.0)) ((x . 2.0) (y . 5.0)))
+> (cdata-set! tval2 1.5 0 'x)
+> (cdata-ref tval2)
+$5 = #(((x . 1.5) (y . 2.0)) ((x . 3.0) (y . 4.0)) ((x . 2.0) (y . 5.0)))
+@end example
+
+
+
 
 @deffn {Procedure} cdata& data => cdata
 Generate a reference (i.e., cpointer) to the contents in the underlying
@@ -316,16 +345,17 @@ It is recommended that one use symbols for names rather than strings,
 so that @code{pretty-print-ctype} will use names effectively.
 @end deffn
 
-@deffn {Procedure} ctype-equal? a b => #t|#f
-This predicate assesses equality of it's arguments.
-Two types are considered equal if they have the same size,
-alignment, kind, and eqivalent kind-specific properties.
-For base types, the symbolic mtype must be equal; this includes
-size, integer versus float, and signed versus unsigned.
-For struct and union kinds, the names and types of all fields
-must be equal, with the following exception:
-@* NOTE: To avoid inifinite loops, this procedure skips checks
-on pointer fields with delays.
+@deffn {Procedure} ctype-eqv? a b => #t|#f
+@deffnx {Procedure} ctype-equal? a b => #t|#f
+The @code{ctype-eqv?} and @code{ctype-equal?} predicates assesses equality
+of their arguments.  Two types are considered equvalent if they have the
+same size, alignment, kind, and eqivalent kind-specific properties.  For
+base types, the symbolic mtype must be equal; this includes size, integer
+versus float, and signed versus unsigned.  For struct and union kinds, the
+names and types of all fields must be equal, unless, for @code{ctype-eqv?}
+they are pointer types with delays.  The implementation of
+@code{ctype-equal?} is not complete: it is currently the same as
+@code{ctype-eqv?}.
 @end deffn
 
 @deffn {Procedure} ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
@@ -341,7 +371,7 @@ The procedure takes one argument: @code{(proc data [tag ...])}.
 Pointer dereference tags (@code{'*'}) are not allowed.
 The optional @var{offset} argument (default 0), is used for cross
 target use: it is the offset of the address in the host context.
-@end deffn 
+@end deffn
 
 @deffn {Procedure} make-cdata-setter sel [offset] => lambda
 Genererate a procedure that given a cdata object will set the value
@@ -350,7 +380,7 @@ The procedure takes two arguments: @code{(proc data value [tag ...])}.
 Pointer dereference tags (@code{'*'}) are not allowed.
 The optional @var{offset} argument (default 0), is used for cross
 target use: it is the offset of the address in the host context.
-@end deffn 
+@end deffn
 
 
 @heading Working with C Function Calls
@@ -482,9 +512,9 @@ struct bar_s @{
 
 And just for kicks
 @example
-> (define sa 
+> (define sa
     (cstruct `((a int) (b double) (#f ,(cstruct '((x short) (y int)))))))
-> (define sp 
+> (define sp
     (cstruct `((a int) (b double) (#f ,(cstruct '((x short) (y int))))) #t))
 
 > (pretty-print-ctype sa)

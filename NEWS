@@ -6,26 +6,42 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2026-XX-XX  V3.02.0
-	* Updated ffi-helper to allow more backends (e.g, bstruct,
-	  bytestructures).  See github.com/mwette/guile-fhbe. This was
-	  accomplished by adding a layer of indirection and several
-	  backend specific procedures.
-	  + compile time for gtk2.ffi: v3.02=9m19s, v3.01:8m53 => 5% longer
+        * Updated ffi-helper to allow other backends (e.g, bstruct,
+          bytestructures).  See github.com/mwette/guile-fhbe. This was
+          accomplished by adding a layer of indirection for low-level
+          type construction.
+          + Compile time for gtk2.ffi is 5% longer.
+          + Compiled ffi modules include case-backend syntax form.
+          + For an example of case-backend use, see ffi/cairo.scm.
+        * Moved ffi-help-cd.scm back to ffi-help.cd, like for v1.0.
+        * In cdata, removed support for previously deprecated types (e.g.,
+          "signed long int") in preference for canonical short names (e.g.,
+          "long"), as parse-c99 does not produce them.
+        * Merged contributed "powerpc64le" machine arch to arch-info.
+        * Worked more on the "mlang" language example parser and analyzer.
+          + includes vx-match for use in effects analysis.
+        * In cdata, exposed procedure make-cdata/* which will create
+          an object from a pointer.
+        * The cdata user guide has been reviewed and expanded.
+        * cdata-ref now returns scheme array and struct values as Guile
+          objects (array and alist).  To get cdata objects, use cdata-sel.
+        * cdata-set! now accepts scheme arrays (and vectors) for carray and
+          alists for cstructs.
 
 2025-XX-XX  V3.01.1
-	* lalr.scm(wrap-term/MES): make final return 'terminal 
-	* ffi-help-cd.scm(unwrap-mdecl): use (array-of . ,_1) not (array-of)
+        * lalr.scm(wrap-term/MES): make final return 'terminal
+        * ffi-help-cd.scm(unwrap-mdecl): use (array-of . ,_1) not (array-of)
 
 2025-12-13  V3.01.0
         * nyacc/parse.scm(make-lalr-parser): Added option to provide user-hook
-          to intercept state transition.   
+          to intercept state transition.
         * nyacc/lang/c99/parse.scm: removed, back to using nyacc/parse.scm now
         * nyacc/lang/sx-util.scm(sx-match): allow '() as a pattern
         * lang/nx-util.scm: major rework for symbol table handling.
         * nx-mlang: Matured the parser, compiler and pretty printer.
           + It now can parse comma-less matrix rows with space constraint.
-        * nx-javascript: 
-          + Removed `insert-semi' and `no-semi-insertion' (NSI) hacks in 
+        * nx-javascript:
+          + Removed `insert-semi' and `no-semi-insertion' (NSI) hacks in
             javascript parser; the nyacc parser has `ignore-if-unexpected'.
           + Updated compiler to use nx-util updates.
         * Minor work on example javascript, julia and lua parsers.
@@ -65,7 +81,7 @@ without any warranty.
           previously defined use it instead of 'void
         * lang/util.scm(move-if-changed): use system* instead of system, for MES
         * lang/util.scm: add def of string-every, for MES
-        * c99/mach.scm(parse-rhs): changed to syntax-rules from syntax-case 
+        * c99/mach.scm(parse-rhs): changed to syntax-rules from syntax-case
           with aid from new macro wrap-term which detects ident's, for MEs
 
 2025-08-24  V2.02.3
@@ -107,7 +123,7 @@ without any warranty.
 
 2025-01-15  V2.01.5
         * c99/parser.scm(split-cppdefs): w/o = rhs is "1", not ""
-        * c99/ffi-help-cd.scm(unwrap-mdecl,mtail->ffi-decl): add case for 
+        * c99/ffi-help-cd.scm(unwrap-mdecl,mtail->ffi-decl): add case for
           function not declared as pointer; pointer
 
 2024-11-15  V2.01.4
@@ -129,7 +145,7 @@ without any warranty.
         * fixed doc/Makefile.in: missing continuation
 
 2024-10-19  V2.01.0
-        * reworked the FH renamer to work with context: 
+        * reworked the FH renamer to work with context:
             (rename "foo" 'enum) 'type 'function 'variable 'field
         * updated cdata.scm to provide lookup procedures instead of alists,
           making path for using (perfect?) functions for lookups
@@ -195,14 +211,14 @@ without any warranty.
           + see doc/cdata.info
           + capable of dealing with foreign architectures
         * major ffi helper update:
-          + includes two backends: 
+          + includes two backends:
             - cdata: depends only on system/foreign/cdata module
             - bytestructures: depends on ffi-help-rt and bytestructures modules
           + by default, the ffi helper now uses the cdata backend
             - scheme bytestructures is not required
             - does not use ffi-help-rt
-            - generates ~20% smaller .scm files 
-            - generates ~40% smaller .go files 
+            - generates ~20% smaller .scm files
+            - generates ~40% smaller .go files
           + ffi-help.scm(cnvt-udecl): complete re-write, using udecl->mdecl.
             This no longer has special cases for some include files.
           + handling of functions and function types is much cleaner and
@@ -225,7 +241,7 @@ without any warranty.
 
 2024-06-24  V1.09.5
         * fixed bug 65849: crash on multiple #warning
-        
+
 2024-04-19  V1.09.4
         * added nx-printf.scm in examples/nyacc/lang
         * fixed bug #65439 ffi-helper bad code for int foo(void);
@@ -643,3 +659,4 @@ without any warranty.
         /sym parsers for unhashed and /num for hashed.
         * updated interactive parsers, getting ready to and integrate file
         and interactive parsers, and overhaul C99 parser setup
+
