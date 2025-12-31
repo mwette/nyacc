@@ -1,6 +1,6 @@
 ;; gtk2.ffi				-*- Scheme -*-
 
-;; Copyright (C) 2018,2024 Matthew Wette
+;; Copyright (C) 2018,2024-2025 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -26,39 +26,43 @@
 
 (define-public gtk-symval ffi-gtk2-symbol-val)
 
-;; Create GtkEventCallback: missing somehow
-;; Return TRUE (i.e., 1) if event was handled.  For destroy callback you
-;; want to return 0 to make the caller destroy the window.
-;; typedef gboolean (*GtkEventCallback)(GtkWidget *, GdkEvent*, gpointer data);
-(define-public *GtkEventCallback
-  (cfunction
-   (lambda (~proc)
-     (ffi:procedure->pointer
-      ffi:int
-      (lambda (widget event data)
-        (let ((widget (make-cdata GtkWidget* widget))
-              (event (make-cdata GdkEvent* event))
-              (data (make-cdata gpointer data)))
-          (~proc widget event data)))
-      (list '* '* '*)))
-   (lambda (~fptr)
-     (let ((~proc (ffi:pointer->procedure
-                   ffi:int
-                   ~fptr
-                   (list '* '* '*))))
-       (lambda (widget event data)
-         (let ((widget (unwrap-pointer widget))
-               (event (unwrap-pointer event))
-               (data (unwrap-pointer data gpointer)))
-           (~proc widget event data)))))))
-(define-public GtkEventCallback
-  (name-ctype 'GtkEventCallback (cpointer *GtkEventCallback)))
+(case-backend
+ ((cdata)
+  ;; Create GtkEventCallback: missing somehow
+  ;; Return TRUE (i.e., 1) if event was handled.  For destroy callback you
+  ;; want to return 0 to make the caller destroy the window.
+  ;; typedef gboolean (*GtkEventCallback)(GtkWidget *, GdkEvent*, gpointer data);
+  (define-public *GtkEventCallback
+    (cfunction
+     (lambda (~proc)
+       (ffi:procedure->pointer
+        ffi:int
+        (lambda (widget event data)
+          (let ((widget (make-cdata GtkWidget* widget))
+                (event (make-cdata GdkEvent* event))
+                (data (make-cdata gpointer data)))
+            (~proc widget event data)))
+        (list '* '* '*)))
+     (lambda (~fptr)
+       (let ((~proc (ffi:pointer->procedure
+                     ffi:int
+                     ~fptr
+                     (list '* '* '*))))
+         (lambda (widget event data)
+           (let ((widget (unwrap-pointer widget))
+                 (event (unwrap-pointer event))
+                 (data (unwrap-pointer data gpointer)))
+             (~proc widget event data)))))))
+  (define-public GtkEventCallback
+    (name-ctype 'GtkEventCallback (cpointer *GtkEventCallback)))
 
-;; This is the c function.
-(define-public ~gtk_widget_destroy
-  (foreign-pointer-search "gtk_widget_destroy"))
+  ;; This is the c function.
+  (define-public ~gtk_widget_destroy
+    (foreign-pointer-search "gtk_widget_destroy"))
 
-(define-public ~gtk_main_quit
-  (foreign-pointer-search "gtk_main_quit"))
+  (define-public ~gtk_main_quit
+    (foreign-pointer-search "gtk_main_quit")))
+
+ (else))
 
 ;; --- last line ---

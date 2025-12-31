@@ -27,8 +27,12 @@
 (define-public G_PI_2 (ffi-glib-symbol-val 'G_PI_2))
 (define-public G_PI_4 (ffi-glib-symbol-val 'G_PI_4))
 
-(define-public gpointer* (cpointer gpointer))
-(define-public gdouble* (cpointer (cbase 'double)))
+(case-backend
+  ((cdata)
+   (define-public gpointer* (cpointer gpointer))
+   (define-public gdouble* (cpointer (cbase 'double))))
+  
+  (else))
 
 #|
 (define-public GDestroyNotify*-desc (bs:pointer GDestroyNotify-desc))

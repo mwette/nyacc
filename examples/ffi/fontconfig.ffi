@@ -14,11 +14,15 @@
                  (string-contains path-spec "fontconfig/" 0))
   )
 
-;; FcObjectSet *FcObjectSetBuild(const char *first, ...);
-(define-public FcObjectSetBuild
-  (let ((fp (foreign-pointer-search "FcObjectSetBuild")))
-    (lambda args
-      (let ((~proc (ffi:pointer->procedure '* fp (map (lambda (a) '*) args))))
-        (apply ~proc (map cdata-arg->pointer args))))))
+(case-backend
+ ((cdata)
+  ;; FcObjectSet *FcObjectSetBuild(const char *first, ...);
+  (define-public FcObjectSetBuild
+    (let ((fp (foreign-pointer-search "FcObjectSetBuild")))
+      (lambda args
+        (let ((~proc (ffi:pointer->procedure '* fp (map (lambda (a) '*) args))))
+          (apply ~proc (map cdata-arg->pointer args)))))))
+ 
+ (else))
 
 ;; --- last line ---

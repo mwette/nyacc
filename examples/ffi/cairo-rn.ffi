@@ -1,6 +1,6 @@
 ;; cairo-rn.ffi				-*- Scheme -*-
 
-;; Copyright (C) 2018,2024 Matthew Wette
+;; Copyright (C) 2018,2024-2025 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -21,9 +21,13 @@
                 (else name)))
   #:export (M_PI M_2PI make-cairo-unit-matrix))
 
-(define (make-cairo-unit-matrix)
-  (make-cdata cairo_matrix_t
-              `((xx 1.0) (yx 0.0) (xy 0.0) (yy 1.0) (x0 0.0) (y0 0.0))))
+(case-backend
+ ((cdata)
+  (define (make-cairo-unit-matrix)
+    (make-cdata cairo_matrix_t
+                `((xx 1.0) (yx 0.0) (xy 0.0) (yy 1.0) (x0 0.0) (y0 0.0)))))
+
+ (else))
 
 (define M_PI 3.14159265358979323846)
 (define M_2PI 6.28318530717958647692)
