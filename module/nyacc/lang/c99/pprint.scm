@@ -21,13 +21,12 @@
   #:export (pretty-print-c99)
   #:use-module ((srfi srfi-1) #:select (pair-for-each fold-right))
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-util)
-  #:use-module (ice-9 pretty-print)
-  )
-(cond-expand ;; for MES
- (guile-2 #t)
- (else
-  (use-modules (ice-9 optargs))))
+  #:use-module (nyacc lang sx-util))
+(use-modules (ice-9 pretty-print))
+
+(cond-expand
+ (mes (use-modules (ice-9 optargs)))
+ (else))
 
 (define op-sym
   (let ((ot '(("=" . eq) ("+=" . pl-eq) ("-=" . mi-eq) ("*=" . ti-eq)
