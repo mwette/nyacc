@@ -41,17 +41,6 @@
   (pretty-print exp (current-output-port) #:per-line-prefix "  "))
 
 
-;; ============================================================================
-;; info on builtins
-
-(define builtins
-  '("abs" "acos" "any" "atan2" "blkdiag" "cart2sph" "cos" "cosd" "cross"
-    "deg2rad" "diag" "double" "exp" "eye" "false" "find" "flipud"
-    "interp1" "length" "logical" "min" "norm" "ones" "pagemtimes"
-    "permute" "pinv" "rad2deg" "reshape" "sign" "sin" "sind"
-    "size" "sqrt" "squeeze" "struct" "sum" "vecnorm" "zeros"))
-
-;;(define (builtin-out name)
 (define-syntax string-case
   (let-syntax
       ((check-str-case
@@ -64,6 +53,42 @@
          (check-str-case str set (ex ...) kf)))
       ((_ str (else ex ...)) (begin (if #f #f) ex ...))
       ((_ str) (error "no match")))))
+
+
+;; @deffn {Syntax} gen-flags flag-set flag1 flag2 ...
+;; Define a set of variables with name @var{flag-set}-@var{flag1} ....
+;; @end deffn
+(define-syntax gen-flags
+  (lambda (x)
+    (define (genid ctx pfx id)
+      (datum->syntax
+       ctx (symbol-append (syntax->datum pfx) '- (syntax->datum id))))
+    (syntax-case x ()
+      ((_ name flag0 ...)
+       #`(begin .
+           #,(let loop ((ids #'(flag0 ...)) (ofx 0))
+               (if (null? ids) '()
+                   (cons #`(define #,(genid x #'name (car ids)) #,(ash 1 ofx))
+                         (loop (cdr ids) (1+ ofx))))))))))
+  
+(define (set-flag flags flag)
+  (logior flags flag))
+(define (clr-flag flags flag)
+  (logand flags (lognot flag)))
+(define (flag-set? flags flag)
+  (not (zero? (logand flags flag))))
+
+
+;; ============================================================================
+;; info on builtins
+
+(define builtins
+  '("abs" "acos" "any" "atan2" "blkdiag" "cart2sph" "cos" "cosd" "cross"
+    "deg2rad" "diag" "double" "exp" "eye" "false" "find" "flipud"
+    "interp1" "length" "logical" "min" "norm" "ones" "pagemtimes"
+    "permute" "pinv" "rad2deg" "reshape" "sign" "sin" "sind"
+    "size" "sqrt" "squeeze" "struct" "sum" "vecnorm" "zeros"))
+
 
 ;; strategy here
 ;; 1) convert tree into vector of (tag rx ...)
@@ -379,6 +404,40 @@
 ;; ??? and keep a global symbol table w/ uses ???
 ;; remember: beta-reduction would need to relabel all function variables
 
+(gen-flags USE
+           NUM STR SCT HDL OBJ ;; number string struct handle instance
+           INT FLT CPX
+           RK0 RK1 RK2 RK3 RK4 RK5 RK6 RK7)
+
+(define USE-UNKNOWN 0)
+
+;; eval: (put 'string-case 'scheme-indent-function 1)
+(define (fctn-returns name)
+  (string-case name
+    (("length" "size")
+     (list USE-NUM USE-INT))
+    (("abs" "min")
+     (list USE-NUM))
+    (("acos" "asin" "atan2" "cos" "cosd" "deg2rad" "norm"
+      "rad2deg" "sign" "sin" "sind" "sqrt")
+     (list USE-NUM USE-FLT USE-RK0))
+    (("cross")
+     (list USE-NUM USE-FLT USE-RK1))
+    (("ones" "pinv" "zeros")
+     (list USE-NUM USE-FLT USE-RK2))
+    (("struct")
+     (list USE-SCT))
+    (else USE-UNKNOWN)))
+
+(define (fl-join fv ix seed . vl) ;; or #f if they are the same
+  (let ((v0 (vector-ref fv ix)))
+    (let loop ((v1 v0) (vl vl))
+      (if (pair? vl)
+          (loop (set-flag v0 (car vl)) (cdr vl))
+          (cond
+           ((eq? v0 v1) seed)
+           (else (vector-set! fv ix v1) #t))))))
+
 ;; what about
 ;; multiple function calls => overloading
 
@@ -440,43 +499,6 @@
         ((and (string? u) (string=? vyi u)) kt)
         (else kf))))))
 
-
-;; @deffn {Syntax} gen-flags flag-set flag1 flag2 ...
-;; Define a set of variables with name @var{flag-set}-@var{flag1} ....
-;; @end deffn
-(define-syntax gen-flags
-  (lambda (x)
-    (define (genid ctx pfx id)
-      (datum->syntax
-       ctx (symbol-append (syntax->datum pfx) '- (syntax->datum id))))
-    (syntax-case x ()
-      ((_ name flag0 ...)
-       #`(begin .
-           #,(let loop ((ids #'(flag0 ...)) (ofx 0))
-               (if (null? ids) '()
-                   (cons #`(define #,(genid x #'name (car ids)) #,(ash 1 ofx))
-                         (loop (cdr ids) (1+ ofx))))))))))
-  
-(define (set-flag flags flag)
-  (logior flags flag))
-(define (clr-flag flags flag)
-  (logand flags (lognot flag)))
-(define (flag-set? flags flag)
-  (not (zero? (logand flags flag))))
-
-(gen-flags USE
-           NUM STR SYM OBJ
-           INT FLT CPX
-           RK0 RK1 RK2 RK3 RK4 RK5 RK6 RK7)
-
-(define (fl-join fv ix seed . vl) ;; or #f if they are the same
-  (let ((v0 (vector-ref fv ix)))
-    (let loop ((v1 v0) (vl vl))
-      (if (pair? vl)
-          (loop (set-flag v0 (car vl)) (cdr vl))
-          (cond
-           ((eq? v0 v1) seed)
-           (else (vector-set! fv ix v1) #t))))))
 
 (define (tryme vx)
   (let* ((nx (vector-length vx))
