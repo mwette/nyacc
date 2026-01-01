@@ -27,6 +27,9 @@ without any warranty.
           objects (array and alist).  To get cdata objects, use cdata-sel.
         * cdata-set! now accepts scheme arrays (and vectors) for carray and
           alists for cstructs.
+        * Fixes issue#24, empty-structs (struct { };)
+        * Fixes issue#22: buggy cdata-ref/set! with anonymous struct/unions.
+	* Fixes issue#25: attribute-expr w/ math expressions.
 
 2025-XX-XX  V3.01.1
         * lalr.scm(wrap-term/MES): make final return 'terminal

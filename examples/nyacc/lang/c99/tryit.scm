@@ -87,9 +87,11 @@
 (define (parse-string-list . str-l)
   (parse-string (apply string-append str-l)))
 
+#|
 (define (fold p s l)
   (let loop ((s s) (l l))
     (if (null? l) s (loop (p (car l) s) (cdr l)))))
+|#
 
 (define-syntax-rule (pass-if mesg expr)
   (begin
@@ -482,5 +484,49 @@ int foo() {
     (sf "size=~s\n" (ctype-size ct)) 
     (pretty-print-ctype ct)
     #f))
+
+(when #f
+;; typedef struct siginfo {
+;;   union {
+;;     struct {
+;;       int si_signo;
+;;       int si_errno;
+;;       int si_code;
+;;       union __sifields _sifields;
+;;     };
+;;     int _si_pad[128/sizeof(int)];
+;;   };
+;; } siginfo_t;
+  (let* ((ct
+         (name-ctype
+          'siginfo_t
+          (cstruct
+           (list `(#f
+                   ,(cunion
+                     (list `(#f
+                             ,(cstruct
+                               (list `(si_signo ,(cbase 'int))
+                                     `(si_errno ,(cbase 'int))
+                                     `(si_code ,(cbase 'int))
+                                     #;`(_sifields ,union-__sifields))))
+                           `(_si_pad ,(carray (cbase 'int) 32)))))))))
+         (cd (make-cdata ct)))
+    (cdata-ref cd)))
+
+;; issue#25
+(when #f
+  (let* ((code "
+#include <stdint.h>
+struct rseq_cs {
+	/* Version of this structure. */
+	uint32_t version;
+	/* enum rseq_cs_flags */
+	uint32_t flags;
+	uint64_t start_ip;
+	/* Offset from start_ip. */
+	uint64_t post_commit_offset;
+	uint64_t abort_ip;
+} __attribute__((aligned(4 * sizeof(uint64_t))));"))
+    (parse-string code)))
 
 ;; --- last line ---
