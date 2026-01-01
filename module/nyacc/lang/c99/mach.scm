@@ -512,10 +512,9 @@
      (type-name)
      (string-literal)
      (attr-word "(" attr-expr-list ")" ($$ `(attribute ,$1 ,$3)))
-     ;;(constant-expression)
-     (attr-additive-expr)
-     )
+     (attr-additive-expr))
 
+    ;; a bit kludgy but want to minimalize need (see issue#25)
     (attr-additive-expr
      (attr-multiplicative-expr)
      (attr-additive-expr "+" attr-multiplicative-expr ($$ `(add ,$1 ,$3)))
@@ -532,8 +531,6 @@
     (attr-primary-expr
      ($fixed ($$ `(fixed ,$1)))
      (identifier))
-    #|
-    |#
      
     ;; --- declarators
 
