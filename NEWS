@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2025-XX-XX  V3.01.1
+2026-01-01  V3.01.1
 	* lalr.scm(wrap-term/MES): make final return 'terminal 
 	* ffi-help-cd.scm(unwrap-mdecl): use (array-of . ,_1) not (array-of)
 	* added examples/ffi/fuse.ffi
