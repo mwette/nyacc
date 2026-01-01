@@ -641,347 +641,370 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; 268. attribute-expr => type-name
    (lambda ($1 . $rest) $1)
-   ;; 269. attribute-expr => '$fixed
-   (lambda ($1 . $rest) `(fixed ,$1))
-   ;; 270. attribute-expr => string-literal
+   ;; 269. attribute-expr => string-literal
    (lambda ($1 . $rest) $1)
-   ;; 271. attribute-expr => identifier
-   (lambda ($1 . $rest) $1)
-   ;; 272. attribute-expr => attr-word "(" attr-expr-list ")"
+   ;; 270. attribute-expr => attr-word "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(attribute ,$1 ,$3))
-   ;; 273. init-declarator-list => init-declarator-list-1
+   ;; 271. attribute-expr => attr-additive-expr
+   (lambda ($1 . $rest) $1)
+   ;; 272. attr-additive-expr => attr-multiplicative-expr
+   (lambda ($1 . $rest) $1)
+   ;; 273. attr-additive-expr => attr-additive-expr "+" attr-multiplicative-expr
+   (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
+   ;; 274. attr-additive-expr => attr-additive-expr "-" attr-multiplicative-expr
+   (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
+   ;; 275. attr-multiplicative-expr => attr-unary-expr
+   (lambda ($1 . $rest) $1)
+   ;; 276. attr-multiplicative-expr => attr-multiplicative-expr "*" attr-unary-expr
+   (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
+   ;; 277. attr-multiplicative-expr => attr-multiplicative-expr "/" attr-unary-expr
+   (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
+   ;; 278. attr-multiplicative-expr => attr-multiplicative-expr "%" attr-unary-expr
+   (lambda ($3 $2 $1 . $rest) `(mod ,$1 ,$3))
+   ;; 279. attr-unary-expr => attr-primary-expr
+   (lambda ($1 . $rest) $1)
+   ;; 280. attr-unary-expr => "sizeof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(sizeof-type ,$3))
+   ;; 281. attr-unary-expr => "_Alignof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(alignof-type ,$3))
+   ;; 282. attr-primary-expr => '$fixed
+   (lambda ($1 . $rest) `(fixed ,$1))
+   ;; 283. attr-primary-expr => identifier
+   (lambda ($1 . $rest) $1)
+   ;; 284. init-declarator-list => init-declarator-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 274. init-declarator-list-1 => init-declarator
+   ;; 285. init-declarator-list-1 => init-declarator
    (lambda ($1 . $rest)
      (make-tl 'init-declr-list $1))
-   ;; 275. init-declarator-list-1 => init-declarator-list-1 "," init-declarator
+   ;; 286. init-declarator-list-1 => init-declarator-list-1 "," init-declarator
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 276. init-declarator-list-1 => init-declarator-list-1 "," attribute-specif...
+   ;; 287. init-declarator-list-1 => init-declarator-list-1 "," attribute-specif...
    (lambda ($4 $3 $2 $1 . $rest)
      (tl-append $1 $3 $4))
-   ;; 277. init-declarator => init-declarator-1
+   ;; 288. init-declarator => init-declarator-1
    (lambda ($1 . $rest) (process-declr $1))
-   ;; 278. init-declarator-1 => declarator
+   ;; 289. init-declarator-1 => declarator
    (lambda ($1 . $rest) `(init-declr ,$1))
-   ;; 279. init-declarator-1 => declarator "=" initializer
+   ;; 290. init-declarator-1 => declarator "=" initializer
    (lambda ($3 $2 $1 . $rest) `(init-declr ,$1 ,$3))
-   ;; 280. init-declarator-1 => declarator asm-expression
+   ;; 291. init-declarator-1 => declarator asm-expression
    (lambda ($2 $1 . $rest) `(init-declr ,$1 ,$2))
-   ;; 281. init-declarator-1 => declarator asm-expression "=" initializer
+   ;; 292. init-declarator-1 => declarator asm-expression "=" initializer
    (lambda ($4 $3 $2 $1 . $rest)
      `(init-declr ,$1 ,$2 ,$4))
-   ;; 282. init-declarator-1 => declarator attribute-specifiers
+   ;; 293. init-declarator-1 => declarator attribute-specifiers
    (lambda ($2 $1 . $rest) `(init-declr ,$1 ,$2))
-   ;; 283. init-declarator-1 => declarator attribute-specifiers "=" initializer
+   ;; 294. init-declarator-1 => declarator attribute-specifiers "=" initializer
    (lambda ($4 $3 $2 $1 . $rest)
      `(init-declr ,$1 ,$2 ,$4))
-   ;; 284. init-declarator-1 => declarator asm-expression attribute-specifiers
+   ;; 295. init-declarator-1 => declarator asm-expression attribute-specifiers
    (lambda ($3 $2 $1 . $rest)
      `(init-declr ,$1 ,$2 ,$3))
-   ;; 285. declarator => pointer direct-declarator
+   ;; 296. declarator => pointer direct-declarator
    (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
-   ;; 286. declarator => direct-declarator
+   ;; 297. declarator => direct-declarator
    (lambda ($1 . $rest) $1)
-   ;; 287. pointer => "*" type-qualifier-list pointer
+   ;; 298. pointer => "*" type-qualifier-list pointer
    (lambda ($3 $2 $1 . $rest) `(pointer ,$2 ,$3))
-   ;; 288. pointer => "*" type-qualifier-list
+   ;; 299. pointer => "*" type-qualifier-list
    (lambda ($2 $1 . $rest) `(pointer ,$2))
-   ;; 289. pointer => "*" attribute-specifiers pointer
+   ;; 300. pointer => "*" attribute-specifiers pointer
    (lambda ($3 $2 $1 . $rest) `(pointer ,$3))
-   ;; 290. pointer => "*" attribute-specifiers
+   ;; 301. pointer => "*" attribute-specifiers
    (lambda ($2 $1 . $rest) '(pointer))
-   ;; 291. pointer => "*" pointer
+   ;; 302. pointer => "*" pointer
    (lambda ($2 $1 . $rest) `(pointer ,$2))
-   ;; 292. pointer => "*"
+   ;; 303. pointer => "*"
    (lambda ($1 . $rest) '(pointer))
-   ;; 293. direct-declarator => identifier
+   ;; 304. direct-declarator => identifier
    (lambda ($1 . $rest) $1)
-   ;; 294. direct-declarator => "(" declarator ")"
+   ;; 305. direct-declarator => "(" declarator ")"
    (lambda ($3 $2 $1 . $rest) $2)
-   ;; 295. direct-declarator => "(" attribute-specifier declarator ")"
+   ;; 306. direct-declarator => "(" attribute-specifier declarator ")"
    (lambda ($4 $3 $2 $1 . $rest) $3)
-   ;; 296. direct-declarator => direct-declarator "[" type-qualifier-list assign...
+   ;; 307. direct-declarator => direct-declarator "[" type-qualifier-list assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 ,$4))
-   ;; 297. direct-declarator => direct-declarator "[" type-qualifier-list "]"
+   ;; 308. direct-declarator => direct-declarator "[" type-qualifier-list "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3))
-   ;; 298. direct-declarator => direct-declarator "[" assignment-expression "]"
+   ;; 309. direct-declarator => direct-declarator "[" assignment-expression "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3))
-   ;; 299. direct-declarator => direct-declarator "[" "]"
+   ;; 310. direct-declarator => direct-declarator "[" "]"
    (lambda ($3 $2 $1 . $rest) `(ary-declr ,$1))
-   ;; 300. direct-declarator => direct-declarator "[" "static" type-qualifier-li...
+   ;; 311. direct-declarator => direct-declarator "[" "static" type-qualifier-li...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(ary-declr (@ (storage "static")) ,$1 ,$4 ,$5))
-   ;; 301. direct-declarator => direct-declarator "[" "static" assignment-expres...
+   ;; 312. direct-declarator => direct-declarator "[" "static" assignment-expres...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr (@ (storage "static")) ,$1 ,$4))
-   ;; 302. direct-declarator => direct-declarator "[" type-qualifier-list "stati...
+   ;; 313. direct-declarator => direct-declarator "[" type-qualifier-list "stati...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(ary-declr (@ (storage "static")) ,$1 ,$3 ,$5))
-   ;; 303. direct-declarator => direct-declarator "[" type-qualifier-list "*" "]"
+   ;; 314. direct-declarator => direct-declarator "[" type-qualifier-list "*" "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 (var-len)))
-   ;; 304. direct-declarator => direct-declarator "[" "*" "]"
+   ;; 315. direct-declarator => direct-declarator "[" "*" "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 (var-len)))
-   ;; 305. direct-declarator => direct-declarator "(" parameter-type-list ")"
+   ;; 316. direct-declarator => direct-declarator "(" parameter-type-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ftn-declr ,$1 ,$3))
-   ;; 306. direct-declarator => direct-declarator "(" identifier-list ")"
+   ;; 317. direct-declarator => direct-declarator "(" identifier-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ftn-declr ,$1 ,$3))
-   ;; 307. direct-declarator => direct-declarator "(" ")"
+   ;; 318. direct-declarator => direct-declarator "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(ftn-declr ,$1 (param-list)))
-   ;; 308. type-qualifier-list => type-qualifier-list-1
+   ;; 319. type-qualifier-list => type-qualifier-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 309. type-qualifier-list-1 => type-qualifier
+   ;; 320. type-qualifier-list-1 => type-qualifier
    (lambda ($1 . $rest)
      (make-tl 'type-qual-list $1))
-   ;; 310. type-qualifier-list-1 => type-qualifier-list-1 type-qualifier
+   ;; 321. type-qualifier-list-1 => type-qualifier-list-1 type-qualifier
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 311. parameter-type-list => parameter-list
+   ;; 322. parameter-type-list => parameter-list
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 312. parameter-type-list => parameter-list "," "..."
+   ;; 323. parameter-type-list => parameter-list "," "..."
    (lambda ($3 $2 $1 . $rest)
      (tl->list (tl-append $1 '(ellipsis))))
-   ;; 313. parameter-list => parameter-declaration
+   ;; 324. parameter-list => parameter-declaration
    (lambda ($1 . $rest) (make-tl 'param-list $1))
-   ;; 314. parameter-list => parameter-list "," parameter-declaration
+   ;; 325. parameter-list => parameter-list "," parameter-declaration
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 315. parameter-declaration => declaration-specifiers declarator
+   ;; 326. parameter-declaration => declaration-specifiers declarator
    (lambda ($2 $1 . $rest)
      `(param-decl ,$1 (param-declr ,$2)))
-   ;; 316. parameter-declaration => declaration-specifiers abstract-declarator
+   ;; 327. parameter-declaration => declaration-specifiers abstract-declarator
    (lambda ($2 $1 . $rest)
      `(param-decl ,$1 (param-declr ,$2)))
-   ;; 317. parameter-declaration => declaration-specifiers
+   ;; 328. parameter-declaration => declaration-specifiers
    (lambda ($1 . $rest) `(param-decl ,$1))
-   ;; 318. parameter-declaration => declaration-specifiers declarator attribute-...
+   ;; 329. parameter-declaration => declaration-specifiers declarator attribute-...
    (lambda ($3 $2 $1 . $rest)
      `(param-decl ,$1 (param-declr ,$2)))
-   ;; 319. identifier-list => identifier-list-1
+   ;; 330. identifier-list => identifier-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 320. identifier-list-1 => identifier
+   ;; 331. identifier-list-1 => identifier
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
-   ;; 321. identifier-list-1 => identifier-list-1 "," identifier
+   ;; 332. identifier-list-1 => identifier-list-1 "," identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 322. type-name => specifier-qualifier-list/no-attr abstract-declarator
+   ;; 333. type-name => specifier-qualifier-list/no-attr abstract-declarator
    (lambda ($2 $1 . $rest) `(type-name ,$1 ,$2))
-   ;; 323. type-name => specifier-qualifier-list/no-attr
+   ;; 334. type-name => specifier-qualifier-list/no-attr
    (lambda ($1 . $rest) `(type-name ,$1))
-   ;; 324. abstract-declarator => pointer direct-abstract-declarator
+   ;; 335. abstract-declarator => pointer direct-abstract-declarator
    (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
-   ;; 325. abstract-declarator => pointer
+   ;; 336. abstract-declarator => pointer
    (lambda ($1 . $rest) `(abs-ptr-declr ,$1))
-   ;; 326. abstract-declarator => direct-abstract-declarator
+   ;; 337. abstract-declarator => direct-abstract-declarator
    (lambda ($1 . $rest) $1)
-   ;; 327. direct-abstract-declarator => "(" abstract-declarator ")"
+   ;; 338. direct-abstract-declarator => "(" abstract-declarator ")"
    (lambda ($3 $2 $1 . $rest) $2)
-   ;; 328. direct-abstract-declarator => direct-abstract-declarator "(" paramete...
+   ;; 339. direct-abstract-declarator => direct-abstract-declarator "(" paramete...
    (lambda ($4 $3 $2 $1 . $rest)
      `(ftn-declr ,$1 ,$3))
-   ;; 329. direct-abstract-declarator => direct-abstract-declarator "(" ")"
+   ;; 340. direct-abstract-declarator => direct-abstract-declarator "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(ftn-declr ,$1 (param-list)))
-   ;; 330. direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
+   ;; 341. direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 ,$4))
-   ;; 331. direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
+   ;; 342. direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3))
-   ;; 332. direct-abstract-declarator => direct-abstract-declarator "[" assignme...
+   ;; 343. direct-abstract-declarator => direct-abstract-declarator "[" assignme...
    (lambda ($4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3))
-   ;; 333. direct-abstract-declarator => direct-abstract-declarator "[" "]"
+   ;; 344. direct-abstract-declarator => direct-abstract-declarator "[" "]"
    (lambda ($3 $2 $1 . $rest) `(ary-declr ,$1))
-   ;; 334. direct-abstract-declarator => direct-abstract-declarator "[" "static"...
+   ;; 345. direct-abstract-declarator => direct-abstract-declarator "[" "static"...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(ary-declr
         ,$1
         ,(tl->list (tl-insert $4 '(stor-spec (static))))
         ,$5))
-   ;; 335. direct-abstract-declarator => direct-abstract-declarator "[" "static"...
+   ;; 346. direct-abstract-declarator => direct-abstract-declarator "[" "static"...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr
         ,$1
         ,(tl->list (tl-insert $4 '(stor-spec (static))))))
-   ;; 336. direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
+   ;; 347. direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(ary-declr
         ,$1
         ,(tl->list (tl-insert $3 '(stor-spec (static))))
         ,$5))
-   ;; 337. direct-abstract-declarator => direct-abstract-declarator "[" "*" "]"
+   ;; 348. direct-abstract-declarator => direct-abstract-declarator "[" "*" "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(star-ary-declr ,$1))
-   ;; 338. direct-abstract-declarator => "(" parameter-type-list ")"
+   ;; 349. direct-abstract-declarator => "(" parameter-type-list ")"
    (lambda ($3 $2 $1 . $rest) `(abs-ftn-declr ,$2))
-   ;; 339. direct-abstract-declarator => "(" ")"
+   ;; 350. direct-abstract-declarator => "(" ")"
    (lambda ($2 $1 . $rest)
      '(abs-ftn-declr (param-list)))
-   ;; 340. direct-abstract-declarator => "[" type-qualifier-list assignment-expr...
+   ;; 351. direct-abstract-declarator => "[" type-qualifier-list assignment-expr...
    (lambda ($4 $3 $2 $1 . $rest)
      `(abs-ary-declr ,$2 ,$3))
-   ;; 341. direct-abstract-declarator => "[" type-qualifier-list "]"
+   ;; 352. direct-abstract-declarator => "[" type-qualifier-list "]"
    (lambda ($3 $2 $1 . $rest) `(abs-ary-declr ,$2))
-   ;; 342. direct-abstract-declarator => "[" assignment-expression "]"
+   ;; 353. direct-abstract-declarator => "[" assignment-expression "]"
    (lambda ($3 $2 $1 . $rest) `(abs-ary-declr ,$2))
-   ;; 343. direct-abstract-declarator => "[" "]"
+   ;; 354. direct-abstract-declarator => "[" "]"
    (lambda ($2 $1 . $rest) `(abs-ary-declr))
-   ;; 344. direct-abstract-declarator => "[" "static" type-qualifier-list assign...
+   ;; 355. direct-abstract-declarator => "[" "static" type-qualifier-list assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(abs-ary-declr
         ,(tl->list (tl-insert $3 '(stor-spec (static))))
         ,$4))
-   ;; 345. direct-abstract-declarator => "[" "static" type-qualifier-list "]"
+   ;; 356. direct-abstract-declarator => "[" "static" type-qualifier-list "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(abs-ary-declr
         ,(tl->list (tl-insert $3 '(stor-spec (static))))))
-   ;; 346. direct-abstract-declarator => "[" type-qualifier-list "static" assign...
+   ;; 357. direct-abstract-declarator => "[" type-qualifier-list "static" assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(abs-ary-declr
         ,(tl->list (tl-insert $2 '(stor-spec (static))))
         ,$4))
-   ;; 347. direct-abstract-declarator => "[" "*" "]"
+   ;; 358. direct-abstract-declarator => "[" "*" "]"
    (lambda ($3 $2 $1 . $rest) '(abs-star-ary-declr))
-   ;; 348. typedef-name => 'typename
+   ;; 359. typedef-name => 'typename
    (lambda ($1 . $rest) `(typename ,$1))
-   ;; 349. initializer => assignment-expression
+   ;; 360. initializer => assignment-expression
    (lambda ($1 . $rest) `(initzer ,$1))
-   ;; 350. initializer => "{" initializer-list "}"
+   ;; 361. initializer => "{" initializer-list "}"
    (lambda ($3 $2 $1 . $rest)
      `(initzer ,(tl->list $2)))
-   ;; 351. initializer => "{" initializer-list "," "}"
+   ;; 362. initializer => "{" initializer-list "," "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(initzer ,(tl->list $2)))
-   ;; 352. initializer-list => designation initializer
+   ;; 363. initializer-list => designation initializer
    (lambda ($2 $1 . $rest)
      (make-tl 'initzer-list $1 $2))
-   ;; 353. initializer-list => initializer
+   ;; 364. initializer-list => initializer
    (lambda ($1 . $rest) (make-tl 'initzer-list $1))
-   ;; 354. initializer-list => initializer-list "," designation initializer
+   ;; 365. initializer-list => initializer-list "," designation initializer
    (lambda ($4 $3 $2 $1 . $rest)
      (tl-append $1 $3 $4))
-   ;; 355. initializer-list => initializer-list "," initializer
+   ;; 366. initializer-list => initializer-list "," initializer
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 356. designation => designator-list "="
+   ;; 367. designation => designator-list "="
    (lambda ($2 $1 . $rest) `(desig ,$1))
-   ;; 357. designator-list => designator
+   ;; 368. designator-list => designator
    (lambda ($1 . $rest) (make-tl 'desgr-list $1))
-   ;; 358. designator-list => designator-list designator
+   ;; 369. designator-list => designator-list designator
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 359. designator => "[" constant-expression "]"
+   ;; 370. designator => "[" constant-expression "]"
    (lambda ($3 $2 $1 . $rest) `(array-dsgr ,$2))
-   ;; 360. designator => "." identifier
+   ;; 371. designator => "." identifier
    (lambda ($2 $1 . $rest) `(sel-dsgr ,$2))
-   ;; 361. statement => labeled-statement
+   ;; 372. statement => labeled-statement
    (lambda ($1 . $rest) $1)
-   ;; 362. statement => compound-statement
+   ;; 373. statement => compound-statement
    (lambda ($1 . $rest) $1)
-   ;; 363. statement => expression-statement
+   ;; 374. statement => expression-statement
    (lambda ($1 . $rest) $1)
-   ;; 364. statement => selection-statement
+   ;; 375. statement => selection-statement
    (lambda ($1 . $rest) $1)
-   ;; 365. statement => iteration-statement
+   ;; 376. statement => iteration-statement
    (lambda ($1 . $rest) $1)
-   ;; 366. statement => jump-statement
+   ;; 377. statement => jump-statement
    (lambda ($1 . $rest) $1)
-   ;; 367. statement => asm-statement
+   ;; 378. statement => asm-statement
    (lambda ($1 . $rest) $1)
-   ;; 368. statement => pragma
+   ;; 379. statement => pragma
    (lambda ($1 . $rest) $1)
-   ;; 369. statement => cpp-statement
+   ;; 380. statement => cpp-statement
    (lambda ($1 . $rest) $1)
-   ;; 370. labeled-statement => identifier ":" statement
+   ;; 381. labeled-statement => identifier ":" statement
    (lambda ($3 $2 $1 . $rest)
      `(labeled-stmt ,$1 ,$3))
-   ;; 371. labeled-statement => identifier ":" attribute-specifier statement
+   ;; 382. labeled-statement => identifier ":" attribute-specifier statement
    (lambda ($4 $3 $2 $1 . $rest)
      `(labeled-stmt ,$1 ,$4))
-   ;; 372. labeled-statement => "case" constant-expression ":" statement
+   ;; 383. labeled-statement => "case" constant-expression ":" statement
    (lambda ($4 $3 $2 $1 . $rest) `(case ,$2 ,$4))
-   ;; 373. labeled-statement => "default" ":" statement
+   ;; 384. labeled-statement => "default" ":" statement
    (lambda ($3 $2 $1 . $rest) `(default ,$3))
-   ;; 374. compound-statement => "{" $P3 block-item-list $P4 "}"
+   ;; 385. compound-statement => "{" $P3 block-item-list $P4 "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(compd-stmt ,(tl->list $3)))
-   ;; 375. compound-statement => "{" "}"
+   ;; 386. compound-statement => "{" "}"
    (lambda ($2 $1 . $rest)
      `(compd-stmt (block-item-list)))
-   ;; 376. $P3 => 
+   ;; 387. $P3 => 
    (lambda ($1 . $rest) (cpi-push))
-   ;; 377. $P4 => 
+   ;; 388. $P4 => 
    (lambda ($3 $2 $1 . $rest) (cpi-pop))
-   ;; 378. block-item-list => block-item
+   ;; 389. block-item-list => block-item
    (lambda ($1 . $rest)
      (make-tl 'block-item-list $1))
-   ;; 379. block-item-list => block-item-list block-item
+   ;; 390. block-item-list => block-item-list block-item
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 380. block-item => declaration
+   ;; 391. block-item => declaration
    (lambda ($1 . $rest) $1)
-   ;; 381. block-item => statement
+   ;; 392. block-item => statement
    (lambda ($1 . $rest) $1)
-   ;; 382. expression-statement => expression ";"
+   ;; 393. expression-statement => expression ";"
    (lambda ($2 $1 . $rest) `(expr-stmt ,$1))
-   ;; 383. expression-statement => ";"
+   ;; 394. expression-statement => ";"
    (lambda ($1 . $rest) '(expr-stmt))
-   ;; 384. selection-statement => "if" "(" expression ")" statement
+   ;; 395. selection-statement => "if" "(" expression ")" statement
    (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$3 ,$5))
-   ;; 385. selection-statement => "if" "(" expression ")" statement "else" state...
+   ;; 396. selection-statement => "if" "(" expression ")" statement "else" state...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$3 ,$5 ,$7))
-   ;; 386. selection-statement => "switch" "(" expression ")" statement
+   ;; 397. selection-statement => "switch" "(" expression ")" statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(switch ,$3 ,$5))
-   ;; 387. iteration-statement => "while" "(" expression ")" statement
+   ;; 398. iteration-statement => "while" "(" expression ")" statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$3 ,$5))
-   ;; 388. iteration-statement => "do" statement "while" "(" expression ")" ";"
+   ;; 399. iteration-statement => "do" statement "while" "(" expression ")" ";"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(do-while ,$2 ,$5))
-   ;; 389. iteration-statement => "for" "(" initial-clause opt-expression ";" op...
+   ;; 400. iteration-statement => "for" "(" initial-clause opt-expression ";" op...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$3 ,$4 ,$6 ,$8))
-   ;; 390. initial-clause => expression ";"
+   ;; 401. initial-clause => expression ";"
    (lambda ($2 $1 . $rest) $1)
-   ;; 391. initial-clause => ";"
+   ;; 402. initial-clause => ";"
    (lambda ($1 . $rest) '(expr))
-   ;; 392. initial-clause => declaration
+   ;; 403. initial-clause => declaration
    (lambda ($1 . $rest) $1)
-   ;; 393. opt-expression => 
+   ;; 404. opt-expression => 
    (lambda $rest '(expr))
-   ;; 394. opt-expression => expression
+   ;; 405. opt-expression => expression
    (lambda ($1 . $rest) $1)
-   ;; 395. jump-statement => "goto" identifier ";"
+   ;; 406. jump-statement => "goto" identifier ";"
    (lambda ($3 $2 $1 . $rest) `(goto ,$2))
-   ;; 396. jump-statement => "continue" ";"
+   ;; 407. jump-statement => "continue" ";"
    (lambda ($2 $1 . $rest) '(continue))
-   ;; 397. jump-statement => "break" ";"
+   ;; 408. jump-statement => "break" ";"
    (lambda ($2 $1 . $rest) '(break))
-   ;; 398. jump-statement => "return" expression ";"
+   ;; 409. jump-statement => "return" expression ";"
    (lambda ($3 $2 $1 . $rest) `(return ,$2))
-   ;; 399. jump-statement => "return" ";"
+   ;; 410. jump-statement => "return" ";"
    (lambda ($2 $1 . $rest) `(return (expr)))
-   ;; 400. asm-statement => asm-expression ";"
+   ;; 411. asm-statement => asm-expression ";"
    (lambda ($2 $1 . $rest) `(expr-stmt ,$1))
-   ;; 401. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal ")"
+   ;; 412. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(asm-expr (@ (extension "GNUC") ,@$2) ,$4))
-   ;; 402. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
+   ;; 413. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5))
-   ;; 403. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
+   ;; 414. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC") ,@$2)
         ,$4
         ,$5
         ,$6))
-   ;; 404. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
+   ;; 415. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC") ,@$2)
@@ -989,7 +1012,7 @@
         ,$5
         ,$6
         ,$7))
-   ;; 405. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
+   ;; 416. asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC") ,@$2)
@@ -998,127 +1021,127 @@
         ,$6
         ,$7
         ,$8))
-   ;; 406. opt-asm-qualifiers => 
+   ;; 417. opt-asm-qualifiers => 
    (lambda $rest (list))
-   ;; 407. opt-asm-qualifiers => "__volatile__"
+   ;; 418. opt-asm-qualifiers => "__volatile__"
    (lambda ($1 . $rest) (list '(volatile "true")))
-   ;; 408. opt-asm-qualifiers => "__goto__"
+   ;; 419. opt-asm-qualifiers => "__goto__"
    (lambda ($1 . $rest) (list '(goto "true")))
-   ;; 409. opt-asm-qualifiers => "volatile"
+   ;; 420. opt-asm-qualifiers => "volatile"
    (lambda ($1 . $rest) (list '(volatile "true")))
-   ;; 410. opt-asm-qualifiers => "goto"
+   ;; 421. opt-asm-qualifiers => "goto"
    (lambda ($1 . $rest) (list '(goto "true")))
-   ;; 411. asm-outputs => asm-outputs-1
+   ;; 422. asm-outputs => asm-outputs-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 412. asm-outputs-1 => ":"
+   ;; 423. asm-outputs-1 => ":"
    (lambda ($1 . $rest) (make-tl 'asm-outputs))
-   ;; 413. asm-outputs-1 => ":" asm-output
+   ;; 424. asm-outputs-1 => ":" asm-output
    (lambda ($2 $1 . $rest)
      (make-tl 'asm-outputs $2))
-   ;; 414. asm-outputs-1 => asm-outputs-1 "," asm-output
+   ;; 425. asm-outputs-1 => asm-outputs-1 "," asm-output
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 415. asm-output => string-literal "(" identifier ")"
+   ;; 426. asm-output => string-literal "(" identifier ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(asm-operand ,$1 ,$3))
-   ;; 416. asm-output => "[" identifier "]" string-literal "(" identifier ")"
+   ;; 427. asm-output => "[" identifier "]" string-literal "(" identifier ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-operand ,$2 ,$4 ,$6))
-   ;; 417. asm-inputs => asm-inputs-1
+   ;; 428. asm-inputs => asm-inputs-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 418. asm-inputs-1 => ":"
+   ;; 429. asm-inputs-1 => ":"
    (lambda ($1 . $rest) (make-tl 'asm-inputs))
-   ;; 419. asm-inputs-1 => ":" asm-input
+   ;; 430. asm-inputs-1 => ":" asm-input
    (lambda ($2 $1 . $rest) (make-tl 'asm-inputs $2))
-   ;; 420. asm-inputs-1 => asm-inputs-1 "," asm-input
+   ;; 431. asm-inputs-1 => asm-inputs-1 "," asm-input
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 421. asm-input => string-literal "(" expression ")"
+   ;; 432. asm-input => string-literal "(" expression ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(asm-operand ,$1 ,$3))
-   ;; 422. asm-input => "[" identifier "]" string-literal "(" expression ")"
+   ;; 433. asm-input => "[" identifier "]" string-literal "(" expression ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-operand ,$2 ,$4 ,$6))
-   ;; 423. asm-clobbers => asm-clobbers-1
+   ;; 434. asm-clobbers => asm-clobbers-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 424. asm-clobbers-1 => ":"
+   ;; 435. asm-clobbers-1 => ":"
    (lambda ($1 . $rest) (make-tl 'asm-clobbers))
-   ;; 425. asm-clobbers-1 => ":" string-literal
+   ;; 436. asm-clobbers-1 => ":" string-literal
    (lambda ($2 $1 . $rest)
      (make-tl 'asm-clobbers $2))
-   ;; 426. asm-clobbers-1 => asm-clobbers-1 "," string-literal
+   ;; 437. asm-clobbers-1 => asm-clobbers-1 "," string-literal
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 427. asm-gotos => asm-gotos-1
+   ;; 438. asm-gotos => asm-gotos-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 428. asm-gotos-1 => ":"
+   ;; 439. asm-gotos-1 => ":"
    (lambda ($1 . $rest) (make-tl 'asm-gotos))
-   ;; 429. asm-gotos-1 => ":" identifier
+   ;; 440. asm-gotos-1 => ":" identifier
    (lambda ($2 $1 . $rest) (make-tl 'asm-gotos $2))
-   ;; 430. asm-gotos-1 => asm-gotos-1 "," identifier
+   ;; 441. asm-gotos-1 => asm-gotos-1 "," identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 431. translation-unit => external-declaration-list
+   ;; 442. translation-unit => external-declaration-list
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 432. external-declaration-list => 
+   ;; 443. external-declaration-list => 
    (lambda $rest (make-tl 'trans-unit))
-   ;; 433. external-declaration-list => external-declaration-list external-decla...
+   ;; 444. external-declaration-list => external-declaration-list external-decla...
    (lambda ($2 $1 . $rest)
      (if (eqv? (sx-tag $2) 'extern-block)
        (tl-extend $1 (sx-tail $2 1))
        (tl-append $1 $2)))
-   ;; 434. external-declaration => function-definition
+   ;; 445. external-declaration => function-definition
    (lambda ($1 . $rest) $1)
-   ;; 435. external-declaration => declaration
+   ;; 446. external-declaration => declaration
    (lambda ($1 . $rest) $1)
-   ;; 436. external-declaration => lone-comment
+   ;; 447. external-declaration => lone-comment
    (lambda ($1 . $rest) $1)
-   ;; 437. external-declaration => cpp-statement
+   ;; 448. external-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
-   ;; 438. external-declaration => pragma
+   ;; 449. external-declaration => pragma
    (lambda ($1 . $rest) $1)
-   ;; 439. external-declaration => "extern" '$string "{" $P5 external-declaratio...
+   ;; 450. external-declaration => "extern" '$string "{" $P5 external-declaratio...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(extern-block
         (extern-begin ,$2)
         ,@(sx-tail (tl->list $5) 1)
         (extern-end)))
-   ;; 440. external-declaration => ";"
+   ;; 451. external-declaration => ";"
    (lambda ($1 . $rest)
      `(decl (@ (extension "GNUC"))))
-   ;; 441. $P5 => 
+   ;; 452. $P5 => 
    (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
-   ;; 442. $P6 => 
+   ;; 453. $P6 => 
    (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
-   ;; 443. function-definition => declaration-specifiers declarator compound-sta...
+   ;; 454. function-definition => declaration-specifiers declarator compound-sta...
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn ,$1 ,$2 ,$3))
-   ;; 444. identifier => '$ident
+   ;; 455. identifier => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; 445. constant => '$fixed
+   ;; 456. constant => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; 446. constant => '$float
+   ;; 457. constant => '$float
    (lambda ($1 . $rest) `(float ,$1))
-   ;; 447. constant => '$chlit
+   ;; 458. constant => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
-   ;; 448. constant => '$chlit/L
+   ;; 459. constant => '$chlit/L
    (lambda ($1 . $rest)
      `(char (@ (type "wchar_t")) ,$1))
-   ;; 449. constant => '$chlit/u
+   ;; 460. constant => '$chlit/u
    (lambda ($1 . $rest)
      `(char (@ (type "char16_t")) ,$1))
-   ;; 450. constant => '$chlit/U
+   ;; 461. constant => '$chlit/U
    (lambda ($1 . $rest)
      `(char (@ (type "char32_t")) ,$1))
-   ;; 451. string-literal => string-literal-1
+   ;; 462. string-literal => string-literal-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 452. string-literal-1 => '$string
+   ;; 463. string-literal-1 => '$string
    (lambda ($1 . $rest) (make-tl 'string $1))
-   ;; 453. string-literal-1 => string-literal-1 '$string
+   ;; 464. string-literal-1 => string-literal-1 '$string
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 454. code-comment => '$code-comm
+   ;; 465. code-comment => '$code-comm
    (lambda ($1 . $rest) `(comment ,$1))
-   ;; 455. lone-comment => '$lone-comm
+   ;; 466. lone-comment => '$lone-comm
    (lambda ($1 . $rest) `(comment ,$1))
-   ;; 456. cpp-statement => 'cpp-stmt
+   ;; 467. cpp-statement => 'cpp-stmt
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
-   ;; 457. pragma => '$pragma
+   ;; 468. pragma => '$pragma
    (lambda ($1 . $rest) `(pragma ,$1))
    ))
 

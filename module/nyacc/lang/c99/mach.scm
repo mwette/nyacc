@@ -504,18 +504,37 @@
 
     (attr-expr-list
      (attr-expr-list-1 ($$ (tl->list $1))))
-
     (attr-expr-list-1
      (attribute-expr ($$ (make-tl 'attr-expr-list $1)))
      (attr-expr-list-1 "," attribute-expr ($$ (tl-append $1 $3))))
 
     (attribute-expr
      (type-name)
-     ($fixed ($$ `(fixed ,$1)))
      (string-literal)
-     (identifier)
-     (attr-word "(" attr-expr-list ")" ($$ `(attribute ,$1 ,$3)))) ;; ???
+     (attr-word "(" attr-expr-list ")" ($$ `(attribute ,$1 ,$3)))
+     ;;(constant-expression)
+     (attr-additive-expr)
+     )
 
+    (attr-additive-expr
+     (attr-multiplicative-expr)
+     (attr-additive-expr "+" attr-multiplicative-expr ($$ `(add ,$1 ,$3)))
+     (attr-additive-expr "-" attr-multiplicative-expr ($$ `(sub ,$1 ,$3))))
+    (attr-multiplicative-expr
+     (attr-unary-expr)
+     (attr-multiplicative-expr "*" attr-unary-expr ($$ `(mul ,$1 ,$3)))
+     (attr-multiplicative-expr "/" attr-unary-expr ($$ `(div ,$1 ,$3)))
+     (attr-multiplicative-expr "%" attr-unary-expr ($$ `(mod ,$1 ,$3))))
+    (attr-unary-expr
+     (attr-primary-expr)
+     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
+     ("_Alignof" "(" type-name ")" ($$ `(alignof-type ,$3))))
+    (attr-primary-expr
+     ($fixed ($$ `(fixed ,$1)))
+     (identifier))
+    #|
+    |#
+     
     ;; --- declarators
 
     (init-declarator-list		; S 6.7

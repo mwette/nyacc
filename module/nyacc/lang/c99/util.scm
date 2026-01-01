@@ -274,7 +274,13 @@
       ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
       ((fixed-type ,name) name)
       ((float-type ,name) name)
-      (,_ (sferr "c99/util: missed ~S\n" spec) "MISSED")))
+      ;;((mul ,lt ,rt) (c99
+      (,_ (let* ((sp (source-properties spec))
+                 (fn (assq-ref sp 'filename))
+                 (ln (assq-ref sp 'line))
+                 (wm "warning: c99 attribute not processed"))
+            (if sp (sferr "~a at ~a:~a\n" wm fn ln) (sferr "~a: ~s\n" wm spec))
+            "MISSED"))))
   (if (null? attr-list) '()
       `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
 
