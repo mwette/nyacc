@@ -99,6 +99,8 @@
             cdata-kind cdata& cdata* cdata-sel
             cdata*-sel cdata*-ref cdata&-sel cdata&-ref
             ctype-sel make-cdata-getter make-cdata-setter
+            may-be-make-cdata-accessor
+            %make-cdata
             ctype->ffi
             ;;
             NULL NULL?
@@ -504,8 +506,8 @@
   ;; 5) bitfield, no name, positive size => padding, not transferred
   ;; cases 4&5 can be combined easily, I think
   (let loop ((cfl '()) (ssz 0) (sal 0) (sfl fields))
-    ;; cfl: C field list; ssz: struct size;
-    ;; sal:struct alignment; sfl: scheme fields
+    ;; cfl: C field list; ssz: struct size (bytes rational)
+    ;; sal: struct alignment (bytes); sfl: scheme fields
     (if (pair? sfl)
         (match (car sfl)
 
@@ -1428,6 +1430,49 @@
       (lambda (bv ix ct) (Xcdata-set! bv ix ct value)))))
 
 
+;; @deffn {Procedure} make-cdata-accessor sel [offset]
+;; This procedure is similar to @code{make-cdata-getter} and
+;; @code{make-cdata-setter} but the resulting procedure accepts
+;; no tag sequence.  Called with one arg, it's a getter;
+;; called with two args, it's a setter.
+;; @example
+;; > (define ct (cstruct ...))
+;; > (define sel (ctype-sel ct 0 'b 'y '* 3 'm))
+;; > (define *foo* (make-cdata-accessor sel))
+;; > (define cd (make-cdata ct))
+;; > (*foo* cd 42) ; set value
+;; > (*foo* cd)    ; get value
+;; $1 = 42
+;; @end example
+;; @end deffn
+(define* (may-be-make-cdata-accessor sel #:optional (offset 0))
+  "- Procedure: make-cdata-accessor sel [offset]
+     This procedure is similar to ‘make-cdata-getter’ and
+     ‘make-cdata-setter’ but the resulting procedure accepts no tag
+     sequence.  Called with one arg, it's a getter; called with two
+     args, it's a setter.
+          > (define ct (cstruct ...))
+          > (define sel (ctype-sel ct 0 'b 'y '* 3 'm))
+          > (define *foo* (make-cdata-accessor sel))
+          > (define cd (make-cdata ct))
+          > (*foo* cd 42) ; set value
+          > (*foo* cd)    ; get value
+          $1 = 42"
+  (unless (and (pair? sel) (pair? (cdr sel)))
+    (error "make-cdata-getter: bad SEL arg"))
+  (unless (integer? offset)
+    (error "make-cdata-setter: bad OFFSET arg"))
+  (case-lambda
+    ((data) 
+     (assert-cdata 'make-cdata-accessor data)
+     (call-with-values (lambda () (Xloop sel offset data '()))
+       Xcdata-ref))
+    ((data value)
+     (assert-cdata 'make-cdata-accessor data)
+     (call-with-values (lambda () (Xloop sel offset data '()))
+      (lambda (bv ix ct) (Xcdata-set! bv ix ct value))))))
+
+
 ;; @deffn {Procedure} pretty-print-ctype type [port] [options]
 ;; Converts type to a literal tree and uses Guile's pretty-print function
 ;; to display it.  The default port is the current output port.
@@ -1480,8 +1525,8 @@
         ((pointer)
          (let* ((type (%cpointer-type info)) (name (ctype-name type)))
            (if (promise? type)
-               `(cpointer (delay (uq ,(or name '_))))
-               `(cpointer (uq ,(or name (cnvt type)))))))
+               `(cpointer (delay (,uq ,(or name '_))))
+               `(cpointer (,uq ,(or name (cnvt type)))))))
         ((array)
          `(carray (,uq ,(cnvt (carray-type info))) ,(carray-length info)))
         ((enum)
