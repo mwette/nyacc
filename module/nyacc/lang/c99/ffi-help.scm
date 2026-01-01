@@ -291,9 +291,7 @@
             (xdecl (expand-typerefs udecl (*udict*) (*defined*)))
             (mdecl (udecl->mdecl (udecl-rem-type-qual xdecl)))
             (type (expand-tail (md-tail mdecl))))
-       (if (and (pair? type) (eq? 'cbitfield (car type)))
-           `(,qq (,(and=> name string->symbol) (,uq ,(cadr type)) ,(caddr type)))
-           `(,qq (,(and=> name string->symbol) (,uq ,type))))))
+       `(,qq (,(and=> name string->symbol) (,uq ,type)))))
    (clean-and-dictize-fields fields)))
 
 ;; Should be processed with canize-enum-def-list first
@@ -400,6 +398,13 @@
         ((cdata? arg) (cdata-ref arg))
         (else (error "type mismatch"))))))
 
+(define (fix-flds fields)
+  (map (lambda (f)
+         (match f
+           (`(,qq (,n (,uq (cbitfield ,t ,s)))) `(,qq (,n (,uq ,t) ,s)))
+           (`(,qq (,n (,uq ,t))) f)))
+       fields))
+
 (define cdata-backend
   (make-fh-backend
    'cdata                               ; name
@@ -412,7 +417,9 @@
    (lambda (type)                       ; pointer
      `(cpointer ,type)) 
    (lambda* (flds #:optional packed)    ; struct
-     (if packed `(cstruct (list ,@flds) #t) `(cstruct (list ,@flds))))
+     (if packed
+         `(cstruct (list ,@(fix-flds flds)) #t)
+         `(cstruct (list ,@(fix-flds flds)))))
    (lambda (type size)                  ; bitfield
      `(cbitfield ,type ,size))
    (lambda (flds)                       ; union
@@ -853,8 +860,14 @@
 ;; Returns (values defined term), where defined is a list of defined
 ;; types, and wrapped is the same, not used. FIXME
 ;; @end deffn
-;; this used to be cnvt-udecl
 (define (udecl->sexp udecl udict defined-lz seed)
+  ;; this used to be cnvt-udecl
+  "- Procedure: udecl->sexp udecl udict defined seed)
+     Given UDECL produce scheme FFI wrappers for C types, C functions,
+     and C variables.  Return updated DEFINED, a string based vhash of
+     types defined.  The list is used used in the conversion
+     subroutines.  Returns (values defined term), where defined is a
+     list of defined types, and wrapped is the same, not used.  FIXME"
 
   (define defined (if (vhash? defined-lz) defined-lz
                       (alist->vhash (map (lambda (n) (cons n #t)) defined-lz))))
@@ -1593,8 +1606,24 @@
 ;; @deffn {Procedure} ccode->sexp string [attrs] => tree
 ;; Convert a snippet of C code to list of scheme forms.
 ;; @example
-;; > (ccode->sexp "double sqrt(doubld);")
-;; $1 =
+;; > (ccode->sexp "double sqrt(double x);")
+;; $1 = (begin
+;;   (define-public sqrt
+;;     (let ((~proc (delay (ffi:pointer->procedure
+;;                           ffi:double
+;;                           (foreign-pointer-search "sqrt")
+;;                           (list ffi:double)))))
+;;       (lambda (x)
+;;         (let ((x (arg->number x))) ((force ~proc) x))))))
+;; > (ccode->sexp "typedef struct { int x; double y; } foo_t;")
+;; $2 = (begin
+;;   (define-public foo_t
+;;     (name-ctype
+;;       'foo_t
+;;       (cstruct
+;;         (list `(x ,(cbase 'int)) `(y ,(cbase 'double))))))
+;;   (define-public foo_t*
+;;     (name-ctype 'foo_t* (cpointer foo_t))))
 ;; @end example
 ;; @end deffn
 (define* (ccode->sexp code #:optional attrs)
