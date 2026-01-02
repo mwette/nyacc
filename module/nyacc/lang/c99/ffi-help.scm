@@ -1557,7 +1557,7 @@
 
     ;; Convert and output foreign declarations.
     (call-with-values
-        (lambda () (process-decls ffi-decls udecls init-defd #:declf declf))
+        (lambda () (process-decls ffi-decls udict init-defd #:declf declf))
       (lambda (defined seed)
         ;; Set ffimod-defined for including, but removed built-in types.
         (set! ffimod-defined
