@@ -105,7 +105,7 @@
   (cond
    (CC CC)
    ((getenv "CC") => identity)
-   (else "gcc")))
+   (else "gcc -std=gnu99")))
 
 ;; @deffn {Procedure} convert-def line
 ;; Convert string in gcc cpp defs to pair of strings for term and replacement.
@@ -131,7 +131,7 @@
 ;; @deffn {Procedure} get-sys-cpp-defs [args] [#:CC "gcc"] => '("ABC=123" ...)
 ;; Generate a list of default defines produced by gcc (or other comiler).
 ;; If keyword arg @arg{CC} is not provided this procedure looks for environment
-;; variable @code{"CC"}, else it defaults to @code{"gcc"}.
+;; variable @code{"CC"}, else it defaults to @code{"gcc -std=gnu99"}.
 ;; @end deffn
 (define* (get-sys-cpp-defs #:optional (args '()) #:key CC)
   ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
