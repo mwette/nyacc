@@ -1625,6 +1625,20 @@
 ;;   (define-public foo_t*
 ;;     (name-ctype 'foo_t* (cpointer foo_t))))
 ;; @end example
+;; The optional argument @var{attrs} is an alist of ffi-module
+;; including
+;; @table code
+;; @ #:pkg-config
+;; a string denoting the pkgconfig package
+;; @ #:cpp-defs
+;; a quoted list of strings for cpp defs
+;; @ #:inc-dirs
+;; a quoted list of strings denoting include directories
+;; @ #:inc-filter
+;; usually a procedure of two arguments, the include spec (e.g.
+;; @code{<foo.h>} and the path (e.g., @code{/usr/include/foo.h})
+;; it should return @code{#f} if declarations from the file should
+;; not be included in the output
 ;; @end deffn
 (define* (ccode->sexp code #:optional attrs)
   (let* ((tree (parse-code code attrs))
