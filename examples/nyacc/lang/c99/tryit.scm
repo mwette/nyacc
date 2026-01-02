@@ -529,4 +529,15 @@ struct rseq_cs {
 } __attribute__((aligned(4 * sizeof(uint64_t))));"))
     (parse-string code)))
 
+;; issue#26
+(when #f
+  (let* ((code "#include <linux/elf.h>\n")
+         (tree (parse-string code #:mode 'decl))
+         (udict (c99-trans-unit->udict/deep tree))
+         )
+    ;;(pp (ccode->sexp code))
+    ;;(pp udict)
+    (if #f #f)))
+
+
 ;; --- last line ---
