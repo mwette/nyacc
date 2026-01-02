@@ -99,7 +99,7 @@
             cdata-kind cdata& cdata* cdata-sel
             cdata*-sel cdata*-ref cdata&-sel cdata&-ref
             ctype-sel make-cdata-getter make-cdata-setter
-            may-be-make-cdata-accessor
+            ?make-cdata-accessor
             %make-cdata
             ctype->ffi
             ;;
@@ -518,8 +518,8 @@
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
                   (ssz (incr-bit-size 0 fal ssz))
                   (cf (%make-cfield name type ssz)))
-             (loop (cons cf cfl)
-                   (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))
+             (loop (cons cf cfl) (incr-size fsz fal ssz)
+                   (max fal sal) (cdr sfl))))
 
           ((name type width)            ; bitfield
            (let* ((type (check-type type))
@@ -1445,7 +1445,7 @@
 ;; $1 = 42
 ;; @end example
 ;; @end deffn
-(define* (may-be-make-cdata-accessor sel #:optional (offset 0))
+(define* (?make-cdata-accessor sel #:optional (offset 0))
   "- Procedure: make-cdata-accessor sel [offset]
      This procedure is similar to ‘make-cdata-getter’ and
      ‘make-cdata-setter’ but the resulting procedure accepts no tag
