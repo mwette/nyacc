@@ -840,6 +840,28 @@
                           `((lambda (~ret) ,exec-ret) ,call)
                           call)))))))))
 
+(define (cnvt-fctn-to-C name return params seed)
+  ;; simple values return that, for complex, encode as bytevector & return
+  ;; then return does (%make-cdata bv 0 ct)
+  ;; for complex types pass bytevector
+  (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+  (let* ((rname (rename name 'function))
+         (params names (setup-function return params))
+         (decl-ret decl-par (function-decls return params))
+         (exec-ret exec-par (function-execs return params))
+         (urap-par (fold-right (lambda (n u s) (if u (cons `(,n ,u) s) s))
+                               '() names exec-par))
+         (call `((force ~proc) ,@names))
+         (va-call `(apply ~proc ,@names (map cdr ~rest))))
+    #|
+    SCM_DEFINE (scm_fctn, "fctn", narg, 0, 0, (SCM obj, SCM ...), "")
+    #define FUNC_NAME s_scm_fctn
+    {
+    arg_to_pointer()
+    }
+    #undef FUNC_NAME
+    |#
+    seed))
 
 ;; === the main conversion driver ==============================================
 
@@ -1460,6 +1482,7 @@
 ;; === main converter ==================
 
 ;; => (values defined forms)
+;; decls : "names" to process (e.g., "foo_t" (struct . "foo")
 (define* (process-decls decls udict
                         #:optional (defined '())
                         #:key (declf (lambda (k) #t)))
@@ -1519,7 +1542,7 @@
                   (else (fherr "expecing #:include or #:api-code")))))
          (udict (c99-trans-unit->udict/deep tree))
          (udecls (c99-trans-unit->udict tree #:inc-filter incf))
-         (ffi-decls (map car udecls))   ; just the names, get decls from udict
+         (decl-keys (map car udecls))   ; just the names, get decls from udict
 
          ;; the list of typedefs we will generate (later):
          (ffimod-defined #f)
@@ -1557,7 +1580,7 @@
 
     ;; Convert and output foreign declarations.
     (call-with-values
-        (lambda () (process-decls ffi-decls udict init-defd #:declf declf))
+        (lambda () (process-decls decl-keys udict init-defd #:declf declf))
       (lambda (defined seed)
         ;; Set ffimod-defined for including, but removed built-in types.
         (set! ffimod-defined
@@ -1644,7 +1667,6 @@
   (let* ((tree (parse-code code attrs))
          (udict (c99-trans-unit->udict/deep tree))
          (udecls (c99-trans-unit->udict tree))
-         (ffi-decls (map car udecls))
          (cnvt (lambda (udent defined seed)
                  (udecl->sexp (cdr udent) udict defined seed))))
     (*udict* udict)
