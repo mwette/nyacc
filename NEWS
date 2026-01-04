@@ -6,19 +6,20 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2026-XX-XX  V3.02.0
+	* Many thanks to #lechner for persistence in testing new commits!
         * Updated ffi-helper to allow other backends (e.g, bstruct,
           bytestructures).  See github.com/mwette/guile-fhbe. This was
           accomplished by adding a layer of indirection for low-level
           type construction.
           + Compile time for gtk2.ffi is 5% longer.
           + Compiled ffi modules include case-backend syntax form.
-          + For an example of case-backend use, see ffi/cairo.scm.
+            (See ffi/cairo.ffi for an example use case.)
         * Moved ffi-help-cd.scm back to ffi-help.cd, like for v1.0.
         * In cdata, removed support for previously deprecated types (e.g.,
           "signed long int") in preference for canonical short names (e.g.,
           "long"), as parse-c99 does not produce them.
-        * Merged contributed "powerpc64le" machine arch to arch-info.
-        * Worked more on the "mlang" language example parser and analyzer.
+        * Merged "powerpc64le" machine arch (from #lechner) into arch-info.
+        * Added s390x machine arch (thanks #rlb) into arch-info. issue#27
         * In cdata, exposed procedure make-cdata/* which will create
           an object from a pointer.
         * The cdata user guide has been reviewed and expanded.
@@ -27,10 +28,11 @@ without any warranty.
         * cdata-set! now accepts scheme arrays (and vectors) for carray and
           alists for cstructs and cunions.
         * Fixes issue#22: buggy cdata-ref/set! with anonymous struct/unions.
-        * Fixes issue#24, c99 parsing empty-structs (struct { };)
+        * Fixes issue#24: c99 parsing empty-structs (struct { };).
 	* Fixes issue#25: attribute arguments w/ math expressions.
 	* Fixes issue#26: __u32 not found => major bug in process-decls
-	  commit c2f84da -> 0cc90f6
+          (see commit c2f84da -> 0cc90f6).
+        * Worked more on the "mlang" language example parser and analyzer.
 
 2026-01-01  V3.01.1
 	* lalr.scm(wrap-term/MES): make final return 'terminal 
