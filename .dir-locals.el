@@ -4,6 +4,8 @@
                      (tab-width   .  8)))
  (scheme-mode
   . ((indent-tabs-mode . nil)
+     ;;(eval . (add-to-list 'write-file-functions 'delete-trailing-whitespace))
+     ;;(eval . (add-to-list 'write-file-functions 'untabify))
      (eval . (put 'sx-match            'scheme-indent-function 1))
      (eval . (put 'sx-match-tail       'scheme-indent-function 1))
      (eval . (put 'with-arch           'scheme-indent-function 1))
