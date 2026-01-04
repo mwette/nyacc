@@ -598,7 +598,7 @@
     (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
     (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
     (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
-    (intptr_t . s32be) (uintptr_t . u32be)
+    (intptr_t . s64be) (uintptr_t . u64be)
     (_Bool . s8) (bool . s8)
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
@@ -607,8 +607,8 @@
     ;; deprecated:
     (unsigned-int . u32be)))
 
-(define arch/x390x
-  (make-arch-info "x390x" 'big mtype-map/x390x alignof-mtype-map/natural))
+(define arch/s390x
+  (make-arch-info "s390x" 'big mtype-map/s390x alignof-mtype-map/natural))
 
 (add-to-arch-map "s390x" arch/s390x)
 
