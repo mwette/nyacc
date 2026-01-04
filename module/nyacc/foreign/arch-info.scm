@@ -586,6 +586,33 @@
 (add-to-arch-map "riscv64" arch/riscv64)
 
 
+;; s390x 64 bit (big endian)
+(define mtype-map/s390x
+  '((void* . u64be)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16be) (unsigned-short . u16be)
+    (int . s32be) (unsigned . u32be)
+    (long . s64be) (unsigned-long . u64be)
+    (long-long . s64be) (unsigned-long-long . u64be)
+    (float . f32be) (double . f64be)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
+    (intptr_t . s32be) (uintptr_t . u32be)
+    (_Bool . s8) (bool . s8)
+    (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
+    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
+    (float-_Complex . c32be) (double-_Complex . c64be)
+    (__int128 . s128be) (unsigned-__int128 . u128be)
+    ;; deprecated:
+    (unsigned-int . u32be)))
+
+(define arch/x390x
+  (make-arch-info "x390x" 'big mtype-map/x390x alignof-mtype-map/natural))
+
+(add-to-arch-map "s390x" arch/s390x)
+
+
 ;; sparc 32 bit (big endian)
 (define mtype-map/sparc32
   '((void* . u32be)
@@ -615,7 +642,7 @@
 
 ;; sparc 64 bit (big endian)
 (define mtype-map/sparc64
-  '((void* . u32be)
+  '((void* . u64be)
     (char . s8) (signed-char . s8) (unsigned-char . u8)
     (short . s16be) (unsigned-short . u16be)
     (int . s32be) (unsigned . u32be)
