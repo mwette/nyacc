@@ -168,6 +168,11 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
              `((backend . ,(getenv "FFI_HELP_BACKEND"))
                (machine . "native")) '()))
 
+(define (basename/tag path)
+  (let* ((base (basename path))
+         (tagix (string-rindex base #\.)))
+    (substring base 0 tagix)))
+
 ;; --- check dependencies -------------------------------------------
 
 (define-syntax find-ffi-uses
@@ -258,8 +263,9 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
   (cond
    ((assq-ref opts 'output))
    ((assq-ref opts 'output-dir) =>
-    (lambda (dir) (string-append dir "/" (basename ffi-file ".ffi") ".scm")))
-   (else (string-append (string-drop-right ffi-file 4) ".scm"))))
+    (lambda (dir) (string-append dir "/" (basename/tag ffi-file) ".scm")))
+   (else
+    (string-append (substring ffi-file (string-rindex ffi-file #\.)) ".scm"))))
 
 ;; from list of all files and depd, return supplier-for dict
 (define (ensure-ffi-deps file opts)
