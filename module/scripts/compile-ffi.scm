@@ -265,7 +265,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
    ((assq-ref opts 'output-dir) =>
     (lambda (dir) (string-append dir "/" (basename/tag ffi-file) ".scm")))
    (else
-    (string-append (substring ffi-file (string-rindex ffi-file #\.)) ".scm"))))
+    (string-append (substring ffi-file 0 (string-rindex ffi-file #\.)) ".scm"))))
 
 ;; from list of all files and depd, return supplier-for dict
 (define (ensure-ffi-deps file opts)
