@@ -445,6 +445,34 @@
 (add-to-arch-map "i686" arch/i686)
 
 
+;; LoongArch 64bit (little-endian)
+(define mtype-map/loongarch64
+  '((void* . u64le)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s64le) (unsigned-long . u64le)
+    (long-long . s64le) (unsigned-long-long . u64le)
+    (float . f32le) (double . f64le)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
+    (intptr_t . s64le) (uintptr_t . u64le)
+    (_Bool . s8) (bool . s8)
+    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
+    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
+    ;; deprecated:
+    (unsigned-int . u32le)))
+
+(define arch/loongarch64
+  (make-arch-info "loongarch64" 'little mtype-map/loongarch64
+                  alignof-mtype-map/natural))
+
+(add-to-arch-map "loongarch64" arch/loongarch64)
+
+
 ;; 32 bit powerpc aka ppc32, big endian
 (define mtype-map/powerpc32
   '((void* . u32be)
@@ -696,7 +724,6 @@
 (add-to-arch-map "ppc32" arch/powerpc32)
 (add-to-arch-map "ppc64" arch/powerpc64)
 (add-to-arch-map "ppc64le" arch/powerpc64le)
-(add-to-arch-map "loongarch64" arch/riscv64)
 
 
 ;; === native =================================================================
@@ -723,7 +750,7 @@
 (define (mtype-noendian mtype)
   (assq-ref mtype-noendian-map mtype))
 
-(define native-arch
+p(define native-arch
   (assoc-ref (*arch-map*) host-arch-name))
 
 (add-to-arch-map "native" native-arch)
