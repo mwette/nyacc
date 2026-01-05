@@ -608,7 +608,7 @@
     (unsigned-int . u32be)))
 
 (define arch/s390x
-  (make-arch-info "s390x" 'big mtype-map/s390x alignof-mtype-map/natural))
+  (make-arch-info 's390x 'big mtype-map/s390x alignof-mtype-map/natural))
 
 (add-to-arch-map "s390x" arch/s390x)
 
