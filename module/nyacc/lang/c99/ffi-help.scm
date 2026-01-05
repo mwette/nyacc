@@ -861,6 +861,7 @@
     }
     #undef FUNC_NAME
     |#
+    `(add-c-code "foo")
     seed))
 
 ;; === the main conversion driver ==============================================
