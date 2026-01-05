@@ -443,7 +443,6 @@
   (make-arch-info 'i686 'little mtype-map/i686 alignof-mtype-map/natural))
 
 (add-to-arch-map "i686" arch/i686)
-(add-to-arch-map "i386" arch/i686)
 
 
 ;; 32 bit powerpc aka ppc32, big endian
@@ -471,7 +470,6 @@
   (make-arch-info 'powerpc32 'big mtype-map/powerpc32 alignof-mtype-map/natural))
 
 (add-to-arch-map "powerpc32" arch/powerpc32)
-(add-to-arch-map "ppc32" arch/powerpc32)
 
 
 ;; 64 bit powerpc, aka ppc64 (big endian)
@@ -499,7 +497,6 @@
   (make-arch-info 'powerpc64 'big mtype-map/powerpc64 alignof-mtype-map/natural))
 
 (add-to-arch-map "powerpc64" arch/powerpc64)
-(add-to-arch-map "ppc64" arch/powerpc64)
 
 
 ;; 64 bit powerpc64le, aka ppc64le (little endian)
@@ -527,7 +524,6 @@
   (make-arch-info 'powerpc64le 'little mtype-map/powerpc64le alignof-mtype-map/natural))
 
 (add-to-arch-map "powerpc64le" arch/powerpc64le)
-(add-to-arch-map "ppc64le" arch/powerpc64le)
 
 
 ;; riscv 32 bit (little endian)
@@ -693,6 +689,14 @@
 
 (add-to-arch-map "x86_64" arch/x86_64)
 
+
+;; aliases
+
+(add-to-arch-map "i386" arch/i686)
+(add-to-arch-map "ppc32" arch/powerpc32)
+(add-to-arch-map "ppc64" arch/powerpc64)
+(add-to-arch-map "ppc64le" arch/powerpc64le)
+(add-to-arch-map "loongarch64" arch/riscv64)
 
 ;; === native =================================================================
 
