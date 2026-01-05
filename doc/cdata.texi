@@ -405,7 +405,7 @@ The optional @var{offset} argument (default 0), is used for cross
 target use: it is the offset of the address in the host context.
 @end deffn
 
-@deffn {Procedure} may-be-make-cdata-accessor sel [offset]
+@deffn {Procedure} ?make-cdata-accessor sel [offset]
 This procedure (not final) is similar to @code{make-cdata-getter} and
 @code{make-cdata-setter} but the resulting procedure accepts
 no tag sequence.  Called with one arg, it's a getter;

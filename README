@@ -27,3 +27,6 @@ There are a number of (incomplete) manuals under doc/nyacc, including:
 * CData Reference Manual https://github.com/mwette/nyacc/wiki/CData-Reference-Manual
 
 This package can be installed or executed in situ.
+
+If you run into problems with syntax errors with the ffi-helper sometimes
+this may help: CC="gcc -std=gnu99" guild compile-ffi file.ffi
