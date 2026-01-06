@@ -1,5 +1,11 @@
-/*
-*/
+/* show_march.c - generate machine info for arch-info.scm file
+ *
+ * usage:
+ *   $ gcc show_march.c
+ *   $ ./a.out > march.`uname -m`
+ *
+ * M.Wette - Jan 2026
+ */
 
 #include <stdio.h>
 #include <stddef.h>
@@ -93,6 +99,8 @@ size_t sizeof_type_named(const char *arg) {
     size = sizeof(__int128);
   } else if (strcmp("unsigned-__int128", arg) == 0) {
     size = sizeof(unsigned __int128);
+  } else if (strcmp("unsigned-int", arg) == 0) {
+    size = sizeof(unsigned int);
   } else {
     printf("missed %s\n", arg);
     size = 0;
@@ -102,7 +110,7 @@ size_t sizeof_type_named(const char *arg) {
 
 #define IS_SIGNED(TYPE) (((TYPE)-1) < 0)
 
-char mkindof_type_named(const char *arg) {
+char kindof_type_named(const char *arg) {
   char kind;
 
   if (strcmp("void*", arg) == 0) {
@@ -185,6 +193,8 @@ char mkindof_type_named(const char *arg) {
     kind = IS_SIGNED(__int128) ? 's' : 'u';
   } else if (strcmp("unsigned-__int128", arg) == 0) {
     kind = IS_SIGNED(unsigned __int128) ? 's' : 'u';
+  } else if (strcmp("unsigned-int", arg) == 0) {
+    kind = IS_SIGNED(unsigned int) ? 's' : 'u';
   } else {
     printf("missed %s\n", arg);
     kind = '!';
@@ -194,8 +204,21 @@ char mkindof_type_named(const char *arg) {
 
 const char * mtypeof_type_named(const char *arg) {
   static char buf[128];
+  size_t siz = sizeof_type_named(arg);
+  char kind = kindof_type_named(arg);
+  char nd;
+  
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  nd = 'b';
+#else
+  nd = 'l';
+#endif
 
-  snprintf(buf,128, "%c%ld", mkindof_type_named(arg), 8*sizeof_type_named(arg));
+  if (siz == 1) {
+    snprintf(buf,128, "%c%ld", kindof_type_named(arg), 8*siz);
+  } else {
+    snprintf(buf,128, "%c%ld%ce", kindof_type_named(arg), 8*siz, nd);
+  }
   return (char*) buf;
 }
 
@@ -282,6 +305,8 @@ size_t alignof_type_named(const char *arg) {
     almt = __alignof__(__int128);
   } else if (strcmp("unsigned-__int128", arg) == 0) {
     almt = __alignof__(unsigned __int128);
+  } else if (strcmp("unsigned-int", arg) == 0) {
+    almt = __alignof__(unsigned int);
   } else {
     printf("missed %s\n", arg);
     almt = 0;
@@ -296,7 +321,7 @@ const char *types[] = {
   "uint32_t", "int64_t", "uint64_t", "size_t", "ssize_t", "ptrdiff_t",
   "intptr_t", "uintptr_t", "_Bool", "bool", "wchar_t", "char16_t", "char32_t",
   "long double", "_Float16", "_Float128", "float _Complex", "double _Complex",
-  "long double _Complex", "__int128", "unsigned __int128",
+  "long double _Complex", "__int128", "unsigned __int128", "unsigned int",
 };
 
 const char *almts[] = {
@@ -306,8 +331,8 @@ const char *almts[] = {
   "long double _Complex", "__int128", "unsigned __int128",
 };
 
-char *symform(const char* name) {
-  int ix;
+char *symform(const char* name) {  
+int ix;
   static char buf[128];
 
   for (ix = 0; *name; ix++) {
@@ -320,7 +345,6 @@ char *symform(const char* name) {
 
 int main(int argc, char *argv[]) {
   char *symname;
-  char nd;
   struct utsname utsn;
   char machname[64];
 
@@ -328,18 +352,11 @@ int main(int argc, char *argv[]) {
   //printf("sysname=%s\n", utsn.sysname); => "Linux"
   strncpy(machname, utsn.machine, 64);
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  nd = 'b';
-#else
-  nd = 'l';
-#endif
-  
   printf("(define mtype-map/%s\n", machname);
   printf(" '(\n");
   for (int ix = 0; ix < sizeof(types)/sizeof(char*); ix++) {
     symname = symform(types[ix]);
-    printf("   (%s . %s%ce)\n",
-	   symname, mtypeof_type_named(symname), nd);
+    printf("   (%s . %s)\n", symname, mtypeof_type_named(symname));
   }
   printf("  ))\n");
   printf("\n");
@@ -347,8 +364,8 @@ int main(int argc, char *argv[]) {
   printf(" '(\n");
   for (int ix = 0; ix < sizeof(almts)/sizeof(char*); ix++) {
     symname = symform(almts[ix]);
-    printf("   (%s%ce . %ld)\n",
-	   mtypeof_type_named(symname), nd, alignof_type_named(symname));
+    printf("   (%s . %ld)\n",
+	   mtypeof_type_named(symname), alignof_type_named(symname));
   }
   printf("  ))\n");
 }
