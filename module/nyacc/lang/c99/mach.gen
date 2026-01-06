@@ -21,4 +21,9 @@ exec guile $0
     (and c99-spec (pp-lalr-grammar c99-spec))
     (and c99-mach (pp-lalr-machine c99-mach))))
 
+(with-output-to-file ",gram-cx.txt"
+  (lambda ()
+    (and c99cx-spec (pp-lalr-grammar c99cx-spec))
+    (and c99cx-mach (pp-lalr-machine c99cx-mach))))
+
 ;;; --- last line ---

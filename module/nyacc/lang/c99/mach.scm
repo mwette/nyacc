@@ -114,6 +114,7 @@
      ("sizeof" unary-expression ($$ `(sizeof-expr ,$2)))
      ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
      ("_Alignof" "(" type-name ")" ($$ `(alignof-type ,$3)))
+     ;; S-R conflict ("__alignof__" "(" type-name ")" ($$ `(alignof-type ,$3)))
      ("__builtin_offsetof" "(" type-name "," constant-expression ")"
       ($$ `(offsetof-type ,$3 ,$5)))
      )
@@ -303,6 +304,9 @@
      ("unsigned" "char" ($$ '(fixed-type "unsigned char")))
      ("__int128" ($$ '(fixed-type "__int128")))
      ("unsigned" "__int128" ($$ '(fixed-type "unsigned __int128")))
+     ;; gnu extensions
+     ("__int128_t" ($$ '(fixed-type "__int128")))
+     ("unsigned __int128_t" ($$ '(fixed-type "unsigned __int128")))
      ;; fixes 250627
      ("short" "signed" ($prec 'imp) ($$ '(fixed-type "short")))
      ("short" "signed" "int" ($$ '(fixed-type "short")))
