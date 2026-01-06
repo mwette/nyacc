@@ -1051,7 +1051,7 @@
       ((struct)
        (aggr-ref (cstruct-select (ctype-info ct))))
       ((union)
-       (aggr-ref (cstruct-select (ctype-info ct))))
+       (aggr-ref (cunion-select (ctype-info ct))))
       ((function)
        (let* ((ti (ctype-info ct))
               (mtype (cfunction-ptr-mtype ti))

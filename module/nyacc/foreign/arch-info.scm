@@ -363,6 +363,49 @@
 
 ;; === maps ====================================================================
 
+(define mtype-map/natural64le
+  '((void* . u64le)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16le) (unsigned-short . u16le)
+    (int . s32le) (unsigned . u32le)
+    (long . s64le) (unsigned-long . u64le)
+    (long-long . s64le) (unsigned-long-long . u64le)
+    (float . f32le) (double . f64le)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
+    (intptr_t . s64le) (uintptr_t . u64le)
+    (_Bool . s8) (bool . s8)
+    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
+    (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
+    (float-_Complex . c32le) (double-_Complex . c64le)
+    (__int128 . s128le) (unsigned-__int128 . u128le)
+    ;; deprecated
+    (unsigned-int . u32le)))
+(export mtype-map/natural64le)
+
+(define mtype-map/natural64be
+  '((void* . u64be)
+    (char . s8) (signed-char . s8) (unsigned-char . u8)
+    (short . s16be) (unsigned-short . u16be)
+    (int . s32be) (unsigned . u32be)
+    (long . s64be) (unsigned-long . u64be)
+    (long-long . s64be) (unsigned-long-long . u64be)
+    (float . f32be) (double . f64be)
+    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
+    (intptr_t . s64be) (uintptr_t . u64be)
+    (_Bool . s8) (bool . s8)
+    (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
+    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
+    (float-_Complex . c32be) (double-_Complex . c64be)
+    (__int128 . s128be) (unsigned-__int128 . u128be)
+    ;; deprecated:
+    (unsigned-int . u32be)))
+(export mtype-map/natural64be)
+
+
 ;; ARM 64bit (little-endian)
 (define mtype-map/aarch64
   '((void* . u64le)
@@ -383,6 +426,8 @@
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated
     (unsigned-int . u32le)))
+;;(if (equal? mtype-map/aarch64 mtype-map/natural64le)
+;;    (display "aarch64 map can copied\n"))
 
 (define arch/aarch64
   (make-arch-info "aarch64" 'little mtype-map/aarch64 alignof-mtype-map/natural))
@@ -465,6 +510,8 @@
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
+;;(if (equal? mtype-map/loongarch64 mtype-map/natural64le)
+;;    (display "loongarch64 map can copied\n"))
 
 (define arch/loongarch64
   (make-arch-info "loongarch64" 'little mtype-map/loongarch64
@@ -520,6 +567,8 @@
     (__int128 . s128be) (unsigned-__int128 . u128be)
     ;; deprecated:
     (unsigned-int . u32be)))
+;;(if (equal? mtype-map/powerpc64 mtype-map/natural64be)
+;;    (display "powerpc64 map can copied\n"))
 
 (define arch/powerpc64
   (make-arch-info 'powerpc64 'big mtype-map/powerpc64 alignof-mtype-map/natural))
@@ -547,6 +596,8 @@
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
+;;(if (equal? mtype-map/powerpc64le mtype-map/natural64le)
+;;    (display "powerpc64le map can copied\n"))
 
 (define arch/powerpc64le
   (make-arch-info 'powerpc64le 'little mtype-map/powerpc64le alignof-mtype-map/natural))
@@ -603,6 +654,8 @@
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
+;;(if (equal? mtype-map/riscv64 mtype-map/natural64le)
+;;    (display "riscv64 map can copied\n"))
 
 (define arch/riscv64
   (make-arch-info "riscv64" 'little mtype-map/riscv64 alignof-mtype-map/natural))
@@ -711,6 +764,8 @@
     (__int128 . s128le) (unsigned-__int128 . u128le)
     ;; deprecated:
     (unsigned-int . u32le)))
+;;(if (equal? mtype-map/x86_64 mtype-map/natural64le)
+;;    (display "x86_64 map can copied\n"))
 
 (define arch/x86_64
   (make-arch-info "x86_64" 'little mtype-map/x86_64 sizeof-mtype-map))
@@ -750,7 +805,7 @@
 (define (mtype-noendian mtype)
   (assq-ref mtype-noendian-map mtype))
 
-p(define native-arch
+(define native-arch
   (assoc-ref (*arch-map*) host-arch-name))
 
 (add-to-arch-map "native" native-arch)
