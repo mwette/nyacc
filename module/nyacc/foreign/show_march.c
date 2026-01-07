@@ -227,9 +227,11 @@ const char * mtypeof_type_named(const char *arg) {
   if (siz == 0) {
     snprintf(buf,128, "#f");
   } else if (siz == 1) {
-    snprintf(buf,128, "%c%ld", kindof_type_named(arg), 8*siz);
+    snprintf(buf,128, "%c%ld", kind, 8*siz);
+  } else if (kind == 'c') {
+    snprintf(buf,128, "%c%ld%ce", kind, 8*siz/2, nd);
   } else {
-    snprintf(buf,128, "%c%ld%ce", kindof_type_named(arg), 8*siz, nd);
+    snprintf(buf,128, "%c%ld%ce", kind, 8*siz, nd);
   }
   return (char*) buf;
 }
