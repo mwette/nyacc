@@ -208,6 +208,11 @@
 ;; @end example
 ;; @end deffn
 (define (sizeof-basetype name)
+  "- Procedure: sizeof-basetype name
+     NAME can be string (e.g., ‘\"short\"’) or symbol (e.g., ‘short-int’).
+     Return the size in bytes of the basetype TYPE, a string, based on
+     the global parameter *ARCH*.
+          (sizeof-basetype \"unsigned\") => 4"
   (let ((name (if (string? name) (c-strname->symname name) name))
         (arch (*arch*)))
     (and=> (assq-ref (arch-mtype-map arch) name)
@@ -220,6 +225,10 @@
 ;; the global parameter @var{*arch*}.
 ;; @end deffn
 (define (alignof-basetype name)
+  "- Procedure: alignof-basetype name
+     NAME can be string (e.g., ‘\"short\"’) or symbol (e.g., ‘short-int’).
+     Return the alignment of the basetype TYPE-NAME based on the global
+     parameter *ARCH*."
   (let ((name (if (string? name) (strname->symname name) name))
         (arch (*arch*)))
     (and=> (assq-ref (arch-mtype-map arch) name)
@@ -385,8 +394,8 @@
    (float . f32le) (double . f64le)
    (int8_t . s8le) (uint8_t . u8le) (int16_t . s16le) (uint16_t . u16le)
    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-   (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
-   (intptr_t . s64le) (uintptr_t . u64le)
+   (size_t . u64le) (ssize_t . s64le)
+   (ptrdiff_t . s64le) (intptr_t . s64le) (uintptr_t . u64le)
    (_Bool . u8) (bool . u8)
    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
@@ -428,7 +437,6 @@
    (long-double-_Complex . c128le)
    (__int128 . #f)
    (unsigned-__int128 . #f)
-   ;; sugar
    (unsigned-int . u32le)))
 
 (define align-map/armv8l
@@ -461,7 +469,6 @@
     (long-double . f32le) (_Float16 . f16le) (_Float128 . f64le)
     (float-_Complex . c32le) (double-_Complex . c32le)
     (__int128 . s128le) (unsigned-__int128 . u128le)
-    ;; sugar
     (unsigned-int . u16le)))
 
 (define alignof-mtype-map/avr
@@ -488,7 +495,7 @@
    (ptrdiff_t . s32be) (intptr_t . s32be) (uintptr_t . u32be)
    (_Bool . u8) (bool . u8)
    (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
-   (long-double . f64be) sizeof missed _Float128 (_Float128 . #f)
+   (long-double . f64be) (_Float16 . #f) (_Float128 . #f)
    (float-_Complex . c64be) (double-_Complex . c128be)
    (long-double-_Complex . c128be)
    (__int128 . #f) (unsigned-__int128 . #f)
@@ -525,6 +532,7 @@
    (long-double . f96le) (_Float16 . f16le) (_Float128 . f128le)
    (float-_Complex . c64le) (double-_Complex . c128le)
    (long-double-_Complex . c192le)
+   (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32le)))
 
 (define align-map/i686
@@ -557,7 +565,7 @@
    (ptrdiff_t . s64le) (intptr_t . s64le) (uintptr_t . u64le)
    (_Bool . u8) (bool . u8)
    (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
-   (long-double . f128le) (_Float128 . f128le)
+   (long-double . f128le) (_Float16 . #f) (_Float128 . f128le)
    (float-_Complex . c64le) (double-_Complex . c128le)
    (long-double-_Complex . c256le)
    (__int128 . s128le) (unsigned-__int128 . u128le)
@@ -662,7 +670,7 @@
    (ptrdiff_t . s64be) (intptr_t . s64be) (uintptr_t . u64be)
    (_Bool . u8) (bool . u8)
    (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
-   (long-double . f128be)
+   (long-double . f128be) (_Float16 . #f) (_Float128 . #f)
    (float-_Complex . c64be) (double-_Complex . c128be)
    (long-double-_Complex . c256be)
    (__int128 . s128be) (unsigned-__int128 . u128be)
@@ -697,7 +705,7 @@
    (ptrdiff_t . s64le) (intptr_t . s64le) (uintptr_t . u64le)
    (_Bool . u8) (bool . u8)
    (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
-   (long-double . f128le) (_Float128 . f128le)
+   (long-double . f128le) (_Float16 . #f) (_Float128 . f128le)
    (float-_Complex . c64le) (double-_Complex . c128le)
    (long-double-_Complex . c256le)
    (__int128 . s128le) (unsigned-__int128 . u128le)
@@ -741,7 +749,7 @@
    (float . f32le) (double . f64le)
    (int8_t . s8le) (uint8_t . u8le) (int16_t . s16le) (uint16_t . u16le)
    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-   (size_t . u64le) (ssize_t . s64le) n(ptrdiff_t . s64le)
+   (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
    (intptr_t . s64le) (uintptr_t . u64le)
    (_Bool . u8) (bool . u8)
    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
@@ -810,8 +818,8 @@
     (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
     (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
     (float-_Complex . c32be) (double-_Complex . c64be)
+    (long-double-_Complex . #f)
     (__int128 . s128be) (unsigned-__int128 . u128be)
-    ;; sugar
     (unsigned-int . u32be)))
 
 (define arch/sparc32
@@ -951,18 +959,18 @@
     char signed-char unsigned-char short unsigned-short int unsigned long
     unsigned-long long-long unsigned-long-long float double int8_t uint8_t
     int16_t uint16_t int32_t uint32_t int64_t uint64_t size_t ssize_t
-    nptrdiff_t intptr_t uintptr_t _Bool bool wchar_t char16_t char32_t
+    ptrdiff_t intptr_t uintptr_t _Bool bool wchar_t char16_t char32_t
     long-double _Float16 _Float128 float-_Complex double-_Complex
-   long-double-_Complex __int128 unsigned-__int128 unsigned-int))
+    long-double-_Complex __int128 unsigned-__int128 unsigned-int))
 
 (define-public (check-arch arch-name)
   (sferr "check-arch: ~s\n" arch-name)
   (let* ((arch (assq-ref (*arch-map*) arch-name))
          (atm (arch-mtype-map arch)) (akeys (map car atm))
          (a-b-keys (lset-difference equal? akeys bkeys))
+         (b-a-keys (lset-difference equal? bkeys akeys))
          )
-    ;;(sferr "akeys: ~s\n" akeys)
-    ;;(sferr "bkeys: ~s\n" bkeys)
-    (sferr "a-b-keys: ~s\n" a-b-keys)
+    (if (pair? a-b-keys) (sferr "a-b-keys: ~s\n" a-b-keys))
+    (if (pair? b-a-keys) (sferr "b-a-keys: ~s\n" b-a-keys))
     ))
 
