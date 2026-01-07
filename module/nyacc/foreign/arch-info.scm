@@ -919,6 +919,7 @@
 (add-to-arch-map "x86_64" arch/x86_64)
 
 ;; aliases
+(add-to-arch-map "arm" arch/armv8l)
 (add-to-arch-map "armhf" arch/armv8l)
 (add-to-arch-map "i386" arch/i686)
 (add-to-arch-map "mipsel" arch/mips)
