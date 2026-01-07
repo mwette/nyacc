@@ -141,6 +141,7 @@
     "long double" "_Float16" "_Float128"
     "float _Complex" "double _Complex" "long double _Complex"
     "__int128" "unsigned __int128"
+    ;; sugar:
     "unsigned int"))
 
 (define base-type-symbol-list
@@ -402,7 +403,6 @@
    (float-_Complex . c64le) (double-_Complex . c128le)
    (long-double-_Complex . c256le)
    (__int128 . s128le) (unsigned-__int128 . u128le)
-   ;; sugar
    (unsigned-int . u32le)))
 
 (define align-map/aarch64
@@ -433,8 +433,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f64le) (_Float16 . #f) (_Float128 . #f)
-   (float-_Complex . c64le) (double-_Complex . c128le)
-   (long-double-_Complex . c128le)
+   (float-_Complex . c32le) (double-_Complex . c64le)
+   (long-double-_Complex . c64le)
    (__int128 . #f)
    (unsigned-__int128 . #f)
    (unsigned-int . u32le)))
@@ -468,6 +468,7 @@
     (wchar_t . #f) (char16_t . #f) (char32_t . #f)
     (long-double . f32le) (_Float16 . f16le) (_Float128 . f64le)
     (float-_Complex . c32le) (double-_Complex . c32le)
+    (long-double-_Complex . #f) ;; need to check
     (__int128 . s128le) (unsigned-__int128 . u128le)
     (unsigned-int . u16le)))
 
@@ -496,10 +497,10 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
    (long-double . f64be) (_Float16 . #f) (_Float128 . #f)
-   (float-_Complex . c64be) (double-_Complex . c128be)
-   (long-double-_Complex . c128be)
+   (float-_Complex . c32be) (double-_Complex . c64be)
+   (long-double-_Complex . c64be)
    (__int128 . #f) (unsigned-__int128 . #f)
-   (unsigned-int . #f)))
+   (unsigned-int . u32be)))
 
 (define align-map/hppa
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
@@ -530,8 +531,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f96le) (_Float16 . f16le) (_Float128 . f128le)
-   (float-_Complex . c64le) (double-_Complex . c128le)
-   (long-double-_Complex . c192le)
+   (float-_Complex . c32le) (double-_Complex . c64le)
+   (long-double-_Complex . c96le)
    (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32le)))
 
@@ -566,8 +567,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f128le) (_Float16 . #f) (_Float128 . f128le)
-   (float-_Complex . c64le) (double-_Complex . c128le)
-   (long-double-_Complex . c256le)
+   (float-_Complex . c32le) (double-_Complex . c64le)
+   (long-double-_Complex . c128le)
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
@@ -601,11 +602,10 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
    (long-double . f96be) (_Float16 . #f) (_Float128 . #f)
-   (float-_Complex . c64be) (double-_Complex . c128be)
-   (long-double-_Complex . c192be)
+   (float-_Complex . c32be) (double-_Complex . c64be)
+   (long-double-_Complex . c96be)
    (__int128 . #f) (unsigned-__int128 . #f)
-   ;; sugar
-   (unsigned-int . #f)))
+   (unsigned-int . u32be)))
 
 (define align-map/m68k
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
@@ -635,10 +635,9 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f64le) (_Float16 . #f) (_Float128 . #f)
-   (float-_Complex . c64le) (double-_Complex . c128le)
-   (long-double-_Complex . c128le)
+   (float-_Complex . c32le) (double-_Complex . c64le)
+   (long-double-_Complex . c64le)
    (__int128 . #f) (unsigned-__int128 . #f)
-   ;; sugar
    (unsigned-int . u32le)))
 
 (define align-map/mips
@@ -671,8 +670,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
    (long-double . f128be) (_Float16 . #f) (_Float128 . #f)
-   (float-_Complex . c64be) (double-_Complex . c128be)
-   (long-double-_Complex . c256be)
+   (float-_Complex . c32be) (double-_Complex . c64be)
+   (long-double-_Complex . c128be)
    (__int128 . s128be) (unsigned-__int128 . u128be)
    (unsigned-int . u32be)))
 
@@ -706,8 +705,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f128le) (_Float16 . #f) (_Float128 . f128le)
-   (float-_Complex . c64le) (double-_Complex . c128le)
-   (long-double-_Complex . c256le)
+   (float-_Complex . c32le) (double-_Complex . c64le)
+   (long-double-_Complex . c128le)
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
@@ -754,8 +753,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-   (float-_Complex . c64le) (double-_Complex . c128le)
-   (long-double-_Complex . c256le)
+   (float-_Complex . c32le) (double-_Complex . c64le)
+   (long-double-_Complex . c128le)
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
@@ -782,8 +781,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
    (long-double . f128be) (_Float16 . #f) (_Float128 . f128be)
-   (float-_Complex . c64be) (double-_Complex . c128be)
-   (long-double-_Complex . c256be)
+   (float-_Complex . c32be) (double-_Complex . c64be)
+   (long-double-_Complex . c128be)
    (__int128 . s128be) (unsigned-__int128 . u128be)
    (unsigned-int . u32be)))
 
@@ -845,8 +844,8 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
    (long-double . f128be) (_Float16 . #f) (_Float128 . f128be)
-   (float-_Complex . c64be) (double-_Complex . c128be)
-   (long-double-_Complex . c256be)
+   (float-_Complex . c32be) (double-_Complex . c64be)
+   (long-double-_Complex . c128be)
    (__int128 . s128be) (unsigned-__int128 . u128be)
    (unsigned-int . u32be)))
 
@@ -880,10 +879,9 @@
    (_Bool . u8) (bool . u8)
    (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-   (float-_Complex . c64le) (double-_Complex . c128le)
-   (long-double-_Complex . c256le)
+   (float-_Complex . c32le) (double-_Complex . c64le)
+   (long-double-_Complex . c128le)
    (__int128 . s128le) (unsigned-__int128 . u128le)
-   ;; sugar
    (unsigned-int . u32le)))
 
 (define align-map/x86_64
@@ -970,7 +968,8 @@
          (a-b-keys (lset-difference equal? akeys bkeys))
          (b-a-keys (lset-difference equal? bkeys akeys))
          )
-    (if (pair? a-b-keys) (sferr "a-b-keys: ~s\n" a-b-keys))
-    (if (pair? b-a-keys) (sferr "b-a-keys: ~s\n" b-a-keys))
+    (when (pair? a-b-keys) (sferr "a-b-keys: ~s\n" a-b-keys))
+    (when (pair? b-a-keys) (sferr "b-a-keys: ~s\n" b-a-keys))
+    (unless (assq-ref atm 'unsigned-int) (sferr "missing unsigned-int\n"))
     ))
 
