@@ -661,6 +661,8 @@
        (unwrap-declr dcl (cons `(function-returning ,param-list) tail)))
       ((abs-ftn-declr ,param-list)
        (cons* (namer) `(function-returning ,param-list) tail))
+      ((ftn-declr ,dcl ,param-list ,asm-expr)
+       (unwrap-declr dcl (cons `(function-returning ,param-list) tail)))
       ((scope ,expr) (unwrap-declr expr tail))
       ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
       ((bit-field ,size) (cons* "*anon*" declr tail))
@@ -669,6 +671,25 @@
        (throw 'c99-error "munge-base/unwrap-declr failed")
        #f)))
 
+  #|
+munge-base/unwrap-declr missed:
+  (init-declr
+   (@ (attributes "__nothrow__;__leaf__"))
+   (ftn-declr
+    (ident "lseek")
+    (param-list
+     (param-decl
+      (decl-spec-list (type-spec (fixed-type "int")))
+      (param-declr (ident "__fd")))
+     (param-decl
+      (decl-spec-list (type-spec (typename "__off64_t")))
+      (param-declr (ident "__offset")))
+     (param-decl
+      (decl-spec-list (type-spec (fixed-type "int")))
+      (param-declr (ident "__whence")))))
+   (asm-expr (@ (extension "GNUC")) (string "" " lseek64")))
+  compile-ffi: error: munge-base/unwrap-declr failed
+  |#
   (unwrap-declr declr tail))
 
 ;; @deffn {Procedure} udecl->mdecl udecl [#:namer def-namer]
