@@ -374,98 +374,74 @@
 
 ;; === maps ====================================================================
 
-(define mtype-map/normal64le
-  '((void* . u64le)
-    (char . s8) (signed-char . s8) (unsigned-char . u8)
-    (short . s16le) (unsigned-short . u16le)
-    (int . s32le) (unsigned . u32le)
-    (long . s64le) (unsigned-long . u64le)
-    (long-long . s64le) (unsigned-long-long . u64le)
-    (float . f32le) (double . f64le)
-    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
-    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
-    (intptr_t . s64le) (uintptr_t . u64le)
-    (_Bool . u8) (bool . u8)
-    (wchar_t . s32le) (char16_t . s16le) (char32_t . s32le)
-    (long-double . f128le) (_Float128 . f128le) (_Float16 . f16le)
-    (float-_Complex . c32le) (double-_Complex . c64le)
-    (__int128 . s128le) (unsigned-__int128 . u128le)
-    ;; sugar
-    (unsigned-int . u32le)))
-
-(define mtype-map/normal32le
-  '((void* . u32le)
-    (char . s8) (signed-char . s8) (unsigned-char . u8)
-    (short . s16le) (unsigned-short . u16le)
-    (int . s32le) (unsigned . u32le)
-    (long . s32le) (unsigned-long . u32le)
-    (long-long . s64le) (unsigned-long-long . u64le)
-    (float . f32le) (double . f64le)
-    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
-    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-    (size_t . u32le) (ssize_t . s32le) (ptrdiff_t . s32le)
-    (intptr_t . s32le) (uintptr_t . u32le)
-    (_Bool . u8) (bool . u8)
-    (wchar_t . s32le) (char16_t . s16le) (char32_t . s32le)
-    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-    (float-_Complex . c32le) (double-_Complex . c64le)
-    (__int128 . s128le) (unsigned-__int128 . u128le)
-    ;; sugar
-    (unsigned-int . u32le)))
-
-(define mtype-map/normal64be
-  '((void* . u64be)
-    (char . s8) (signed-char . s8) (unsigned-char . u8)
-    (short . s16be) (unsigned-short . u16be)
-    (int . s32be) (unsigned . u32be)
-    (long . s64be) (unsigned-long . u64be)
-    (long-long . s64be) (unsigned-long-long . u64be)
-    (float . f32be) (double . f64be)
-    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
-    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
-    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
-    (intptr_t . s64be) (uintptr_t . u64be)
-    (_Bool . u8) (bool . u8)
-    (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
-    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . c32be) (double-_Complex . c64be)
-    (__int128 . s128be) (unsigned-__int128 . u128be)
-    ;; sugar
-    (unsigned-int . u32be)))
-
-(define mtype-map/normal32be
-  '((void* . u32be)
-    (char . s8) (signed-char . s8) (unsigned-char . u8)
-    (short . s16be) (unsigned-short . u16be)
-    (int . s32be) (unsigned . u32be)
-    (long . s32be) (unsigned-long . u32be)
-    (long-long . s64be) (unsigned-long-long . u64be)
-    (float . f32be) (double . f64be)
-    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
-    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
-    (size_t . u32be) (ssize_t . s32be) (ptrdiff_t . s32be)
-    (intptr_t . s32be) (uintptr_t . u32be)
-    (_Bool . u8) (bool . u8)
-    (wchar_t . s32be) (char16_t . s16be) (char32_t . s32be)
-    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . c32be) (double-_Complex . c64be)
-    (__int128 . s128be) (unsigned-__int128 . u128be)
-    ;; sugar
-    (unsigned-int . u32be)))
-
-
 ;; ARM 64bit (little-endian)
-(define mtype-map/aarch64 mtype-map/normal64le)
+(define mtype-map/aarch64
+ '((void* . u64le)
+   (char . u8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s64le) (unsigned-long . u64le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8le) (uint8_t . u8le) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
+   (intptr_t . s64le) (uintptr_t . u64le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c256le)
+   (__int128 . s128le) (unsigned-__int128 . u128le)
+   ;; sugar
+   (unsigned-int . u32le)))
+
+(define align-map/aarch64
+  '((s8le . 1) (u8le . 1) (s16le . 2) (u16le . 2)
+    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
+    (f32le . 4) (f64le . 8) (f128le . 16) (f16le . 2) (f128le . 16)
+    (c64le . 4) (c128le . 8) (c256le . 16)
+    (s128le . 16) (u128le . 16)))
 
 (define arch/aarch64
-  (make-arch-info
-   'aarch64 64 'little mtype-map/aarch64 alignof-mtype-map/natural))
+  (make-arch-info 'aarch64 64 'little mtype-map/aarch64 align-map/aarch64))
 
 (add-to-arch-map "aarch64" arch/aarch64)
 
 
-(display "arch-info: todo: armhf\n")
+(define mtype-map/armv8l
+ '((void* . u32le)
+   (char . u8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s32le) (unsigned-long . u32le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u32le) (ssize_t . s32le) (ptrdiff_t . s32le)
+   (intptr_t . s32le) (uintptr_t . u32le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f64le) (_Float16 . #f) (_Float128 . #f)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c128le)
+   (__int128 . #f)
+   (unsigned-__int128 . #f)
+   ;; sugar
+   (unsigned-int . u32le)))
+
+(define align-map/armv8l
+ '((s8 . 1) (u8 . 1)
+   (s16le . 2) (u16le . 2) (s32le . 4) (u32le . 4)
+   (s64le . 8) (u64le . 8) (f32le . 4) (f64le . 8)
+   (f64le . 8)
+   (c64le . 4) (c128le . 8) (c128le . 8)))
+
+(define arch/armv8l
+  (make-arch-info 'armv8l 32 'little mtype-map/aarch64 align-map/aarch64))
+
+(add-to-arch-map "armv8l" arch/armv8l)
 
 
 (define mtype-map/avr
@@ -497,99 +473,252 @@
 
 (add-to-arch-map "avr" arch/avr)
 
+;; hppa
+(define mtype-map/hppa
+ '((void* . u32be)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16be) (unsigned-short . u16be)
+   (int . s32be) (unsigned . u32be)
+   (long . s32be) (unsigned-long . u32be)
+   (long-long . s64be) (unsigned-long-long . u64be)
+   (float . f32be) (double . f64be)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+   (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+   (size_t . u32be) (ssize_t . s32be)
+   (ptrdiff_t . s32be) (intptr_t . s32be) (uintptr_t . u32be)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
+   (long-double . f64be) sizeof missed _Float128 (_Float128 . #f)
+   (float-_Complex . c64be) (double-_Complex . c128be)
+   (long-double-_Complex . c128be)
+   (__int128 . #f) (unsigned-__int128 . #f)
+   (unsigned-int . #f)))
 
-(display "arch-info: todo: hppa\n")
+(define align-map/hppa
+ '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
+   (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
+   (f32be . 4) (f64be . 8)
+   (c64be . 4) (c128be . 8)))
+
+(define arch/hppa
+  (make-arch-info
+   'hppa 64 'big mtype-map/hppa align-map/hppa))
+
+(add-to-arch-map "hppa" arch/hppa)
 
 
+;; i686
 (define mtype-map/i686
-  '((void* . u32le)
-    (char . s8) (signed-char . s8) (unsigned-char . u8)
-    (short . s16le) (unsigned-short . u16le)
-    (int . s32le) (unsigned . u32le)
-    (long . s32le) (unsigned-long . u32le)
-    (long-long . s64le) (unsigned-long-long . u64le)
-    (float . f32le) (double . f64le)
-    (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
-    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
-    (size_t . s32le) (ssize_t . s32le) (ptrdiff_t . s32le)
-    (intptr_t . s32le) (uintptr_t . u32le)
-    (_Bool . u8) (bool . u8)
-    (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
-    (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
-    (float-_Complex . c32le) (double-_Complex . c64le)
-    (__int128 . s128le) (unsigned-__int128 . u128le)
-    ;; sugar
-    (unsigned-int . u32le)))
+ '((void* . u32le)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s32le) (unsigned-long . u32le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u32le) (ssize_t . s32le) (ptrdiff_t . s32le)
+   (intptr_t . s32le) (uintptr_t . u32le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f96le) (_Float16 . f16le) (_Float128 . f128le)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c192le)
+   (unsigned-int . u32le)))
+
+(define align-map/i686
+ '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
+   (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
+   (f32le . 4) (f64le . 8)
+   (f96le . 4) (f16le . 2)
+   (f128le . 16) (c64le . 4)
+   (c128le . 8) (c192le . 4)))
 
 (define arch/i686
   (make-arch-info
-   'i686 32 'little mtype-map/i686 alignof-mtype-map/natural))
+   'i686 32 'little mtype-map/i686 align-map/i686))
 
 (add-to-arch-map "i686" arch/i686)
 
 
 ;; LoongArch 64bit (little-endian)
-(define mtype-map/loongarch64 mtype-map/normal64le)
+(define mtype-map/loongarch64
+ '((void* . u64le)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s64le) (unsigned-long . u64le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u64le) (ssize_t . s64le)
+   (ptrdiff_t . s64le) (intptr_t . s64le) (uintptr_t . u64le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f128le) (_Float128 . f128le)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c256le)
+   (__int128 . s128le) (unsigned-__int128 . u128le)
+   (unsigned-int . u32le)))
+
+(define align-map/loongarch64
+ '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
+   (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
+   (f32le . 4) (f64le . 8) (f128le . 16)
+   (c64le . 4) (c128le . 8) (c256le . 16)
+   (s128le . 16) (u128le . 16)))
 
 (define arch/loongarch64
   (make-arch-info
-   'loongarch64 64 'little mtype-map/loongarch64 alignof-mtype-map/natural))
+   'loongarch64 64 'little mtype-map/loongarch64 align-map/loongarch64))
 
 (add-to-arch-map "loongarch64" arch/loongarch64)
 
 
-(display "arch-info: todo: m68k\n")
-(display "arch-info: todo: mipsel\n")
+;; m68k
+(define mtype-map/m68k
+ '((void* . u32be)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16be) (unsigned-short . u16be)
+   (int . s32be) (unsigned . u32be)
+   (long . s32be) (unsigned-long . u32be)
+   (long-long . s64be) (unsigned-long-long . u64be)
+   (float . f32be) (double . f64be)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+   (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+   (size_t . u32be) (ssize_t . s32be) (ptrdiff_t . s32be)
+   (intptr_t . s32be) (uintptr_t . u32be)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
+   (long-double . f96be) (_Float16 . #f) (_Float128 . #f)
+   (float-_Complex . c64be) (double-_Complex . c128be)
+   (long-double-_Complex . c192be)
+   (__int128 . #f) (unsigned-__int128 . #f)
+   ;; sugar
+   (unsigned-int . #f)))
 
+(define align-map/m68k
+ '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
+   (s32be . 2) (u32be . 2) (s64be . 2) (u64be . 2)
+   (f32be . 2) (f64be . 2)))
 
-;; 32 bit powerpc aka ppc32, big endian
-(define mtype-map/powerpc32
-  '((void* . u32be)
-    (char . s8) (signed-char . s8) (unsigned-char . u8)
-    (short . s16be) (unsigned-short . u16be)
-    (int . s32be) (unsigned . u32be)
-    (long . s64be) (unsigned-long . u64be)
-    (long-long . s64be) (unsigned-long-long . u64be)
-    (float . f32be) (double . f64be)
-    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
-    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64le) (uint64_t . u64le)
-    (size_t . s64be) (ssize_t . s64be) (ptrdiff_t . s64be)
-    (intptr_t . s32be) (uintptr_t . u32be)
-    (_Bool . u8) (bool . u8)
-    (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
-    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . c32be) (double-_Complex . c64be)
-    (__int128 . s128be) (unsigned-__int128 . u128be)
-    ;; sugar
-    (unsigned-int . u32be)))
-
-(define arch/powerpc32
+(define arch/m68k
   (make-arch-info
-   'powerpc32 32 'big mtype-map/powerpc32 alignof-mtype-map/natural))
+   'm68k 32 'big mtype-map/m68k align-map/m68k))
 
-(add-to-arch-map "powerpc32" arch/powerpc32)
+(add-to-arch-map "m68k" arch/m68k)
+
+
+;; mips
+(define mtype-map/mips
+ '((void* . u32le)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s32le) (unsigned-long . u32le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u32le) (ssize_t . s32le)
+   (ptrdiff_t . s32le) (intptr_t . s32le) (uintptr_t . u32le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f64le) (_Float16 . #f) (_Float128 . #f)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c128le)
+   (__int128 . #f) (unsigned-__int128 . #f)
+   ;; sugar
+   (unsigned-int . u32le)))
+
+(define align-map/mips
+ '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
+   (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8) (f32le . 4)
+   (f64le . 8) (f64le . 8)
+   (c64le . 4) (c128le . 8)
+   (c128le . 8)))
+
+(define arch/mips
+  (make-arch-info
+   'mips 32 'little mtype-map/mips align-map/mips))
+
+(add-to-arch-map "mips" arch/mips)
 
 
 ;; 64 bit powerpc, aka ppc64 (big endian)
-(define mtype-map/powerpc64be mtype-map/normal64be)
+(define mtype-map/powerpc64
+ '((void* . u64be)
+   (char . u8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16be) (unsigned-short . u16be)
+   (int . s32be) (unsigned . u32be)
+   (long . s64be) (unsigned-long . u64be)
+   (long-long . s64be) (unsigned-long-long . u64be)
+   (float . f32be) (double . f64be)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+   (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+   (size_t . u64be) (ssize_t . s64be)
+   (ptrdiff_t . s64be) (intptr_t . s64be) (uintptr_t . u64be)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
+   (long-double . f128be)
+   (float-_Complex . c64be) (double-_Complex . c128be)
+   (long-double-_Complex . c256be)
+   (__int128 . s128be) (unsigned-__int128 . u128be)
+   (unsigned-int . u32be)))
 
-(define arch/powerpc64be
+(define align-map/powerpc64
+ '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
+   (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
+   (f32be . 4) (f64be . 8) (f128be . 16)
+   (c64be . 4) (c128be . 8) (c256be . 16)
+   (s128be . 16) (u128be . 16)))
+
+(define arch/powerpc64
   (make-arch-info
-   'powerpc64be 64 'big mtype-map/powerpc64be alignof-mtype-map/natural))
+   'powerpc64 64 'big mtype-map/powerpc64 align-map/powerpc64))
 
-(add-to-arch-map "powerpc64be" arch/powerpc64be)
+(add-to-arch-map "powerpc64" arch/powerpc64)
 
 
 ;; 64 bit powerpc64le, aka ppc64le (little endian)
-(define mtype-map/powerpc64le mtype-map/normal64le)
+(define mtype-map/powerpc64le
+ '((void* . u64le)
+   (char . u8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s64le) (unsigned-long . u64le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u64le) (ssize_t . s64le)
+   (ptrdiff_t . s64le) (intptr_t . s64le) (uintptr_t . u64le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f128le) (_Float128 . f128le)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c256le)
+   (__int128 . s128le) (unsigned-__int128 . u128le)
+   (unsigned-int . u32le)))
+
+(define align-map/powerpc64le
+ '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
+   (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
+   (f32le . 4) (f64le . 8)
+   (f128le . 16)
+   (c64le . 4) (c128le . 8) (c256le . 16)
+   (s128le . 16) (u128le . 16)))
 
 (define arch/powerpc64le
   (make-arch-info
-   'powerpc64le 64 'little mtype-map/powerpc64le alignof-mtype-map/natural))
+   'powerpc64le 64 'little mtype-map/powerpc64le align-map/powerpc64le))
 
 (add-to-arch-map "powerpc64le" arch/powerpc64le)
 
 
+#|
 ;; riscv 32 bit (little endian)
 ;; riscv-gcc -march=rv32gc -dM -E - </dev/null
 (define mtype-map/riscv32 mtype-map/normal64be)
@@ -599,11 +728,28 @@
    'riscv32 32 'little mtype-map/riscv32 alignof-mtype-map/natural))
 
 (add-to-arch-map "riscv32" arch/riscv32)
-
+|#
 
 ;; RISC-V 64bit (little-endian)
-;; riscv-gcc -march=rv64g -mabi=lp64d -dM -E - </dev/null
-(define mtype-map/riscv64 mtype-map/normal64le)
+(define mtype-map/riscv64
+ '((void* . u64le)
+   (char . u8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s64le) (unsigned-long . u64le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8le) (uint8_t . u8le) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u64le) (ssize_t . s64le) n(ptrdiff_t . s64le)
+   (intptr_t . s64le) (uintptr_t . u64le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . u32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c256le)
+   (__int128 . s128le) (unsigned-__int128 . u128le)
+   (unsigned-int . u32le)))
 
 (define arch/riscv64
   (make-arch-info
@@ -614,28 +760,35 @@
 
 ;; s390x 64 bit (big endian)
 (define mtype-map/s390x
-  '((void* . u64be)
-    (char . s8) (signed-char . s8) (unsigned-char . u8)
-    (short . s16be) (unsigned-short . u16be)
-    (int . s32be) (unsigned . u32be)
-    (long . s64be) (unsigned-long . u64be)
-    (long-long . s64be) (unsigned-long-long . u64be)
-    (float . f32be) (double . f64be)
-    (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
-    (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
-    (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
-    (intptr_t . s64be) (uintptr_t . u64be)
-    (_Bool . u8) (bool . u8)
-    (wchar_t . u32be) (char16_t . u16be) (char32_t . u32be)
-    (long-double . f128be) (_Float16 . f16be) (_Float128 . f128be)
-    (float-_Complex . c32be) (double-_Complex . c64be)
-    (__int128 . s128be) (unsigned-__int128 . u128be)
-    ;; sugar
-    (unsigned-int . u32be)))
+ '((void* . u64be)
+   (char . u8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16be) (unsigned-short . u16be)
+   (int . s32be) (unsigned . u32be)
+   (long . s64be) (unsigned-long . u64be)
+   (long-long . s64be) (unsigned-long-long . u64be)
+   (float . f32be) (double . f64be)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+   (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+   (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
+   (intptr_t . s64be) (uintptr_t . u64be)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
+   (long-double . f128be) (_Float16 . #f) (_Float128 . f128be)
+   (float-_Complex . c64be) (double-_Complex . c128be)
+   (long-double-_Complex . c256be)
+   (__int128 . s128be) (unsigned-__int128 . u128be)
+   (unsigned-int . u32be)))
+
+(define align-map/s390x
+ '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
+   (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
+   (f32be . 4) (f64be . 8) (f128be . 8)
+   (c64be . 4) (c128be . 8) (c256be . 8)
+   (s128be . 8) (u128be . 8)))
 
 (define arch/s390x
   (make-arch-info
-   's390x 64 'big mtype-map/s390x alignof-mtype-map/natural))
+   's390x 64 'big mtype-map/s390x align-map/s390x))
 
 (add-to-arch-map "s390x" arch/s390x)
 
@@ -669,50 +822,82 @@
 
 
 ;; sparc 64 bit (big endian)
-(define mtype-map/sparc64 mtype-map/normal64be)
+(define mtype-map/sparc64
+ '((void* . u64be)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16be) (unsigned-short . u16be)
+   (int . s32be) (unsigned . u32be)
+   (long . s64be) (unsigned-long . u64be)
+   (long-long . s64be) (unsigned-long-long . u64be)
+   (float . f32be) (double . f64be)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16be) (uint16_t . u16be)
+   (int32_t . s32be) (uint32_t . u32be) (int64_t . s64be) (uint64_t . u64be)
+   (size_t . u64be) (ssize_t . s64be) (ptrdiff_t . s64be)
+   (intptr_t . s64be) (uintptr_t . u64be)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32be) (char16_t . u16be) (char32_t . u32be)
+   (long-double . f128be) (_Float16 . #f) (_Float128 . f128be)
+   (float-_Complex . c64be) (double-_Complex . c128be)
+   (long-double-_Complex . c256be)
+   (__int128 . s128be) (unsigned-__int128 . u128be)
+   (unsigned-int . u32be)))
+
+(define align-map/sparc64
+ '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
+   (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
+   (f32be . 4) (f64be . 8) (f128be . 16)
+   (c64be . 4) (c128be . 8) (c256be . 16)
+   (s128be . 16) (u128be . 16)))
 
 (define arch/sparc64
   (make-arch-info
-   'sparc64 64 'big mtype-map/sparc64 alignof-mtype-map/natural))
+   'sparc64 64 'big mtype-map/sparc64 align-map/sparc64))
 
 (add-to-arch-map "sparc64" arch/sparc64)
 
 
 ;; intel amd x86_64
-(define mtype-map/x86_64 mtype-map/normal64le)
+(define mtype-map/x86_64
+ '((void* . u64le)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s64le) (unsigned-long . u64le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
+   (intptr_t . s64le) (uintptr_t . u64le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f128le) (_Float16 . f16le) (_Float128 . f128le)
+   (float-_Complex . c64le) (double-_Complex . c128le)
+   (long-double-_Complex . c256le)
+   (__int128 . s128le) (unsigned-__int128 . u128le)
+   ;; sugar
+   (unsigned-int . u32le)))
+
+(define align-map/x86_64
+ '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
+   (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
+   (f32le . 4) (f64le . 8) (f128le . 16) (f16le . 2) (f128le . 16)
+   (c64le . 4) (c128le . 8) (c256le . 16)
+   (s128le . 16) (u128le . 16)))
 
 (define arch/x86_64
-  (make-arch-info
-   'x86_64 64 'little mtype-map/x86_64 sizeof-mtype-map))
+  (make-arch-info 'x86_64 64 'little mtype-map/x86_64 align-map/x86_64))
 
 (add-to-arch-map "x86_64" arch/x86_64)
 
-
 ;; aliases
+(add-to-arch-map "armhf" arch/armv8l)
 (add-to-arch-map "i386" arch/i686)
-(add-to-arch-map "powerpc64" arch/powerpc64be)
-(add-to-arch-map "ppc32" arch/powerpc32)
-(add-to-arch-map "ppc64" arch/powerpc64be)
+(add-to-arch-map "mipsel" arch/mips)
+(add-to-arch-map "parisc64" arch/hppa)
+(add-to-arch-map "powerpc64be" arch/powerpc64)
+(add-to-arch-map "ppc64" arch/powerpc64)
 (add-to-arch-map "ppc64le" arch/powerpc64le)
-
-
-;; utilities
-(define arch/normal64le
-  (make-arch-info
-   'normal64le 64 'little mtype-map/normal64le sizeof-mtype-map))
-(add-to-arch-map "normal64le" arch/normal64le)
-(define arch/normal64be
-  (make-arch-info
-   'normal64be 64 'big mtype-map/normal64be sizeof-mtype-map))
-(add-to-arch-map "normal64be" arch/normal64be)
-(define arch/normal32le
-  (make-arch-info
-   'normal32le 32 'little mtype-map/normal32le sizeof-mtype-map))
-(add-to-arch-map "normal32le" arch/normal32le)
-(define arch/normal32be
-  (make-arch-info
-   'normal32be 32 'big mtype-map/normal32be sizeof-mtype-map))
-(add-to-arch-map "normal32be" arch/normal32be)
 
 
 ;; invert to get in above order
@@ -758,4 +943,26 @@
   (assq-ref mtype-noendian-map mtype))
 
 ;; --- last line ---
+;; compare arch to base
+(use-modules ((srfi srfi-1)
+              #:select (lset-difference fold)))
+(define bkeys
+  '(void*
+    char signed-char unsigned-char short unsigned-short int unsigned long
+    unsigned-long long-long unsigned-long-long float double int8_t uint8_t
+    int16_t uint16_t int32_t uint32_t int64_t uint64_t size_t ssize_t
+    nptrdiff_t intptr_t uintptr_t _Bool bool wchar_t char16_t char32_t
+    long-double _Float16 _Float128 float-_Complex double-_Complex
+   long-double-_Complex __int128 unsigned-__int128 unsigned-int))
+
+(define-public (check-arch arch-name)
+  (sferr "check-arch: ~s\n" arch-name)
+  (let* ((arch (assq-ref (*arch-map*) arch-name))
+         (atm (arch-mtype-map arch)) (akeys (map car atm))
+         (a-b-keys (lset-difference equal? akeys bkeys))
+         )
+    ;;(sferr "akeys: ~s\n" akeys)
+    ;;(sferr "bkeys: ~s\n" bkeys)
+    (sferr "a-b-keys: ~s\n" a-b-keys)
+    ))
 

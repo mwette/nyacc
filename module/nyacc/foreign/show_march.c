@@ -95,7 +95,7 @@ size_t sizeof_type_named(const char *arg) {
   } else if (strcmp("_Float128", arg) == 0) {
     size = sizeof(_Float128);
 #endif
-#ifdef __STDC_IEC_559_COMPLEX__
+#ifdef __STDC_IEC_559_COMPLEX__x
   } else if (strcmp("float-_Complex", arg) == 0) {
     size = sizeof(float _Complex);
   } else if (strcmp("double-_Complex", arg) == 0) {
@@ -108,11 +108,11 @@ size_t sizeof_type_named(const char *arg) {
     size = sizeof(__int128);
   } else if (strcmp("unsigned-__int128", arg) == 0) {
     size = sizeof(unsigned __int128);
+#endif
   } else if (strcmp("unsigned-int", arg) == 0) {
     size = sizeof(unsigned int);
-#endif
   } else {
-    printf("sizeof missed %s\n", arg);
+    printf("   ;; sizeof missed %s\n", arg);
     size = 0;
   }
   return size;
@@ -206,7 +206,7 @@ char kindof_type_named(const char *arg) {
   } else if (strcmp("unsigned-int", arg) == 0) {
     kind = 'u';
   } else {
-    printf("kindof missed %s\n", arg);
+    printf("   ;; kindof missed %s\n", arg);
     kind = '!';
   }
   return kind;
@@ -326,11 +326,11 @@ size_t alignof_type_named(const char *arg) {
     almt = __alignof__(__int128);
   } else if (strcmp("unsigned-__int128", arg) == 0) {
     almt = __alignof__(unsigned __int128);
+#endif
   } else if (strcmp("unsigned-int", arg) == 0) {
     almt = __alignof__(unsigned int);
-#endif
   } else {
-    printf("missed %s\n", arg);
+    printf("   ;; alignof missed %s\n", arg);
     almt = 0;
   }
   return almt;
@@ -386,7 +386,7 @@ int main(int argc, char *argv[]) {
   printf(" '(\n");
   for (int ix = 0; ix < sizeof(almts)/sizeof(char*); ix++) {
     symname = symform(almts[ix]);
-    if (strcmp(symname, "#f") != 0) {
+    if (strcmp(mtypeof_type_named(symname), "#f") != 0) {
       printf("   (%s . %ld)\n",
 	     mtypeof_type_named(symname), alignof_type_named(symname));
     }
