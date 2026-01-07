@@ -83,26 +83,36 @@ size_t sizeof_type_named(const char *arg) {
     size = sizeof(char16_t);
   } else if (strcmp("char32_t", arg) == 0) {
     size = sizeof(char32_t);
+#ifdef __SIZEOF_LONG_DOUBLE__
   } else if (strcmp("long-double", arg) == 0) {
     size = sizeof(long double);
+#endif
+#ifdef __FLT16_MIN_EXP__
   } else if (strcmp("_Float16", arg) == 0) {
     size = sizeof(_Float16);
+#endif
+#ifdef __FLT128_MIN_EXP__
   } else if (strcmp("_Float128", arg) == 0) {
     size = sizeof(_Float128);
+#endif
+#ifdef __STDC_IEC_559_COMPLEX__
   } else if (strcmp("float-_Complex", arg) == 0) {
     size = sizeof(float _Complex);
   } else if (strcmp("double-_Complex", arg) == 0) {
     size = sizeof(double _Complex);
   } else if (strcmp("long-double-_Complex", arg) == 0) {
     size = sizeof(long double _Complex);
+#endif
+#ifdef __SIZEOF_INT128__
   } else if (strcmp("__int128", arg) == 0) {
     size = sizeof(__int128);
   } else if (strcmp("unsigned-__int128", arg) == 0) {
     size = sizeof(unsigned __int128);
   } else if (strcmp("unsigned-int", arg) == 0) {
     size = sizeof(unsigned int);
+#endif
   } else {
-    printf("missed %s\n", arg);
+    printf("sizeof missed %s\n", arg);
     size = 0;
   }
   return size;
@@ -190,13 +200,13 @@ char kindof_type_named(const char *arg) {
   } else if (strcmp("long-double-_Complex", arg) == 0) {
     kind = 'c';
   } else if (strcmp("__int128", arg) == 0) {
-    kind = IS_SIGNED(__int128) ? 's' : 'u';
+    kind = 's';
   } else if (strcmp("unsigned-__int128", arg) == 0) {
-    kind = IS_SIGNED(unsigned __int128) ? 's' : 'u';
+    kind = 'u';
   } else if (strcmp("unsigned-int", arg) == 0) {
-    kind = IS_SIGNED(unsigned int) ? 's' : 'u';
+    kind = 'u';
   } else {
-    printf("missed %s\n", arg);
+    printf("kindof missed %s\n", arg);
     kind = '!';
   }
   return kind;
@@ -214,7 +224,9 @@ const char * mtypeof_type_named(const char *arg) {
   nd = 'l';
 #endif
 
-  if (siz == 1) {
+  if (siz == 0) {
+    snprintf(buf,128, "#f");
+  } else if (siz == 1) {
     snprintf(buf,128, "%c%ld", kindof_type_named(arg), 8*siz);
   } else {
     snprintf(buf,128, "%c%ld%ce", kindof_type_named(arg), 8*siz, nd);
@@ -289,24 +301,34 @@ size_t alignof_type_named(const char *arg) {
     almt = __alignof__(char16_t);
   } else if (strcmp("char32_t", arg) == 0) {
     almt = __alignof__(char32_t);
+#ifdef __SIZEOF_LONG_DOUBLE__
   } else if (strcmp("long-double", arg) == 0) {
     almt = __alignof__(long double);
+#endif
+#ifdef __FLT16_MIN_EXP__
   } else if (strcmp("_Float16", arg) == 0) {
     almt = __alignof__(_Float16);
+#endif
+#ifdef __FLT128_MIN_EXP__
   } else if (strcmp("_Float128", arg) == 0) {
     almt = __alignof__(_Float128);
+#endif
+#ifdef __STDC_IEC_559_COMPLEX__
   } else if (strcmp("float-_Complex", arg) == 0) {
     almt = __alignof__(float _Complex);
   } else if (strcmp("double-_Complex", arg) == 0) {
     almt = __alignof__(double _Complex);
   } else if (strcmp("long-double-_Complex", arg) == 0) {
     almt = __alignof__(long double _Complex);
+#endif
+#ifdef __SIZEOF_INT128__
   } else if (strcmp("__int128", arg) == 0) {
     almt = __alignof__(__int128);
   } else if (strcmp("unsigned-__int128", arg) == 0) {
     almt = __alignof__(unsigned __int128);
   } else if (strcmp("unsigned-int", arg) == 0) {
     almt = __alignof__(unsigned int);
+#endif
   } else {
     printf("missed %s\n", arg);
     almt = 0;
@@ -364,8 +386,10 @@ int main(int argc, char *argv[]) {
   printf(" '(\n");
   for (int ix = 0; ix < sizeof(almts)/sizeof(char*); ix++) {
     symname = symform(almts[ix]);
-    printf("   (%s . %ld)\n",
-	   mtypeof_type_named(symname), alignof_type_named(symname));
+    if (strcmp(symname, "#f") != 0) {
+      printf("   (%s . %ld)\n",
+	     mtypeof_type_named(symname), alignof_type_named(symname));
+    }
   }
   printf("  ))\n");
 }
