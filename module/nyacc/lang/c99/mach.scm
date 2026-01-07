@@ -822,7 +822,7 @@
      (":" asm-output ($$ (make-tl 'asm-outputs $2)))
      (asm-outputs-1 "," asm-output ($$ (tl-append $1 $3))))
     (asm-output
-     (string-literal "(" identifier ")" ($$ `(asm-operand ,$1 ,$3)))
+     (string-literal "(" expression ")" ($$ `(asm-operand ,$1 ,$3)))
      ("[" identifier "]" string-literal "(" identifier ")"
       ($$ `(asm-operand ,$2 ,$4 ,$6))))
     (asm-inputs

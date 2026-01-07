@@ -1045,7 +1045,7 @@
      (make-tl 'asm-outputs $2))
    ;; 427. asm-outputs-1 => asm-outputs-1 "," asm-output
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 428. asm-output => string-literal "(" identifier ")"
+   ;; 428. asm-output => string-literal "(" expression ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(asm-operand ,$1 ,$3))
    ;; 429. asm-output => "[" identifier "]" string-literal "(" identifier ")"
