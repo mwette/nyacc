@@ -469,12 +469,11 @@
    (unsigned-int . u32le)))
 
 (define align-map/armv8l
- '((s8 . 1) (u8 . 1)
-   (s16le . 2) (u16le . 2) (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
-   (f32le . 4) (f64le . 8) (f64le . 8) (c32le . 4) (c64le . 8)))
+  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2) (s32le . 4) (u32le . 4)
+    (s64le . 8) (u64le . 8) (f32le . 4) (f64le . 8) (c32le . 4) (c64le . 8)))
 
 (define arch/armv8l
-  (make-arch-info 'armv8l 32 'little mtype-map/aarch64 align-map/aarch64))
+  (make-arch-info 'armv8l 32 'little mtype-map/armv8l align-map/armv8l))
 
 (add-to-arch-map "armv8l" arch/armv8l)
 
