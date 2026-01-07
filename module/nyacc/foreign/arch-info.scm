@@ -43,6 +43,7 @@
             mtype-bv-ref mtype-bv-set!
             bv-c32-ref bv-c32-set! bv-c64-ref bv-c64-set!
             bv-s128-ref bv-s128-set! bv-u128-ref bv-u128-set!
+            bv-f96-ref bv-f96-set! bv-c96-ref bv-c96-set!
             mtype-signed? mtype-noendian)
   #:declarative? #t
   #:use-module (srfi srfi-9)
@@ -319,6 +320,18 @@
       (bytevector-s16-set! bv ix hi be))
      (else (error "bv-s32-set!: bad endianness")))))
 
+(define-public (bv-f96-ref bv ix en)
+  (error "not implemented"))
+
+(define-public (bv-f96-set! bv ix en)
+  (error "not implemented"))
+
+(define-public (bv-c96-ref bv ix en)
+  (error "not implemented"))
+
+(define-public (bv-c96-set! bv ix en)
+  (error "not implemented"))
+
 ;; => arch-info
 (define (mtype-bv-ref mtype bv ix)
   (case mtype
@@ -332,6 +345,7 @@
     ((s64le) (bytevector-s64-ref bv ix le))
     ((f32le) (bytevector-ieee-single-ref bv ix le))
     ((f64le) (bytevector-ieee-double-ref bv ix le))
+    ;;
     ((u16be) (bytevector-u16-ref bv ix be))
     ((s16be) (bytevector-s16-ref bv ix be))
     ((u32be) (bytevector-u32-ref bv ix be))
@@ -340,6 +354,7 @@
     ((s64be) (bytevector-s64-ref bv ix be))
     ((f32be) (bytevector-ieee-single-ref bv ix be))
     ((f64be) (bytevector-ieee-double-ref bv ix be))
+    ;;
     ((s128le) (bv-s128-ref bv ix le))
     ((u128le) (bv-u128-ref bv ix le))
     ((s128be) (bv-s128-ref bv ix be))
@@ -348,6 +363,12 @@
     ((c64le) (bv-c64-ref bv ix le))
     ((c32be) (bv-c32-ref bv ix be))
     ((c64be) (bv-c64-ref bv ix be))
+    ;;
+    ((f96be) (bv-f96-ref bv ix be))
+    ((c96be) (bv-c96-ref bv ix be))
+    ((f96le) (bv-f96-ref bv ix le))
+    ((c96le) (bv-c96-ref bv ix le))
+    ;;
     (else (error "mtype-bv-ref: bad type " mtype))))
 
 ;; => arch-info
@@ -363,6 +384,7 @@
     ((s64le) (bytevector-s64-set! bv ix value le))
     ((f32le) (bytevector-ieee-single-set! bv ix value le))
     ((f64le) (bytevector-ieee-double-set! bv ix value le))
+    ;;
     ((u16be) (bytevector-u16-set! bv ix value be))
     ((s16be) (bytevector-s16-set! bv ix value be))
     ((u32be) (bytevector-u32-set! bv ix value be))
@@ -371,14 +393,22 @@
     ((s64be) (bytevector-s64-set! bv ix value be))
     ((f32be) (bytevector-ieee-single-set! bv ix value be))
     ((f64be) (bytevector-ieee-double-set! bv ix value be))
+    ;;
     ((s128le) (bv-s128-set! bv ix value le))
     ((u128le) (bv-u128-set! bv ix value le))
     ((s128be) (bv-s128-set! bv ix value be))
     ((u128be) (bv-u128-set! bv ix value be))
+    ;;
     ((c32le) (bv-c32-set! bv ix value le))
     ((c64le) (bv-c64-set! bv ix value le))
     ((c32be) (bv-c32-set! bv ix value be))
     ((c64be) (bv-c64-set! bv ix value be))
+    ;;
+    ((f96le) (bv-f96-ref bv ix le))
+    ((c96le) (bv-c96-ref bv ix le))
+    ((f96be) (bv-f96-ref bv ix be))
+    ((c96be) (bv-c96-ref bv ix be))
+    ;;
     (else (error "mtype-bv-set!: bad type " mtype))))
 
 
@@ -409,7 +439,7 @@
   '((s8le . 1) (u8le . 1) (s16le . 2) (u16le . 2)
     (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
     (f32le . 4) (f64le . 8) (f128le . 16) (f16le . 2) (f128le . 16)
-    (c64le . 4) (c128le . 8) (c256le . 16)
+    (c32le . 4) (c64le . 8) (c128le . 16)
     (s128le . 16) (u128le . 16)))
 
 (define arch/aarch64
@@ -435,16 +465,13 @@
    (long-double . f64le) (_Float16 . #f) (_Float128 . #f)
    (float-_Complex . c32le) (double-_Complex . c64le)
    (long-double-_Complex . c64le)
-   (__int128 . #f)
-   (unsigned-__int128 . #f)
+   (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32le)))
 
 (define align-map/armv8l
  '((s8 . 1) (u8 . 1)
-   (s16le . 2) (u16le . 2) (s32le . 4) (u32le . 4)
-   (s64le . 8) (u64le . 8) (f32le . 4) (f64le . 8)
-   (f64le . 8)
-   (c64le . 4) (c128le . 8) (c128le . 8)))
+   (s16le . 2) (u16le . 2) (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
+   (f32le . 4) (f64le . 8) (f64le . 8) (c32le . 4) (c64le . 8)))
 
 (define arch/armv8l
   (make-arch-info 'armv8l 32 'little mtype-map/aarch64 align-map/aarch64))
@@ -505,8 +532,7 @@
 (define align-map/hppa
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
-   (f32be . 4) (f64be . 8)
-   (c64be . 4) (c128be . 8)))
+   (f32be . 4) (f64be . 8) (c32be . 4) (c64be . 8)))
 
 (define arch/hppa
   (make-arch-info
@@ -540,9 +566,8 @@
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8)
-   (f96le . 4) (f16le . 2)
-   (f128le . 16) (c64le . 4)
-   (c128le . 8) (c192le . 4)))
+   (f96le . 4) (f16le . 2) (f128le . 16)
+   (c32le . 4) (c64le . 8) (c96le . 4)))
 
 (define arch/i686
   (make-arch-info
@@ -576,7 +601,7 @@
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8) (f128le . 16)
-   (c64le . 4) (c128le . 8) (c256le . 16)
+   (c32le . 4) (c64le . 8) (c128le . 16)
    (s128le . 16) (u128le . 16)))
 
 (define arch/loongarch64
@@ -643,9 +668,7 @@
 (define align-map/mips
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8) (f32le . 4)
-   (f64le . 8) (f64le . 8)
-   (c64le . 4) (c128le . 8)
-   (c128le . 8)))
+   (f64le . 8) (f64le . 8) (c32le . 4) (c64le . 8) (c128le . 8)))
 
 (define arch/mips
   (make-arch-info
@@ -679,7 +702,7 @@
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
    (f32be . 4) (f64be . 8) (f128be . 16)
-   (c64be . 4) (c128be . 8) (c256be . 16)
+   (c32be . 4) (c64be . 8) (c128be . 16)
    (s128be . 16) (u128be . 16)))
 
 (define arch/powerpc64
@@ -715,7 +738,7 @@
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8)
    (f128le . 16)
-   (c64le . 4) (c128le . 8) (c256le . 16)
+   (c32le . 4) (c64le . 8) (c128le . 16)
    (s128le . 16) (u128le . 16)))
 
 (define arch/powerpc64le
@@ -790,7 +813,7 @@
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
    (f32be . 4) (f64be . 8) (f128be . 8)
-   (c64be . 4) (c128be . 8) (c256be . 8)
+   (c32be . 4) (c64be . 8) (c128be . 8)
    (s128be . 8) (u128be . 8)))
 
 (define arch/s390x
@@ -853,7 +876,7 @@
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
    (f32be . 4) (f64be . 8) (f128be . 16)
-   (c64be . 4) (c128be . 8) (c256be . 16)
+   (c32be . 4) (c64be . 8) (c128be . 16)
    (s128be . 16) (u128be . 16)))
 
 (define arch/sparc64
@@ -888,7 +911,7 @@
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8) (f128le . 16) (f16le . 2) (f128le . 16)
-   (c64le . 4) (c128le . 8) (c256le . 16)
+   (c32le . 4) (c64le . 8) (c128le . 16)
    (s128le . 16) (u128le . 16)))
 
 (define arch/x86_64
