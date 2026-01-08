@@ -21,7 +21,8 @@
 ;; The architectures names should really use targets but I think.
 ;; Currently, this is sync'd with <march>-*-linux.
 ;; For example, chars on linux are signed but on some other OSs they
-;; are unsigned.
+;; are unsigned.  I may make these like `x86_64-linux` and update the
+;; arch selection routines
 
 ;; 1) We have defined arch's i686 ppc riscv32 riscv64 sparc x86_64
 ;; 2) Can we remove non-le/be mtypes?
