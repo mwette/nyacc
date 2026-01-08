@@ -112,7 +112,7 @@ size_t sizeof_type_named(const char *arg) {
   } else if (strcmp("unsigned-int", arg) == 0) {
     size = sizeof(unsigned int);
   } else {
-    printf("   ;; sizeof missed %s\n", arg);
+    //printf("   ;; sizeof missed %s\n", arg);
     size = 0;
   }
   return size;
@@ -348,6 +348,14 @@ const char *types[] = {
   "long double _Complex", "__int128", "unsigned __int128", "unsigned int",
 };
 
+const char *tspc[] = {
+  "\n   ", " ", " ", "\n   ", " ", "\n   ", " ", "\n   ", " ", "\n   ", 
+  " ", "\n   ", " ", "\n   ", " ", " ", " ", "\n   ", " ", " ", " ", "\n   ", 
+  " ", "\n   ", " ", " ", "\n   ", " ", "\n   ", " ", " ", "\n   ", 
+  " ", " ", "\n   ", " ", "\n   ", "\n   ", " ", "\n   ", "",
+  "\n", "\n", "\n", 
+};
+
 const char *almts[] = {
   "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t",
   "int64_t", "uint64_t", "float", "double", 
@@ -377,23 +385,24 @@ int main(int argc, char *argv[]) {
   strncpy(machname, utsn.machine, 64);
 
   printf("(define mtype-map/%s\n", machname);
-  printf(" '(\n");
+  printf(" '(");
   for (int ix = 0; ix < sizeof(types)/sizeof(char*); ix++) {
     symname = symform(types[ix]);
-    printf("   (%s . %s)\n", symname, mtypeof_type_named(symname));
+    printf("(%s . %s)%s", symname, mtypeof_type_named(symname), tspc[ix]);
   }
-  printf("  ))\n");
+  printf("))\n");
   printf("\n");
   printf("(define align-map/%s\n", machname);
-  printf(" '(\n");
+  printf(" '(");
   for (int ix = 0; ix < sizeof(almts)/sizeof(char*); ix++) {
     symname = symform(almts[ix]);
     if (strcmp(mtypeof_type_named(symname), "#f") != 0) {
-      printf("   (%s . %ld)\n",
+      if (ix > 0) printf("\n   ");
+      printf("(%s . %ld)",
 	     mtypeof_type_named(symname), alignof_type_named(symname));
     }
   }
-  printf("  ))\n");
+  printf("))\n\n");
 }
 
 
