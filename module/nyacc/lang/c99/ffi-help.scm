@@ -415,7 +415,7 @@
    (lambda (type dim)                   ; array
      `(carray ,type ,dim))
    (lambda (type)                       ; pointer
-     `(cpointer ,type)) 
+     `(cpointer ,type))
    (lambda* (flds #:optional packed)    ; struct
      (if packed
          `(cstruct (list ,@(fix-flds flds)) #t)
@@ -808,10 +808,11 @@
                   ,(if exec-ret `((lambda (~ret) ,exec-ret) ,call) call)))))))))
 
 
-(define (cnvt-fctn name return params seed)
+(define* (cnvt-fctn name return params seed #:key asm-name)
   ;; can't use function*-wraps just because of the delay :(
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
   (let* ((rname (rename name 'function))
+         (aname (or asm-name name))
          (params names (setup-function return params))
          (decl-ret decl-par (function-decls return params))
          (exec-ret exec-par (function-execs return params))
@@ -824,7 +825,7 @@
          ,(if varargs?
               `(lambda (,@names . ~rest)
                  (let ((~proc (ffi:pointer->procedure
-                               ,decl-ret (foreign-pointer-search ,name)
+                               ,decl-ret (foreign-pointer-search ,aname)
                                (cons* ,@decl-par (map car ~rest))))
                        ,@urap-par)
                    ,(if exec-ret
@@ -832,7 +833,7 @@
                         va-call)))
               `(let ((~proc
                       (delay (ffi:pointer->procedure
-                              ,decl-ret (foreign-pointer-search ,name)
+                              ,decl-ret (foreign-pointer-search ,aname)
                               (list ,@decl-par)))))
                  (lambda ,names
                    (let ,urap-par
@@ -1159,13 +1160,21 @@
               (sferr "udecl->sexp missed typedef:\n") (pperr mdecl)
               (values defined seed)))))))
 
+
      ((ftn-declr? declr)
       (let* ((specl `(decl-spec-list (type-spec ,tspec)))
              (mdecl (udecl->mdecl (sx-list 'udecl #f specl declr)))
              (name (md-label mdecl))
              (return (mdecl->udecl (cons "~ret" (cdr (md-tail mdecl)))))
-             (params (cdadar (md-tail mdecl))))
-        (values defined (cnvt-fctn name return params seed))))
+             (params (cdadar (md-tail mdecl)))
+             (aname (sx-match declr
+                      ((init-declr (ftn-declr . ,_1) (asm-expr (string . ,sa)))
+                       (string-trim (string-join sa) #\space))
+                      (,__ #f))))
+        (values defined (if aname
+                            (cnvt-fctn name return params seed #:asm-name aname)
+                            (cnvt-fctn name return params seed)))))
+
 
      ((sx-match tspec
 

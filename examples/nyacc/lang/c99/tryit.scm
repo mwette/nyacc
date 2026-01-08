@@ -465,54 +465,6 @@ int foo() {
     (pperr (ccode->sexp code))
     ))
 
-;; issue 24
-;;#define __DECLARE_FLEX_ARRAY(TYPE, NAME)        \
-;;        struct { \
-;;                struct { } __empty_ ## NAME; \
-;;                TYPE NAME[]; \
-;;        }
-;;#endif
-(when #f
-  (let* ((code "struct foo { struct {} __empty_bufs; int bufs[]; };")
-         (tree (parse-string code))
-         (sexp (ccode->sexp code))
-         (ct (eval (caddr (cadr sexp)) (current-module))))
-    ;;(pp tree)
-    ;;(pp sexp)
-    (pp (caddr (cadr sexp)))
-    (sf "ct=~s\n" ct)
-    (sf "size=~s\n" (ctype-size ct)) 
-    (pretty-print-ctype ct)
-    #f))
-
-(when #f
-;; typedef struct siginfo {
-;;   union {
-;;     struct {
-;;       int si_signo;
-;;       int si_errno;
-;;       int si_code;
-;;       union __sifields _sifields;
-;;     };
-;;     int _si_pad[128/sizeof(int)];
-;;   };
-;; } siginfo_t;
-  (let* ((ct
-         (name-ctype
-          'siginfo_t
-          (cstruct
-           (list `(#f
-                   ,(cunion
-                     (list `(#f
-                             ,(cstruct
-                               (list `(si_signo ,(cbase 'int))
-                                     `(si_errno ,(cbase 'int))
-                                     `(si_code ,(cbase 'int))
-                                     #;`(_sifields ,union-__sifields))))
-                           `(_si_pad ,(carray (cbase 'int) 32)))))))))
-         (cd (make-cdata ct)))
-    (cdata-ref cd)))
-
 ;; issue#25
 (when #f
   (let* ((code "
@@ -549,136 +501,19 @@ struct rseq_cs {
     (if #f #f)))
 
 ;; issue#36
-(when #t
+(when #f
   (let* ((code "int f() {
 __asm__(\"bswapl %0 ; bswapl %1 ; xchgl %0,%1\"
 	    : \"=r\" (v.s.a), \"=r\" (v.s.b)
 	    : \"0\" (v.s.a), \"1\" (v.s.b));
 	
-}")
-         (tree (parse-string code))
-         )
-    (if #f #f)))
+}"))
+    (pp (parse-string code))))
 
-(when #f
-  (let* (
-         (__kernel_pid_t (cbase 'int))
-         (__kernel_uid32_t (cbase 'uint32_t))
-         (__kernel_timer_t (cbase 'uint32_t))
-         (__kernel_clock_t (cbase 'uint32_t))
-         (__u32 (cbase 'uint32_t))
-         (sigval_t (cbase 'uint32_t))
-         (union-__sifields
-          (name-ctype
-           'union-__sifields
-           (cunion
-            (list `(_kill ,(cstruct
-                            (list `(_pid ,__kernel_pid_t)
-                                  `(_uid ,__kernel_uid32_t))))
-                  `(_timer
-                    ,(cstruct
-                      (list `(_tid ,__kernel_timer_t)
-                            `(_overrun ,(cbase 'int))
-                            `(_sigval ,sigval_t)
-                            `(_sys_private ,(cbase 'int)))))
-                  `(_rt ,(cstruct
-                          (list `(_pid ,__kernel_pid_t)
-                                `(_uid ,__kernel_uid32_t)
-                                `(_sigval ,sigval_t))))
-                  `(_sigchld
-                    ,(cstruct
-                      (list `(_pid ,__kernel_pid_t)
-                            `(_uid ,__kernel_uid32_t)
-                            `(_status ,(cbase 'int))
-                            `(_utime ,__kernel_clock_t)
-                            `(_stime ,__kernel_clock_t))))
-                  `(_sigfault
-                    ,(cstruct
-                      (list `(_addr ,(cpointer (cbase 'void)))
-                            `(#f
-                              ,(cunion
-                                (list `(_trapno ,(cbase 'int))
-                                      `(_addr_lsb ,(cbase 'short))
-                                      `(_addr_bnd
-                                        ,(cstruct
-                                          (list `(_dummy_bnd
-                                                  ,(carray (cbase 'char) 8))
-                                                `(_lower
-                                                  ,(cpointer (cbase 'void)))
-                                                `(_upper
-                                                  ,(cpointer (cbase 'void))))))
-                                      `(_addr_pkey
-                                        ,(cstruct
-                                          (list `(_dummy_pkey
-                                                  ,(carray (cbase 'char) 8))
-                                                `(_pkey ,__u32))))
-                                      `(_perf ,(cstruct
-                                                (list `(_data ,(cbase 'unsigned-long))
-                                                      `(_type ,__u32)
-                                                      `(_flags ,__u32))))))))))
-                  `(_sigpoll
-                    ,(cstruct
-                      (list `(_band ,(cbase 'long))
-                            `(_fd ,(cbase 'int)))))
-                  `(_sigsys
-                    ,(cstruct
-                      (list `(_call_addr ,(cpointer (cbase 'void)))
-                            `(_syscall ,(cbase 'int))
-                            `(_arch ,(cbase 'unsigned)))))))))
-
-         (siginfo_t
-          (name-ctype
-           'siginfo_t
-           (cstruct
-            (list `(#f
-                    ,(cunion
-                      (list `(#f
-                              ,(cstruct
-                                (list `(si_signo ,(cbase 'int))
-                                      `(si_errno ,(cbase 'int))
-                                      `(si_code ,(cbase 'int))
-                                      `(_sifields ,union-__sifields))))
-                            `(_si_pad ,(carray (cbase 'int) 32)))))))))
-         )
-    ;;(pp (ccode->sexp code))
-    ;;(pp udict)
-    ;;(if #f #f)
-    siginfo_t
-    ))
-         
-(when #f
-  (let* ((code "int f() {
-int lseek(int __fd, int __offset, int __whence) asm (\"\" \" lseek64\");
-}")
-         (tree (parse-string code))
-         )
-    (if #f #f)))
-
+;; issue#49
 (when #t
-  (let ((udecl
-         '(udecl (decl-spec-list
-                  (stor-spec (extern))
-                  (type-spec (typename "__off64_t")))
-                 (init-declr
-                  (@ (attributes "__nothrow__;__leaf__"))
-                  (ftn-declr
-                   (ident "lseek")
-                   (param-list
-                    (param-decl
-                     (decl-spec-list (type-spec (fixed-type "int")))
-                     (param-declr (ident "__fd")))
-                    (param-decl
-                     (decl-spec-list
-                      (type-spec (typename "__off64_t")))
-                     (param-declr (ident "__offset")))
-                    (param-decl
-                     (decl-spec-list (type-spec (fixed-type "int")))
-                     (param-declr (ident "__whence")))))
-                  (asm-expr
-                   (@ (extension "GNUC"))
-                   (string "" "lseek64"))))))
-    (sf "issue#35: NOTE that we lose asm name:\n")
-    (pp udecl)
-    (pp (udecl->mdecl udecl))))
+  (let ((code "int foo(int x) asm (\"\" \" foo64\");"))
+    ;;(pp (parse-string code))
+    (pp (ccode->sexp code))))
 
 ;; --- last line ---
