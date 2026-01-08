@@ -639,11 +639,13 @@
 
   (define (unwrap-declr declr tail)
     (sx-match declr
+      ;; FIXME tossing initializers - e.g. double d[] = { 1.0, 2.0, 3.0 };
+      ;; FIXME if asm-expr is asm name we don't transfer that
       ((init-declr ,item) (unwrap-declr item tail))
-      ((init-declr ,item (initzer . ,vals))
-       ;;(sferr "udecl->mdecl tossing initializer\n")
-       ;; FIXME this is bad for: double d[] = { 1.0, 2.0, 3.0 };
-       (unwrap-declr item tail)) ;; ?
+      ((init-declr ,item (initzer . ,vals)) (unwrap-declr item tail))
+      ((init-declr ,item (asm-expr . ,vals)) (unwrap-declr item tail))
+      ((init-declr ,item (asm-expr . ,vals) (initzer . ,vals))
+       (unwrap-declr item tail))
       ((comp-declr ,item) (unwrap-declr item tail))
       ((param-declr ,item) (unwrap-declr item tail))
       ((param-declr) (cons (namer) tail))
@@ -670,26 +672,6 @@
        (sferr "munge-base/unwrap-declr missed:\n") (pperr declr)
        (throw 'c99-error "munge-base/unwrap-declr failed")
        #f)))
-
-  #|
-munge-base/unwrap-declr missed:
-  (init-declr
-   (@ (attributes "__nothrow__;__leaf__"))
-   (ftn-declr
-    (ident "lseek")
-    (param-list
-     (param-decl
-      (decl-spec-list (type-spec (fixed-type "int")))
-      (param-declr (ident "__fd")))
-     (param-decl
-      (decl-spec-list (type-spec (typename "__off64_t")))
-      (param-declr (ident "__offset")))
-     (param-decl
-      (decl-spec-list (type-spec (fixed-type "int")))
-      (param-declr (ident "__whence")))))
-   (asm-expr (@ (extension "GNUC")) (string "" " lseek64")))
-  compile-ffi: error: munge-base/unwrap-declr failed
-  |#
   (unwrap-declr declr tail))
 
 ;; @deffn {Procedure} udecl->mdecl udecl [#:namer def-namer]
