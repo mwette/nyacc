@@ -1083,7 +1083,7 @@
       ;; cdata value
       (let ((sz (ctype-size ct)))
         (unless (ctype-equal? (cdata-ct value) ct)
-          (error "cdata-set!: bad arg:" value))
+          (error "cdata-set!: cdata arg type does not match:" value))
         (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
       ;; guile value
       (case (ctype-kind ct)
@@ -1103,11 +1103,11 @@
                             (pointer-address (string->pointer value))))
             ((procedure? value)
              (unless (eq? (ctype-kind pt) 'function)
-               (error "cdata: expecting pointer to function, got" pt))
+               (error "cdata-set!: expecting pointer to function, got" pt))
              (mtype-bv-set! mtype bv ix
                             (pointer-address
                              ((cfunction-proc->ptr (ctype-info pt)) value))))
-            (else (error "cdata-set!: bad arg:" value)))))
+            (else (error "cdata-set!: bad value for pointer:" value)))))
         ((bitfield)
          (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
                 (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
@@ -1124,17 +1124,17 @@
             ((symbol? value)
              (mtype-bv-set! mtype bv ix ((cenum-numf info) value)))
             (else
-             (error "cdata-set! bad value arg: ~s" value)))))
+             (error "cdata-set! bad value for enum: ~s" value)))))
         ((array)
          (cdata-set-from-array! (%make-cdata bv ix ct) value))
         ((struct)
          (cond
           ((list? value) (aggr-set! (cstruct-select (ctype-info ct)) value))
-          (else (error "cdata-set!: bad arg: " value))))
+          (else (error "cdata-set!: bad value for struct: " value))))
         ((union)
          (cond
           ((list? value) (aggr-set! (cunion-select (ctype-info ct)) value))
-          (else (error "cdata-set!: bad arg: " value))))
+          (else (error "cdata-set!: bad value for union: " value))))
         ((function)
          (cond
           ((procedure? value)
@@ -1143,7 +1143,7 @@
                   (proc->ptr (cfunction-proc->ptr (ctype-info ct)))
                   (fptr (proc->ptr value)))
              (mtype-bv-set! mtype bv ix (pointer-address fptr))))
-          (else (error "cdata-set!: bad arg: " value))))
+          (else (error "cdata-set!: bad value for function: " value))))
         (else (error "cdata-set!: bad arg: " value)))))
 
 ;; @deffn {Procedure} cdata-ref data [tag ...] => value
