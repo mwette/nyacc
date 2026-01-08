@@ -6,7 +6,7 @@
  *
  * M.Wette - Jan 2026
  */
-
+//#define USE_ISOC11
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -14,6 +14,7 @@
 #include <string.h>
 #include <wchar.h>
 #include <uchar.h>
+#include <complex.h>
 #include <sys/utsname.h>
 
 size_t sizeof_type_named(const char *arg) {
@@ -358,9 +359,9 @@ const char *tspc[] = {
 
 const char *almts[] = {
   "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t",
-  "int64_t", "uint64_t", "float", "double", 
-  "long double", "_Float16", "_Float128", "float _Complex", "double _Complex",
-  "long double _Complex", "__int128", "unsigned __int128",
+  "int64_t", "uint64_t", "float", "double", "long double", "_Float16",
+  "float _Complex", "double _Complex", "long double _Complex",
+  "__int128", "unsigned __int128",
 };
 
 char *symform(const char* name) {  
