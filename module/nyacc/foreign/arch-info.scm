@@ -424,7 +424,7 @@
    (long . s64le) (unsigned-long . u64le)
    (long-long . s64le) (unsigned-long-long . u64le)
    (float . f32le) (double . f64le)
-   (int8_t . s8le) (uint8_t . u8le) (int16_t . s16le) (uint16_t . u16le)
+   (int8_t . s8le) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
    (size_t . u64le) (ssize_t . s64le)
    (ptrdiff_t . s64le) (intptr_t . s64le) (uintptr_t . u64le)
@@ -437,7 +437,7 @@
    (unsigned-int . u32le)))
 
 (define align-map/aarch64
-  '((s8le . 1) (u8le . 1) (s16le . 2) (u16le . 2)
+  '((u8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
     (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
     (f32le . 4) (f64le . 8) (f128le . 16) (f16le . 2) (f128le . 16)
     (c32le . 4) (c64le . 8) (c128le . 16)
@@ -769,7 +769,7 @@
    (long . s64le) (unsigned-long . u64le)
    (long-long . s64le) (unsigned-long-long . u64le)
    (float . f32le) (double . f64le)
-   (int8_t . s8le) (uint8_t . u8le) (int16_t . s16le) (uint16_t . u16le)
+   (int8_t . s8le) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
    (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
    (size_t . u64le) (ssize_t . s64le) (ptrdiff_t . s64le)
    (intptr_t . s64le) (uintptr_t . u64le)
