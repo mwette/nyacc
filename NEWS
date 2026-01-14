@@ -5,8 +5,8 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2026-XX-XX  V3.02.0
-	* Many thanks to #lechner for persistence in testing new commits!
+2026-01-14  V3.02.0
+        * Many thanks to #lechner for persistence in testing new commits!
         * Updated ffi-helper to allow other backends (e.g, bstruct,
           bytestructures).  See github.com/mwette/guile-fhbe. This was
           accomplished by adding a layer of indirection for low-level
@@ -18,7 +18,7 @@ without any warranty.
         * In cdata, removed support for previously deprecated types (e.g.,
           "signed long int") in preference for canonical short names (e.g.,
           "long"), as parse-c99 does not produce them.
-        * Merged "powerpc64le" machine arch (from #lechner) into arch-info.
+        * Merged "powerpc64le" machine arch (from #gwitmond) into arch-info.
         * Added s390x machine arch (thanks #rlb) into arch-info. issue#27
         * In cdata, exposed procedure make-cdata/* which will create
           an object from a pointer.
@@ -29,15 +29,16 @@ without any warranty.
           alists for cstructs and cunions.
         * Fixes issue#22: buggy cdata-ref/set! with anonymous struct/unions.
         * Fixes issue#24: c99 parsing empty-structs (struct { };).
-	* Fixes issue#25: attribute arguments w/ math expressions.
-	* Fixes issue#26: __u32 not found => major bug in process-decls
-          (see commit c2f84da -> 0cc90f6).
+        * Fixes issue#25: attribute arguments w/ math expressions.
+        * Fixes issue#26: __u32 not found => major bug in process-decls 0cc90f6
+        * Fixes issue#49: use asm-based link name for foreign-pointers
         * Worked more on the "mlang" language example parser and analyzer.
+        * In define-ffi-module identifier ffi-arch is available march.
 
 2026-01-01  V3.01.1
-	* lalr.scm(wrap-term/MES): make final return 'terminal 
-	* ffi-help-cd.scm(unwrap-mdecl): use (array-of . ,_1) not (array-of)
-	* added examples/ffi/fuse.ffi
+        * lalr.scm(wrap-term/MES): make final return 'terminal 
+        * ffi-help-cd.scm(unwrap-mdecl): use (array-of . ,_1) not (array-of)
+        * added examples/ffi/fuse.ffi
 
 2025-12-13  V3.01.0
         * nyacc/parse.scm(make-lalr-parser): Added option to provide user-hook
