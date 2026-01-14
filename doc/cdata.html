@@ -3,7 +3,7 @@
 <!-- Created by GNU Texinfo 7.1.1, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!-- Copyright (C) 2024 - Matthew Wette
+<!-- Copyright (C) 2024-2025 - Matthew Wette
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -49,7 +49,7 @@ Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previou
 <h1 class="top" id="CData-Reference-Manual"><span>CData Reference Manual<a class="copiable-link" href="#CData-Reference-Manual"> &para;</a></span></h1>
 <br><p> Matt Wette
 <br> October 2024
-<br> 
+<br>
 <br> This is a user guide for the NYACC CData module for Guile.
 </p>
 
@@ -58,8 +58,9 @@ Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previou
 </div>
 <h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
 
-<p>The <em class="emph">cdata</em> module and its partner <em class="emph">arch-info</em> provide a
-way to work with data originating from C libraries.  We hope module
+<p>The <em class="emph">cdata</em> module (<code class="code">(nyacc foreign cdata)</code> and its
+partner <em class="emph">arch-info</em> (<code class="code">(nyacc foreign arch-info)</code> provide a
+way to work with data originating from C libraries.  We hope the module
 is reasonably easy to understand and use.  Size and alignment is
 tracked for all types.  Types are classified into the following kinds:
 base, struct, union, array, pointer, enum and function.  The procedures
@@ -68,18 +69,18 @@ base, struct, union, array, pointer, enum and function.  The procedures
 objects, and the procedure <code class="code">make-cdata</code> will generate data
 objects based on these.  The underlying bits of data are stored in Scheme
 bytevectors.  Access to component data is provided by the
-<code class="code">cdata-ref</code> procedure and mutation is 
-accomplished via the <code class="code">cdata-set!</code> procedure.  
-The modules support non-native machine architectures via a
-global parameter called <code class="code">*arch*</code>.
+<code class="code">cdata-ref</code> procedure and mutation is
+accomplished via the <code class="code">cdata-set!</code> procedure.
+The modules support non-native machine architectures via the
+global parameter <code class="code">*arch*</code>.
 </p>
 <p>Beyond size and
 alignment, base type objects carry a symbolic tag to determine the
 appropriate low level machine type.
 The low level machine types map directly to bytevector setters
 and getters.  Support for C base types is handled by the <code class="code">cbase</code>
-procedure which converts them to underlying types.  For example, on a
-64 bit little endian architecture, <code class="code">(cbase 'uintptr_t)</code> would
+procedure which converts them to underlying types.  For example, for a
+64 bit little endian machine architecture, <code class="code">(cbase 'uintptr_t)</code> would
 generate a type with underlying symbol <code class="code">u64le</code>.
 </p>
 <p>Here is a simple example of using <em class="emph">cdata</em> for structures:
@@ -89,7 +90,8 @@ generate a type with underlying symbol <code class="code">u64le</code>.
 (use-modules (system foreign-library))
 (use-modules (nyacc foreign cdata))
 
-(define timeval_t (cstruct '((tv_sec long) (tv_usec long))))
+(define timeval_t
+  (cstruct `((tv_sec ,(cbase 'long)) (tv_usec ,(cbase 'long)))))
 
 (define gettimeofday
   (foreign-library-function
@@ -105,8 +107,8 @@ generate a type with underlying symbol <code class="code">u64le</code>.
         (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
 time: 1719062561 676365
 </pre></div>
-<p>In the above <code class="code">cdata&amp;</code> generates a cdata pointer to <code class="code">d1</code> and
-<code class="code">cdata-ref</code> extracts the Guile value.
+<p>In the above <code class="code">cdata&amp;</code> generates a cpointer type for <code class="code">d1</code> and
+<code class="code">cdata-ref</code> extracts the Guile (<code class="code">pointer</code>) value.
 </p>
 <h3 class="heading" id="Basic-Usage"><span>Basic Usage<a class="copiable-link" href="#Basic-Usage"> &para;</a></span></h3>
 
@@ -114,10 +116,14 @@ time: 1719062561 676365
 want on your first approach.
 </p>
 <dl class="first-deffn">
-<dt class="deffn" id="index-cbase"><span class="category-def">Procedure: </span><span><strong class="def-name">cbase</strong> <var class="def-var-arguments">name</var><a class="copiable-link" href="#index-cbase"> &para;</a></span></dt>
-<dd><p>Given symbolic <var class="var">name</var> generate a base ctype.   The name can
-be a symbol like <code class="code">unsigned-int</code>, <code class="code">double</code>, or can be a
-<em class="emph">arch-info</em> machine type symbol like <code class="code">u64le</code>.
+<dt class="deffn" id="index-cbase"><span class="category-def">Procedure: </span><span><strong class="def-name">cbase</strong> <var class="def-var-arguments">name =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cbase"> &para;</a></span></dt>
+<dd><p>Given symbolic <var class="var">name</var>, generate a base ctype.   The name can
+be something like <code class="code">unsigned</code>, <code class="code">double</code>, or can be a
+<em class="emph">cdata</em> machine type like <code class="code">u64le</code>.  For example,
+</p><div class="example">
+<pre class="example-preformatted">(define double-type (cbase 'double))
+</pre></div>
+<p>There is a pseudo-type <code class="code">void</code>.
 </p></dd></dl>
 
 <dl class="first-deffn">
@@ -125,7 +131,6 @@ be a symbol like <code class="code">unsigned-int</code>, <code class="code">doub
 <dd><p>Generate a C pointer type for <var class="var">type</var>. To reference or de-reference
 cdata object see <code class="code">cdata&amp;</code> and <code class="code">cdata*</code>.  <var class="var">type</var> can be
 the symbol <code class="code">void</code> or a symbolic name used as argument to <code class="code">cbase</code>.
-<br>note: Should we allow <var class="var">type</var> to be a promise?
 </p><div class="example">
 <pre class="example-preformatted">(define foo_t (cbase 'int))
 (cpointer (delay foo_t))
@@ -156,25 +161,24 @@ If <var class="var">length</var> is zero, the array length is unbounded: it&rsqu
 can be specified as argument to <code class="code">make-cdata</code>.
 </p></dd></dl>
 
-
 <dl class="first-deffn">
 <dt class="deffn" id="index-cenum"><span class="category-def">Procedure: </span><span><strong class="def-name">cenum</strong> <var class="def-var-arguments">enum-list [packed] =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cenum"> &para;</a></span></dt>
 <dd><p><var class="var">enum-list</var> is a list of name or name-value pairs
 </p><div class="example">
 <pre class="example-preformatted">(cenum '((a 1) b (c 4))
 </pre></div>
-<p>If <var class="var">packed</var> is <code class="code">#t</code> the size will be smallest that can hold it.
+<p>If <var class="var">packed</var> is <code class="code">#t</code> the size will be smallest that can hold it,
+as if defined in C with <code class="code">__attribute__((packed))</code>.
 </p></dd></dl>
-
 
 <dl class="first-deffn">
 <dt class="deffn" id="index-cfunction"><span class="category-def">Procedure: </span><span><strong class="def-name">cfunction</strong> <var class="def-var-arguments">proc-&gt;ptr ptr-&gt;proc [variadic?] =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cfunction"> &para;</a></span></dt>
-<dd><p>Generate a C function type to be used with <code class="code">cpointer</code>.  You must
-pass the <var class="var">wrapper</var> and <var class="var">unwrapper</var> procedures that convert a
+<dd><p>Generate a C function type to be used with <code class="code">cpointer</code>. The arguments
+<var class="var">proc-&gt;ptr</var> and <var class="var">ptr-&gt;proc</var> are procedures that convert a
 procedure to a pointer, and pointer to procedure, respectively.  The
 optional argument <var class="var">#:variadic</var>, if <code class="code">#t</code>,  indicates the function
 uses variadic arguments.  For this case (I need to add documention).
-Here is an example:
+ Here is an example:
 </p><div class="example">
 <pre class="example-preformatted">(define (f-proc-&gt;ptr proc)
   (ffi:procedure-&gt;pointer ffi:void proc (list)))
@@ -182,7 +186,10 @@ Here is an example:
   (ffi:pointer-&gt;procedure ffi:void fptr (list)))
 (define ftype (cpointer (cfunction f-proc-&gt;ptr f-ptr-&gt;proc)))
 </pre></div>
-</dd></dl>
+<p>The thinking here is that a <code class="code">cfunction</code> type is a proxy for a
+C function in memory, with a getter and setter to read from or write
+to memory.
+</p></dd></dl>
 
 <dl class="first-deffn">
 <dt class="deffn" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value]</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
@@ -194,6 +201,13 @@ that size.
 </p></dd></dl>
 
 <dl class="first-deffn">
+<dt class="deffn" id="index-make_002dcdata_002f_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata/*</strong> <var class="def-var-arguments">type pointer</var><a class="copiable-link" href="#index-make_002dcdata_002f_002a"> &para;</a></span></dt>
+<dd><p>Make a cdata object from a pointer.   That is, instead of creating a
+bytevector to hold the data use the memory at the pointer using
+<code class="code">pointer-&gt;bytevector</code>.
+</p></dd></dl>
+
+<dl class="first-deffn">
 <dt class="deffn" id="index-cdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-ref</strong> <var class="def-var-arguments">data [tag ...] =&gt; value</var><a class="copiable-link" href="#index-cdata_002dref"> &para;</a></span></dt>
 <dd><p>Return the Scheme (scalar) slot value for selected <var class="var">tag ...</var> with
 respect to the cdata object <var class="var">data</var>.
@@ -201,8 +215,9 @@ respect to the cdata object <var class="var">data</var>.
 <pre class="example-preformatted">(cdata-ref my-struct-value 'a 'b 'c))
 </pre></div>
 <p>This procedure returns Guile values for cdata kinds <em class="emph">base</em>,
-<em class="emph">pointer</em> and <em class="emph">procedure</em>.   For other cases, a <em class="emph">cdata</em>
-object is returned.  If you always want a cdata object, use <code class="code">cdata-sel</code>.
+<em class="emph">pointer</em>, <em class="emph">procedure</em>, <em class="emph">array</em> (an array) and <em class="emph">struct</em>
+(an alist).  For <em class="emph">union</em> an exception is raised.   The returned values
+are freshly allocated copies. If want a cdata object, use <code class="code">cdata-sel</code>.
 </p></dd></dl>
 
 
@@ -213,10 +228,57 @@ object is returned.  If you always want a cdata object, use <code class="code">c
 </p><div class="example">
 <pre class="example-preformatted">(cdata-set! my-struct-data 42 'a 'b 'c))
 </pre></div>
-<p>If <var class="var">value</var> is a <code class="code">&lt;cdata&gt;</code> object copy that, if types match.
-<br>If <var class="var">value</var> can be a procedure used to set a cfunction pointer
-value.
+<p>If <var class="var">value</var> is a <code class="code">&lt;cdata&gt;</code> object then copy that (if types match).
+<br>The <var class="var">value</var> argument can be a Scheme procedure when the associated
+ctype is a pointer to function.
 </p></dd></dl>
+
+<p>Values accepted by <code class="code">cdata-set!</code> and <code class="code">make-cdata</code> are as follows,
+based on the cdata target ctype.
+</p><ol class="enumerate">
+<li> If the type is a base machine type, then the argument must be an associated
+Scheme numeric type.
+</li><li> If the type is a pointer type, the value can be a Guile pointer, an integer
+(address), a string, or a procedure (for the case where the type is a function
+pointer).
+</li><li> If the type is an array type, TO BE CONTINUED.
+</li><li> If the type is a function type, then an error is returned.  See above
+for pointer (to function) types.
+</li><li> If a struct, and the value is
+</li></ol>
+<p>In addition, if the value is of ctype, a copy of the underlying bytevector
+contents will be performed.  An error will be thrown if the types are not equal.
+Also, if the value argument to <code class="code">make-cdata</code> is an integer and
+the type argument is an array of length zero, then space is allocated to
+accomodate that length array.  Here are some examples:
+</p><div class="example">
+<pre class="example-preformatted">&gt; (define tri1-t (carray (carray (cbase 'double) 2) 3))
+&gt; (define tval1 (make-cdata tri1-t #2f64((1.0 2.0) (3.0 4.0) (5.0 6.0))))
+&gt; (cdata-ref tval1)
+$1 = #2f64((1.0 2.0) (3.0 4.0) (5.0 6.0))
+&gt; (cdata-set! tval1 1.5 0 1)
+&gt; (cdata-ref tval1)
+$2 = #2f64((1.0 1.5) (3.0 4.0) (5.0 6.0))
+&gt;
+</pre></div>
+<p>and
+</p><div class="example">
+<pre class="example-preformatted">&gt; (define loc-t (cstruct `((x double) (y double))) 3)
+&gt; (define tri2-t (carray loc-t 3))
+&gt; (define tval2 (make-cdata tri2-t (vector '((x . 1.0) (y . 2.0))
+                                           '((x . 3.0) (y . 4.0))
+                                           '((x . 2.0) (y . 5.0)))))
+&gt; tval2
+$3 = #&lt;cdata array 0x79ae9a077200&gt;
+&gt; (cdata-ref tval2)
+$4 = #(((x . 1.0) (y . 2.0)) ((x . 3.0) (y . 4.0)) ((x . 2.0) (y . 5.0)))
+&gt; (cdata-set! tval2 1.5 0 'x)
+&gt; (cdata-ref tval2)
+$5 = #(((x . 1.5) (y . 2.0)) ((x . 3.0) (y . 4.0)) ((x . 2.0) (y . 5.0)))
+</pre></div>
+
+
+
 
 <dl class="first-deffn">
 <dt class="deffn" id="index-cdata_0026"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata&amp;</strong> <var class="def-var-arguments">data =&gt; cdata</var><a class="copiable-link" href="#index-cdata_0026"> &para;</a></span></dt>
@@ -276,6 +338,12 @@ This always returns a Guile <em class="emph">pointer</em>.
 <dd><p>Shortcut for <code class="code">(cdata-ref (cdata* data tag ...))</code>
 </p></dd></dl>
 
+<p>Underneath, cdata data is a triple of bytevector, offset, and
+ctype.  In some cases it may be more efficient to work with the
+deconstructed triple.  The following two procedures are
+provided for working at that level, in addition to the <code class="code">ctype-sel</code>
+procedure described below.
+</p>
 <dl class="first-deffn">
 <dt class="deffn" id="index-Xcdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">Xcdata-ref</strong> <var class="def-var-arguments">bv ix ct -&gt; value</var><a class="copiable-link" href="#index-Xcdata_002dref"> &para;</a></span></dt>
 <dd><p>Reference a deconstructed cdata object. See <em class="emph">cdata-ref</em>.
@@ -289,11 +357,12 @@ This always returns a Guile <em class="emph">pointer</em>.
 <h3 class="heading" id="Working-with-Types"><span>Working with Types<a class="copiable-link" href="#Working-with-Types"> &para;</a></span></h3>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-name_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">name-ctype</strong> <var class="def-var-arguments">name type =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-name_002dctype"> &para;</a></span></dt>
+<dt class="deffn" id="index-name_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">name-ctype</strong> <var class="def-var-arguments">name type -&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-name_002dctype"> &para;</a></span></dt>
 <dd><p>Create a new named version of the type.  The name is useful when the type
 is printed.  This procedure does not mutate: a new type object is created.
 If a specific type is used by multiple names the names can share
-the underlying type guts.  The following generates two named types.
+the underlying type guts.  The following examples shows how one type
+can have two names:
 </p><div class="example">
 <pre class="example-preformatted">(define raw (cstruct '((a 'int) (b 'double))))
 (define foo_t (name-ctype 'foo_t raw))
@@ -303,18 +372,22 @@ the underlying type guts.  The following generates two named types.
 </p><div class="example">
 <pre class="example-preformatted">(ctype-equal? foo_t struct-foo) =&gt; #t
 </pre></div>
-</dd></dl>
+<p>It is recommended that one use symbols for names rather than strings,
+so that <code class="code">pretty-print-ctype</code> will use names effectively.
+</p></dd></dl>
 
 <dl class="first-deffn">
-<dt class="deffn" id="index-ctype_002dequal_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-equal?</strong> <var class="def-var-arguments">a b</var><a class="copiable-link" href="#index-ctype_002dequal_003f"> &para;</a></span></dt>
-<dd><p>This predicate assesses equality of it&rsquo;s arguments.
-Two types are considered equal if they have the same size,
-alignment, kind, and eqivalent kind-specific properties.
-For base types, the symbolic mtype must be equal; this includes
-size, integer versus float, and signed versus unsigned.
-For struct and union kinds, the names and types of all fields
-must be equal.
-<br>TODO: algorithm to prevent infinite search for recursive structs
+<dt class="deffn" id="index-ctype_002deqv_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-eqv?</strong> <var class="def-var-arguments">a b =&gt; #t|#f</var><a class="copiable-link" href="#index-ctype_002deqv_003f"> &para;</a></span></dt>
+<dt class="deffnx def-cmd-deffn" id="index-ctype_002dequal_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-equal?</strong> <var class="def-var-arguments">a b =&gt; #t|#f</var><a class="copiable-link" href="#index-ctype_002dequal_003f"> &para;</a></span></dt>
+<dd><p>The <code class="code">ctype-eqv?</code> and <code class="code">ctype-equal?</code> predicates assesses equality
+of their arguments.  Two types are considered equvalent if they have the
+same size, alignment, kind, and eqivalent kind-specific properties.  For
+base types, the symbolic mtype must be equal; this includes size, integer
+versus float, and signed versus unsigned.  For struct and union kinds, the
+names and types of all fields must be equal, unless, for <code class="code">ctype-eqv?</code>
+they are pointer types with delays.  The implementation of
+<code class="code">ctype-equal?</code> is not complete: it is currently the same as
+<code class="code">ctype-eqv?</code>.
 </p></dd></dl>
 
 <dl class="first-deffn">
@@ -323,6 +396,29 @@ must be equal.
 used to create getters and setter for foreign machine architectures.
 See <em class="emph">make-cdata-getter</em> and <em class="emph">make-cdata-setter</em>.
 </p></dd></dl>
+
+<p>The procedure <code class="code">ctype-sel</code> should be very useful for creating
+fast code, with compiled procedures or macros.  It computes offsets
+for legs of a selection (e.g., <code class="code">'a 'x '* 3 'b</code>).   Note that
+if a selection includes dereferences (i.e., <code class="code">'*</code>) then at runtime
+the address of the currently processed data must be fetched from memory.
+So, for the selection <code class="code">'a 'x '* 3 'b</code> a list of two offsets will
+be produced, looking like the following:
+</p><div class="example">
+<pre class="example-preformatted">&gt; (ctype-sel some-type 0 'b 'y '* 3 'm)
+$1 = ((16 . #&lt;ctype pointer 0x7284a17e2660&gt;)
+      (28 . #&lt;ctype s32le 0x7284a2c1d600&gt;))
+</pre></div>
+<p>To use the above, the application procedure could access a
+pointer at offset 16 in the bytevector, create a new bytevector
+(via <code class="code">pointer-&gt;bytevector</code>) then generate a cdata via the
+low-level procedure <code class="code">%make-cdata</code> as in
+</p><div class="example">
+<pre class="example-preformatted">(define data (%make-cdata bv 28 (caadr $1)))
+</pre></div>
+<p>The following routines use this feature to create quick accessors.
+<br> TODO: Create a similar procedure that uses case-lambda to do both.
+</p>
 
 <dl class="first-deffn">
 <dt class="deffn" id="index-make_002dcdata_002dgetter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata-getter</strong> <var class="def-var-arguments">sel [offset] =&gt; lambda</var><a class="copiable-link" href="#index-make_002dcdata_002dgetter"> &para;</a></span></dt>
@@ -344,18 +440,47 @@ The optional <var class="var">offset</var> argument (default 0), is used for cro
 target use: it is the offset of the address in the host context.
 </p></dd></dl>
 
+<dl class="first-deffn">
+<dt class="deffn" id="index-_003fmake_002dcdata_002daccessor"><span class="category-def">Procedure: </span><span><strong class="def-name">?make-cdata-accessor</strong> <var class="def-var-arguments">sel [offset]</var><a class="copiable-link" href="#index-_003fmake_002dcdata_002daccessor"> &para;</a></span></dt>
+<dd><p>This procedure (not final) is similar to <code class="code">make-cdata-getter</code> and
+<code class="code">make-cdata-setter</code> but the resulting procedure accepts
+no tag sequence.  Called with one arg, it&rsquo;s a getter;
+called with two args, it&rsquo;s a setter.
+</p><div class="example">
+<pre class="example-preformatted">&gt; (define ct (cstruct ...))
+&gt; (define sel (ctype-sel ct 0 'b 'y '* 3 'm))
+&gt; (define *foo* (may-be-make-cdata-accessor sel))
+&gt; (define cd (make-cdata ct))
+&gt; (*foo* cd 42) ; set value
+&gt; (*foo* cd)    ; get value
+$1 = 42
+</pre></div>
+</dd></dl>
 
 <h3 class="heading" id="Working-with-C-Function-Calls"><span>Working with C Function Calls<a class="copiable-link" href="#Working-with-C-Function-Calls"> &para;</a></span></h3>
 
-<p>The procedure
-<code class="code">ctype-&gt;ffi</code> is a helper for using Guile&rsquo;s
-<em class="emph">pointer-&gt;procedure</em>.
+<p>The procedure <code class="code">ctype-&gt;ffi</code> is a helper for using Guile&rsquo;s
+<em class="emph">pointer-&gt;procedure</em>.  It generates an appropriate
+<code class="code">(system foreign)</code> ffi-type for the given cdata type.
 </p>
 <dl class="first-deffn">
 <dt class="deffn" id="index-ccast"><span class="category-def">Procedure: </span><span><strong class="def-name">ccast</strong> <var class="def-var-arguments">type data [do-check] =&gt; &lt;cdata&gt;</var><a class="copiable-link" href="#index-ccast"> &para;</a></span></dt>
-<dd><p>need to be able to cast array to pointer
+<dd><p>Cast a cdata object of one (pointer) type to another (pointer) type.
+This routine creates a new cdata object with the target type, but
+same bytevector and index.
 </p><div class="example">
-<pre class="example-preformatted">(ccast Target* val)
+<pre class="example-preformatted">&gt; (define t1 (cstruct '((a int) (b int))))
+&gt; (define t2 (cstruct `((base ,t1) (c int))))
+&gt; (define d2 (make-cdata t2))
+&gt; (cdata-set! d2 42 'base 'a)
+&gt; (define p2 (cdata&amp; d2))
+&gt; p2
+$1 = #&lt;cdata pointer 0x7c5b59dfac20&gt;
+&gt; (define p1 (ccast (cpointer t1) p2))
+&gt; (cdata-ref p1 '* 'a)
+$2 = 42
+&gt; (cdata-ref p2 '* 'base 'a)
+$3 = 42
 </pre></div>
 </dd></dl>
 
@@ -430,7 +555,11 @@ $2 = base
 $3 = s32le
 </pre></div>
 
-<p>Structs are more involved.
+<p>Structs are more complex.  A struct type object includes a member
+<code class="code">cstruct-fields</code>, list of
+it&rsquo;s fields (<code class="code">cfield</code>), and a member <code class="code">cstruct-select</code>, a procedure
+to lookup fields based on symbolic or string name.  In addition, with
+no arg, the select procedure will return a symbolic list of member names.
 </p><div class="example">
 <pre class="example-preformatted">&gt; (define bar-s
     (cstruct `((a int) (b float) (#f ,(cstruct '(x int) (y int))))))
@@ -461,9 +590,9 @@ like the following in C:
 
 <p>And just for kicks
 </p><div class="example">
-<pre class="example-preformatted">&gt; (define sa 
+<pre class="example-preformatted">&gt; (define sa
     (cstruct `((a int) (b double) (#f ,(cstruct '((x short) (y int)))))))
-&gt; (define sp 
+&gt; (define sp
     (cstruct `((a int) (b double) (#f ,(cstruct '((x short) (y int))))) #t))
 
 &gt; (pretty-print-ctype sa)
@@ -576,18 +705,21 @@ to display it.  The default port is the current output port.
 </p>
 <h4 class="subheading" id="Base-Types"><span>Base Types<a class="copiable-link" href="#Base-Types"> &para;</a></span></h4>
 
+<p>Base types are the following, along with the pseudo-type <code class="code">void</code>
+</p>
 <div class="example">
-<pre class="example-preformatted">void*
-char short int long float double unsigned-short unsigned unsigned-long
-size_t ssize_t ptrdiff_t int8_t uint8_t int16_t uint16_t int32_t
-uint32_t int64_t uint64_t signed-char unsigned-char short-int
-signed-short signed-short-int signed signed-int long-int signed-long
-signed-long-int unsigned-short-int unsigned-int unsigned-long-int
-_Bool bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
-long-long long-long-int signed-long-long signed-long-long-int
-unsigned-long-long unsigned-long-long-int
+<pre class="example-preformatted">void* char signed-char unsigned-char short unsigned-short
+float double int unsigned long unsigned-long long-long unsigned-long-long
+int8_t uint8_t int16_t uint16_t int32_t uint32_t int64_t uint64_t
+size_t ssize_t ptrdiff_t intptr_t uintptr_t _Bool bool
+wchar_t char16_t char32_t long-double _Float16 _Float128
+float-_Complex double-_Complex __int128 unsigned-__int128
 </pre></div>
 
+<p>When it come to multi-named types like &ldquo;long long int&rdquo; cdata wants
+to see the shorted variant, here &ldquo;long long&rdquo;.   Likewise, use
+&ldquo;unsigned&rdquo; for &ldquo;unsigned int&rdquo;, &ldquo;short&rdquo; for &ldquo;short int&rdquo;, etc.
+</p>
 <h4 class="subheading" id="Other-Procedures"><span>Other Procedures<a class="copiable-link" href="#Other-Procedures"> &para;</a></span></h4>
 
 <p>More to come.

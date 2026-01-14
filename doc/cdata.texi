@@ -207,7 +207,7 @@ ctype is a pointer to function.
 
 Values accepted by @code{cdata-set!} and @code{make-cdata} are as follows,
 based on the cdata target ctype.
-@enumerated
+@enumerate
 @item
 If the type is a base machine type, then the argument must be an associated
 Scheme numeric type.
@@ -222,7 +222,7 @@ If the type is a function type, then an error is returned.  See above
 for pointer (to function) types.
 @item
 If a struct, and the value is
-@end enumerated
+@end enumerate
 In addition, if the value is of ctype, a copy of the underlying bytevector
 contents will be performed.  An error will be thrown if the types are not equal.
 Also, if the value argument to @code{make-cdata} is an integer and
