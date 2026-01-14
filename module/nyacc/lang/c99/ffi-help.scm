@@ -1841,7 +1841,14 @@
             (lambda (oport)
               (*mport* oport)
               (let ((env (make-fresh-user-module)))
-                (eval `(use-modules (nyacc lang c99 ffi-help)) env)
+                (eval
+                 `(begin
+                    (use-modules ((nyacc lang c99 ffi-help)
+                                  #:select (define-ffi-module)))
+                    (define ffi-arch
+                      (let ((aname (@ (nyacc foreign arch-info) arch-name)))
+                        (aname ((@ (nyacc foreign arch-info) *arch*))))))
+                 env)
                 (let loop ((exp (read iport)))
                   (cond
                    ((eof-object? exp)
