@@ -972,7 +972,7 @@
 (define (mtype-noendian mtype)
   (assq-ref mtype-noendian-map mtype))
 
-;; --- last line ---
+#|
 ;; compare arch to base
 (use-modules ((srfi srfi-1)
               #:select (lset-difference fold)))
@@ -996,4 +996,6 @@
     (when (pair? b-a-keys) (sferr "b-a-keys: ~s\n" b-a-keys))
     (unless (assq-ref atm 'unsigned-int) (sferr "missing unsigned-int\n"))
     ))
+|#
 
+;; --- last line ---
