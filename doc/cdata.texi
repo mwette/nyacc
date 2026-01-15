@@ -34,6 +34,11 @@ October 2024
 @* This is a user guide for the NYACC CData module for Guile.
 @end ifnottex
 
+@dircategory Software development
+@direntry 
+* NYACC CData User Guide: (nyacc).    The NYACC CData User guide.
+@end direntry
+
 @menu
 * Introduction ::
 @end menu

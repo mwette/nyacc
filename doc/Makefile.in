@@ -34,7 +34,7 @@ all:
 install: install-info install-pdf install-html
 
 .PHONY: install-info
-install-info:
+install-info: nyacc-ug.info nyacc-fh-ug.info nyacc-c99-ug.info cdata.info
 	@echo "installing NYACC info docs in $(DESTDIR)$(SITE_SCM_DIR)"
 	mkdir -p $(DESTDIR)$(INFODIR)
 	for file in \
