@@ -350,9 +350,10 @@
 	 (assc-$ (lambda (pair)
 		   (cons (assq-ref symtab (car pair)) (cdr pair))))
 	 ;;
-	 (t-end (assq-ref symtab '$end))
-	 (t-ident (assq-ref symtab '$ident))
-	 (t-typename (assq-ref symtab 'typename)))
+	 ;;(t-end (assq-ref symtab '$end))
+	 ;;(t-ident (assq-ref symtab '$ident))
+	 ;;(t-typename (assq-ref symtab 'typename))
+         )
 
     ;; mode: 'code|'file|'decl
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
@@ -622,27 +623,27 @@
 		(set! suppress #f)
 		(if (pop-input)
 		    (loop (read-char) ss)
-		    (w/ ss (assc-$ '($end . "#<eof>")))))
+		    (w/ ss '($end . "#<eof>"))))
 	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) #f))
 	       ((char-set-contains? c:ws ch) (loop (read-char) #f))
 	       (bol
 		(set! bol #f)
 		(cond ;; things that require bol
  		 ((read-c-comm ch #t #:skip-prefix #t) =>
-                  (lambda (p) (w/ ss (assc-$ p))))
+                  (lambda (p) (w/ ss p)))
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
 		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) =>
-                           (lambda (p) (w/ ss (assc-$ p))))
+                           (lambda (p) (w/ ss p)))
 			  (else (loop (read-char) ss)))))
 		 (else (loop ch ss))))
 	       ((read-c-comm ch #f #:skip-prefix #t) =>
-                (lambda (p) (w/ ss (assc-$ p))))
+                (lambda (p) (w/ ss p)))
 	       ((and (not (eq? (car ppxs) 'keep))
 		     (eq? mode 'code))
 		(loop (read-char) ss))
 	       ((read-c-chlit ch) =>    ; before ident for [ULl]'c'
-                (lambda (p) (w/ ss (assc-$ p))))
+                (lambda (p) (w/ ss p)))
 	       ((read-c-ident ch) =>
 		(lambda (name)
 		  (let ((symb (string->symbol name))
@@ -665,13 +666,13 @@
 		      ;;          (assq-ref keytab symb))
 		      => (lambda (t) (w/ ss (cons t name))))
 		     ((typename? name)
-		      (w/ ss (cons t-typename name)))
+		      (w/ ss (cons 'typename name)))
 		     ((string=? name "_Pragma")
-		      (w/ ss (assc-$ (finish-pragma))))
+		      (w/ ss (finish-pragma)))
 		     (else
-		      (w/ ss (cons t-ident name)))))))
-	       ((read-c-num ch) => (lambda (p) (w/ ss (assc-$ p))))
-	       ((read-c-string ch) => (lambda (p) (w/ ss (assc-$ p))))
+		      (w/ ss (cons '$ident name)))))))
+	       ((read-c-num ch) => (lambda (p) (w/ ss p)))
+	       ((read-c-string ch) => (lambda (p) (w/ ss p)))
 	       ;; Keep track of brace level and scope for typedefs.
 	       ((and (char=? ch #\{)
 		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info)
@@ -691,16 +692,15 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let loop ((pair (read-token)))
-            (cond
-             ((eq? t-end (car pair))
-              (if (pair? (cdr ppxs))
-                  (c99-err "unterminated #if")
-                  pair))
-             (else
-	      (case (car ppxs)
-	        ((keep) pair)
-	        ((skip-done skip-look skip) (loop (read-token)))
-	        (else (throw 'c99-error "parser.scm: coding error")))))))))
+            (sferr "pair: ~s\n" pair)
+            (if (eq? '$end (car pair))
+                (if (pair? (cdr ppxs))
+                    (c99-err "unterminated #if")
+                    (assc-$ pair))
+                (case (car ppxs)
+	          ((keep) (if (integer? (car pair)) pair (assc-$ pair)))
+	          ((skip-done skip-look skip) (loop (read-token)))
+	          (else (throw 'c99-error "parser.scm: coding error"))))))))
 
     lexer))
 
