@@ -12,11 +12,7 @@ copy of the license is included with the distribution as ‘COPYING.DOC’.
 NYACC User's Guide
 Matt Wette
 May 2024
-<<<<<<< HEAD
 With NYACC Version 3.02.0
-=======
-With NYACC Version 3.01.0
->>>>>>> dev-3.01
 
 
 File: nyacc-ug.info,  Node: Top,  Next: Demonstration,  Prev: (dir),  Up: (dir)
@@ -1343,29 +1339,29 @@ References
 
 
 Tag Table:
-Node: Top613
-Node: Demonstration868
-Node: Parsing10046
-Ref: Specification10496
-Ref: Actions19806
-Ref: Recovery from Syntax Errors20484
-Ref: sublanguage21362
-Ref: Parser21683
-Ref: match table25614
-Ref: lex27429
-Ref: parser-lexer34674
-Ref: Parser Tables36264
-Ref: Hashing and Compacting37616
-Ref: Debugging39377
-Ref: Human Readable Output39488
-Node: Translation42545
-Ref: Tagged Lists45117
-Ref: SXML Parse Trees47111
-Node: Coding to the Compiler Tower49048
-Ref: Pretty Print50264
-Node: Administrative50460
-Node: TODOs51486
-Node: References52511
+Node: Top549
+Node: Demonstration804
+Node: Parsing9982
+Ref: Specification10432
+Ref: Actions19742
+Ref: Recovery from Syntax Errors20420
+Ref: sublanguage21298
+Ref: Parser21619
+Ref: match table25550
+Ref: lex27365
+Ref: parser-lexer34610
+Ref: Parser Tables36200
+Ref: Hashing and Compacting37552
+Ref: Debugging39313
+Ref: Human Readable Output39424
+Node: Translation42481
+Ref: Tagged Lists45053
+Ref: SXML Parse Trees47047
+Node: Coding to the Compiler Tower48984
+Ref: Pretty Print50200
+Node: Administrative50396
+Node: TODOs51422
+Node: References52447
 
 End Tag Table
 
