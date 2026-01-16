@@ -353,8 +353,8 @@
      '(fixed-type "unsigned __int128"))
    ;; 152. fixed-type-specifier => "__int128_t"
    (lambda ($1 . $rest) '(fixed-type "__int128"))
-   ;; 153. fixed-type-specifier => "unsigned __int128_t"
-   (lambda ($1 . $rest)
+   ;; 153. fixed-type-specifier => "unsigned" "__int128_t"
+   (lambda ($2 $1 . $rest)
      '(fixed-type "unsigned __int128"))
    ;; 154. fixed-type-specifier => "short" "signed"
    (lambda ($2 $1 . $rest) '(fixed-type "short"))
