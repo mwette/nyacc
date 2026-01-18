@@ -54,7 +54,7 @@
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< (left 'imp)	       ; "implied type" SR-conflict resolution
-	  (left "char" "short" "int" "long" "__int128"
+	  (left "char" "short" "int" "long" "__int128" "__int128_t"
                 "signed" "unsigned"
                 "_Fract" "_Accum" "_Sat")
 	  (left "float" "double" "_Complex"))
@@ -306,7 +306,7 @@
      ("unsigned" "__int128" ($$ '(fixed-type "unsigned __int128")))
      ;; gnu extensions
      ("__int128_t" ($$ '(fixed-type "__int128")))
-     ("unsigned __int128_t" ($$ '(fixed-type "unsigned __int128")))
+     ("unsigned" "__int128_t" ($$ '(fixed-type "unsigned __int128")))
      ;; fixes 250627
      ("short" "signed" ($prec 'imp) ($$ '(fixed-type "short")))
      ("short" "signed" "int" ($$ '(fixed-type "short")))

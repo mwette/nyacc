@@ -338,40 +338,34 @@
      '() stmts))
 
   (let* ((ident-like? (make-ident-like-p read-c-ident))
-	 ;;
-	 (strtab (filter-mt string? match-table)) ; strings in grammar
+         (strtab (filter-mt string? match-table)) ; strings in grammar
 	 (kwstab (filter-mt ident-like? strtab))  ; keyword strings =>
-	 (keytab (map-mt string->symbol kwstab))  ; keywords in grammar
-	 (chrseq (remove-mt ident-like? strtab))  ; character sequences
-	 (symtab (filter-mt symbol? match-table)) ; symbols in grammar
-	 (chrtab (filter-mt char? match-table))	  ; characters in grammar
-	 ;;
+         (keytab (map-mt string->symbol kwstab))  ; keywords in grammar
+	 (symtab (append (filter-mt symbol? match-table)))  ; symbols in grammar
+	 (chrseq (remove-mt ident-like? strtab)) ; character sequences
 	 (read-chseq (make-chseq-reader chrseq))
-	 (assc-$ (lambda (pair)
-		   (cons (assq-ref symtab (car pair)) (cdr pair))))
-	 ;;
-	 ;;(t-end (assq-ref symtab '$end))
-	 ;;(t-ident (assq-ref symtab '$ident))
-	 ;;(t-typename (assq-ref symtab 'typename))
-         )
+	 (t-ident (assq-ref symtab '$ident))
+	 (t-typename (assq-ref symtab 'typename))
+         (tkl '()))
 
     ;; mode: 'code|'file|'decl
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
-    ;;(lambda* (#:key (mode 'code) xdef? show-incs)
-    (define* (lexer #:key (mode 'code) xdef? show-incs)
+    ;; (gen-lexer* (#:key (mode 'code) xdef? show-incs) => gettok
+    (define* (gen-lexer #:key (mode 'code) xdef? show-incs)
 
-      (define (run-parse)
-	(let ((info (*info*)))
-	  (raw-parser (lexer #:mode 'decl #:show-incs (cpi-shinc info))
+      (define (run-parse)	
+        (let ((info (*info*)))
+	  (raw-parser (gen-lexer #:mode 'decl #:show-incs (cpi-shinc info))
 		      #:debug (cpi-debug info))))
 
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
-	    (info (*info*))	; info shared w/ parser
+	    (info (*info*))      ; info shared w/ parser
 	    (x-def? (cond ((procedure? xdef?) xdef?)
 			  ((eq? xdef? #t) (lambda (n m) #t))
 			  (else def-xdef?))))
+        
 	;; Return the first (tval . lval) pair not excluded by the CPP.
 	(lambda ()
 
@@ -398,7 +392,7 @@
 	  (define (inc-stmt->file-spec stmt) ;; retain <> or ""
 	    (let* ((arg (cadr stmt)))
 	      (if (ident-like? arg) ;; #include MYFILE
-		  (expand-cpp-macro-ref arg (cpi-defs info) '())
+		  (expand-cpp-macro-ref arg (cpi-defs info))
 		  arg)))
 
 	  (define (file-spec->file spec)
@@ -623,7 +617,9 @@
 		(set! suppress #f)
 		(if (pop-input)
 		    (loop (read-char) ss)
-		    (w/ ss '($end . "#<eof>"))))
+                    (if (pair? (cdr ppxs))
+                        (c99-err "unterminated #if")
+		        (w/ ss (cons '$end "#<eof>")))))
 	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) #f))
 	       ((char-set-contains? c:ws ch) (loop (read-char) #f))
 	       (bol
@@ -645,44 +641,14 @@
 	       ((read-c-chlit ch) =>    ; before ident for [ULl]'c'
                 (lambda (p) (w/ ss p)))
 	       ((read-c-ident ch) =>
-		(lambda (name)
-		  (let ((symb (string->symbol name))
-			(defs (cpi-defs info)))
-		    (cond
-		     ((memq (car ppxs) '(skip skip-look skip-done))
-		      (skip-cpp-macro-ref name defs)
-		      (loop (read-char) ss))
-		     ((and (not suppress) (x-def? name mode)
-			   (expand-cpp-macro-ref name defs ss))
-		      => (lambda (repl)
-			   (set! suppress #t) ; don't rescan
-			   (push-input (open-input-string repl))
-                           (set-port-filename! (current-input-port)
-                                               (assq-ref ss 'filename))
-			   (loop (read-char) ss)))
-		     ((assq-ref keytab symb)
-		      ;;^minor bug: won't work on #define keyword xxx
-		      ;; try (and (not (assoc-ref name defs))
-		      ;;          (assq-ref keytab symb))
-		      => (lambda (t) (w/ ss (cons t name))))
-		     ((typename? name)
-		      (w/ ss (cons 'typename name)))
-		     ((string=? name "_Pragma")
-		      (w/ ss (finish-pragma)))
-		     (else
-		      (w/ ss (cons '$ident name)))))))
+		(lambda (name) (cons '$ident name)))
 	       ((read-c-num ch) => (lambda (p) (w/ ss p)))
 	       ((read-c-string ch) => (lambda (p) (w/ ss p)))
-	       ;; Keep track of brace level and scope for typedefs.
-	       ((and (char=? ch #\{)
-		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info)
-		     #f) #f)
-	       ((and (char=? ch #\})
-		     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info)
-		     #f) #f)
+	       ((and (char=? ch #\{)    ; lt-brace: inc-blev for typedefs
+                     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info) #f) #f)
+	       ((and (char=? ch #\})    ; rt-brace: dec-blev for typedefs
+                     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info) #f) #f)
 	       ((read-chseq ch) => (lambda (p) (w/ ss p)))
-	       ((assq-ref chrtab ch) =>
-                (lambda (t) (w/ ss (cons t (string ch)))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
 		(let ((ch (read-char)))
 		  (cond
@@ -691,18 +657,46 @@
 	       (else (w/ ss (cons ch (string ch)))))))
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
-	  (let loop ((pair (read-token)))
-            (sferr "pair: ~s\n" pair)
-            (if (eq? '$end (car pair))
-                (if (pair? (cdr ppxs))
-                    (c99-err "unterminated #if")
-                    (assc-$ pair))
-                (case (car ppxs)
-	          ((keep) (if (integer? (car pair)) pair (assc-$ pair)))
-	          ((skip-done skip-look skip) (loop (read-token)))
-	          (else (throw 'c99-error "parser.scm: coding error"))))))))
+          ;; ptl: processed token list, rtl: raw token list
+          ;; (lexer #:mode mode #:xdef? xdef? #:show-incs show-incs)
+          (define (encode-token tok)
+            (define pk identity)
+            (pk (let ((key (car tok)) (val (cdr tok)))
+              (sferr "encode ~s\n" tok)
+              (cond
+               ((integer? key) tok)
+               ((or (eq? '$ident key) (eq? t-ident key))
+                (let ((symb (string->symbol val)))
+                  (cond
+                   ((typename? val) (set-car! tok t-typename) tok)
+                   ((assq-ref keytab symb) => (lambda (v) (set-car! tok v) tok))
+                   (else (set-car! tok t-ident) tok))))
+               ((symbol? key) (set-car! tok (assq-ref symtab key)) tok)
+               (else tok)))))
+          
+          (if (pair? tkl)
+              (let ((tok (car tkl)))
+                (set! tkl (cdr tkl))
+                (encode-token tok)))
+          (let loop ((token (read-token)))
+            ;;(sferr "loop: ~s ~s\n" (car ppxs) token)
+            (case (car ppxs)
+              ((keep)
+               (cond
+                ((integer? (car token)) token)
+                ((eq? '$ident (car token))
+                 (let ((mx (expand-cpp-macro-ref (cdr token) (cpi-defs info))))
+                   (cond
+                    (mx
+                     ;;(pperr (assoc "FOO" (cpi-defs info)))
+                     ;;(sferr "mx:\n") (pperr mx) (quit)
+                     (set! tkl (cdr mx)) (encode-token (car mx)))
+                    (else (encode-token token)))))
+                (else (encode-token token))))
+	      ((skip-done skip-look skip) (loop (read-token)))
+	      (else (throw 'c99-error "parser.scm: coding error")))))))
 
-    lexer))
+    gen-lexer))
 
 ;; ===================================
 
