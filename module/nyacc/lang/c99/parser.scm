@@ -660,9 +660,8 @@
           ;; ptl: processed token list, rtl: raw token list
           ;; (lexer #:mode mode #:xdef? xdef? #:show-incs show-incs)
           (define (encode-token tok)
-            (define pk identity)
-            (pk (let ((key (car tok)) (val (cdr tok)))
-              (sferr "encode ~s\n" tok)
+            (let ((key (car tok)) (val (cdr tok)))
+              ;;(sferr "encode ~s\n" tok)
               (cond
                ((integer? key) tok)
                ((or (eq? '$ident key) (eq? t-ident key))
@@ -672,29 +671,27 @@
                    ((assq-ref keytab symb) => (lambda (v) (set-car! tok v) tok))
                    (else (set-car! tok t-ident) tok))))
                ((symbol? key) (set-car! tok (assq-ref symtab key)) tok)
-               (else tok)))))
+               (else tok))))
           
           (if (pair? tkl)
               (let ((tok (car tkl)))
                 (set! tkl (cdr tkl))
-                (encode-token tok)))
-          (let loop ((token (read-token)))
-            ;;(sferr "loop: ~s ~s\n" (car ppxs) token)
-            (case (car ppxs)
-              ((keep)
-               (cond
-                ((integer? (car token)) token)
-                ((eq? '$ident (car token))
-                 (let ((mx (expand-cpp-macro-ref (cdr token) (cpi-defs info))))
+                (encode-token tok))
+              (let loop ((token (read-token)))
+                ;;(sferr "loop: ~s ~s\n" (car ppxs) token)
+                (case (car ppxs)
+                  ((keep)
                    (cond
-                    (mx
-                     ;;(pperr (assoc "FOO" (cpi-defs info)))
-                     ;;(sferr "mx:\n") (pperr mx) (quit)
-                     (set! tkl (cdr mx)) (encode-token (car mx)))
-                    (else (encode-token token)))))
-                (else (encode-token token))))
-	      ((skip-done skip-look skip) (loop (read-token)))
-	      (else (throw 'c99-error "parser.scm: coding error")))))))
+                    ((integer? (car token)) token)
+                    ((eq? '$ident (car token))
+                     (let ((mx (expand-cpp-macro-ref
+                                (cdr token) (cpi-defs info))))
+                       (cond
+                        (mx (set! tkl (cdr mx)) (encode-token (car mx)))
+                        (else (encode-token token)))))
+                    (else (encode-token token))))
+	          ((skip-done skip-look skip) (loop (read-token)))
+	          (else (throw 'c99-error "parser.scm: coding error"))))))))
 
     gen-lexer))
 
