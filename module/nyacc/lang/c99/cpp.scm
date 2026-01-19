@@ -379,50 +379,6 @@
 ;; (default @code{()}.  The unused boolean option @var{keep-comm} is intended
 ;; to be option to keep comments from macros.
 ;;.@end deffn
-(define* (macro-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
-
-  (let loop ((seed seed) (used used) (tokl tokl))
-    (match tokl
-      (`(($ident . ,ident) . ,rest)
-       (cond
-        ((member ident used)
-         (loop (acons '$idnox ident seed) used rest))
-        ((assoc-ref defs ident) =>
-         (lambda (rhs)
-           (cond
-            ((null? rhs)
-             (loop seed used rest))
-            ((string? (car rhs))
-             (sferr "\nmacro-expand I: ~s\n" ident)
-             (let* ((repl rhs) ;; replace rhs
-                    (x (sferr "  mx: repl = ~s\n" repl))
-                    (used (cons ident used))
-                    (seed (macro-expand repl defs used seed keep-comm)))
-               (loop seed used rest)))
-            ((collect-args (car rhs) rest) (lambda (a b) a) =>
-             (lambda (argd rest)
-               (sferr "  mx: argd=~s\n" argd)
-               (and argd
-                    (let* ((repl (cdr rhs))
-                           (used (cons ident used))
-                           (pxtl (pre-expand argd repl defs used))
-                           (seed (macro-expand pxtl defs used seed)))
-                      (sferr "  mx: repl = ~s\n" repl)
-                      (sferr "  mx: used = ~s\n" used)
-                      (sferr "  mx: pxtl = ~s\n" pxtl)
-                      (sferr "  mx: seed = ~s\n" seed)
-                      (sferr "  mx: rest = ~s\n" rest)
-                      (match seed
-                        ((('$ident . ,_0) . _1)
-                         (loop (cdr seed) used (cons (car seed) rest)))
-                        (_0
-                         (loop seed used rest)))))))
-            (else ;; ident is function macro but not used as such
-             ;;(sferr "\nmacro-expand X: id=~s rest=~s\n" ident rest)
-             (loop (cons (car tokl) seed) used (cdr tokl))))))
-        (else (loop (cons (car tokl) seed) used (cdr tokl)))))
-      ((head . tail) (loop (cons head seed) used tail))
-      ('() seed))))
 
 
 ;;.@deffn {Procedure} pre-expand argd repl defs used
@@ -434,81 +390,6 @@
 ;;.@end defun
 ;; TODO: retokenize after ## application (from start-or-space to end-or-space)
 ;; e.g. hex numbers 0 ## xf is not an identifier
-(define (pre-expand argd repl defs used) ;; => tokl
-  (define (idchr? ch) (and (char? ch) (char-set-contains? c:ir ch)))
-  (define (paste rtokl) `($ident . ,(rtokl->string rtokl)))
-  (define (maybe-sub tk)
-    (or (and (pair? tk) (eq? '$ident (car tk)) (assoc-ref argd (cdr tk)))
-        (list tk)))
-
-  ;;(sferr "\npre-expand ~s\n  ~s\n" argd (tokl->string repl))
-  (let loop ((rz '()) (tokl repl))
-    ;;(sferr "  px: rz=~s tl=~s\n" rz tokl)
-    (match tokl
-      ('() (reverse rz))
-      ;;
-      (('$hash #\space . rest)
-       (loop rz (cons '$hash rest)))
-      (('$hash rg . rest)
-       (unless (and (pair? rg) (eq? '$ident (car rg)))
-         (throw 'cpp-error "cpp: expect macro arg after #"))
-       (sferr "  px: rg=~s \n" rg)
-       (loop (cons `($string . ,(tokl->string (assoc-ref argd (cdr rg)))) rz)
-             rest))
-      ;;
-      ((lt #\space '$dhash . rest) (loop rz (cons* lt '$dhash rest)))
-      ((lt '$dhash #\space . rest) (loop rz (cons* lt '$dhash rest)))
-      ((('$ident . lt) '$dhash . _0)
-       (loop (append-reverse (maybe-sub (car tokl)) rz) (cdr tokl)))
-      
-      (('$dhash rt . rest)
-       ;; lt should be in rz ; what is pl? : paste-list
-       ;; find left-side and right-side pasties
-       ;; 
-       (let lp ((rz rz) (pl '()) (tl (append (maybe-sub rt) rest)))
-         ;;(sferr "  lp: pl=~s rz=~s\n" pl rz)
-         (cond
-          ((null? pl)
-           (if (match (car rz) (('$ident . _0) #t) (('$idnox . _0) #t) (_0 #f))
-               (lp (cdr rz) (cons (car rz) pl) tl)
-               (loop rz tl)))
-          (else
-           (match tl
-             ('() (loop (cons (paste pl) rz) tl))
-             (((? idchr?) . _0) (lp rz (cons (car tl) pl) (cdr tl)))
-             ((('$ident . _0) . _1) (lp rz (cons (car tl) pl) (cdr tl)))
-             ((('$idnox . _0) . _1) (lp rz (cons (car tl) pl) (cdr tl)))
-             (_0 (loop (cons (paste pl) rz) tl)))))))
-      
-      (('XXX lt '$dhash rt . rest)
-       ;; This is so ugly.
-       (let lrt ((pl '()) (tl (append (maybe-sub rt) rest)))
-         (match tl
-           ((('$ident . _0) . _1) (lrt (cons (car tl) pl) (cdr tl)))
-           ((('$idnox . _0) . _1) (lrt (cons (car tl) pl) (cdr tl)))
-           (((? idchr?) . _0) (lrt (cons (car tl) pl) (cdr tl)))
-           (_0
-            (let llt ((pl (reverse pl)) (hd (reverse (maybe-sub lt))))
-              (match hd
-                ((('$ident . _0) . _1) (llt (cons (car hd) pl) (cdr hd)))
-                ((('$idnox . _0) . _1) (llt (cons (car hd) pl) (cdr hd)))
-                (((? idchr?) . _0) (lrt (cons (car tl) pl) (cdr tl)))
-                (_0
-                 (sferr "rz=~s\n" rz)
-                 (sferr "hd=~s\n" hd)
-                 (sferr "pl=~s\n" pl)
-                 (sferr "tl=~s\n" tl)
-                 (newline)
-                 (loop (append-reverse hd rz) (cons (paste pl) tl)))))))))
-      ;;
-      ((('$ident . ident) . rest)
-       (cond
-        ((member ident used)
-         (loop (cons `($idnox . ,ident) rz) rest))
-        ((assoc-ref argd ident) =>
-         (lambda (aval) (loop (macro-expand aval defs used rz) rest)))
-        (else (loop (cons (car tokl) rz) (cdr tokl)))))
-      (else (loop (cons (car tokl) rz) (cdr tokl))))))
 
 ;; currently outputs rtkl
 (define (cpp-subst inseq argd defs used)
@@ -899,7 +780,7 @@
 ;; === convert to tokens and process
 
 "
-macro-expand tokl defs used => tokl used
+cpp-expand tokl defs used => tokl used
   calls
   1.  maybe-expand-ref
   2.  collect-args
@@ -923,7 +804,7 @@ expand-cpp-macro-ref ident defs sp
 ;;.@end deffn
 (define (macro-expand-text text defs)
   (let* ((tokl (tokenize-string-to-mark text #f))
-         (rtokl (macro-expand tokl defs))
+         (rtokl (cpp-expand tokl defs))
          (repl (rtokl->string rtokl)))
     repl))
 
@@ -1038,7 +919,7 @@ expand-cpp-macro-ref ident defs sp
   (with-throw-handler
       'cpp-error
     (lambda ()
-      (let* ((repl (macro-expand-text text defs))
+      (let* ((repl (cpp-expand-text text defs))
 	     (exp (parse-cpp-expr repl)))
         (eval-cpp-expr exp defs #:inc-dirs inc-dirs)))
     (lambda (key fmt . args)
