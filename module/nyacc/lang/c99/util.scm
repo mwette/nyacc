@@ -140,8 +140,8 @@
          (ip (open-input-pipe cmd)))
     (let loop ((line (read-line ip 'trim)))
       (if (eof-object? line)
-          '("__has_include=__has_include__"
-            "__has_include_next=__has_include_next__")
+          '("__has_include(X)=__has_include__(X)"
+            "__has_include_next(X)=__has_include_next__(X)")
           (cons (convert-line line) (loop (read-line ip 'trim)))))))
 
 
