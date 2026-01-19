@@ -26,6 +26,11 @@ October 2024
 @end iftex
 
 @ifnottex
+@dircategory Software development
+@direntry 
+* NYACC CData User Guide: (nyacc).    The NYACC CData User guide.
+@end direntry
+
 @node Top, Introduction, (dir), (dir)
 @top CData Reference Manual
 @* Matt Wette
