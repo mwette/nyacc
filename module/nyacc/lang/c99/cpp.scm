@@ -49,6 +49,8 @@
 (define* (pperr exp #:optional (plp ""))
   (pretty-print exp (current-error-port) #:per-line-prefix plp))
 
+(define rls reverse-list->string)
+
 (define mkid (let ((id 0)) (lambda () (set! id (1+ id)) id)))
 (define DBG #t)
 
@@ -349,7 +351,7 @@
   (and=> (tokenize-args argl)
     (lambda (argd)
       (sferr "  argd: ~s\n" argd)
-      (let* ((pxtl (cpp-subst argd used repl))
+      (let* ((pxtl (cpp-subst repl argd defs used))
              ;;(x (begin (sferr "argd=~s pxtl=~s\n" argd pxtl) (quit)))
              (rtkl (cpp-expand pxtl defs (cons ident used) seed)))
         (maybe-expand-again rtkl defs used)))))
@@ -509,7 +511,7 @@
       (else (loop (cons (car tokl) rz) (cdr tokl))))))
 
 ;; currently outputs rtkl
-(define (cpp-subst argd used inseq)
+(define (cpp-subst inseq argd defs used)
   (let loop ((osq '()) (uzd used) (isq inseq))
     ;;(sferr "cpp-subst loop:\n  isq: ~s\n  osq: ~s\n" isq osq)
     (match isq
@@ -518,10 +520,25 @@
       (let ((arg (assoc-ref argd name)))
         (unless arg (throw 'cpp-error "not found: ~s" name))
         (loop (acons '$string (tokl->string arg) osq) uzd (cddr isq))))
+
      ;; ALL the ## cases HERE =>
+     (`(($dhash . ,_1) ($ident . ,name) . ,rest)
+      (let* ((arg (assoc-ref argd name))
+             (xrest (append (if arg arg (list (cadr isq))) rest))
+             (txt (string-append (cdar osq) (cdar xrest)))
+             (tok (with-input-from-string txt read-cpp-token)))
+        (loop (cons tok (cdr osq)) uzd (cdr xrest))))
+     
+     (`(($dhash . ,_1) ,rs . ,resti)
+      (let* ((txt (string-append (cdar osq) (cdr rs)))
+             (tok (with-input-from-string txt read-cpp-token)))
+        (loop (cons tok (cdr osq)) uzd resti)))
+     
      (`(($ident . ,name) . ,rest)
       (let* ((arg (assoc-ref argd name))
-             (osq (if arg (append-reverse arg osq) osq)))
+             (osq (if arg
+                      (cpp-expand arg defs (cons name used) osq)
+                      (cons (car isq) osq))))
         (loop osq uzd rest)))
      ;; error cases
      (`(($hash . ,_1) . ,_2) (throw 'cpp-error "bad #"))
@@ -548,7 +565,7 @@
              ;; plain macro call
              (sferr "    plain:\n")
              (let* ((uzd (cons ident uzd))
-                    (tkl (cpp-subst '() uzd isq))
+                    (tkl (cpp-subst isq '() defs uzd))
                     (osq (cpp-expand tkl defs uzd osq keep-comm)))
                (loop osq uzd rest)))
             ((collect-args (car rhs) rest) (lambda (a b) a) =>
@@ -557,7 +574,7 @@
                (if argd
                    ;; fnctn call macro
                    (let* ((uzd (cons ident uzd))
-                          (tkl (cpp-subst argd uzd isq))
+                          (tkl (cpp-subst isq argd defs uzd))
                           (osq (cpp-expand tkl defs uzd osq keep-comm)))
                      (loop osq uzd rest))
                    ;; no macro call
@@ -625,6 +642,7 @@
   (cons* (cons #\( (assoc-ref "(" chseqtab))
          (cons #\, (assoc-ref "," chseqtab))
          (cons #\) (assoc-ref ")" chseqtab))
+         (cons #\< (assoc-ref "<" chseqtab))
          ;;(cons '$ident '$ident)
 	 (filter-mt symbol? c99-mtab)))
 
@@ -646,6 +664,7 @@
      ((char=? ch #\() (cons #\( "("))
      ((char=? ch #\,) (cons #\, ","))
      ((char=? ch #\)) (cons #\) ")"))
+     ((char=? ch #\<) (cons #\< "<"))   ; as in <foo.h>
      ((char=? ch #\#)
       (let ((ch (read-char)))
         (cond ((eqv? ch #\#) `($dhash . "#"))
@@ -742,13 +761,20 @@
   ;; cx(context, see ctx above):, #\D=def #\I=inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (tk (read-cpp-token)))
     (let ((k (car tk)) (v (cdr tk)))
+      (sferr "loop: k=~s v=~s cx=~s\n" k v cx)
       (cond
        ((and (null? tkl) (eq? #\space k)) (loop tkl cx lv (read-cpp-token)))
        ((eq? k '$ident)
-        (loop (cons (if (eq? cx #\D) `($idnox . (cdr tk)) tk) tkl)
-              #\nul lv (read-cpp-token)))
-       ((eq? k '$end) (if mark (throw 'cpp-error "yuck") (finish tkl)))
+        (loop (cons (if (eq? cx #\D) `($idnox . ,(cdr tk)) tk) tkl)
+              (ctx v #\nul) lv (read-cpp-token)))
+       ((and (char=? #\I cx) (eq? #\< k))
+        (let lp ((chl (list k)) (ch (read-char)))
+          (if (char=? #\> ch)
+              (loop (acons '$text (rls (cons ch chl)) tkl)
+                    #\nul lv (read-cpp-token))
+              (lp (cons ch chl) (read-char)))))
        ((eq? k #\() (loop (cons tk tkl) cx (1+ lv) (read-cpp-token)))
+       ((eq? k '$end) (if mark (throw 'cpp-error "yuck") (finish tkl)))
        ((positive? lv)
         (loop (cons tk tkl) cx (if (eq? #\ k) (1- lv) lv) (read-cpp-token)))
        ((or (eqv? mark k) (and mark (eq? #\) k))) (unread-char k) (finish tkl))
@@ -803,6 +829,17 @@
 ;; Convert reverse token-list to string.
 ;;.@end deffn
 (define (rtokl->string tokl)
+  (let loop ((stl '()) (tkl tokl))
+    (cond
+     ((null? tkl) (string-join (reverse stl) ""))
+     ((eq? '$string (caar tkl))
+      (loop (cons (string-append "\"" (cdar tkl) "\"") stl) (cdr tkl)))
+     ;;((eq? #\( (car tkl)) (loop (cons "(" stl) (cdr tkl)))
+     ;;((eq? #\) (car tkl)) (loop (cons ")" stl) (cdr tkl)))
+     ((char? (car tkl)) (error "fixme"))
+     (else (loop (cons (cdar tkl) stl) (cdr tkl))))))
+
+(define (OLD_rtokl->string tokl)
 
   ;; Turn reverse chl into a string and insert it into the string list stl.
   (define (add-chl chl stl)
