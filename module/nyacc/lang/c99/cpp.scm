@@ -33,7 +33,6 @@
 	    expand-cpp-name
 	    parse-cpp-expr
 	    eval-cpp-expr
-            scan-arg-literal
 	    )
   #:use-module (ice-9 match)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
@@ -52,7 +51,7 @@
 (define rls reverse-list->string)
 
 (define mkid (let ((id 0)) (lambda () (set! id (1+ id)) id)))
-(define DBG #t)
+(define DBG #f)
 
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__TIME__"
@@ -287,6 +286,7 @@
 ;; and @code{#:inc-dirs} for @code{has_include} etc
 ;; @end deffn
 (define* (eval-cpp-expr tree #:optional (dict '()) #:key (inc-dirs '()))
+  (define xdefs '("__has_include" "__has_include_next"))
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
@@ -299,7 +299,8 @@
 	  (case (car tree)
 	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
 	    ((char) (char->integer (string-ref (tx1 tree) 0)))
-	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
+	    ((defined) (let ((id (tx1 tree)))
+                         (if (or (assoc-ref dict id) (member id xdefs)) 1 0)))
 	    ((has-include)
 	     (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #f) 1 0))
 	    ((has-include-next)
@@ -394,7 +395,7 @@
 ;; currently outputs rtkl
 (define (cpp-subst inseq argd defs used)
   (let loop ((osq '()) (uzd used) (isq inseq))
-    ;;(sferr "cpp-subst loop:\n  isq: ~s\n  osq: ~s\n" isq osq)
+    (when DBG (sferr "cpp-subst loop:\n  isq: ~s\n  osq: ~s\n" isq osq))
     (match isq
      ('() (reverse osq))
      (`(($hash . ,_1) ($ident . ,name) . ,_2)
@@ -418,7 +419,7 @@
      (`(($ident . ,name) . ,rest)
       (let* ((arg (assoc-ref argd name))
              (osq (if arg
-                      (cpp-expand arg defs (cons name used) osq)
+                      (pk (cpp-expand arg defs (cons name used) osq))
                       (cons (car isq) osq))))
         (loop osq uzd rest)))
      ;; error cases
@@ -427,7 +428,6 @@
 
 ;; @deff cpp-expand tokl defs [used [seed [keep-comm]]] => tokl
 (define* (cpp-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
-  (define DBG #t)
   (when DBG (sferr "cpp-expand:\n"))
   (let loop ((osq seed) (uzd used) (isq tokl))
     (when DBG (sferr "  loop:\n    isq: ~s\n    osq:  ~s\n" isq osq))
@@ -447,7 +447,7 @@
              ;; plain macro call
              (when DBG (sferr "    plain: used:~s\n" uzd))
              (let* ((uzd (cons ident uzd))
-                    (tkl (cpp-subst (cdr rhs) '() defs uzd))
+                    (tkl (cpp-subst rhs '() defs uzd))
                     (osq (cpp-expand tkl defs uzd osq keep-comm)))
                (loop osq uzd rest)))
             ((collect-args (car rhs) rest) (lambda (a b) a) =>
@@ -570,7 +570,7 @@
 ;; with @code{#\)}.
 ;; @*An identifier appearing after the text @code{defined} will be marked
 ;; for no-expansion.  A string or @code{<>} based include path appearing
-;; after @code{__has_include__} will be converted to a string or text, and
+;; after @code{__has_include} will be converted to a string or text, and
 ;; not be expanded (e.g., if @code{stdio} is defined @code{<stdio.h>} will
 ;; not be expanded.
 ;;.@end deffn
@@ -580,7 +580,7 @@
   (define (ctx id cx)
     (cond
      ((member id '("defined")) #\D)
-     ((member id '("__has_include__" "__has_include_next__")) #\I)
+     ((member id '("__has_include" "__has_include_next")) #\I)
      (else cx)))
   
   (define (finish tkl)
@@ -589,7 +589,7 @@
   ;; cx(context, see ctx above):, #\D=def #\I=inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (tk (read-cpp-token)))
     (let ((k (car tk)) (v (cdr tk)))
-      ;;(sferr "loop: k=~s v=~s cx=~s\n" k v cx)
+      (when DBG (sferr "loop: k=~s v=~s cx=~s\n" k v cx))
       (cond
        ((and (null? tkl) (eq? #\space k)) (loop tkl cx lv (read-cpp-token)))
        ((eq? k '$ident)
@@ -604,7 +604,7 @@
        ((eq? k #\() (loop (cons tk tkl) cx (1+ lv) (read-cpp-token)))
        ((eq? k '$end) (if mark (throw 'cpp-error "yuck") (finish tkl)))
        ((positive? lv)
-        (loop (cons tk tkl) cx (if (eq? #\ k) (1- lv) lv) (read-cpp-token)))
+        (loop (cons tk tkl) #\nul (if (eq? #\ k) (1- lv) lv) (read-cpp-token)))
        ((or (eqv? mark k) (and mark (eq? #\) k))) (unread-char k) (finish tkl))
        (else (loop (cons tk tkl) cx lv (read-cpp-token)))))))
   
@@ -619,7 +619,7 @@
 ;; token is not @code{(} return @code{#f}.  See also @code{collect-args}.
 ;;.@end deffn
 (define (tokenize-args argl) ;; => argd | #f
-  (sferr "argl: ~s\n" argl)
+  (when DBG (sferr "argl: ~s\n" argl))
   (and
    (let loop1 ((sp #f) (ch (read-char)))
      ;;(sferr "  ch: ~s\n" ch)
@@ -659,63 +659,12 @@
   (let loop ((stl '()) (tkl tokl))
     (cond
      ((null? tkl) (string-join stl ""))
-     ((eq? '$string (caar tkl))
+     ((memq (caar tkl) '($string $text))
       (loop (cons (string-append "\"" (cdar tkl) "\"") stl) (cdr tkl)))
      ;;((eq? #\( (car tkl)) (loop (cons "(" stl) (cdr tkl)))
      ;;((eq? #\) (car tkl)) (loop (cons ")" stl) (cdr tkl)))
      ((char? (car tkl)) (error "fixme"))
      (else (loop (cons (cdar tkl) stl) (cdr tkl))))))
-
-(define (OLD_rtokl->string tokl)
-
-  ;; Turn reverse chl into a string and insert it into the string list stl.
-  (define (add-chl chl stl)
-    (if (null? chl) stl (cons (list->string chl) stl)))
-
-  ;; Works like this: Scan through the list of tokens (key-val pairs or
-  ;; lone characters).  Lone characters are collected in a list (@code{chl});
-  ;; pairs are converted into strings and combined with list of characters
-  ;; into a list of strings.  When done the list of strings is combined to
-  ;; one string.  (The token 'argval is expansion of argument.)
-  ;;(sferr "R->S\n")
-  (let loop ((stl '())		   ; list of strings to reverse-append
-	     (chl '())		   ; char list
-	     (nxt #f)		   ; next string to add after chl
-	     (tkl tokl))	   ; input token list
-    ;;(sferr " tkl=~s chl=~s stl=~s\n" tkl chl stl)
-    (cond
-     (nxt
-      (loop (cons nxt (add-chl chl stl)) '() #f tkl))
-     ((null? tkl)
-      (apply string-append (add-chl chl stl)))
-     ((char? (car tkl))
-      (loop stl (cons (car tkl) chl) nxt (cdr tkl)))
-     (else
-      (match tkl
-	(`(($ident . ,ident) . ,rest)
-	 (loop stl chl ident rest))
-	(`(($idnox . ,ident) . ,rest)
-	 (loop stl chl ident rest))
-	#;(`(($cppop . ,ident) . ,rest)
-	(loop stl chl ident rest))
-	(`(($string . ,val) . ,rest)
-	 (loop stl (cons #\" chl) (esc-c-str val) (cons #\" rest)))
-	(`(($text . ,val) . ,rest)
-	 (loop stl chl val rest))
-	(`(#\space #\space . ,rest)
-	 (loop stl chl nxt rest))
-	(`(#\space . ,rest)
-	 (loop stl (cons #\space chl) nxt rest))
-	(`(($comm . ,val) . ,rest)
-	 (loop stl chl (string-append "/*" val "*/ ") rest))
-        (`($hash . ,rest)
-         (loop stl (cons #\# chl) nxt rest))
-        (`($dhash . ,rest)
-         (loop stl (cons* #\# #\# chl) nxt rest))
-	(`(,asis . ,rest)
-	 (loop stl chl asis rest))
-	(otherwise
-	 (error "nyacc cpp rtokl->string, no match" tkl)))))))
 
 ;;.@deffn {Procedure} tokl->string reverse-token-list => string
 ;; Convert token-list to string (using @code{rtokl->string}).
@@ -726,7 +675,7 @@
 ;; === convert to tokens and process
 
 "
-cpp-expand tokl defs used => tokl used
+cpp-expand tokl defs used => rtokl used
   calls
   1.  maybe-expand-ref
   2.  collect-args
@@ -750,10 +699,10 @@ expand-cpp-macro-ref ident defs sp
 ;;.@end deffn
 (define (macro-expand-text text defs)
   (let* ((tokl (tokenize-string-to-mark text #f))
-         (zz (begin (sferr "defs: ~s\n" defs) (sferr "tokl: ~s\n" tokl)))
-         (rtokl (pk (cpp-expand tokl defs)))
-         (repl (rtokl->string rtokl)))
-    (pperr repl)
+         (xx (sferr "\ntok-to-mark: ~s => ~s\n\n" text tokl))
+         (tokl (cpp-expand tokl defs))
+         (repl (tokl->string tokl)))
+    (sferr "macro-expand-text: ~s => ~s\n" text repl)
     repl))
 
 ;; === exports =======================

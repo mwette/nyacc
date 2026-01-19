@@ -98,8 +98,8 @@
      ($chlit/U ($$ `(char (@ (type "char32_t")) ,$1)))
      ("defined" "(" $ident ")" ($$ `(defined ,$3)))
      ("defined" $ident ($$ `(defined ,$2)))
-     ("__has_include__" "(" $string ")" ($$ `(has-include ,$3)))
-     ("__has_include_next__" "(" $string ")" ($$ `(has-include-next ,$3)))
+     ("__has_include" "(" $string ")" ($$ `(has-include ,$3)))
+     ("__has_include_next" "(" $string ")" ($$ `(has-include-next ,$3)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list
      (conditional-expression)

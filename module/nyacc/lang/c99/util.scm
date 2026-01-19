@@ -139,9 +139,7 @@
   (let* ((cmd (string-append (resolve-CC CC) " -dM -E - </dev/null"))
          (ip (open-input-pipe cmd)))
     (let loop ((line (read-line ip 'trim)))
-      (if (eof-object? line)
-          '("__has_include(X)=__has_include__(X)"
-            "__has_include_next(X)=__has_include_next__(X)")
+      (if (eof-object? line) '()
           (cons (convert-line line) (loop (read-line ip 'trim)))))))
 
 
