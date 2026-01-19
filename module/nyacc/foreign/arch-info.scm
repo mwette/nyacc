@@ -416,7 +416,7 @@
 ;; === maps ====================================================================
 
 ;; ARM 64bit (little-endian)
-(define mtype-map/aarch64
+(define mtype-map/aarch64-linux
  '((void* . u64le)
    (char . u8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -436,20 +436,21 @@
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
-(define align-map/aarch64
+(define align-map/aarch64-linux
   '((u8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
     (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
     (f32le . 4) (f64le . 8) (f128le . 16) (f16le . 2) (f128le . 16)
     (c32le . 4) (c64le . 8) (c128le . 16)
     (s128le . 16) (u128le . 16)))
 
-(define arch/aarch64
-  (make-arch-info 'aarch64 64 'little mtype-map/aarch64 align-map/aarch64))
+(define arch/aarch64-linux
+  (make-arch-info
+    'aarch64-linux 64 'little mtype-map/aarch64-linux align-map/aarch64-linux))
 
-(add-to-arch-map "aarch64" arch/aarch64)
+(add-to-arch-map "aarch64-linux" arch/aarch64-linux)
 
 
-(define mtype-map/armv8l
+(define mtype-map/armv8l-linux
  '((void* . u32le)
    (char . u8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -469,17 +470,18 @@
    (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32le)))
 
-(define align-map/armv8l
+(define align-map/armv8l-linux
   '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2) (s32le . 4) (u32le . 4)
     (s64le . 8) (u64le . 8) (f32le . 4) (f64le . 8) (c32le . 4) (c64le . 8)))
 
-(define arch/armv8l
-  (make-arch-info 'armv8l 32 'little mtype-map/armv8l align-map/armv8l))
+(define arch/armv8l-linux
+  (make-arch-info
+   'armv8l-linux 32 'little mtype-map/armv8l-linux align-map/armv8l-linux))
 
-(add-to-arch-map "armv8l" arch/armv8l)
+(add-to-arch-map "armv8l-linux" arch/armv8l-linux)
 
 
-(define mtype-map/avr
+(define mtype-map/avr-eabi
   '((void* . u16le)
     (char . s8) (signed-char . s8) (unsigned-char . u8)
     (short . s16le) (unsigned-short . u16le)
@@ -499,17 +501,18 @@
     (__int128 . s128le) (unsigned-__int128 . u128le)
     (unsigned-int . u16le)))
 
-(define alignof-mtype-map/avr
+(define alignof-mtype-map/avr-eabi
   (map (lambda (pair) (cons (car pair) 1)) sizeof-mtype-map))
 
-(define arch/avr
+(define arch/avr-eabi
   (make-arch-info
-   'avr 8 'little mtype-map/avr alignof-mtype-map/avr))
+   'avr-eabi 8 'little mtype-map/avr-eabi alignof-mtype-map/avr-eabi))
 
-(add-to-arch-map "avr" arch/avr)
+(add-to-arch-map "avr-eabi" arch/avr-eabi)
+
 
 ;; hppa
-(define mtype-map/hppa
+(define mtype-map/hppa-linux
  '((void* . u32be)
    (char . s8) (signed-char . s8) (unsigned-char . u8)
    (short . s16be) (unsigned-short . u16be)
@@ -529,20 +532,20 @@
    (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32be)))
 
-(define align-map/hppa
+(define align-map/hppa-linux
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
    (f32be . 4) (f64be . 8) (c32be . 4) (c64be . 8)))
 
-(define arch/hppa
+(define arch/hppa-linux
   (make-arch-info
-   'hppa 64 'big mtype-map/hppa align-map/hppa))
+   'hppa-linux 64 'big mtype-map/hppa-linux align-map/hppa-linux))
 
-(add-to-arch-map "hppa" arch/hppa)
+(add-to-arch-map "hppa-linux" arch/hppa-linux)
 
 
 ;; i686
-(define mtype-map/i686
+(define mtype-map/i686-linux
  '((void* . u32le)
    (char . s8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -562,22 +565,22 @@
    (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32le)))
 
-(define align-map/i686
+(define align-map/i686-linux
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8)
    (f96le . 4) (f16le . 2) (f128le . 16)
    (c32le . 4) (c64le . 8) (c96le . 4)))
 
-(define arch/i686
+(define arch/i686-linux
   (make-arch-info
-   'i686 32 'little mtype-map/i686 align-map/i686))
+   'i686-linux 32 'little mtype-map/i686-linux align-map/i686-linux))
 
-(add-to-arch-map "i686" arch/i686)
+(add-to-arch-map "i686-linux" arch/i686-linux)
 
 
 ;; LoongArch 64bit (little-endian)
-(define mtype-map/loongarch64
+(define mtype-map/loongarch64-linux
  '((void* . u64le)
    (char . s8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -597,22 +600,23 @@
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
-(define align-map/loongarch64
+(define align-map/loongarch64-linux
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8) (f128le . 16)
    (c32le . 4) (c64le . 8) (c128le . 16)
    (s128le . 16) (u128le . 16)))
 
-(define arch/loongarch64
+(define arch/loongarch64-linux
   (make-arch-info
-   'loongarch64 64 'little mtype-map/loongarch64 align-map/loongarch64))
+   'loongarch64-linux 64 'little mtype-map/loongarch64-linux
+   align-map/loongarch64-linux))
 
-(add-to-arch-map "loongarch64" arch/loongarch64)
+(add-to-arch-map "loongarch64-linux" arch/loongarch64-linux)
 
 
 ;; m68k
-(define mtype-map/m68k
+(define mtype-map/m68k-linux
  '((void* . u32be)
    (char . s8) (signed-char . s8) (unsigned-char . u8)
    (short . s16be) (unsigned-short . u16be)
@@ -632,20 +636,20 @@
    (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32be)))
 
-(define align-map/m68k
+(define align-map/m68k-linux
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 2) (u32be . 2) (s64be . 2) (u64be . 2)
    (f32be . 2) (f64be . 2)))
 
-(define arch/m68k
+(define arch/m68k-linux
   (make-arch-info
-   'm68k 32 'big mtype-map/m68k align-map/m68k))
+   'm68k-linux 32 'big mtype-map/m68k-linux align-map/m68k-linux))
 
-(add-to-arch-map "m68k" arch/m68k)
+(add-to-arch-map "m68k-linux" arch/m68k-linux)
 
 
 ;; mips
-(define mtype-map/mips
+(define mtype-map/mips-linux
  '((void* . u32le)
    (char . s8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -665,20 +669,20 @@
    (__int128 . #f) (unsigned-__int128 . #f)
    (unsigned-int . u32le)))
 
-(define align-map/mips
+(define align-map/mips-linux
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8) (f32le . 4)
    (f64le . 8) (f64le . 8) (c32le . 4) (c64le . 8) (c128le . 8)))
 
-(define arch/mips
+(define arch/mips-linux
   (make-arch-info
-   'mips 32 'little mtype-map/mips align-map/mips))
+   'mips-linux 32 'little mtype-map/mips-linux align-map/mips-linux))
 
-(add-to-arch-map "mips" arch/mips)
+(add-to-arch-map "mips-linux" arch/mips-linux)
 
 
 ;; 64 bit powerpc, aka ppc64 (big endian)
-(define mtype-map/powerpc64
+(define mtype-map/powerpc64-linux
  '((void* . u64be)
    (char . u8) (signed-char . s8) (unsigned-char . u8)
    (short . s16be) (unsigned-short . u16be)
@@ -698,22 +702,22 @@
    (__int128 . s128be) (unsigned-__int128 . u128be)
    (unsigned-int . u32be)))
 
-(define align-map/powerpc64
+(define align-map/powerpc64-linux
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
    (f32be . 4) (f64be . 8) (f128be . 16)
    (c32be . 4) (c64be . 8) (c128be . 16)
    (s128be . 16) (u128be . 16)))
 
-(define arch/powerpc64
+(define arch/powerpc64-linux
   (make-arch-info
-   'powerpc64 64 'big mtype-map/powerpc64 align-map/powerpc64))
+   'powerpc64-linux 64 'big mtype-map/powerpc64-linux align-map/powerpc64-linux))
 
-(add-to-arch-map "powerpc64" arch/powerpc64)
+(add-to-arch-map "powerpc64-linux" arch/powerpc64-linux)
 
 
 ;; 64 bit powerpc64le, aka ppc64le (little endian)
-(define mtype-map/powerpc64le
+(define mtype-map/powerpc64le-linux
  '((void* . u64le)
    (char . u8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -733,7 +737,7 @@
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
-(define align-map/powerpc64le
+(define align-map/powerpc64le-linux
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8)
@@ -741,11 +745,12 @@
    (c32le . 4) (c64le . 8) (c128le . 16)
    (s128le . 16) (u128le . 16)))
 
-(define arch/powerpc64le
+(define arch/powerpc64le-linux
   (make-arch-info
-   'powerpc64le 64 'little mtype-map/powerpc64le align-map/powerpc64le))
+   'powerpc64le-linux 64 'little mtype-map/powerpc64le-linux
+   align-map/powerpc64le-linux))
 
-(add-to-arch-map "powerpc64le" arch/powerpc64le)
+(add-to-arch-map "powerpc64le-linux" arch/powerpc64le-linux)
 
 
 #|
@@ -761,7 +766,7 @@
 |#
 
 ;; RISC-V 64bit (little-endian)
-(define mtype-map/riscv64
+(define mtype-map/riscv64-linux
  '((void* . u64le)
    (char . u8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -781,15 +786,15 @@
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
-(define arch/riscv64
+(define arch/riscv64-linux
   (make-arch-info
-   'riscv64 64 'little mtype-map/riscv64 alignof-mtype-map/natural))
+   'riscv64-linux 64 'little mtype-map/riscv64-linux alignof-mtype-map/natural))
 
-(add-to-arch-map "riscv64" arch/riscv64)
+(add-to-arch-map "riscv64-linux" arch/riscv64-linux)
 
 
 ;; s390x 64 bit (big endian)
-(define mtype-map/s390x
+(define mtype-map/s390x-linux
  '((void* . u64be)
    (char . u8) (signed-char . s8) (unsigned-char . u8)
    (short . s16be) (unsigned-short . u16be)
@@ -809,22 +814,22 @@
    (__int128 . s128be) (unsigned-__int128 . u128be)
    (unsigned-int . u32be)))
 
-(define align-map/s390x
+(define align-map/s390x-linux
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
    (f32be . 4) (f64be . 8) (f128be . 8)
    (c32be . 4) (c64be . 8) (c128be . 8)
    (s128be . 8) (u128be . 8)))
 
-(define arch/s390x
+(define arch/s390x-linux
   (make-arch-info
-   's390x 64 'big mtype-map/s390x align-map/s390x))
+   's390x-linux 64 'big mtype-map/s390x-linux align-map/s390x-linux))
 
-(add-to-arch-map "s390x" arch/s390x)
+(add-to-arch-map "s390x-linux" arch/s390x-linux)
 
 
 ;; sparc 32 bit (big endian)
-(define mtype-map/sparc32
+(define mtype-map/sparc32-linux
   '((void* . u32be)
     (char . s8) (signed-char . s8) (unsigned-char . u8)
     (short . s16be) (unsigned-short . u16be)
@@ -844,15 +849,15 @@
     (__int128 . s128be) (unsigned-__int128 . u128be)
     (unsigned-int . u32be)))
 
-(define arch/sparc32
+(define arch/sparc32-linux
   (make-arch-info
-   'sparc32 32 'big mtype-map/sparc32 alignof-mtype-map/natural))
+   'sparc32-linux 32 'big mtype-map/sparc32-linux alignof-mtype-map/natural))
 
-(add-to-arch-map "sparc32" arch/sparc32)
+(add-to-arch-map "sparc32-linux" arch/sparc32-linux)
 
 
 ;; sparc 64 bit (big endian)
-(define mtype-map/sparc64
+(define mtype-map/sparc64-linux
  '((void* . u64be)
    (char . s8) (signed-char . s8) (unsigned-char . u8)
    (short . s16be) (unsigned-short . u16be)
@@ -872,22 +877,22 @@
    (__int128 . s128be) (unsigned-__int128 . u128be)
    (unsigned-int . u32be)))
 
-(define align-map/sparc64
+(define align-map/sparc64-linux
  '((s8 . 1) (u8 . 1) (s16be . 2) (u16be . 2)
    (s32be . 4) (u32be . 4) (s64be . 8) (u64be . 8)
    (f32be . 4) (f64be . 8) (f128be . 16)
    (c32be . 4) (c64be . 8) (c128be . 16)
    (s128be . 16) (u128be . 16)))
 
-(define arch/sparc64
+(define arch/sparc64-linux
   (make-arch-info
-   'sparc64 64 'big mtype-map/sparc64 align-map/sparc64))
+   'sparc64-linux 64 'big mtype-map/sparc64-linux align-map/sparc64-linux))
 
-(add-to-arch-map "sparc64" arch/sparc64)
+(add-to-arch-map "sparc64-linux" arch/sparc64-linux)
 
 
 ;; intel amd x86_64
-(define mtype-map/x86_64
+(define mtype-map/x86_64-linux
  '((void* . u64le)
    (char . s8) (signed-char . s8) (unsigned-char . u8)
    (short . s16le) (unsigned-short . u16le)
@@ -907,39 +912,65 @@
    (__int128 . s128le) (unsigned-__int128 . u128le)
    (unsigned-int . u32le)))
 
-(define align-map/x86_64
+(define align-map/x86_64-linux
  '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
    (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
    (f32le . 4) (f64le . 8) (f128le . 16) (f16le . 2) (f128le . 16)
    (c32le . 4) (c64le . 8) (c128le . 16)
    (s128le . 16) (u128le . 16)))
 
-(define arch/x86_64
-  (make-arch-info 'x86_64 64 'little mtype-map/x86_64 align-map/x86_64))
+(define arch/x86_64-linux
+  (make-arch-info
+   'x86_64-linux 64 'little mtype-map/x86_64-linux align-map/x86_64-linux))
 
-(add-to-arch-map "x86_64" arch/x86_64)
+(add-to-arch-map "x86_64-linux" arch/x86_64-linux)
 
 ;; aliases
-(add-to-arch-map "arm" arch/armv8l)
-(add-to-arch-map "armhf" arch/armv8l)
-(add-to-arch-map "i386" arch/i686)
-(add-to-arch-map "mipsel" arch/mips)
-(add-to-arch-map "parisc64" arch/hppa)
-(add-to-arch-map "powerpc64be" arch/powerpc64)
-(add-to-arch-map "ppc64" arch/powerpc64)
-(add-to-arch-map "ppc64le" arch/powerpc64le)
+(add-to-arch-map "aarch64" arch/aarch64-linux)
+(add-to-arch-map "armv8l" arch/armv8l-linux)
+(add-to-arch-map "avr" arch/avr-eabi)
+(add-to-arch-map "hppa" arch/hppa-linux)
+(add-to-arch-map "i686" arch/i686-linux)
+(add-to-arch-map "loongarch64" arch/loongarch64-linux)
+(add-to-arch-map "m68k" arch/m68k-linux)
+(add-to-arch-map "mips" arch/mips-linux)
+(add-to-arch-map "powerpc64" arch/powerpc64-linux)
+(add-to-arch-map "powerpc64le" arch/powerpc64le-linux)
+(add-to-arch-map "riscv64" arch/riscv64-linux)
+(add-to-arch-map "s390x" arch/s390x-linux)
+(add-to-arch-map "sparc32" arch/sparc32-linux)
+(add-to-arch-map "sparc64" arch/sparc64-linux)
+(add-to-arch-map "x86_64" arch/x86_64-linux)
+
+(add-to-arch-map "arm" arch/armv8l-linux)
+(add-to-arch-map "armhf" arch/armv8l-linux)
+(add-to-arch-map "i386" arch/i686-linux)
+(add-to-arch-map "mipsel" arch/mips-linux)
+(add-to-arch-map "parisc64" arch/hppa-linux)
+(add-to-arch-map "powerpc64be" arch/powerpc64-linux)
+(add-to-arch-map "ppc64" arch/powerpc64-linux)
+(add-to-arch-map "ppc64le" arch/powerpc64le-linux)
 
 
 ;; invert to get in above order
 (*arch-map* (reverse (*arch-map*)))
 
-;; native
+;; native type and arch
 (eval-when (expand load eval)
-  (define host-arch-name
-    (and=> (string-split %host-type #\-) car)))
+  (begin
+    (define host-type-name
+      (let loop ((ma #f) (os "unknown") (fl (string-split %host-type #\-)))
+        (cond
+         ((null? fl) (string-append ma "-" os))
+         ((not ma) (loop (car fl) os (cdr fl)))
+         ((member (car fl) '("linux" "eabi")) (loop ma (car fl) '()))
+         (else (loop ma os (cdr fl))))))
+    (define host-arch-name
+      (and=> (string-split %host-type #\-) car))))
 
 (define native-arch
-  (assoc-ref (*arch-map*) host-arch-name))
+  (assoc-ref (*arch-map*) host-type-name))
+
 
 (add-to-arch-map "native" native-arch)
 
