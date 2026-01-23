@@ -358,29 +358,28 @@
 (define xlev (make-parameter 0))
 (define* (cpp-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
   (xlev (1+ (xlev)))
-  ;;(if (> (xlev) 4) (quit))
+  (if (> (xlev) 4) (quit))
   (when DBG (sferr "\ncpp-expand/~s: ~s\n    used=~s\n" (xlev) tokl used))
   (let loop ((osq seed) (used used) (isq tokl))
+    ;;(if (and (pair? osq) (eq? (caar osq) 110)) (quit))
     (when DBG (sferr "  Xloop:\n    isq: ~s\n    osq:  ~s\n" isq osq))
     (match isq
       ('() #;(sferr " X=> ~s\n" (rtokl->string osq)) (xlev (1- (xlev))) osq)
       (`(($ident . ,ident) . ,rest)
-       ;;(when DBG (sferr "    ident=~s\n" ident))
+       (when DBG (sferr "    ident=~s\n" ident))
        (cond
         ((member ident used)
-         ;; TODO: do we need to mark ident used here?
-         (loop (cons (car isq) osq) used (cdr isq)))
+         (loop (cons `($idnox . ,ident) osq) used (cdr isq)))
         ((assoc-ref defs ident) =>
          (lambda (rhs)
-           ;;(when DBG (sferr "    rhs: ~s\n" rhs))
+           (when DBG (sferr "    rhs: ~s\n" rhs))
            (cond
-            ((null? rhs) (loop osq used rest))
+            ((null? rhs)
+             (loop osq used rest))
             ((string? (caar rhs))
-             (let ((ch (read-char)))
-               (unless (eof-object? ch) (unread-char ch)))
              (cond
-              ((collect-args (car rhs)
-                             (if (pair? rest) rest (tokenize-args (car rhs))))
+              ((collect-args
+                (car rhs) (if (pair? rest) rest (tokenize-args (car rhs))))
                ;; tokenize args is needed if plain turns into fnctn
                (lambda (a b) a) =>
                (lambda (argd rest)
@@ -389,16 +388,16 @@
                  ;; fnctn call macro
                  (let* ((tkl (cpp-subst (cdr rhs) argd defs used))
                         (uzed (cons ident used))
-                        ;;(osq (cpp-expand tkl defs uzed osq keep-comm)))
                         (csq (cpp-expand tkl defs uzed '() keep-comm))
                         (rest (append-reverse csq rest)))
                    (loop osq used rest))))
               (else
                ;; no macro call
+               (when DBG (sferr "    no macro\n" argd))
                (loop (cons (car isq) osq) used (cdr isq)))))
             (else
              ;; plain macro call
-             ;;(when DBG (sferr "    plain: used:~s\n" used))
+             (when DBG (sferr "    plain: used:~s\n" used))
              (let* ((tkl (cpp-subst rhs '() defs used))
                     (uzed (cons ident used))
                     (csq (cpp-expand tkl defs uzed '() keep-comm))
@@ -425,8 +424,7 @@
   (let loop ((osq '()) (isq tokl))
     (when DBG (sferr "  Sloop:\n    isq: ~s\n    osq: ~s\n" isq osq))
     (match isq
-      ('() #;(when DBG (sferr " S=> ~s\n" (rtokl->string osq)))
-       (slev (1- (slev))) (reverse osq))
+      ('() (slev (1- (slev))) (reverse osq))
       (`(($hash . ,_1) ($ident . ,ident) . ,_2)
        (let ((arg (assoc-ref argd ident)))
          (when DBG (sferr "hash arg: ~s\n" arg))
