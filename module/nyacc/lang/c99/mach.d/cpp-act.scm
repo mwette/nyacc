@@ -114,9 +114,9 @@
    (lambda ($4 $3 $2 $1 . $rest) `(defined ,$3))
    ;; 48. primary-expression => "defined" '$ident
    (lambda ($2 $1 . $rest) `(defined ,$2))
-   ;; 49. primary-expression => "__has_include" "(" '$string ")"
+   ;; 49. primary-expression => "__has_include__" "(" '$string ")"
    (lambda ($4 $3 $2 $1 . $rest) `(has-include ,$3))
-   ;; 50. primary-expression => "__has_include_next" "(" '$string ")"
+   ;; 50. primary-expression => "__has_include_next__" "(" '$string ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(has-include-next ,$3))
    ;; 51. primary-expression => "(" expression-list ")"
