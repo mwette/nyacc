@@ -467,44 +467,43 @@
   (define (finish atkl)
     (reverse (if (and (pair? atkl) (eqv? (caar atkl) #\space)) (cdr atkl) atkl)))
 
-  ;;(cond
-  ;; ((pair? tokl)
-  ;;  (if (eq? #\( (caar tokl))
-  (match tokl
-    (`((#\( . ,_) . ,rest)
-     ;; ad: arg-dict av: tokens, lv: paren-level, al: argl
-     (let loop ((argd '()) (tk (car tokl)) (tkl rest) (argl argl))
-       ;;(sferr "collect-args: tk=~s\n" tk)
-       (match (car tk)
-         (#f (throw 'cpp-error "end of input collecting args"))
-         ((or #\( #\,)                  ; start of arg
-          (let* ((anam (and (pair? argl) (car argl)))
-                 (mark (if (equal? anam "...") #\) #\,))
-                 (anam (if (equal? anam "...") "__VA_ARGS__" anam)))
-            (let lp ((atkl '()) (lv 0) (tkl tkl)) ; collect-to-mark
-              (let* ((tk (and (pair? tkl) (car tkl))) (k (car tk)))
-                (cond
-                 ((null? tkl)
-                  (throw 'cpp-error "yuck"))
-                 ((and (null? atkl) (eq? k #\space))
-                  (lp atkl lv (cdr tkl)))
-                 ((eq? #\( k)
-                  (lp (cons tk atkl) (1+ lv) (cdr tkl)))
-                 ((positive? lv)
-                  (lp (cons tk atkl) (if (eq? k #\)) (1- lv) lv) (cdr tkl)))
-                 ((or (eq? mark k) (and mark (eq? #\) k)))
-                  (loop (acons anam (finish atkl) argd)
-                        (car tkl) (cdr tkl) (cdr argl)))
-                 (else (lp (cons tk atkl) lv (cdr tkl))))))))
-         (#\)                           ; end of args
-          (cond
-           ((null? argl) (values argd tkl))
-           ((equal? argl '("...")) (values (acons "__VA_ARGS__" '() argd) tkl))
-           (else (throw 'cpp-error "function macro arg count mismatch"))))
-         (__
-          (throw 'cpp-error "collect-args coding error")))))
-    (`((#\space . ,_) (#\( . ,_) . ,rest) (collect-args argl (cdr tokl)))
-    (_ (values #f tokl))))
+  (cond
+   ((null? tokl) (values #f tokl))
+   ((eq? #\( (caar tokl))
+    ;; ad: arg-dict av: tokens, lv: paren-level, al: argl
+    (let loop ((argd '()) (tk (car tokl)) (tkl (cdr tokl)) (argl argl))
+      ;;(sferr "collect-args: tk=~s\n" tk)
+      (case (car tk)
+        ((#f) (throw 'cpp-error "end of input collecting args"))
+        ((#\( #\,)                     ; start of arg
+         (let* ((anam (and (pair? argl) (car argl)))
+                (mark (if (equal? anam "...") #\) #\,))
+                (anam (if (equal? anam "...") "__VA_ARGS__" anam)))
+           (let lp ((atkl '()) (lv 0) (tkl tkl)) ; collect-to-mark
+             (let* ((tk (and (pair? tkl) (car tkl))) (k (car tk)))
+               (cond
+                ((null? tkl)
+                 (throw 'cpp-error "yuck"))
+                ((and (null? atkl) (eq? k #\space))
+                 (lp atkl lv (cdr tkl)))
+                ((eq? #\( k)
+                 (lp (cons tk atkl) (1+ lv) (cdr tkl)))
+                ((positive? lv)
+                 (lp (cons tk atkl) (if (eq? k #\)) (1- lv) lv) (cdr tkl)))
+                ((or (eq? mark k) (and mark (eq? #\) k)))
+                 (loop (acons anam (finish atkl) argd)
+                       (car tkl) (cdr tkl) (cdr argl)))
+                (else (lp (cons tk atkl) lv (cdr tkl))))))))
+        ((#\))                         ; end of args
+         (cond
+          ((null? argl) (values argd tkl))
+          ((equal? argl '("...")) (values (acons "__VA_ARGS__" '() argd) tkl))
+          (else (throw 'cpp-error "function macro arg count mismatch"))))
+        (else
+         (throw 'cpp-error "collect-args coding error")))))
+   ((and (eq? #\space (caar tokl) (pair? (cdr tokl)) (eq? #\( (caadr tokl))))
+    (collect-args argl (cdr tokl)))
+   (else (values #f tokl))))
 
 
 ;; === tokenize & reverse ============
