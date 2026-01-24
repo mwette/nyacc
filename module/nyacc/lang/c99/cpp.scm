@@ -342,19 +342,19 @@
          (if (eq? (car tok) '$ident) `($idnox . ,(cdr tok)) tok))
        tokl))
 
-;;.@deffn {Procedure} macro-expand tokl defs [used seed keep-comm] => rtkl| #f
+;; @deffn {Procedure} macro-expand tokl defs [used [seed [keep-comm]]]
 ;; Process the token list @var{tokl}, using alist of macro definitions
 ;; @var{defs}.  The list of strings @var{used} defined macros already used.
 ;; Return the result as a list of reversed tokens, prepened to @var{seed}
 ;; (default @code{()}.  The unused boolean option @var{keep-comm} is intended
-;; to be option to keep comments from macros.
-;;.@end deffn
-;; @deff cpp-expand tokl defs [used [seed [keep-comm]]] => rtokl
+;; to be option to keep comments from macros, but is not yet implemented.
+;; Return the processed token sequence in @emph{reverse order}.
+;; @end deffn
 (define* (cpp-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
   (let loop ((osq seed) (used used) (isq tokl))
     (match isq
       ('() osq)
-      (`(($ident . ,ident) . ,rest)
+      ((('$ident . ident) . rest)
        (cond
         ((member ident used)
          (loop (cons `($idnox . ,ident) osq) used (cdr isq)))
@@ -386,29 +386,27 @@
         (else (loop (cons (car isq) osq) used (cdr isq)))))
       (_ (loop (cons (car isq) osq) used (cdr isq))))))
 
-;;.@deffn {Procedure} cpp-subst argd repl defs used => tokl
-;; FIXME:@*
-;; Given alist of function argument names and values @var{argd}, and tokenized
-;; macro replacement text, perform the preexpansion.  For arguments that are
-;; subject to @code{#} or @code{##} perform the associated operation
-;; (stringificaton or paste).  Otherwise, expand the argument value and mark
-;; expanded identifiers (i.e., replace key @code{$ident} with @code{$idnox}).
-;;.@end defun
-;; TODO: retokenize after ## application (from start-or-space to end-or-space)
-;; e.g. hex numbers 0 ## xf is not an identifier
+;; @deffn {Procedure} cpp-subst argd repl defs used => tokl
+;; Given an alist of function argument names and values @var{argd}, and
+;; tokenized macro replacement text @var{repl}, perform the preexpansion.
+;; For @code{#} or @code{##} forms, the stringification or pasting is
+;; performed.  Formal parameters in the replacement are replaced with the
+;; expanded token sequence from @var{argd}, and identifiers are marked for
+;; no further expansion.
+;; @end defun
 (define (cpp-subst tokl argd defs used)
   (let loop ((osq '()) (isq tokl))
     (match isq
       ('() (reverse osq))
-      (`(($hash . ,_1) ($ident . ,ident) . ,_2)
+      ((('$hash . _1) ('$ident . ident) . _2)
        (let ((arg (assoc-ref argd ident)))
          (unless arg (throw 'cpp-error "not found: ~s" ident))
          (loop (acons '$string (tokl->string arg) osq) (cddr isq))))
 
-      (`(($dhash . ,_1) (#\space . ,_2) . ,rest)
+      ((('$dhash . _1) ('#\space . _2) . rest)
        (loop osq (cons (car isq) (cddr isq))))
 
-      (`(($dhash . ,_1) ($ident . ,name) . ,rest)
+      ((('$dhash . _1) ('$ident . name) . rest)
        (let* ((isp (eq? (caar osq) #\space))
               (rpl (or (assoc-ref argd name) (list (cadr isq))))
               (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdar rpl)))
@@ -417,14 +415,14 @@
               (osq (append-reverse (cdr rpl) (append-reverse tkl osq1))))
          (loop osq rest)))
 
-      (`(($dhash . ,_1) ,rs . ,rest)
+      ((('$dhash . _1) rs . rest)
        (let* ((isp (eq? (caar osq) #\space))
               (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdr rs)))
               (tkl (tokenize-cpp-string txt))
               (osq (append tkl (if isp (cddr osq) (cdr osq)))))
          (loop osq rest)))
 
-      (`(($ident . ,ident) . ,rest)
+      ((('$ident . ident) . rest)
        (let* ((arg (assoc-ref argd ident)))
          (loop
           (cond
@@ -433,8 +431,8 @@
            (else (cons (car isq) osq)))
           rest)))
 
-      (`(($hash . ,_1) . ,_2) (throw 'cpp-error "bad #"))
-      (__ (loop (cons (car isq) osq) (cdr isq))))))
+      ((('$hash . _1) . _2) (throw 'cpp-error "bad #"))
+      (_ (loop (cons (car isq) osq) (cdr isq))))))
 
 
 ;;.@deffn {Procedure} collect-args argl tokl
@@ -679,7 +677,6 @@
 ;; expand text, you must use (with-input-from-string "" ...)
 ;; The argument @var{sp} is source properties (aka location info).
 ;; @end deffn
-(display "cpp.scm: restore false-if-exception\n")
 (define* (expand-cpp-macro-ref ident defs #:optional (sp '()))
 
   (define (cleanup seq)
@@ -695,7 +692,7 @@
         (loop (cons (car in) out) (cdr in)))
        (else (loop (cons (car in) out) (cdr in))))))
 
-  (identity ;; false-if-exception
+  (false-if-exception
    (cond
     ((assoc-ref defs ident)
      (cleanup (cpp-expand `(($ident . ,ident)) defs '() '())))
