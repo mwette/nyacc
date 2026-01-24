@@ -377,27 +377,20 @@
             ((null? rhs)
              (loop osq used rest))
             ((string? (caar rhs))
-             (cond
-              ((collect-args
-                (car rhs) (if (pair? rest) rest (tokenize-args (car rhs))))
-               ;; tokenize args is needed if plain turns into fnctn
-               (lambda (a b) a) =>
+             (call-with-values
+                 (lambda ()
+                   (if (pair? rest)
+                       (collect-args (car rhs) rest)
+                       (values (tokenize-args (car rhs)) '())))
                (lambda (argd rest)
-                 ;; MAYBE (map cdr argd) SHOULD BE EXPANDED HERE?
-                 (when DBG (sferr "    fnctn: argd=~s\n" argd))
-                 ;; fnctn call macro
-                 (let* ((tkl (cpp-subst (cdr rhs) argd defs used))
-                        (uzed (cons ident used))
-                        (csq (cpp-expand tkl defs uzed '() keep-comm))
-                        (rest (append-reverse csq rest)))
-                   (loop osq used rest))))
-              (else
-               ;; no macro call
-               (when DBG (sferr "    no macro\n" argd))
-               (loop (cons (car isq) osq) used (cdr isq)))))
+                 (if argd
+                     (let* ((tkl (cpp-subst (cdr rhs) argd defs used))
+                            (uzed (cons ident used))
+                            (csq (cpp-expand tkl defs uzed '() keep-comm))
+                            (rest (append-reverse csq rest)))
+                       (loop osq used rest))
+                     (loop (cons (car isq) osq) used (cdr isq))))))
             (else
-             ;; plain macro call
-             (when DBG (sferr "    plain: used:~s\n" used))
              (let* ((tkl (cpp-subst rhs '() defs used))
                     (uzed (cons ident used))
                     (csq (cpp-expand tkl defs uzed '() keep-comm))
@@ -474,6 +467,9 @@
   (define (finish atkl)
     (reverse (if (and (pair? atkl) (eqv? (caar atkl) #\space)) (cdr atkl) atkl)))
 
+  ;;(cond
+  ;; ((pair? tokl)
+  ;;  (if (eq? #\( (caar tokl))
   (match tokl
     (`((#\( . ,_) . ,rest)
      ;; ad: arg-dict av: tokens, lv: paren-level, al: argl
@@ -513,21 +509,20 @@
 
 ;; === tokenize & reverse ============
 
-(include-from-path "nyacc/lang/c99/mach.d/c99-tab.scm")
-
 ;; extended char sequence tab
-(define chseqtab (remove-mt ident-like? (filter-mt string? c99-mtab)))
+(include-from-path "nyacc/lang/c99/mach.d/c99-tab.scm")
+(define ext-chseq-tab (remove-mt ident-like? (filter-mt string? c99-mtab)))
+(define ext-symbol-tab (filter-mt symbol? c99-mtab))
 
-;; see expand-cpp-macro-ref/reverse-and-cleanup
-(define xsymtab
-  (cons* (cons #\( (assoc-ref "(" chseqtab))
-         (cons #\, (assoc-ref "," chseqtab))
-         (cons #\) (assoc-ref ")" chseqtab))
-         (cons #\< (assoc-ref "<" chseqtab))
-         ;;(cons '$ident '$ident)
-	 (filter-mt symbol? c99-mtab)))
+;; see expand-cpp-macro-ref/cleanup
+(define ext-symtab
+  (cons* (cons #\( (assoc-ref ext-chseq-tab "("))
+         (cons #\, (assoc-ref ext-chseq-tab ","))
+         (cons #\) (assoc-ref ext-chseq-tab ")"))
+         (cons #\< (assoc-ref ext-chseq-tab "<"))
+	 (filter-mt symbol? ext-symbol-tab)))
 
-(define read-chseq (make-chseq-reader chseqtab))
+(define read-chseq (make-chseq-reader ext-chseq-tab))
 
 (define (read-cpp-token)
   (let loop ((ch (read-char)) (ws #f))
@@ -665,25 +660,6 @@
 
 ;; === convert to tokens and process
 
-"
-cpp-expand tokl defs used => rtokl used
-  calls
-  1.  maybe-expand-ref
-  2.  collect-args
-
-expand-macro-ref ident tokl defs used => head tail used
-  calls
-  1.  collect-args
-  2.  tokenize/memoize REPL  via (lkup-repl defs ident) -> tokl
-  3.  macro-expand
-
-expand-cpp-macro-ref ident defs sp
-  calls
-  1. tokenize-args
-  2. macro-expand
-  3. tokl->string
-"
-
 ;; @deffn {Procedure} macro-expand-text text defs => text
 ;; Like @code{macro-expand} but processes text entirely and generates
 ;; text result.
@@ -700,7 +676,7 @@ expand-cpp-macro-ref ident defs sp
 
 ;; This of bit of a kludge to deal with _Pragma in odd places.  The parser
 ;; can't reject the full deal so we parse here and return as ($pragma . str)
-;; which the parser can ignore.  (Should the make-lalr-parser have a hoook
+;; which the parser can ignore.  (Should the make-lalr-parser have a hook
 ;; for language pramgas?
 (define (finish-pragma)
   (define (sk-ws ch)
@@ -735,22 +711,22 @@ expand-cpp-macro-ref ident defs sp
   (define (cleanup seq)
     (let loop ((out '()) (in seq))
       (cond
-       ((null? in) (reverse out))
+       ((null? in) out)
        ((eq? #\space (caar in)) (loop out (cdr in)))
-       ((eq? '$ident (caar in)) (loop (cons (car in) in) (cdr in)))
+       ((eq? '$ident (caar in)) (loop (cons (car in) out) (cdr in)))
+       ((eq? '$idnox (caar in)) (loop (acons '$ident (cdar in) out) (cdr in)))
        ((or (char? (caar in)) (symbol? (caar in)))
-        (set-car! (car in) (assq-ref xsymtab (caar in)))
+        ;; set-car! preserves source properties; do we care?
+        (set-car! (car in) (assq-ref ext-symtab (caar in)))
         (loop (cons (car in) out) (cdr in)))
        (else (loop (cons (car in) out) (cdr in))))))
 
-  ;;(sferr "assoc-ref defs ~s => ~s\n" ident (assoc-ref defs ident))
-  
-  (identity ;;false-if-exception
+  (identity ;; false-if-exception
    (cond
     ((assoc-ref defs ident)
-     (cleanup
-      (cpp-expand `(($ident . ,ident)) defs '() '())))
-    ((c99-std-val ident sp) => (lambda (s) (list (cons '$string s))))
+     (cleanup (cpp-expand `(($ident . ,ident)) defs '() '())))
+    ((c99-std-val ident sp)
+     => (lambda (s) (list (cons '$string s))))
     (else #f))))
 
 ;; @deffn {Procedure} skip-cpp-macro-ref name defs
