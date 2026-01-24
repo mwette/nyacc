@@ -18,11 +18,9 @@
   (define name (@@ (nyacc lang c99 cpp) name)))
 (cpp-import tokenize-args)
 (cpp-import cpp-subst)
+(cpp-import cpp-expand)
 (cpp-import collect-args)
 (cpp-import tokenize-to-mark)
-
-(cpp-import cpp-expand)
-
 (cpp-import macro-expand-text)
 ;;(cpp-import rtokl->string)
 ;;(cpp-import tokl->string)
