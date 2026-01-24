@@ -373,8 +373,9 @@
 	    (let* ((tail (cdr tree))
 		   (name (car (assq-ref tail 'name)))
 		   (args (assq-ref tail 'args))
-		   (repl (car (assq-ref tail 'repl)))
-		   (cell (cons name (if args (cons args repl) repl))))
+		   (rtxt (car (assq-ref tail 'repl)))
+                   (rtkl (tokenize-cpp-string rtxt))
+		   (cell (cons name (if args (cons args rtkl) rtkl))))
 	      (set-cpi-defs! info (cons cell (cpi-defs info)))))
 
 	  (define (rem-define name)
@@ -673,7 +674,7 @@
                ((symbol? key) (set-car! tok (assq-ref symtab key)) tok)
                (else tok))))
           
-          (if (pair? tkl)
+          (identity (if (pair? tkl)
               (let ((tok (car tkl)))
                 (set! tkl (cdr tkl))
                 (encode-token tok))
@@ -686,12 +687,13 @@
                     ((eq? '$ident (car token))
                      (let ((mx (expand-cpp-macro-ref
                                 (cdr token) (cpi-defs info))))
+                       (sferr "mx=~s\n" mx)
                        (cond
                         (mx (set! tkl (cdr mx)) (encode-token (car mx)))
                         (else (encode-token token)))))
                     (else (encode-token token))))
 	          ((skip-done skip-look skip) (loop (read-token)))
-	          (else (throw 'c99-error "parser.scm: coding error"))))))))
+	          (else (throw 'c99-error "parser.scm: coding error")))))))))
 
     gen-lexer))
 
