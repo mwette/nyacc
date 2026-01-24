@@ -52,17 +52,15 @@
   (blev cpi-blev set-cpi-blev!)		; curr brace/block level
   )
 
-;;.@deffn Procedure split-cppdef defstr => \
-;;  (<name> . <repl>) | (<name>  <args> . <repl>) | #f
-;; Convert define string to a dict item.  As a kludge, if a non-function
-;; macro is @code{"#f"}, then it's assigned @code{#f}, which serves as
-;; an undef.
+;;.@deffn Procedure split-cppdef defstr => form | #f
+;; Convert string @var{defstr} to CPP def for use in macro expansion.
+;; If a macro replacment is @code{"#f"}, then effectively it has been
+;; @code{undef}'d.  The replacment part is tokenized.
 ;; @* Examples:
 ;; @example
-;; "ABC=123" => '("ABC" . "123")
-;; "MAX(X,Y)=((X)>(Y)?(X):(Y))" => ("MAX" ("X" "Y") . "((X)>(Y)?(X):(Y))")
-;; "DEF=#f" => '("DEF" . #f)
-;; "FOO" => '("FOO" . "1")
+;; "ABC=123" => '("ABC" ($fixed . "123"))
+;; "SUM(X,Y)=X+Y" => '("SUM" ("X" "Y") ($ident . "X") (#\+ . "+") ($ident . "Y"))
+;; "FOO" => '("FOO" ($fixed . "1"))
 ;; @end example
 ;; @end deffn
 (define (split-cppdef defstr)
@@ -71,12 +69,12 @@
          (rhs (if ex (substring defstr (1+ ex)) "1"))
          (lx (string-index lhs #\())
          (rx (string-index lhs #\))))
-    (cons
-     (if lx
-         (cons (substring lhs 0 lx)
-               (string-split (substring lhs (1+ lx) (1- rx)) #\,))
-         lhs)
-     (if (string=? "#f" rhs) #f rhs))))
+    (cond
+     ((string=? rhs "#f") (cons lhs #f))
+     (lx (cons* (substring lhs 0 lx)
+                (string-split (substring lhs (1+ lx) rx) #\,)
+                (tokenize-cpp-string rhs)))
+     (else (cons lhs (tokenize-cpp-string rhs))))))
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
@@ -674,12 +672,11 @@
                ((symbol? key) (set-car! tok (assq-ref symtab key)) tok)
                (else tok))))
           
-          (identity (if (pair? tkl)
+          (if (pair? tkl)
               (let ((tok (car tkl)))
                 (set! tkl (cdr tkl))
                 (encode-token tok))
               (let loop ((token (read-token)))
-                ;;(sferr "loop: ~s ~s\n" (car ppxs) token)
                 (case (car ppxs)
                   ((keep)
                    (cond
@@ -687,13 +684,12 @@
                     ((eq? '$ident (car token))
                      (let ((mx (expand-cpp-macro-ref
                                 (cdr token) (cpi-defs info))))
-                       (sferr "mx=~s\n" mx)
                        (cond
                         (mx (set! tkl (cdr mx)) (encode-token (car mx)))
                         (else (encode-token token)))))
                     (else (encode-token token))))
 	          ((skip-done skip-look skip) (loop (read-token)))
-	          (else (throw 'c99-error "parser.scm: coding error")))))))))
+	          (else (throw 'c99-error "parser.scm: coding error"))))))))
 
     gen-lexer))
 
