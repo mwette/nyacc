@@ -1391,7 +1391,7 @@
         (defs
           (fold
            (lambda (name seed)
-             (let* ((repl (expand-cpp-name name ddict '()))
+             (let* ((repl (macro-expand-text name ddict))
                     (val (and (string? repl)
                               (false-if-exception (eval-code-string repl)))))
                (if val

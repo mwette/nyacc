@@ -589,11 +589,17 @@
         ((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
         ((memq ch '(#\F #\f)) (loop (cons ch chl) ty 69 (read-char)))
         ((memq ch '(#\L #\l)) (loop (cons ch chl) ty 65 (read-char)))
+        ((memq ch '(#\B #\b)) (loop (cons ch chl) ty 51 (read-char)))
         ((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixpt 66 (read-char)))
         ((memq ch '(#\K #\R #\k #\r))
          (loop (cons ch chl) '$fixpt 70 (read-char)))
         ((memq ch '(#\D #\d)) (loop (cons ch chl) '$decfl 68 (read-char)))
         (else (loop chl ty 70 ch))))
+      ((51) ;; got B looking for BF16 suffix
+       (cond
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((memq ch '(#\F #\f)) (loop (cons ch chl) ty 69 (read-char)))
+        (else (bad-sfx chl))))
       ;; suffixes
       ((61) ;; fixed/u
        (cond
@@ -644,13 +650,13 @@
         ((memq ch '(#\K #\R #\k #\r))
          (loop (cons ch chl) '$fixpt 70 (read-char)))
         (else (bad-sfx chl))))
-      ((68) ;; got (d|D), look for dDfFlL
+      ((68) ;; got (d|D), look for dDfFlL or 0-9
        (cond
         ((eof-object? ch) (bad-sfx chl))
-        ((memq ch '(#\D #\F #\L #\d #\f #\l))
-         (loop (cons ch chl) '$decfl 72 ch))
+        ((memq ch '(#\D #\d #\F #\f #\L #\l)) (loop (cons ch chl) '$decfl 72 ch))
+        ((char-numeric? ch) (loop (cons ch chl) ty 69 (read-char)))
         (else (bad-sfx chl))))
-      ((69) ;; bizarre gcc float suffixes: F128 F32x
+      ((69) ;; special float suffixes: F128 F32x F16 BF16
        (cond
         ((eof-object? ch) (loop chl ty 72 ch))
         ((char-numeric? ch) (loop (cons ch chl) ty 69 (read-char)))

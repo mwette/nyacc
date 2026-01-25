@@ -35,10 +35,11 @@
 (define-module (nyacc lang c99 cpp)
   #:export (cpp-line->stmt
 	    expand-cpp-macro-ref
-	    eval-cpp-cond-text
-	    find-incl-in-dirl
-            tokenize-cpp-string
+	    eval-cpp-cond-text          ; #if etc
+	    find-incl-in-dirl           ; #include
+            tokenize-cpp-string         ; #define
 	    ;; not used directly
+            macro-expand-text
 	    parse-cpp-expr
 	    eval-cpp-expr)
   #:use-module (ice-9 match)
@@ -70,13 +71,15 @@
 
 (define (c99-std-val str sl)
   (cond
-   ((string=? str "__DATE__") "M01 01 2001")
-   ((string=? str "__FILE__") (or (assq-ref sl 'filename) "(unknown)"))
-   ((string=? str "__LINE__") (number->string (or (assq-ref sl 'line) 0)))
-   ((string=? str "__TIME__") "00:00:00")
-   ((string=? str "__STDC__") "1")
-   ((string=? str "__STDC_HOSTED__") "0")
-   ((string=? str "__STDC_VERSION__") "199901L")
+   ((string=? str "__DATE__") '(($string . "M01 01 2001")))
+   ((string=? str "__FILE__")
+    `(($string . ,(or (assq-ref sl 'filename) "(unknown)"))))
+   ((string=? str "__LINE__")
+    `(($string . ,(number->string (or (assq-ref sl 'line) 0)))))
+   ((string=? str "__TIME__") '(($strings . "00:00:00")))
+   ((string=? str "__STDC__") '(($strings . "1")))
+   ((string=? str "__STDC_HOSTED__") '(($strings . "0")))
+   ((string=? str "__STDC_VERSION__") '(($strings . "199901L")))
    (else #f)))
 
 (define inline-whitespace (list->char-set '(#\space #\tab)))
@@ -283,6 +286,7 @@
 ;; Options include optional dictionary for defines and values
 ;; and @code{#:inc-dirs} for @code{has_include} etc
 ;; @end deffn
+(display "NEED TO DEAL WITH c99 token stream from ident in eval-cpp-expr\n")
 (define* (eval-cpp-expr tree #:optional (dict '()) #:key (inc-dirs '()))
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
@@ -327,7 +331,10 @@
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
 	    ;; in CPP if ident is not defined it should be zero
-	    ((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
+	    ((ident)
+             (or
+              (and=> (tokl->string (assoc-ref dict (tx1 tree))) string->number)
+              0))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
 	    (else (error "nyacc eval-cpp-expr: incomplete implementation"))))))
@@ -354,11 +361,11 @@
   (let loop ((osq seed) (used used) (isq tokl))
     (match isq
       ('() osq)
-      ((('$ident . ident) . rest)
+      (`(($ident . ,ident) . ,rest)
        (cond
         ((member ident used)
          (loop (cons `($idnox . ,ident) osq) used (cdr isq)))
-        ((assoc-ref defs ident) =>
+        ((lookup-def defs ident) =>
          (lambda (rhs)
            (cond
             ((null? rhs)
@@ -398,15 +405,15 @@
   (let loop ((osq '()) (isq tokl))
     (match isq
       ('() (reverse osq))
-      ((('$hash . _1) ('$ident . ident) . _2)
+      (`(($hash . ,_1) ($ident . ,ident) . ,_2)
        (let ((arg (assoc-ref argd ident)))
          (unless arg (throw 'cpp-error "not found: ~s" ident))
          (loop (acons '$string (tokl->string arg) osq) (cddr isq))))
 
-      ((('$dhash . _1) ('#\space . _2) . rest)
+      (`(($dhash . ,_1) (#\space . ,_2) . ,rest)
        (loop osq (cons (car isq) (cddr isq))))
 
-      ((('$dhash . _1) ('$ident . name) . rest)
+      (`(($dhash . ,_1) ($ident . ,name) . ,rest)
        (let* ((isp (eq? (caar osq) #\space))
               (rpl (or (assoc-ref argd name) (list (cadr isq))))
               (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdar rpl)))
@@ -415,14 +422,14 @@
               (osq (append-reverse (cdr rpl) (append-reverse tkl osq1))))
          (loop osq rest)))
 
-      ((('$dhash . _1) rs . rest)
+      (`(($dhash . ,_1) ,rs . ,rest)
        (let* ((isp (eq? (caar osq) #\space))
               (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdr rs)))
               (tkl (tokenize-cpp-string txt))
               (osq (append tkl (if isp (cddr osq) (cdr osq)))))
          (loop osq rest)))
 
-      ((('$ident . ident) . rest)
+      (`(($ident . ,ident) . ,rest)
        (let* ((arg (assoc-ref argd ident)))
          (loop
           (cond
@@ -431,7 +438,7 @@
            (else (cons (car isq) osq)))
           rest)))
 
-      ((('$hash . _1) . _2) (throw 'cpp-error "bad #"))
+      (`(($hash . ,_1) . ,_2) (throw 'cpp-error "bad #"))
       (_ (loop (cons (car isq) osq) (cdr isq))))))
 
 
@@ -630,7 +637,22 @@
 (define (tokl->string tokl)
   (rtokl->string (reverse tokl)))
 
-;; === convert to tokens and process
+;; The question is whether to tokenize all cpp-defs
+;; or keep the strings and convert to tokens on the fly.
+(define-public (lookup-def defs ident)
+  (let* ((def (assoc ident defs)) (ref (and def (cdr def))))
+    (cond
+     ((not def))
+     ((null? ref))
+     ((string? ref) (set-cdr! def (tokenize-cpp-string ref)))
+     ((string? (cdr ref)) (set-cdr! ref (tokenize-cpp-string (cdr ref)))))
+    (and def (cdr def))))
+;; vs
+;;(define-public (lookup-def defs ident)
+;;  (assoc-ref defs ident))  
+
+
+;; === exports =======================
 
 ;; @deffn {Procedure} macro-expand-text text defs => text
 ;; Like @code{macro-expand} but processes text entirely and generates
@@ -643,8 +665,6 @@
              (rtkl (cpp-expand tokl defs))
              (repl (rtokl->string rtkl)))
         repl))))
-
-;; === exports =======================
 
 ;; This of bit of a kludge to deal with _Pragma in odd places.  The parser
 ;; can't reject the full deal so we parse here and return as ($pragma . str)
@@ -694,7 +714,7 @@
 
   (false-if-exception
    (cond
-    ((assoc-ref defs ident)
+    ((lookup-def defs ident)
      (cleanup (cpp-expand `(($ident . ,ident)) defs '() '())))
     ((c99-std-val ident sp)
      => (lambda (s) (list (cons '$string s))))
@@ -713,6 +733,7 @@
 	     (exp (parse-cpp-expr repl)))
         (eval-cpp-expr exp defs #:inc-dirs inc-dirs)))
     (lambda (key fmt . args)
+      (pperr text)
       (report-error fmt args)
       (throw 'c99-error "CPP error"))))
 
@@ -726,10 +747,6 @@
 ;; @var{sp} is optional source properties
 ;; @end deffn
 (define (expand-cpp-name name defs sp)
-  "- Procedure: expand-cpp-name name defs [sp]=> repl | #f
-     Calls ‘expand-cpp-macro-ref’ with null input string (w/o further
-     input).  If NAME is has a function definition ‘#f’ is returned.  SP
-     is optional source properties"
   (with-input-from-string ""
     (lambda () (expand-cpp-macro-ref name defs))))
 
@@ -741,7 +758,7 @@
   "- Procedure: skip-cpp-macro-ref name defs
      Like ‘expand-cpp-macro-ref’ but skip over the reference.
      may not catch strings w/ non-matching parens"
-  (let ((rval (assoc-ref defs name)))
+  (let ((rval (lookup-def defs name)))
     (and
      (pair? rval)
      (let loop ((ch (read-char)))

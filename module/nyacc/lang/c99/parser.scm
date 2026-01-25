@@ -69,12 +69,14 @@
          (rhs (if ex (substring defstr (1+ ex)) "1"))
          (lx (string-index lhs #\())
          (rx (string-index lhs #\))))
+    ;; The option is tokenize here or (memoize) on demand.
     (cond
      ((string=? rhs "#f") (cons lhs #f))
      (lx (cons* (substring lhs 0 lx)
                 (string-split (substring lhs (1+ lx) rx) #\,)
-                (tokenize-cpp-string rhs)))
-     (else (cons lhs (tokenize-cpp-string rhs))))))
+                rhs)) ;; vs (tokenize-cpp-string rhs)
+     (else (cons lhs
+                 rhs))))) ;; vs (tokenize-cpp-string rhs)
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
@@ -685,8 +687,9 @@
                      (let ((mx (expand-cpp-macro-ref
                                 (cdr token) (cpi-defs info))))
                        (cond
-                        (mx (set! tkl (cdr mx)) (encode-token (car mx)))
-                        (else (encode-token token)))))
+                        ((not mx) (encode-token token))
+                        ((null? mx) (loop (read-token)))
+                        (else (set! tkl (cdr mx)) (encode-token (car mx))))))
                     (else (encode-token token))))
 	          ((skip-done skip-look skip) (loop (read-token)))
 	          (else (throw 'c99-error "parser.scm: coding error"))))))))
