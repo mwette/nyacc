@@ -214,7 +214,7 @@
 ;; @code{eval-cpp-expr}.
 ;; @end deffn
 (define (cpp-line->stmt line)
-  (define (rd-ident) (read-c-ident (skip-il-ws (read-char))))
+  (define (rd-id) (read-c-ident (skip-il-ws (read-char))))
   (define (rd-num) (and=> (read-c-num (skip-il-ws (read-char))) cdr))
   (define (rd-rest) (read-rest (skip-il-ws (read-char))))
   (with-input-from-string line
@@ -222,21 +222,18 @@
       (let ((ch (skip-il-ws (read-char))))
 	(cond
 	 ((read-c-ident ch) =>
-	  (lambda (cmds)
-	    (let ((cmd (string->symbol cmds)))
-	      (case cmd
-		((include) `(include ,(cpp-include)))
-		((include_next) `(include-next ,(cpp-include)))
-		((define) (cpp-define))
-		((undef) `(undef ,(rd-ident)))
-		((ifdef)
-		 `(if ,(string-append "defined(" (rd-ident) ")" (rd-rest))))
-		((ifndef)
-		 `(if ,(string-append "!defined(" (rd-ident) ")" (rd-rest))))
-		((if elif else endif line error warning pragma)
-		 (list cmd (rd-rest)))
-		(else
-		 (list 'warning (simple-format #f "unknown CPP: ~S" line)))))))
+	  (lambda (cmdstr)
+	    (case (string->symbol cmdstr)
+	      ((include) `(include ,(cpp-include)))
+	      ((include_next) `(include-next ,(cpp-include)))
+	      ((define) (cpp-define))
+	      ((undef) `(undef ,(rd-id)))
+	      ((ifdef) `(if ,(string-append "defined(" (rd-id) ")" (rd-rest))))
+	      ((ifndef) `(if ,(string-append "!defined(" (rd-id) ")" (rd-rest))))
+	      ((if elif else endif line error warning pragma)
+	       (list (string->symbol cmdstr) (rd-rest)))
+	      (else
+	       (list 'warning (simple-format #f "unknown CPP: ~S" line))))))
 	 ((read-c-num ch) => (lambda (num) `(line ,num ,(rd-rest))))
 	 (else '(null)))))))
 
@@ -286,8 +283,7 @@
 ;; Options include optional dictionary for defines and values
 ;; and @code{#:inc-dirs} for @code{has_include} etc
 ;; @end deffn
-(display "NEED TO DEAL WITH c99 token stream from ident in eval-cpp-expr\n")
-(define* (eval-cpp-expr tree #:optional (dict '()) #:key (inc-dirs '()))
+(define* (eval-cpp-expr tree #:optional (defs '()) #:key (inc-dirs '()))
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
@@ -300,7 +296,7 @@
 	  (case (car tree)
 	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
 	    ((char) (char->integer (string-ref (tx1 tree) 0)))
-	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
+	    ((defined) (if (assoc-ref defs (tx1 tree)) 1 0))
 	    ((has-include)
 	     (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #f) 1 0))
 	    ((has-include-next)
@@ -330,14 +326,13 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ;; in CPP if ident is not defined it should be zero
-	    ((ident)
-             (or
-              (and=> (tokl->string (assoc-ref dict (tx1 tree))) string->number)
-              0))
+	    ;; If ident is not defined it should be zero:
+	    ((ident) (if (assoc-ref defs (tx1 tree))
+                         (throw 'cpp-error "ident not expanded ???")
+                         0))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
-	    (else (error "nyacc eval-cpp-expr: incomplete implementation"))))))
+	    (else (throw 'cpp-error "eval-cpp-expr: incomplete impl"))))))
     (eval-expr tree)))
 
 
@@ -453,65 +448,57 @@
   (define (finish atkl)
     (reverse (if (and (pair? atkl) (eqv? (caar atkl) #\space)) (cdr atkl) atkl)))
 
+  ;; #\(=%28  #\)=%29  #\,=%2c
   (cond
    ((null? tokl) (values #f tokl))
-   ((eq? #\( (caar tokl))
+   ((eq? '%28 (caar tokl))
     ;; ad: arg-dict av: tokens, lv: paren-level, al: argl
     (let loop ((argd '()) (tk (car tokl)) (tkl (cdr tokl)) (argl argl))
       (case (car tk)
         ((#f) (throw 'cpp-error "end of input collecting args"))
-        ((#\( #\,)                     ; start of arg
+        ((%28 %2c)                     ; start of arg (#\( #\,)
          (let* ((anam (and (pair? argl) (car argl)))
-                (mark (if (equal? anam "...") #\) #\,))
+                (mark (if (equal? anam "...") '%29 '%2c))
                 (anam (if (equal? anam "...") "__VA_ARGS__" anam)))
+           ;;(sferr "subloop: tk=~s tkl=~s\n" tk tkl)
            (let lp ((atkl '()) (lv 0) (tkl tkl)) ; collect-to-mark
-             (let* ((tk (and (pair? tkl) (car tkl))) (k (car tk)))
+             (when (null? tkl) (throw 'cpp-error "incomplete arg list"))
+             (let* ((tk (car tkl)) (k (car tk)))
+               ;;(sferr "  lp: k=~s mark=~s\n" k mark)
                (cond
-                ((null? tkl)
-                 (throw 'cpp-error "yuck"))
                 ((and (null? atkl) (eq? k #\space))
                  (lp atkl lv (cdr tkl)))
-                ((eq? #\( k)
+                ((eq? '%28 k)
                  (lp (cons tk atkl) (1+ lv) (cdr tkl)))
                 ((positive? lv)
-                 (lp (cons tk atkl) (if (eq? k #\)) (1- lv) lv) (cdr tkl)))
-                ((or (eq? mark k) (and mark (eq? #\) k)))
+                 (lp (cons tk atkl) (if (eq? k '%29) (1- lv) lv) (cdr tkl)))
+                ((or (eq? k mark) (and mark (eq? k '%29)))
                  (loop (acons anam (finish atkl) argd)
                        (car tkl) (cdr tkl) (cdr argl)))
                 (else (lp (cons tk atkl) lv (cdr tkl))))))))
-        ((#\))                         ; end of args
+        ((%29)                         ; end of args (#\))
          (cond
           ((null? argl) (values argd tkl))
           ((equal? argl '("...")) (values (acons "__VA_ARGS__" '() argd) tkl))
           (else (throw 'cpp-error "function macro arg count mismatch"))))
         (else
          (throw 'cpp-error "collect-args coding error")))))
-   ((and (eq? #\space (caar tokl) (pair? (cdr tokl)) (eq? #\( (caadr tokl))))
+   ((and (eq? #\space (caar tokl)) (pair? (cdr tokl)) (eq? '%28 (caadr tokl)))
     (collect-args argl (cdr tokl)))
    (else (values #f tokl))))
 
 
 ;; === tokenize & reverse ============
 
-;; extended char sequence tab
-(include-from-path "nyacc/lang/c99/mach.d/c99-tab.scm")
-(define ext-chseq-tab (remove-mt ident-like? (filter-mt string? c99-mtab)))
-(define ext-symbol-tab (filter-mt symbol? c99-mtab))
+(define cpp-chseq-tab (remove-mt ident-like? (filter-mt string? cpp-mtab)))
 
-;; see expand-cpp-macro-ref/cleanup
-(define ext-symtab
-  (cons* (cons #\( (assoc-ref ext-chseq-tab "("))
-         (cons #\, (assoc-ref ext-chseq-tab ","))
-         (cons #\) (assoc-ref ext-chseq-tab ")"))
-         (cons #\< (assoc-ref ext-chseq-tab "<"))
-	 (filter-mt symbol? ext-symbol-tab)))
-
-(define read-chseq (make-chseq-reader ext-chseq-tab))
+(define read-chseq
+  (make-chseq-reader (chseq->canon-map cpp-chseq-tab)))
 
 (define (read-cpp-token)
   (let loop ((ch (read-char)) (ws #f))
     (cond
-     ((eof-object? ch) '($end . "#<eof>"))
+     ((eof-object? ch) (if ws (cons #\space " ") (cons '$end "#<eof>")))
      ((char-set-contains? c:ws ch) (loop (read-char) #t))
      ((eq? ch #\newline) (loop (read-char) #t))
      ((read-c-comm ch #f) (loop (read-char) #t))
@@ -520,10 +507,6 @@
      ((read-c-ident ch) => (lambda (name) (cons '$ident name)))
      ((read-c-num ch) => identity)
      ((read-c-string ch) => identity)
-     ((char=? ch #\() (cons #\( "("))
-     ((char=? ch #\,) (cons #\, ","))
-     ((char=? ch #\)) (cons #\) ")"))
-     ((char=? ch #\<) (cons #\< "<"))   ; as in <foo.h>
      ((char=? ch #\#)
       (let ((ch (read-char)))
         (cond ((eqv? ch #\#) `($dhash . "##"))
@@ -538,43 +521,48 @@
 
 ;; mark must be one of #\, #\) #f
 ;; Does not eat the mark.  If #\, or #\) remove trailing space
+
 ;;.@deffn {Procedure} tokenize-to-mark mark
 ;; Generate a token list from characters read from the current input port,
 ;; up to condition indicated by @var{mark}.  If the mark is @code{#f},
-;; read to end of input; if the mark is @code{#\)}, read balanced right paren;
-;; if the mark is @code{#\,}, read to the balanced comma or right paren.
-;; In the above balanced means additional @code{#\(} must first be matched
-;; with @code{#\)}.
+;; read to end of input; if the mark is @code{#\)}-token, read balanced
+;; right paren;if the mark is @code{#\,}-token, read to the balanced
+;; comma-token or right paren. In the above balanced means additional
+;; @code{#\(}-token must first be matched with a @code{#\)}-token.
 ;; @*An identifier appearing after the text @code{defined} will be marked
 ;; for no-expansion.  A string or @code{<>} based include path appearing
 ;; after @code{__has_include} will be converted to a string or text, and
 ;; not be expanded (e.g., if @code{stdio} is defined @code{<stdio.h>} will
 ;; not be expanded.
+;; @*The @code{#\)} is of the form @code{'%29} (hex symbol);
+;; @code{#\)} and @code{#\)} tokens are of the same form.
+;; 
 ;;.@end deffn
-
 (define (tokenize-to-mark mark)
+  ;; assert (memq mark '(#f %29 %2c))
 
   (define (ctx id cx)
-    (cond
-     ((member id '("defined")) #\D)
-     (else cx)))
+    (if (string=? id "defined") #\D cx))
   
   (define (finish tkl)
-    (reverse (if (and (pair? tkl) (eqv? #\space (caar tkl))) (cdr tkl) tkl)))
+    (reverse tkl))
+  ;;(reverse (if (and mark (pair? tkl) (eq? #\space (caar tkl))) (cdr tkl) tkl)))
 
   ;; cx(context, see ctx above):, #\D=def #\I=inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (tk (read-cpp-token)))
+    ;;(sferr "tk=~s\n" tk)
     (let ((k (car tk)) (v (cdr tk)))
       (cond
-       ((and (null? tkl) (eq? #\space k)) (loop tkl cx lv (read-cpp-token)))
+       ((and mark (null? tkl) (eq? #\space k)) (loop tkl cx lv (read-cpp-token)))
        ((eq? k '$ident)
         (loop (cons (if (eq? cx #\D) `($idnox . ,(cdr tk)) tk) tkl)
               (ctx v #\nul) lv (read-cpp-token)))
-       ((eq? k #\() (loop (cons tk tkl) cx (1+ lv) (read-cpp-token)))
+       ((eq? k '%28) (loop (cons tk tkl) cx (1+ lv) (read-cpp-token)))
        ((eq? k '$end) (if mark (throw 'cpp-error "yuck") (finish tkl)))
        ((positive? lv)
-        (loop (cons tk tkl) #\nul (if (eq? #\ k) (1- lv) lv) (read-cpp-token)))
-       ((or (eqv? mark k) (and mark (eq? #\) k))) (unread-char k) (finish tkl))
+        (loop (cons tk tkl) cx (if (eq? '%29 k) (1- lv) lv) (read-cpp-token)))
+       ((or (eq? k mark) (and mark (eq? k '%29)))
+        (unread-char (case k ((%29) #\)) ((%2c) #\,))) (finish tkl))
        (else (loop (cons tk tkl) cx lv (read-cpp-token)))))))
 
 (define (tokenize-cpp-string str)
@@ -594,7 +582,8 @@
      (cond
       ((eof-object? ch) (if sp (unread-char #\space)) #f)
       ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
-      ((not (char=? #\( ch)) (if sp (unread-char #\space)) #f)))
+      ((not (char=? #\( ch))
+       (if sp (unread-char #\space)) (unread-char ch) #f)))
    ;; found #\(
    (let loop2 ((argd '()) (ch #\() (argl argl))
      (cond
@@ -602,7 +591,8 @@
        (throw 'cpp-error "end of input collecting args"))
       ((memq ch '(#\( #\,)) ; start of arg
        (let* ((anam (and (pair? argl) (car argl)))
-              (atkl (tokenize-to-mark (if (equal? anam "...") #\) #\,))))
+              (tl (tokenize-to-mark (if (equal? anam "...") '%29 '%2c)))
+              (atkl (if (and (pair? tl) (eq? #\space (caar tl))) (cdr tl) tl)))
          (loop2
 	  (cond
            ((and (char=? #\( ch) (null? argl) (null? atkl)) argd)
@@ -617,6 +607,50 @@
         (else (throw 'cpp-error "function macro arg count mismatch"))))
       (else
        (throw 'cpp-error "cpp.scm(tokenize-args): coding error"))))))
+
+;; clusterfuck use by gobject
+(define (collect-one-arg mark)
+  (let loop ((lv 0) (chl '()) (ch (read-char)))
+    (cond
+     ((eof-object? ch) (error "crap"))
+     ((and mark (null? chl) (eq? #\space k)) (loop lv chl (read-char)))
+     ((char=? ch #\() (loop (1+ lv) (cons ch chl) (read-char)))
+     ((positive? lv)
+      (loop (if (char=? ch #\)) (1- lv) lv) (cons ch chl) (read-char)))
+     ((or (char=? ch mark) (and mark (char=? k #\))))
+      (unread-char ch) (cons '$arg (rls chl)))
+     (else (loop lv (cons ch chl) (read-char))))))
+
+(define (kluge-args argl) 
+  (and
+   (let loop1 ((sp #f) (ch (read-char)))
+     (cond
+      ((eof-object? ch) (if sp (unread-char #\space)) #f)
+      ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
+      ((not (char=? #\( ch))
+       (if sp (unread-char #\space)) (unread-char ch) #f)))
+   ;; found #\(
+   (let loop2 ((argd '()) (chl '()) (ch #\() (argl argl))
+     (cond
+      ((eof-object? ch)
+       (throw 'cpp-error "end of input collecting args"))
+      ((memq ch '(#\( #\,)) ; start of arg
+       (let* ((anam (and (pair? argl) (car argl)))
+              (argtk (collect-one-arg (if (equal? anam "...") #\) #\,))))
+         (loop2
+	  (cond
+           ((and (char=? #\( ch) (null? argl) argtk) argd)
+           ((null? argl) (throw 'cpp-error "too many values"))
+           ((string=? anam "...") (acons "__VA_ARGS__" argtk argd))
+           (else (acons anam argtk argd)))
+          (read-char) (if (pair? argl) (cdr argl) argl))))
+      ((char=? ch #\))                  ; end of args
+       (cond
+        ((null? argl) argd)
+        ((equal? argl '("...")) (acons "__VA_ARGS__" '() argd))
+        (else (throw 'cpp-error "function macro arg count mismatch"))))
+      (else
+       (throw 'cpp-error "cpp.scm(kludge-args): coding error"))))))
 
 
 ;;.@deffn {Procedure} rtokl->string reverse-token-list => string
@@ -641,12 +675,16 @@
 ;; or keep the strings and convert to tokens on the fly.
 (define-public (lookup-def defs ident)
   (let* ((def (assoc ident defs)) (ref (and def (cdr def))))
+    (when #f ;; (string=? ident "__USE_DYNAMIC_STACK_SIZE")
+      (sferr "ident=~s\n" ident)
+      (sferr "    =>~s\n" def)
+      (quit))
     (cond
-     ((not def))
+     ((not ref))                        ; catch ("FOO" . #f)
      ((null? ref))
      ((string? ref) (set-cdr! def (tokenize-cpp-string ref)))
      ((string? (cdr ref)) (set-cdr! ref (tokenize-cpp-string (cdr ref)))))
-    (and def (cdr def))))
+    (and ref (cdr def))))
 ;; vs
 ;;(define-public (lookup-def defs ident)
 ;;  (assoc-ref defs ident))  
@@ -704,15 +742,10 @@
       (cond
        ((null? in) out)
        ((eq? #\space (caar in)) (loop out (cdr in)))
-       ((eq? '$ident (caar in)) (loop (cons (car in) out) (cdr in)))
        ((eq? '$idnox (caar in)) (loop (acons '$ident (cdar in) out) (cdr in)))
-       ((or (char? (caar in)) (symbol? (caar in)))
-        ;; set-car! preserves source properties; do we care?
-        (set-car! (car in) (assq-ref ext-symtab (caar in)))
-        (loop (cons (car in) out) (cdr in)))
        (else (loop (cons (car in) out) (cdr in))))))
 
-  (false-if-exception
+  (identity ;; false-if-exception
    (cond
     ((lookup-def defs ident)
      (cleanup (cpp-expand `(($ident . ,ident)) defs '() '())))
@@ -733,7 +766,6 @@
 	     (exp (parse-cpp-expr repl)))
         (eval-cpp-expr exp defs #:inc-dirs inc-dirs)))
     (lambda (key fmt . args)
-      (pperr text)
       (report-error fmt args)
       (throw 'c99-error "CPP error"))))
 
