@@ -908,12 +908,7 @@
     (code-comment ($code-comm ($$ `(comment ,$1))))
     (lone-comment ($lone-comm ($$ `(comment ,$1))))
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
-    (pragma
-     ($pragma ($$ `(pragma ,$1)))
-     ;;("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3)))
-     )
-
-    )))
+    (pragma ($pragma ($$ `(pragma ,$1)))))))
 
 ;;; === parsers =========================
 
