@@ -341,9 +341,12 @@
          (strtab (filter-mt string? match-table)) ; strings in grammar
 	 (kwstab (filter-mt ident-like? strtab))  ; keyword strings =>
          (keytab (map-mt string->symbol kwstab))  ; keywords in grammar
-	 (symtab (append (filter-mt symbol? match-table)))  ; symbols in grammar
-	 (chrseq (remove-mt ident-like? strtab)) ; character sequences
-	 (read-chseq (make-chseq-reader chrseq))
+	 (chrseq (remove-mt ident-like? strtab))  ; character sequences
+	 ;;(read-chseq (make-chseq-reader chrseq))
+         (cs-rmap (chseq->canon-map chrseq))     ; remap 
+	 (read-chseq (make-chseq-reader cs-rmap))
+         (cs-umap (chseq->canon-unmap chrseq))     ; unmap
+	 (symtab (append (filter-mt symbol? match-table) cs-umap))
 	 (t-ident (assq-ref symtab '$ident))
 	 (t-typename (assq-ref symtab 'typename))
          (tkl '()))
@@ -639,7 +642,7 @@
 	       ((and (not (eq? (car ppxs) 'keep))
 		     (eq? mode 'code))
 		(loop (read-char) ss))
-	       ((read-c-chlit ch) =>    ; before ident for [ULl]'c'
+	       ((read-c-mclit ch) =>    ; mclit over chlit for gobject bd
                 (lambda (p) (w/ ss p)))
 	       ((read-c-ident ch) =>
 		(lambda (name) (cons '$ident name)))
@@ -662,17 +665,22 @@
           ;; (lexer #:mode mode #:xdef? xdef? #:show-incs show-incs)
           (define (encode-token tok)
             (let ((key (car tok)) (val (cdr tok)))
-              ;;(sferr "encode ~s\n" tok)
+              #;(when (not (eq? key 'cpp-stmt))
+                (let ((v (if (> (string-length val) 40)
+                             (substring val 0 40)
+                             val)))
+                  (format #t "\nencode ~s ~s" key v)))
               (cond
-               ((integer? key) tok)
-               ((or (eq? '$ident key) (eq? t-ident key))
+               ((integer? key) tok)     ; never happens now, I think
+               ;;((or (eq? '$ident key) (eq? t-ident key))
+               ((eq? '$ident key)
                 (let ((symb (string->symbol val)))
                   (cond
                    ((typename? val) (set-car! tok t-typename) tok)
                    ((assq-ref keytab symb) => (lambda (v) (set-car! tok v) tok))
                    (else (set-car! tok t-ident) tok))))
                ((symbol? key) (set-car! tok (assq-ref symtab key)) tok)
-               (else tok))))
+               (else (error "tok")))))
           
           (if (pair? tkl)
               (let ((tok (car tkl)))
@@ -684,8 +692,19 @@
                    (cond
                     ((integer? (car token)) token)
                     ((eq? '$ident (car token))
+                     #;(when (string=? (cdr token) "g_bit_nth_lsf")
+                       (format #t "next ~s\n" (read-char))
+                       (quit)
+                       )
                      (let ((mx (expand-cpp-macro-ref
                                 (cdr token) (cpi-defs info))))
+                       #;(when #t ;; (string=? (cdr token) "__nonnull")
+                         (format #t "~s => ~s\n" (cdr token) mx)
+                         )
+                       #;(when (string=? (cdr token) "g_bit_nth_lsf")
+                         (format #t "next ~s\n" (read-char))
+                         (quit)
+                         )
                        (cond
                         ((not mx) (encode-token token))
                         ((null? mx) (loop (read-token)))
@@ -703,8 +722,8 @@
 ;; SXML attributes.  See move-attributes in util.scm.
 ;;(define process-specs identity)
 ;;(define process-declr identity)
-(define process-specs move-attributes)
-(define process-declr move-attributes)
+(define (process-specs exp) (move-attributes exp))
+(define (process-declr exp) (move-attributes exp))
 
 (define (make-user-hook mtab)
   (let ((typename (assq-ref mtab 'typename))

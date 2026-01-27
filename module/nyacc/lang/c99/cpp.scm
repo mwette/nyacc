@@ -425,13 +425,13 @@
          (loop osq rest)))
 
       (`(($ident . ,ident) . ,rest)
-       (let* ((arg (assoc-ref argd ident)))
-         (loop
-          (cond
-           (arg (append (mknox (cpp-expand arg defs used)) osq))
-           ((member ident used) (cons `($idnox . ,ident) osq))
-           (else (cons (car isq) osq)))
-          rest)))
+       (loop
+        (cond
+         ((member ident used) (cons `($idnox . ,ident) osq))
+         ((assoc-ref argd ident) =>
+          (lambda (rpl) (append (mknox (cpp-expand rpl defs used)) osq)))
+         (else (cons (car isq) osq)))
+        rest))
 
       (`(($hash . ,_1) . ,_2) (throw 'cpp-error "bad #"))
       (_ (loop (cons (car isq) osq) (cdr isq))))))
@@ -503,7 +503,7 @@
      ((eq? ch #\newline) (loop (read-char) #t))
      ((read-c-comm ch #f) (loop (read-char) #t))
      (ws (unread-char ch) (cons #\space " "))
-     ((read-c-chlit ch) => identity)
+     ((read-c-mclit ch) => identity)
      ((read-c-ident ch) => (lambda (name) (cons '$ident name)))
      ((read-c-num ch) => identity)
      ((read-c-string ch) => identity)
@@ -608,20 +608,20 @@
       (else
        (throw 'cpp-error "cpp.scm(tokenize-args): coding error"))))))
 
-;; clusterfuck use by gobject
+;; gobject does shit like GMAC('hello world')
 (define (collect-one-arg mark)
   (let loop ((lv 0) (chl '()) (ch (read-char)))
     (cond
      ((eof-object? ch) (error "crap"))
-     ((and mark (null? chl) (eq? #\space k)) (loop lv chl (read-char)))
+     ((and mark (null? chl) (eq? #\space ch)) (loop lv chl (read-char)))
      ((char=? ch #\() (loop (1+ lv) (cons ch chl) (read-char)))
      ((positive? lv)
       (loop (if (char=? ch #\)) (1- lv) lv) (cons ch chl) (read-char)))
-     ((or (char=? ch mark) (and mark (char=? k #\))))
-      (unread-char ch) (cons '$arg (rls chl)))
+     ((or (char=? ch mark) (and mark (char=? ch #\))))
+      (unread-char ch) (if (pair? chl) (cons '$arg (rls chl)) #f))
      (else (loop lv (cons ch chl) (read-char))))))
 
-(define (kluge-args argl) 
+(define (kludge-args argl) 
   (and
    (let loop1 ((sp #f) (ch (read-char)))
      (cond
@@ -630,19 +630,20 @@
       ((not (char=? #\( ch))
        (if sp (unread-char #\space)) (unread-char ch) #f)))
    ;; found #\(
-   (let loop2 ((argd '()) (chl '()) (ch #\() (argl argl))
+   (let loop2 ((argd '()) (ch #\() (argl argl))
      (cond
       ((eof-object? ch)
        (throw 'cpp-error "end of input collecting args"))
       ((memq ch '(#\( #\,)) ; start of arg
        (let* ((anam (and (pair? argl) (car argl)))
-              (argtk (collect-one-arg (if (equal? anam "...") #\) #\,))))
+              (atk (collect-one-arg (if (equal? anam "...") #\) #\,)))
+              (atkl (if atk (list atk) '())))
          (loop2
 	  (cond
-           ((and (char=? #\( ch) (null? argl) argtk) argd)
+           ((and (char=? #\( ch) (null? argl) (null? atkl)) argd)
            ((null? argl) (throw 'cpp-error "too many values"))
-           ((string=? anam "...") (acons "__VA_ARGS__" argtk argd))
-           (else (acons anam argtk argd)))
+           ((string=? anam "...") (acons "__VA_ARGS__" atkl argd))
+           (else (acons anam atkl argd)))
           (read-char) (if (pair? argl) (cdr argl) argl))))
       ((char=? ch #\))                  ; end of args
        (cond

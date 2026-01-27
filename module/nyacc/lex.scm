@@ -46,12 +46,13 @@
             read-c-ident read-c$-ident
             read-c-comm
             read-c-string
-            read-c-chlit
+            read-c-chlit read-c-mclit
             read-c-num
             read-oct read-hex
             like-c-ident? like-c$-ident?
             c-escape
             cnumstr->scm
+            chseq->canon-map chseq->canon-unmap
             filter-mt remove-mt map-mt make-ident-like-p
             c:ws c:if c:ir)
   #:use-module ((srfi srfi-1) #:select (remove append-reverse)))
@@ -325,6 +326,26 @@
 ;; @end deffn
 (define (make-chlit-reader . rest) (error "NOT IMPLEMENTED"))
 
+(define (read-esc-char)
+  (let ((c2 (read-char)))
+    (case c2
+      ((#\t) "\t")               ; horizontal tab U+0009
+      ((#\n) "\n")               ; newline U+000A
+      ((#\v) "\v")               ; verticle tab U+000B
+      ((#\f) "\f")               ; formfeed U+000C
+      ((#\r) "\r")               ; return U+000D
+      ((#\a) "\x07")             ; alert U+0007
+      ((#\b) "\x08")             ; backspace U+0008 not in guile 1.8
+      ((#\0) (string (integer->char (read-oct)))) ; octal
+      ((#\1 #\2 #\3 #\4 #\5 #\6 #\7)              ; octal
+       (unread-char c2) (string (integer->char (read-oct))))
+      ((#\x) (string (integer->char (read-hex)))) ; hex
+      ((#\\ #\' #\" #\? #\|) (string c2))
+      (else (error "bad escape sequence" c2)))))
+
+(define (wchar t)
+  (case t ((#\L) '$chlit/L) ((#\u) '$chlit/u) ((#\U) '$chlit/U)))
+
 ;; @deffn {Procedure} read-c-chlit ch
 ;; @example
 ;; ... 'c' ... => (read-c-chlit #\') => '($chlit . #\c)
@@ -333,24 +354,6 @@
 ;; @code{$chlit/u} for @code{char16_t}, or @code{$chlit/U} for @code{char32_t}.
 ;; @end deffn
 (define (read-c-chlit ch)
-  (define (read-esc-char)
-    (let ((c2 (read-char)))
-      (case c2
-        ((#\t) "\t")               ; horizontal tab U+0009
-        ((#\n) "\n")               ; newline U+000A
-        ((#\v) "\v")               ; verticle tab U+000B
-        ((#\f) "\f")               ; formfeed U+000C
-        ((#\r) "\r")               ; return U+000D
-        ((#\a) "\x07")             ; alert U+0007
-        ((#\b) "\x08")             ; backspace U+0008 not in guile 1.8
-        ((#\0) (string (integer->char (read-oct)))) ; octal
-        ((#\1 #\2 #\3 #\4 #\5 #\6 #\7)              ; octal
-         (unread-char c2) (string (integer->char (read-oct))))
-        ((#\x) (string (integer->char (read-hex)))) ; hex
-        ((#\\ #\' #\" #\? #\|) (string c2))
-        (else (error "bad escape sequence" c2)))))
-  (define (wchar t)
-    (case t ((#\L) '$chlit/L) ((#\u) '$chlit/u) ((#\U) '$chlit/U)))
   (cond
    ((char=? ch #\')
     (let* ((c1 (read-char))
@@ -358,6 +361,24 @@
       (if (not (char=? #\' (read-char)))
           (throw 'nyacc-error "read-c-chlit: bad char literal"))
       (cons '$chlit sc)))
+   ((char-set-contains? c:cx ch)
+    (let ((c1 (read-char)))
+      (cond
+       ((eof-object? c1) #f)
+       ((char=? c1 #\') (cons (wchar ch) (cdr (read-c-chlit c1))))
+       (else (unread-char c1) #f))))
+   (else #f)))
+
+;; read multi-char literal : braindamage in gobject/glib-types.h
+(define (read-c-mclit ch)
+  (define (readit ch)
+    (let loop ((chl (list ch)) (ch (read-char)))
+      (cond
+       ((char=? ch #\') (cons '$chlit (rls chl)))
+       ((char=? ch #\\) (loop (cons (read-esc-char) chl) (read-char)))
+       (else (loop (cons ch chl) (read-char))))))
+  (cond
+   ((char=? ch #\') (readit (read-char)))
    ((char-set-contains? c:cx ch)
     (let ((c1 (read-char)))
       (cond
@@ -681,29 +702,30 @@
 ;; This probably belongs in @code{(nyacc lang util)}.
 ;; @end deffn
 (define (cnumstr->scm str)
-  (define (2- n) (1- (1- n))) (define (3- n) (1- (2- n)))
+  (define (2- n) (1- (1- n)))
+  (define (3- n) (1- (2- n)))
+  (define (trim-rt st nd) ;; trim U, UL, ULL (and lowercase) from right
+    (if (char-set-contains? c:sx (string-ref str (1- nd)))
+        (if (char-set-contains? c:sx (string-ref str (2- nd)))
+            (if (char-set-contains? c:sx (string-ref str (3- nd)))
+                (substring str st (3- nd))
+                (substring str st (2- nd)))
+            (substring str st (1- nd)))
+        (substring str st nd)))
   (let* ((nd (string-length str)))
-    (define (trim-rt st) ;; trim U, UL, ULL (and lowercase) from right
-      (if (char-set-contains? c:sx (string-ref str (1- nd)))
-          (if (char-set-contains? c:sx (string-ref str (2- nd)))
-              (if (char-set-contains? c:sx (string-ref str (3- nd)))
-                  (substring str st (3- nd))
-                  (substring str st (2- nd)))
-              (substring str st (1- nd)))
-          (substring str st nd)))
     (if (< nd 2) str
         (if (char=? #\0 (string-ref str 0))
             (cond
              ((char=? #\x (string-ref str 1))
-              (string-append "#x" (trim-rt 2)))
+              (string-append "#x" (trim-rt 2 nd)))
              ((char=? #\X (string-ref str 1))
-              (string-append "#x" (trim-rt 2)))
+              (string-append "#x" (trim-rt 2 nd)))
              ((char=? #\b (string-ref str 1))
-              (string-append "#b" (trim-rt 2)))
+              (string-append "#b" (trim-rt 2 nd)))
              ((char-numeric? (string-ref str 1))
-              (string-append "#o" (trim-rt 1)))
-             (else (trim-rt 0)))
-            (trim-rt 0)))))
+              (string-append "#o" (trim-rt 1 nd)))
+             (else (trim-rt 0 nd)))
+            (trim-rt 0 nd)))))
 
 ;;.@deffn {Procedure} si-map string-list ix => a-list
 ;; Convert list of strings to alist of char at ix and strings.
@@ -722,6 +744,29 @@
      (else ;; Add (#\? . string) to alist.
       (loop (cons (cons (string-ref (car sl) ix) (list (car sl))) sal)
             (cdr sl))))))
+
+(define (chseq->symbol cs)
+  (let* ((iseq (string-fold (lambda (c s) (cons* (char->integer c) s)) '() cs))
+         (guts (string-join (map (lambda (i) (number->string i 16)) iseq) "%"))
+         (name (string-append "%" guts)))
+    (string->symbol name)))
+(export chseq->symbol) ;; for debugging
+
+;; @deffn chseq->canon-map cst
+;; @deffnx chseq->canon-unmap cst
+;; The first procedure maps a char-sequence alist to one mapping the string
+;; form (e.g., @code{"+="}) to a canonical form (e.g. @code{_2B_3D_}).
+;; The second generates an alist with the canonical form keys and values
+;; from @var{cst}.  So, for example, pairs from @var{cst} are transformed as
+;; @example
+;; '("+=" . 123) -> '("+=" . %2B%3D)  '(%2B%3D . 123)
+;; @example
+;; @end deffn
+(define (chseq->canon-map cst)
+  (map (lambda (pair) (cons (car pair) (chseq->symbol (car pair)))) cst))
+(define (chseq->canon-unmap cst)
+  "See chseq"
+  (map (lambda (pair) (cons (chseq->symbol (car pair)) (cdr pair))) cst))
 
 ;;.@deffn {Procedure} make-tree strtab -> tree
 ;; This routine takes an alist of strings and symbols and makes a tree
