@@ -58,7 +58,9 @@
                   (vector-map (lambda (ix actn) (wrap-action actn)) av))))
 
 (define (dmsg/n s t a ntab)
-  (let ((t (or (assq-ref ntab t) t)))
+  (let* ((t (or (assq-ref ntab t) t))
+         (t (if (and (string? t) (> (string-length t) 40))
+                (substring t 0 40) t)))
     (cond
      ((not a) (sferr "state ~S, token ~S\t=> parse error\n" s t))
      ((positive? a) (sferr "state ~S, token ~S  => shift, goto ~S\n" s t a))
