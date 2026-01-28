@@ -27,8 +27,10 @@
 
 (define cpp-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2016,2017,2026 Matthew Wette"
                           license-lgpl3+))
+   (reserve "..." ";" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-="
+            "+=" "=" "->" "." "]" "[" "}" "{") ;; same chseq's for C99 & CPP !
    (expect 0)
    (start conditional-expression)
    (grammar

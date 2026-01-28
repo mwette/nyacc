@@ -1,6 +1,6 @@
 ;; cpp-act.scm
 
-;; Copyright (C) 2016,2017 Matthew R. Wette
+;; Copyright (C) 2016,2017,2026 Matthew Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public

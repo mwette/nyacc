@@ -1,0 +1,282 @@
+;; nyacc/lang/c99/c99-MX.test           -*- scheme -*-
+;;
+;; Copyright (C) 2025 Matthew Wette
+;;
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+;; see: https://github.com/hirrolot/awesome-c-preprocessor
+;; C preprocessor tests that don't require the parser.
+
+(use-modules (nyacc lang c99 cpp))
+(use-modules (ice-9 match))
+
+
+(define-syntax-rule (cpp-import name)
+  (define name (@@ (nyacc lang c99 cpp) name)))
+(cpp-import tokenize-args)
+(cpp-import cpp-subst)
+(cpp-import cpp-expand)
+(cpp-import collect-args)
+(cpp-import tokenize-to-mark)
+(cpp-import macro-expand-text)
+;;(cpp-import rtokl->string)
+;;(cpp-import tokl->string)
+
+(cpp-import cpp-define)
+
+(define (sf fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pp exp) (pretty-print exp (current-error-port)))
+
+(define prefix "")
+
+(define-syntax with-test-prefix
+  (syntax-rules ()
+    ((_ name expr ...)
+     (begin (set! prefix name) expr ...))))
+
+(define-syntax pass-if
+  (syntax-rules (equal?)
+    ((_ label (equal? got xpt))
+     (let ((g got) (x xpt))
+       (sf " got: ~s\n" g)
+       (sf " exp: ~s\n" x)
+       (if (equal? g x)
+           (sf "PASS: ~a, ~a\n" prefix label)
+           (sf "FAIL: ~a, ~a\n" prefix label))))
+    ((_ label expr)
+     (let ((x expr))
+       (if x
+           (sf "PASS: ~a, ~a\n" prefix label)
+           (sf "FAIL: ~a, ~a\n" prefix label))))))
+
+(define has-inc-defs
+  '(("__has_include" ("X")
+     ($ident . "__has_include__")
+     (#\( . "(") ($hash . "#") ($ident . "X") (#\) . ")"))
+    ("__has_include_next" ("X")
+     ($ident . "__has_include_next__")
+     (#\( . "(") ($hash . "#") ($ident . "X") (#\) . ")"))))
+
+(define (rddef . stl)
+  (let* ((str (string-join stl " "))
+         (cppdef (with-input-from-string str cpp-define)))
+    (match cppdef
+      (`(define (name ,name) (args . ,args) (repl ,repl))
+       (cons* name args (tokenize-cpp-string repl)))
+      (`(define (name ,name) (repl ,repl))
+       (cons* name (tokenize-cpp-string repl))))))
+
+(define (tokenize-string-to-mark string mark)
+  (with-input-from-string string
+      (lambda () (tokenize-to-mark mark))))
+
+(with-test-prefix "nyacc c99-MX, CPP macros"
+
+  #|
+  (pass-if "tokenize-to-mark"
+    (and
+     (equal?
+      (tokenize-string-to-mark "__has_include(<foo.h>)" #f)
+     '(($ident . "__has_include") (#\( . "(") ($text . "<foo.h>") (#\) . ")")))
+     (equal?
+      (tokenize-string-to-mark "__has_include_next(<foo.h>)" #f)
+      '(($ident . "__has_include_next") (#\( . "(") ($text . "<foo.h>")
+        (#\) . ")")))
+     (equal?
+      (tokenize-string-to-mark "__has_include(\"foo.h\")" #f)
+     '(($ident . "__has_include") (#\( . "(") ($string . "foo.h") (#\) . ")")))
+     (equal?
+      (tokenize-string-to-mark "__has_include_next(\"foo.h\")" #f)
+      '(($ident . "__has_include_next") (#\( . "(") ($string . "foo.h")
+        (#\) . ")")))
+     (equal?
+      (tokenize-string-to-mark "defined FOO" #f)
+      '(($ident . "defined") (#\space . " ") ($idnox . "FOO")))
+     (equal?
+      (tokenize-string-to-mark "defined(FOO)" #f)
+      '(($ident . "defined") (#\( . "(") ($idnox . "FOO") (#\) . ")")))
+     (equal?
+      (pk (tokenize-string-to-mark "defined (FOO)" #f))
+      '(($ident . "defined")
+        (#\space . " ") (#\( . "(") ($idnox . "FOO") (#\) . ")")))
+     (equal?
+      (tokenize-string-to-mark "\"bar \\\"-baz\\\"\"" #f)
+      '(($string . "bar \"-baz\"")))
+     #t))
+  |#
+  #|
+  (pass-if "tokenize-args"
+    (and
+     (equal?
+      (with-input-from-string "(1, 2)"
+        (lambda () (tokenize-args '("a" "b"))))
+      (reverse '(("a" ($fixed . "1")) ("b" ($fixed . "2")))))
+     (equal?
+      (with-input-from-string "  (1, 2)"
+        (lambda () (tokenize-args '("a" "b"))))
+      (reverse '(("a" ($fixed . "1")) ("b" ($fixed . "2")))))
+     (equal?
+      (with-input-from-string "  (1, 2)"
+        (lambda () (tokenize-args '("a" "..."))))
+      (reverse '(("a" ($fixed . "1")) ("__VA_ARGS__" ($fixed . "2")))))
+     (equal?
+      (with-input-from-string "(1, 2, 3)"
+        (lambda () (tokenize-args '("a" "..."))))
+      (reverse '(("a" ($fixed . "1"))
+                 ("__VA_ARGS__" ($fixed . "2")
+                  (#\, . ",") (#\space . " ") ($fixed . "3")))))
+     (equal?
+      (with-input-from-string "(1,)"
+        (lambda () (tokenize-args '("a" "..."))))
+      (reverse '(("a" ($fixed . "1")) ("__VA_ARGS__"))))
+     (equal?
+      (with-input-from-string "()"
+        (lambda () (tokenize-args '())))
+      '())
+     (equal?
+      (with-input-from-string "(  )"
+        (lambda () (tokenize-args '())))
+      '())
+     (equal?
+      (with-input-from-string "(  /* hi */ 1)"
+        (lambda () (tokenize-args '("a"))))
+      '(("a" ($fixed . "1"))))
+     ))
+  |#
+  #|
+  (pass-if "collect-args"
+    (and
+     (call-with-values
+         (lambda ()
+           (collect-args
+            '("a" "b")
+            '((#\( . "(") ($fixed . "1") (#\, . ",") ($fixed . "2")
+              (#\) . ")"))))
+       (lambda (argd rest)
+         (and (equal? argd '(("b" ($fixed . "2")) ("a" ($fixed . "1"))))
+              (equal? rest '()))))
+     (call-with-values
+         (lambda ()
+           (collect-args
+            '("x" "y")
+            '((#\( . "(") ($fixed . "1") (#\, . ",") ($fixed . "2")
+              (#\) . ")"))))
+       (lambda (argd rest)
+         (and (equal? argd '(("y" ($fixed . "2")) ("x" ($fixed . "1"))))
+              (equal? rest '()))))
+     (call-with-values
+         (lambda ()
+           (collect-args
+            '("x" "y")
+            '((#\( . "(") ($fixed . "1") (#\, . ",") ($fixed . "2")
+              (#\) . ")") ($ident . "a") (#\( . "("))))
+       (lambda (argd rest)
+         (and (equal? argd '(("y" ($fixed . "2")) ("x" ($fixed . "1"))))
+              (equal? rest '(($ident . "a") (#\( . "("))))))
+     ))
+   |#
+  #|
+  (pass-if "cpp-subst"
+    (and
+     (equal?
+      (cpp-subst
+       '(($ident . "x") ($dhash . "##") ($ident . "a"))
+       '(("a" ($fixed . "1")))
+       '() '())
+      '(($ident . "x1")))
+     (equal?
+      (cpp-subst
+       '(($ident . "x") (#\= . "=") ($hash . "#") ($ident . "a"))
+       '(("a" ($fixed . "1")))
+       '() '())
+      '(($ident . "x") (#\= . "=") ($string . "1")))
+     ))
+  |#
+  (pass-if "macro-expand-text"
+    (and
+     #|
+     |#
+     (equal?
+      (macro-expand-text "__has_include(<stdio.h>)" has-inc-defs)
+      "__has_include__(\"<stdio.h>\")")
+     (equal?
+      (macro-expand-text "defined FOO" '(("FOO" ($string "random"))))
+      "defined FOO")
+     (equal?
+      (let* ((defs (list (rddef "A(x) B(x)+3")
+                         (rddef "B(y) y*B(2)"))))
+        (macro-expand-text "A(B(1))" defs))
+      "1*B(2)*B(2)+3")
+     (equal?
+      (let* ((defs (list (rddef "SQRT(x)sqrt(1+x)"))))
+        (macro-expand-text "SQRT(SQRT(3))" defs))
+      "sqrt(1+sqrt(1+3))")
+     (equal? ;; bug 66626
+      (let* ((defs (list
+                        (rddef "VALUE(elements) elements.value")
+                        (rddef "elements GLOBAL(elements)")
+                        (rddef "GLOBAL(name)global.name"))))
+        (macro-expand-text "VALUE(elements)" defs))
+      "global.elements.value")
+     (equal?
+      (let* ((defs (list
+                    (rddef "foo1(X,Y) ((X)*(Y))")
+                    (rddef "foo(A,B,...)"
+                           "foo1(A,B)+bar(0, A, B, __VA_ARGS__)"))))
+        (macro-expand-text "foo(1, 2, 3, 4, foo1(5,6))" defs))
+      "((1)*(2))+bar(0, 1, 2, 3, 4, ((5)*(6)))")
+     (equal?
+      (let* ((defs
+               (list (rddef "assert(x) ((x) ? (void)0 : assert_fail (#x))"))))
+        (macro-expand-text "assert(boo);" defs))
+      "((boo) ? (void)0 : assert_fail (\"boo\"));")
+     (equal?
+      (let ((defs (list (rddef "sqrt(X) sqrt(X)+1"))))
+        (macro-expand-text "sqrt(2)" defs))
+      "sqrt(2)+1")
+     (equal?
+      (let* ((defs (list (rddef "ELFW(type) ELF##32##_##type")
+                         (rddef "ELF32_ST_INFO(bind,type)"
+                                "(((bind) << 4) + ((type) & 0xf))"))))
+        (macro-expand-text "ELFW(ST_INFO)(1, 0)" defs))
+      "(((1) << 4) + ((0) & 0xf))")
+     (equal?
+      (let* ((defs
+               (list (rddef "DEF(id,str) ,id")
+                     (rddef "DEF_BWLX DEF_BWL")
+                     (rddef "DEF_BWL(x) DEF(TOK_ASM_ ## x, #x)"))))
+        (macro-expand-text "DEF_BWLX(mov)" defs))
+      ",TOK_ASM_mov")
+     #t))
+  
+  #|
+  (pass-if "expand-cpp-macro-ref"
+    (and
+     (equal?
+      (expand-cpp-macro-ref "FILE" '(("FILE" . "<stdio.h>")))
+      "<stdio.h>")
+     (equal?
+      (let ((defs '(("bar" ("p" "q") . "foo(p,q)")
+                    ("foo" ("r" "s") . "bar(r,s)")
+                    ("FOO" ("x" "y") . "foo(x,y)"))))
+        ;; FOO(FOO(1,2),3) => 
+        (with-input-from-string "(FOO(1,2),3);"
+          (lambda () (expand-cpp-macro-ref "FOO" defs '()))))
+      "foo(foo(1,2),3)")
+     (equal?
+      (let* ((defs
+               (list (rddef "DEF(id,str) ,id")
+                     (rddef "DEF_BWLX DEF_BWL")
+                     (rddef "DEF_BWL(x) DEF(TOK_ASM_ ## x, #x)"))))
+        (pk (with-input-from-string "(mov)"
+          (lambda () (expand-cpp-macro-ref "DEF_BWLX" defs)))))
+      ",TOK_ASM_mov")
+  |#
+
+  #t)
+
+;; --- last line ---

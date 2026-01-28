@@ -8,6 +8,9 @@ without any warranty.
 2026-XX-XX  V3.03.0
         * for C, define __has_include and __has_include_next
 	  ^ TEST THIS
+new token-based CPP working
+3.02.0 : 9m20s
+fix-cpp: 7m56s
 
 2026-01-14  V3.02.0
         * Many thanks to #lechner for persistence in testing new commits!

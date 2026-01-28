@@ -324,8 +324,10 @@
      ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double")))
      ("_Float16" ($$ '(float-type "_Float16")))
+     ("_Float32" ($$ '(float-type "float")))
+     ("_Float64" ($$ '(float-type "double")))
      ("_Float128" ($$ '(float-type "_Float128")))
-     ("_float16" ($$ '(float-type "_Float16")))
+     ;; gnu extensions
      ("_float128" ($$ '(float-type "_Float128"))))
 
     (complex-type-specifier
@@ -906,12 +908,7 @@
     (code-comment ($code-comm ($$ `(comment ,$1))))
     (lone-comment ($lone-comm ($$ `(comment ,$1))))
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
-    (pragma
-     ($pragma ($$ `(pragma ,$1)))
-     ;;("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3)))
-     )
-
-    )))
+    (pragma ($pragma ($$ `(pragma ,$1)))))))
 
 ;;; === parsers =========================
 

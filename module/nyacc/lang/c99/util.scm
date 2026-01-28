@@ -44,6 +44,8 @@
             "__inline__=inline" "__inline=__inline__"
             "__restrict__=restrict" "__restrict=__restrict__"
             "__signed__=signed" "__signed=__signed__"
+            "__has_include(X)=__has_include__(#X)"
+            "__has_include_next(X)=__has_include_next__(#X)"
             "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
             "__attribute(X)=__attribute__(X)"
             "__volatile__=volatile" "__volatile=__volatile__"
