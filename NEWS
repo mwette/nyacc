@@ -6,11 +6,12 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2026-XX-XX  V3.03.0
+        * reworked C99 preprocessor to be token-based. Tests show
+          the C parser is running more than 15% faster on my x86_64 laptop.
+          + for guild compoile-ffi ffi/gtk2.ffi
+            3.02.0: 9m20s
+            3.03.0: 7m56s
         * for C, define __has_include and __has_include_next
-	  ^ TEST THIS
-new token-based CPP working
-3.02.0 : 9m20s
-fix-cpp: 7m56s
 
 2026-01-14  V3.02.0
         * Many thanks to #lechner for persistence in testing new commits!
