@@ -1,6 +1,6 @@
 ;;; nyacc/foreign/arch-info.scm - map c types to machine arch' types
 
-;; Copyright (C) 2020-2025 Matthew Wette
+;; Copyright (C) 2020-2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
