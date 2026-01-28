@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/c99eval.scm - evaluate constant expressions
 
-;; Copyright (C) 2018-2024 Matthew Wette
+;; Copyright (C) 2018-2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -46,6 +46,9 @@
   #:use-module (system foreign)
   #:use-module (nyacc foreign arch-info)
   #:use-module (ice-9 match))
+(cond-expand
+ (mes (use-modules (nyacc lang c99 cxmach)))
+ (else))
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
@@ -57,8 +60,17 @@
 (define (sizeof-string-const value)
   #f)
 
-(include-from-path "nyacc/lang/c99/mach.d/c99cx-act.scm")
-(include-from-path "nyacc/lang/c99/mach.d/c99cx-tab.scm")
+(cond-expand
+ (guile
+  (include-from-path "nyacc/lang/c99/mach.d/c99cx-act.scm")
+  (include-from-path "nyacc/lang/c99/mach.d/c99cx-tab.scm"))
+ (mes
+  (define c99cx-tables
+    (map (lambda (key) (cons key (assq-ref c99cx-mach key)))
+         '(mtab ntab len-v rto-v pat-v)))
+  (define c99cx-act-v (assq-ref c99cx-mach 'act-v))
+  (define c99cx-mtab (assq-ref c99cx-mach 'mtab)))
+ (else))
 
 (define c99cx-raw-parser
   (make-lalr-parser
