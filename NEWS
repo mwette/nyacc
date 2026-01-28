@@ -6,12 +6,15 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2026-XX-XX  V3.03.0
-        * reworked C99 preprocessor to be token-based. Tests show
+        * Reworked C99 preprocessor to be token-based. Tests show
           the C parser is running more than 15% faster on my x86_64 laptop.
-          + for guild compoile-ffi ffi/gtk2.ffi
+          + For guild compoile-ffi ffi/gtk2.ffi, 3.03 is 15% faster than 3.02:
             3.02.0: 9m20s
             3.03.0: 7m56s
-        * for C, define __has_include and __has_include_next
+        * For C, define __has_include and __has_include_next in util.scm.
+	* Updated arch-info to add `-linux' to most arch names.
+	  In the future use `(with-arch "x86_64-linux"' to be more specific.
+	* for mes, c99 uses mach.scm instead of pre-compiled tables in mach.d
 
 2026-01-14  V3.02.0
         * Many thanks to #lechner for persistence in testing new commits!

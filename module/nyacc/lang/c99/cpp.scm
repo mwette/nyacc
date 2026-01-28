@@ -34,14 +34,14 @@
 
 (define-module (nyacc lang c99 cpp)
   #:export (cpp-line->stmt
-	    expand-cpp-macro-ref
-	    eval-cpp-cond-text          ; #if etc
-	    find-incl-in-dirl           ; #include
+            expand-cpp-macro-ref
+            eval-cpp-cond-text          ; #if etc
+            find-incl-in-dirl           ; #include
             tokenize-cpp-string         ; #define
-	    ;; not used directly
+            ;; not used directly
             macro-expand-text
-	    parse-cpp-expr
-	    eval-cpp-expr)
+            parse-cpp-expr
+            eval-cpp-expr)
   #:use-module (ice-9 match)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
   #:use-module (rnrs arithmetic bitwise)
@@ -49,6 +49,9 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc lang sx-util)
   #:use-module ((nyacc lang util) #:select (report-error)))
+(cond-expand
+ (mes (use-modules (nyacc lang c99 cppmach)))
+ (else))
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
@@ -106,8 +109,8 @@
    (string-fold-right
     (lambda (ch chl)
       (case ch
-	((#\\ #\") (cons* #\\ ch chl))
-	(else (cons ch chl))))
+        ((#\\ #\") (cons* #\\ ch chl))
+        (else (cons ch chl))))
     '() str)))
 
 (define (unesc-c-str str)
@@ -138,17 +141,17 @@
 ;; @end deffn
 (define* (find-incl-in-dirl file dirl #:optional (next #f))
   (let* ((cid (and=> (port-filename (current-input-port)) dirname))
-	 (file-type (string-ref file 0)) ;; #\< or #\"
-	 (file-name (substring file 1 (1- (string-length file))))
-	 (dirl (if (and cid (char=? #\" file-type)) (cons cid dirl) dirl)))
+         (file-type (string-ref file 0)) ;; #\< or #\"
+         (file-name (substring file 1 (1- (string-length file))))
+         (dirl (if (and cid (char=? #\" file-type)) (cons cid dirl) dirl)))
     (if (char=? #\/ (string-ref file-name 0))
         file-name
         (let loop ((dirl dirl))
           (if (null? dirl) #f
-	      (if (and next (string=? (car dirl) cid))
-	          (loop (cdr dirl))
-	          (let ((p (string-append (car dirl) "/" file-name)))
-		    (if (access? p R_OK) p (loop (cdr dirl))))))))))
+              (if (and next (string=? (car dirl) cid))
+                  (loop (cdr dirl))
+                  (let ((p (string-append (car dirl) "/" file-name)))
+                    (if (access? p R_OK) p (loop (cdr dirl))))))))))
 
 ;; @deffn {Procedure} cpp-include
 ;; Parse CPP include statement.
@@ -156,7 +159,7 @@
 (define (cpp-include)
   (define (read-to-end cl ch end-ch)
     (if (eq? ch end-ch)  (reverse-list->string (cons ch cl))
-	(read-to-end (cons ch cl) (read-char) end-ch)))
+        (read-to-end (cons ch cl) (read-char) end-ch)))
   (let ((ch (skip-il-ws (read-char))))
     (cond
      ((char=? ch #\<) (read-to-end (list #\<) (read-char) #\>))
@@ -177,31 +180,31 @@
 
   (define (p-args la) ;; parse args
     (if (eq? la #\()
-	(let loop ((args '()) (la (skip-il-ws (read-char))))
-	  (cond
-	   ((eq? la #\)) (reverse args))
+        (let loop ((args '()) (la (skip-il-ws (read-char))))
+          (cond
+           ((eq? la #\)) (reverse args))
            ((read-c-comm la) (loop args (skip-il-ws (read-char))))
-	   ((read-c-ident la) =>
-	    (lambda (arg) (loop (cons arg args) (skip-il-ws (read-char)))))
-	   ((read-ellipsis la) =>
-	    (lambda (arg) (loop (cons arg args) (skip-il-ws (read-char)))))
-	   ((eq? la #\,) (loop args (skip-il-ws (read-char))))))
-	(begin (if (char? la) (unread-char la)) #f)))
+           ((read-c-ident la) =>
+            (lambda (arg) (loop (cons arg args) (skip-il-ws (read-char)))))
+           ((read-ellipsis la) =>
+            (lambda (arg) (loop (cons arg args) (skip-il-ws (read-char)))))
+           ((eq? la #\,) (loop args (skip-il-ws (read-char))))))
+        (begin (if (char? la) (unread-char la)) #f)))
 
   (define (p-rest la)
     (read-rest la))
 
   (let* ((name (let loop ((ch (skip-il-ws (read-char))))
-		 (cond
-		  ((eof-object? ch) (throw 'cpp-error "bad #define"))
-		  ((read-c-ident ch))
-		  ((cpp-comm-skipper ch) (loop (skip-il-ws (read-char))))
-		  (else (throw 'cpp-error "bad #define")))))
-	 (args (p-args (read-char)))
-	 (repl (p-rest (skip-il-ws (read-char)))))
+                 (cond
+                  ((eof-object? ch) (throw 'cpp-error "bad #define"))
+                  ((read-c-ident ch))
+                  ((cpp-comm-skipper ch) (loop (skip-il-ws (read-char))))
+                  (else (throw 'cpp-error "bad #define")))))
+         (args (p-args (read-char)))
+         (repl (p-rest (skip-il-ws (read-char)))))
     (if args
-	`(define (name ,name) (args . ,args) (repl ,repl))
-	`(define (name ,name) (repl ,repl)))))
+        `(define (name ,name) (args . ,args) (repl ,repl))
+        `(define (name ,name) (repl ,repl)))))
 
 ;; @deffn {Procedure} cpp-line->stmt line defs => (stmt-type text)
 ;; Parse a line from a CPP statement and return a parse tree.
@@ -220,26 +223,35 @@
   (with-input-from-string line
     (lambda ()
       (let ((ch (skip-il-ws (read-char))))
-	(cond
-	 ((read-c-ident ch) =>
-	  (lambda (cmdstr)
-	    (case (string->symbol cmdstr)
-	      ((include) `(include ,(cpp-include)))
-	      ((include_next) `(include-next ,(cpp-include)))
-	      ((define) (cpp-define))
-	      ((undef) `(undef ,(rd-id)))
-	      ((ifdef) `(if ,(string-append "defined(" (rd-id) ")" (rd-rest))))
-	      ((ifndef) `(if ,(string-append "!defined(" (rd-id) ")" (rd-rest))))
-	      ((if elif else endif line error warning pragma)
-	       (list (string->symbol cmdstr) (rd-rest)))
-	      (else
-	       (list 'warning (simple-format #f "unknown CPP: ~S" line))))))
-	 ((read-c-num ch) => (lambda (num) `(line ,num ,(rd-rest))))
-	 (else '(null)))))))
+        (cond
+         ((read-c-ident ch) =>
+          (lambda (cmdstr)
+            (case (string->symbol cmdstr)
+              ((include) `(include ,(cpp-include)))
+              ((include_next) `(include-next ,(cpp-include)))
+              ((define) (cpp-define))
+              ((undef) `(undef ,(rd-id)))
+              ((ifdef) `(if ,(string-append "defined(" (rd-id) ")" (rd-rest))))
+              ((ifndef) `(if ,(string-append "!defined(" (rd-id) ")" (rd-rest))))
+              ((if elif else endif line error warning pragma)
+               (list (string->symbol cmdstr) (rd-rest)))
+              (else
+               (list 'warning (simple-format #f "unknown CPP: ~S" line))))))
+         ((read-c-num ch) => (lambda (num) `(line ,num ,(rd-rest))))
+         (else '(null)))))))
 
 
-(include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
-(include-from-path "nyacc/lang/c99/mach.d/cpp-act.scm")
+(cond-expand
+ (guile
+  (include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
+  (include-from-path "nyacc/lang/c99/mach.d/cpp-act.scm"))
+ (mes
+  (define cpp-tables
+    (map (lambda (key) (cons key (assq-ref cpp-mach key)))
+         '(mtab ntab len-v rto-v pat-v)))
+  (define cpp-act-v (assq-ref cpp-mach 'act-v))
+  (define cpp-mtab (assq-ref cpp-mach 'mtab)))
+ (else))
 
 (define cpp-raw-parser
   (make-lalr-parser (acons 'act-v cpp-act-v cpp-tables)))
@@ -259,9 +271,9 @@
 ;; generate a lexical analyzer per string
 (define gen-cpp-lexer
   (make-lexer-generator cpp-mtab
-			#:comm-skipper cpp-comm-skipper
-			#:chlit-reader read-c-chlit
-			#:num-reader read-c-num))
+                        #:comm-skipper cpp-comm-skipper
+                        #:chlit-reader read-c-chlit
+                        #:num-reader read-c-num))
 
 ;; @deffn {Procedure} parse-cpp-expr text => tree
 ;; Given a string returns a cpp parse tree.  This is called by
@@ -288,56 +300,56 @@
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
        (ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
-       (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
-       (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2b
-       (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
+       (ev1 (lambda (ex) (ev ex 1)))    ; eval expr in arg 1
+       (ev2 (lambda (ex) (ev ex 2)))    ; eval expr in arg 2b
+       (ev3 (lambda (ex) (ev ex 3)))    ; eval expr in arg 3
        (eval-expr
-	(lambda (tree)
-	  (case (car tree)
-	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
-	    ((char) (char->integer (string-ref (tx1 tree) 0)))
-	    ((defined) (if (assoc-ref defs (tx1 tree)) 1 0))
-	    ((has-include)
-	     (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #f) 1 0))
-	    ((has-include-next)
-	     (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #t) 1 0))
-	    ((pre-inc post-inc) (1+ (ev1 tree)))
-	    ((pre-dec post-dec) (1- (ev1 tree)))
-	    ((pos) (ev1 tree))
-	    ((neg) (- (ev1 tree)))
-	    ((not) (if (zero? (ev1 tree)) 1 0))
-	    ((mul) (* (ev1 tree) (ev2 tree)))
-	    ((div) (/ (ev1 tree) (ev2 tree)))
-	    ((mod) (modulo (ev1 tree) (ev2 tree)))
-	    ((add) (+ (ev1 tree) (ev2 tree)))
-	    ((sub) (- (ev1 tree) (ev2 tree)))
-	    ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
-	    ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
-	    ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
-	    ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
-	    ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
-	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
-	    ((eq) (if (= (ev1 tree) (ev2 tree)) 1 0))
-	    ((ne) (if (= (ev1 tree) (ev2 tree)) 0 1))
-	    ((bitwise-not) (lognot (ev1 tree)))
-	    ((bitwise-or) (logior (ev1 tree) (ev2 tree)))
-	    ((bitwise-xor) (logxor (ev1 tree) (ev2 tree)))
-	    ((bitwise-and) (logand (ev1 tree) (ev2 tree)))
-	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ;; If ident is not defined it should be zero:
-	    ((ident) (if (assoc-ref defs (tx1 tree))
+        (lambda (tree)
+          (case (car tree)
+            ((fixed) (string->number (cnumstr->scm (tx1 tree))))
+            ((char) (char->integer (string-ref (tx1 tree) 0)))
+            ((defined) (if (assoc-ref defs (tx1 tree)) 1 0))
+            ((has-include)
+             (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #f) 1 0))
+            ((has-include-next)
+             (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #t) 1 0))
+            ((pre-inc post-inc) (1+ (ev1 tree)))
+            ((pre-dec post-dec) (1- (ev1 tree)))
+            ((pos) (ev1 tree))
+            ((neg) (- (ev1 tree)))
+            ((not) (if (zero? (ev1 tree)) 1 0))
+            ((mul) (* (ev1 tree) (ev2 tree)))
+            ((div) (/ (ev1 tree) (ev2 tree)))
+            ((mod) (modulo (ev1 tree) (ev2 tree)))
+            ((add) (+ (ev1 tree) (ev2 tree)))
+            ((sub) (- (ev1 tree) (ev2 tree)))
+            ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
+            ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
+            ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
+            ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
+            ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
+            ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
+            ((eq) (if (= (ev1 tree) (ev2 tree)) 1 0))
+            ((ne) (if (= (ev1 tree) (ev2 tree)) 0 1))
+            ((bitwise-not) (lognot (ev1 tree)))
+            ((bitwise-or) (logior (ev1 tree) (ev2 tree)))
+            ((bitwise-xor) (logxor (ev1 tree) (ev2 tree)))
+            ((bitwise-and) (logand (ev1 tree) (ev2 tree)))
+            ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
+            ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
+            ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
+            ;; If ident is not defined it should be zero:
+            ((ident) (if (assoc-ref defs (tx1 tree))
                          (throw 'cpp-error "ident not expanded ???")
                          0))
-	    ((p-expr) (ev1 tree))
-	    ((cast) (ev2 tree))
-	    (else (throw 'cpp-error "eval-cpp-expr: incomplete impl"))))))
+            ((p-expr) (ev1 tree))
+            ((cast) (ev2 tree))
+            (else (throw 'cpp-error "eval-cpp-expr: incomplete impl"))))))
     (eval-expr tree)))
 
 
 ;; === C preprocessor macro expansion =========================================
-;; Macro expansion is hairy, with lots of corner cases.  
+;; Macro expansion is hairy, with lots of corner cases.
 
 (define (mknox tokl)
   (map (lambda (tok)
@@ -520,9 +532,9 @@
      ((read-chseq ch) => identity)
      ((eqv? ch #\\)
       (let ((ch (read-char)))
-	(cond
+        (cond
          ((eqv? #\newline ch) (loop (read-char) ws)) ; extend
-	 (else (unread-char ch) (cons #\\ "\\")))))  ; error
+         (else (unread-char ch) (cons #\\ "\\")))))  ; error
      (else (cons ch (string ch))))))
 
 ;; mark must be one of #\, #\) #f
@@ -542,14 +554,14 @@
 ;; not be expanded.
 ;; @*The @code{#\)} is of the form @code{'%29} (hex symbol);
 ;; @code{#\)} and @code{#\)} tokens are of the same form.
-;; 
+;;
 ;;.@end deffn
 (define (tokenize-to-mark mark)
   ;; assert (memq mark '(#f %29 %2c))
 
   (define (ctx id cx)
     (if (string=? id "defined") #\D cx))
-  
+
   (define (finish tkl)
     (reverse tkl))
   ;;(reverse (if (and mark (pair? tkl) (eq? #\space (caar tkl))) (cdr tkl) tkl)))
@@ -574,7 +586,7 @@
 (define (tokenize-cpp-string str)
   (with-input-from-string str
     (lambda () (tokenize-to-mark #f))))
-  
+
 
 ;;.@deffn {Procedure} tokenize-args argl
 ;; Given the list of argument strings @var{argl}, search the current input
@@ -599,7 +611,7 @@
               (tl (tokenize-to-mark (if (equal? anam "...") '%29 '%2c)))
               (atkl (if (and (pair? tl) (eq? #\space (caar tl))) (cdr tl) tl)))
          (loop2
-	  (cond
+          (cond
            ((and (char=? #\( ch) (null? argl) (null? atkl)) argd)
            ((null? argl) (throw 'cpp-error "too many values"))
            ((string=? anam "...") (acons "__VA_ARGS__" atkl argd))
@@ -717,7 +729,7 @@
       'cpp-error
     (lambda ()
       (let* ((repl (macro-expand-text text defs))
-	     (exp (parse-cpp-expr repl)))
+             (exp (parse-cpp-expr repl)))
         (eval-cpp-expr exp defs #:inc-dirs inc-dirs)))
     (lambda (key fmt . args)
       (report-error fmt args)
@@ -749,14 +761,14 @@
      (pair? rval)
      (let loop ((ch (read-char)))
        (cond ((eof-object? ch) (throw 'c99-error "eof when expecting `('"))
-	     ((char-whitespace? ch) (loop (read-char)))
-	     ((char=? ch #\() #t)
-	     (else (unread-char ch) #f)))
+             ((char-whitespace? ch) (loop (read-char)))
+             ((char=? ch #\() #t)
+             (else (unread-char ch) #f)))
      (let loop ((lv 0) (ch (read-char)))
        (cond ((eof-object? ch) (throw 'c99-error "expecting `)'"))
-	     ((char=? #\( ch) (loop (1+ lv) (read-char)))
-	     ((char=? #\) ch) (if (zero? lv) #f (loop (1- lv) (read-char))))
-	     (else (loop lv (read-char))))))))
+             ((char=? #\( ch) (loop (1+ lv) (read-char)))
+             ((char=? #\) ch) (if (zero? lv) #f (loop (1- lv) (read-char))))
+             (else (loop lv (read-char))))))))
 
 
 ;; --- last line ---
