@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 
-;; Copyright (C) 2015-2022,2025 - Matthew Wette
+;; Copyright (C) 2015-2022,2025,2026 Matthew Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
