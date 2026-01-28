@@ -353,6 +353,12 @@
 ;; Return the processed token sequence in @emph{reverse order}.
 ;; @end deffn
 (define* (cpp-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
+
+  (define (get-args argl rest)
+    (if (pair? rest)
+        (collect-args argl rest)
+        (values (tokenize-args argl) '())))
+
   (let loop ((osq seed) (used used) (isq tokl))
     (match isq
       ('() osq)
@@ -366,11 +372,7 @@
             ((null? rhs)
              (loop osq used rest))
             ((string? (caar rhs))
-             (call-with-values
-                 (lambda ()
-                   (if (pair? rest)
-                       (collect-args (car rhs) rest)
-                       (values (tokenize-args (car rhs)) '())))
+             (call-with-values (lambda () (get-args (car rhs) rest))
                (lambda (argd rest)
                  (if argd
                      (let* ((tkl (cpp-subst (cdr rhs) argd defs used))
@@ -385,7 +387,13 @@
                     (csq (cpp-expand tkl defs uzed '() keep-comm))
                     (rest (append-reverse csq rest)))
                (loop osq used rest))))))
-        (else (loop (cons (car isq) osq) used (cdr isq)))))
+        ((string=? ident "_Pragma")
+         (call-with-values (lambda () (get-args '("x") rest))
+           (lambda (argd rest)
+             (let ((arg (rtokl->string (cpp-expand (cdar argd) defs used '()))))
+               (loop (acons '$pragma arg osq) used rest)))))
+        (else
+         (loop (cons (car isq) osq) used (cdr isq)))))
       (_ (loop (cons (car isq) osq) used (cdr isq))))))
 
 ;; @deffn {Procedure} cpp-subst argd repl defs used => tokl
@@ -460,11 +468,9 @@
          (let* ((anam (and (pair? argl) (car argl)))
                 (mark (if (equal? anam "...") '%29 '%2c))
                 (anam (if (equal? anam "...") "__VA_ARGS__" anam)))
-           ;;(sferr "subloop: tk=~s tkl=~s\n" tk tkl)
            (let lp ((atkl '()) (lv 0) (tkl tkl)) ; collect-to-mark
              (when (null? tkl) (throw 'cpp-error "incomplete arg list"))
              (let* ((tk (car tkl)) (k (car tk)))
-               ;;(sferr "  lp: k=~s mark=~s\n" k mark)
                (cond
                 ((and (null? atkl) (eq? k #\space))
                  (lp atkl lv (cdr tkl)))
@@ -550,7 +556,6 @@
 
   ;; cx(context, see ctx above):, #\D=def #\I=inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (tk (read-cpp-token)))
-    ;;(sferr "tk=~s\n" tk)
     (let ((k (car tk)) (v (cdr tk)))
       (cond
        ((and mark (null? tkl) (eq? #\space k)) (loop tkl cx lv (read-cpp-token)))
@@ -558,6 +563,7 @@
         (loop (cons (if (eq? cx #\D) `($idnox . ,(cdr tk)) tk) tkl)
               (ctx v #\nul) lv (read-cpp-token)))
        ((eq? k '%28) (loop (cons tk tkl) cx (1+ lv) (read-cpp-token)))
+
        ((eq? k '$end) (if mark (throw 'cpp-error "yuck") (finish tkl)))
        ((positive? lv)
         (loop (cons tk tkl) cx (if (eq? '%29 k) (1- lv) lv) (read-cpp-token)))
@@ -582,8 +588,7 @@
      (cond
       ((eof-object? ch) (if sp (unread-char #\space)) #f)
       ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
-      ((not (char=? #\( ch))
-       (if sp (unread-char #\space)) (unread-char ch) #f)))
+      ((not (char=? #\( ch)) (unread-char ch) (if sp (unread-char #\space)) #f)))
    ;; found #\(
    (let loop2 ((argd '()) (ch #\() (argl argl))
      (cond
@@ -608,52 +613,6 @@
       (else
        (throw 'cpp-error "cpp.scm(tokenize-args): coding error"))))))
 
-;; gobject does shit like GMAC('hello world')
-(define (collect-one-arg mark)
-  (let loop ((lv 0) (chl '()) (ch (read-char)))
-    (cond
-     ((eof-object? ch) (error "crap"))
-     ((and mark (null? chl) (eq? #\space ch)) (loop lv chl (read-char)))
-     ((char=? ch #\() (loop (1+ lv) (cons ch chl) (read-char)))
-     ((positive? lv)
-      (loop (if (char=? ch #\)) (1- lv) lv) (cons ch chl) (read-char)))
-     ((or (char=? ch mark) (and mark (char=? ch #\))))
-      (unread-char ch) (if (pair? chl) (cons '$arg (rls chl)) #f))
-     (else (loop lv (cons ch chl) (read-char))))))
-
-(define (kludge-args argl) 
-  (and
-   (let loop1 ((sp #f) (ch (read-char)))
-     (cond
-      ((eof-object? ch) (if sp (unread-char #\space)) #f)
-      ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
-      ((not (char=? #\( ch))
-       (if sp (unread-char #\space)) (unread-char ch) #f)))
-   ;; found #\(
-   (let loop2 ((argd '()) (ch #\() (argl argl))
-     (cond
-      ((eof-object? ch)
-       (throw 'cpp-error "end of input collecting args"))
-      ((memq ch '(#\( #\,)) ; start of arg
-       (let* ((anam (and (pair? argl) (car argl)))
-              (atk (collect-one-arg (if (equal? anam "...") #\) #\,)))
-              (atkl (if atk (list atk) '())))
-         (loop2
-	  (cond
-           ((and (char=? #\( ch) (null? argl) (null? atkl)) argd)
-           ((null? argl) (throw 'cpp-error "too many values"))
-           ((string=? anam "...") (acons "__VA_ARGS__" atkl argd))
-           (else (acons anam atkl argd)))
-          (read-char) (if (pair? argl) (cdr argl) argl))))
-      ((char=? ch #\))                  ; end of args
-       (cond
-        ((null? argl) argd)
-        ((equal? argl '("...")) (acons "__VA_ARGS__" '() argd))
-        (else (throw 'cpp-error "function macro arg count mismatch"))))
-      (else
-       (throw 'cpp-error "cpp.scm(kludge-args): coding error"))))))
-
-
 ;;.@deffn {Procedure} rtokl->string reverse-token-list => string
 ;; Convert reverse token-list to string.
 ;;.@end deffn
@@ -663,7 +622,8 @@
      ((null? tkl) (string-join stl ""))
      ((memq (caar tkl) '($string $text))
       (loop (cons (string-append "\"" (cdar tkl) "\"") stl) (cdr tkl)))
-     ((char? (car tkl)) (error "fixme"))
+     ((memq (caar tkl) '($chlit $chlit/L $chlit/U))
+      (loop (cons (string-append "'" (cdar tkl) "'") stl) (cdr tkl)))
      (else (loop (cons (cdar tkl) stl) (cdr tkl))))))
 
 ;;.@deffn {Procedure} tokl->string reverse-token-list => string
@@ -676,19 +636,12 @@
 ;; or keep the strings and convert to tokens on the fly.
 (define-public (lookup-def defs ident)
   (let* ((def (assoc ident defs)) (ref (and def (cdr def))))
-    (when #f ;; (string=? ident "__USE_DYNAMIC_STACK_SIZE")
-      (sferr "ident=~s\n" ident)
-      (sferr "    =>~s\n" def)
-      (quit))
     (cond
      ((not ref))                        ; catch ("FOO" . #f)
      ((null? ref))
      ((string? ref) (set-cdr! def (tokenize-cpp-string ref)))
      ((string? (cdr ref)) (set-cdr! ref (tokenize-cpp-string (cdr ref)))))
     (and ref (cdr def))))
-;; vs
-;;(define-public (lookup-def defs ident)
-;;  (assoc-ref defs ident))  
 
 
 ;; === exports =======================

@@ -511,7 +511,7 @@ __asm__(\"bswapl %0 ; bswapl %1 ; xchgl %0,%1\"
     (pp (parse-string code))))
 
 ;; issue#49
-(when #t
+(when #f
   (let ((code "int foo(int x) asm (\"\" \" foo64\");"))
     ;;(pp (parse-string code))
     (pp (ccode->sexp code))))

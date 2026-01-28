@@ -16,6 +16,11 @@ exec guile $0
 (when (gen-c99cx-files)
   (system "touch cxeval.scm"))
 
+(with-output-to-file ",gram-cpp.txt"
+  (lambda ()
+    (and cpp-spec (pp-lalr-grammar cpp-spec))
+    (and cpp-mach (pp-lalr-machine cpp-mach))))
+
 (with-output-to-file ",gram.txt"
   (lambda ()
     (and c99-spec (pp-lalr-grammar c99-spec))

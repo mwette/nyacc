@@ -66,16 +66,16 @@
   (let* ((ex (string-index defstr #\=))
          (lhs (if ex (substring defstr 0 ex) defstr))
          (rhs (if ex (substring defstr (1+ ex)) "1"))
-         (lx (string-index lhs #\())
-         (rx (string-index lhs #\))))
-    ;; The option is tokenize here or (memoize) on demand.
+         (lpx (string-index lhs #\())
+         (rpx (string-index lhs #\))))
+    ;; We will tokenize on demand in cpp.scm.
     (cond
      ((string=? rhs "#f") (cons lhs #f))
-     (lx (cons* (substring lhs 0 lx)
-                (string-split (substring lhs (1+ lx) rx) #\,)
-                rhs)) ;; vs (tokenize-cpp-string rhs)
+     (lpx (cons* (substring lhs 0 lpx)
+                 (string-split (substring lhs (1+ lpx) rpx) #\,)
+                 rhs))
      (else (cons lhs
-                 rhs))))) ;; vs (tokenize-cpp-string rhs)
+                 rhs)))))
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
@@ -327,7 +327,6 @@
 	 (kwstab (filter-mt ident-like? strtab))  ; keyword strings =>
          (keytab (map-mt string->symbol kwstab))  ; keywords in grammar
 	 (chrseq (remove-mt ident-like? strtab))  ; character sequences
-	 ;;(read-chseq (make-chseq-reader chrseq))
          (cs-rmap (chseq->canon-map chrseq))     ; remap 
 	 (read-chseq (make-chseq-reader cs-rmap))
          (cs-umap (chseq->canon-unmap chrseq))     ; unmap
@@ -432,7 +431,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-incs (sferr "include ~A => ~S\n" spec path))
+	      (if show-incs (sf "include ~A => ~S\n" spec path))
 	      (cond
 	       ((apply-helper file) stmt)
 	       ((not path) (c99-err "not found: ~S" file))
@@ -445,7 +444,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-incs (sferr "include ~A => ~S\n" spec path))
+	      (if show-incs (sf "include ~A => ~S\n" spec path))
 	      (cond
 	       ((apply-helper file) stmt)
 	       ((not path) (c99-err "not found: ~S" file))
@@ -622,8 +621,7 @@
 		 (else (loop ch ss))))
 	       ((read-c-comm ch #f #:skip-prefix #t) =>
                 (lambda (p) (w/ ss p)))
-	       ((and (not (eq? (car ppxs) 'keep))
-		     (eq? mode 'code))
+	       ((and (not (eq? (car ppxs) 'keep)) (eq? mode 'code))
 		(loop (read-char) ss))
 	       ((read-c-mclit ch) =>    ; mclit over chlit for gobject bd
                 (lambda (p) (w/ ss p)))
@@ -631,16 +629,15 @@
 		(lambda (name) (cons '$ident name)))
 	       ((read-c-num ch) => (lambda (p) (w/ ss p)))
 	       ((read-c-string ch) => (lambda (p) (w/ ss p)))
-	       ((and (char=? ch #\{)    ; lt-brace: inc-blev for typedefs
-                     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info) #f) #f)
-	       ((and (char=? ch #\})    ; rt-brace: dec-blev for typedefs
-                     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info) #f) #f)
+	       ((and (char=? ch #\{) (eqv? 'keep (car ppxs))
+                     (cpi-inc-blev! info) #f) #f) ; incr brace level
+	       ((and (char=? ch #\}) (eqv? 'keep (car ppxs))
+                     (cpi-dec-blev! info) #f) #f) ; decr brace level
 	       ((read-chseq ch) => (lambda (p) (w/ ss p)))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
-		(let ((ch (read-char)))
-		  (cond
-                   ((eqv? #\newline ch) (loop (read-char) ss)) ;; extend
-		   (else (unread-char ch) (w/ ss (cons #\\ "\\")))))) ;; error
+                (if (eqv? (read-char) #\newline)
+                    (loop (read-char) ss)
+                    (throw 'c99-error "bad use of \\")))
 	       (else (w/ ss (cons ch (string ch)))))))
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
@@ -648,25 +645,18 @@
           ;; (lexer #:mode mode #:xdef? xdef? #:show-incs show-incs)
           (define (encode-token tok)
             (let ((key (car tok)) (val (cdr tok)))
-              ;; FIXME
-              #;(when (not (eq? key 'cpp-stmt))
-                (let ((v (if (> (string-length val) 40)
-                             (substring val 0 40)
-                             val)))
-                  (format #t "\nencode ~s ~s" key v)))
               (cond
-               ((integer? key) tok)     ; never happens now, I think
-               ;;((or (eq? '$ident key) (eq? t-ident key))
                ((eq? '$ident key)
                 (let ((symb (string->symbol val)))
                   (cond
-                   ((typename? val) (set-car! tok t-typename) tok)
-                   ((assq-ref keytab symb) => (lambda (v) (set-car! tok v) tok))
-                   (else (set-car! tok t-ident) tok))))
-               ((symbol? key) (set-car! tok (assq-ref symtab key)) tok)
-               (else (error "tok")))))
+                   ((typename? val) (cons-source tok t-typename val))
+                   ((assq-ref keytab symb)
+                    => (lambda (v) (cons-source tok v val)))
+                   (else (cons-source tok t-ident val)))))
+               ((symbol? key) (cons-source tok (assq-ref symtab key) val))
+               (else (error "parser.scm: coding error")))))
           
-          (if (pair? tkl)
+            (if (pair? tkl)
               (let ((tok (car tkl)))
                 (set! tkl (cdr tkl))
                 (encode-token tok))
@@ -674,23 +664,9 @@
                 (case (car ppxs)
                   ((keep)
                    (cond
-                    ((integer? (car token)) token)
                     ((eq? '$ident (car token))
-                     ;; FIXME
-                     #;(when (string=? (cdr token) "g_bit_nth_lsf")
-                       (format #t "next ~s\n" (read-char))
-                       (quit)
-                       )
                      (let ((mx (expand-cpp-macro-ref
                                 (cdr token) (cpi-defs info))))
-                       ;; FIXME
-                       #;(when #t ;; (string=? (cdr token) "__nonnull")
-                         (format #t "~s => ~s\n" (cdr token) mx)
-                         )
-                       #;(when (string=? (cdr token) "g_bit_nth_lsf")
-                         (format #t "next ~s\n" (read-char))
-                         (quit)
-                         )
                        (cond
                         ((not mx) (encode-token token))
                         ((null? mx) (loop (read-token)))
