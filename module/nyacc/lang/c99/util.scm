@@ -34,8 +34,16 @@
   #:use-module (srfi srfi-2)            ; and-let*
   #:use-module (sxml fold)
   #:use-module (ice-9 popen)            ; gen-gcc-cpp-defs
-  #:use-module (ice-9 rdelim)           ; gen-gcc-cpp-defs
-  #:use-module (ice-9 match))
+  #:use-module (ice-9 rdelim))           ; gen-gcc-cpp-defs
+(cond-expand
+ (guile-test
+  (use-modules (smatch))
+  (define-macro (match exp . clauses)
+    `((smatch-lambda . ,clauses) ,exp)))
+ (mes
+  (use-modules (ice-9 match)))
+ (else
+  (use-modules (ice-9 match))))
 
 (define c99-def-help
   (let ((base

@@ -43,9 +43,18 @@
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
-  #:use-module (ice-9 match)
   #:use-module (ice-9 hash-table)
   #:use-module (ice-9 vlist))
+(cond-expand
+ (guile-test
+  (use-modules (smatch))
+  (define-macro (match exp . clauses)
+    `((smatch-lambda . ,clauses) ,exp)))
+ (mes
+  (use-modules (nyacc lang c99 cppmach))
+  (use-modules (ice-9 match)))
+ (else
+  (use-modules (ice-9 match))))
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)

@@ -42,7 +42,6 @@
             macro-expand-text
             parse-cpp-expr
             eval-cpp-expr)
-  #:use-module (ice-9 match)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (nyacc parse)
@@ -50,8 +49,15 @@
   #:use-module (nyacc lang sx-util)
   #:use-module ((nyacc lang util) #:select (report-error)))
 (cond-expand
- (mes (use-modules (nyacc lang c99 cppmach)))
- (else))
+ (guile-test
+  (use-modules (smatch))
+  (define-macro (match exp . clauses)
+    `((smatch-lambda . ,clauses) ,exp)))
+ (mes
+  (use-modules (nyacc lang c99 cppmach))
+  (use-modules (ice-9 match)))
+ (else
+  (use-modules (ice-9 match))))
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
@@ -242,16 +248,16 @@
 
 
 (cond-expand
- (guile
-  (include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
-  (include-from-path "nyacc/lang/c99/mach.d/cpp-act.scm"))
  (mes
   (define cpp-tables
     (map (lambda (key) (cons key (assq-ref cpp-mach key)))
          '(mtab ntab len-v rto-v pat-v)))
   (define cpp-act-v (assq-ref cpp-mach 'act-v))
   (define cpp-mtab (assq-ref cpp-mach 'mtab)))
- (else))
+ (else
+  (include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
+  (include-from-path "nyacc/lang/c99/mach.d/cpp-act.scm")))
+  
 
 (define cpp-raw-parser
   (make-lalr-parser (acons 'act-v cpp-act-v cpp-tables)))
