@@ -46,7 +46,7 @@
   #:use-module (ice-9 hash-table)
   #:use-module (ice-9 vlist))
 (cond-expand
- (guile-test
+ (guile
   (use-modules (smatch))
   (define-macro (match exp . clauses)
     `((smatch-lambda . ,clauses) ,exp)))

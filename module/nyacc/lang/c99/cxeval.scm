@@ -68,16 +68,15 @@
   #f)
 
 (cond-expand
- (guile
-  (include-from-path "nyacc/lang/c99/mach.d/c99cx-act.scm")
-  (include-from-path "nyacc/lang/c99/mach.d/c99cx-tab.scm"))
  (mes
   (define c99cx-tables
     (map (lambda (key) (cons key (assq-ref c99cx-mach key)))
          '(mtab ntab len-v rto-v pat-v)))
   (define c99cx-act-v (assq-ref c99cx-mach 'act-v))
   (define c99cx-mtab (assq-ref c99cx-mach 'mtab)))
- (else))
+ (else
+  (include-from-path "nyacc/lang/c99/mach.d/c99cx-act.scm")
+  (include-from-path "nyacc/lang/c99/mach.d/c99cx-tab.scm")))
 
 (define c99cx-raw-parser
   (make-lalr-parser
