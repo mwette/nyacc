@@ -31,7 +31,7 @@ all:
 	@true
 
 .PHONY: install
-install: install-info install-pdf install-html
+install: install-info install-html
 
 .PHONY: install-info
 install-info: nyacc-ug.info nyacc-fh-ug.info nyacc-c99-ug.info cdata.info
@@ -59,10 +59,10 @@ install-html:
 
 .PHONY: dist-files
 dist-files: \
-	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html \
-	nyacc-c99-ug.info nyacc-c99-ug.pdf nyacc-c99-ug.html \
-	nyacc-fh-ug.info nyacc-fh-ug.pdf nyacc-fh-ug.html \
-	cdata.info cdata.pdf cdata.html
+	nyacc-ug.info nyacc-ug.html \
+	nyacc-c99-ug.info nyacc-c99-ug.html \
+	nyacc-fh-ug.info nyacc-fh-ug.html \
+	cdata.info cdata.html
 
 %_scm.texi: ../../module/nyacc/%.scm
 	./pull-texi.scm $< >$@
@@ -88,6 +88,6 @@ clean:
 
 .PHONY: really-clean
 really-clean:
-	rm -f *.pdf *.info
+	rm -f *.pdf *.info *.html
 
 # --- last line
