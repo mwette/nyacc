@@ -3,9 +3,7 @@
 ;; Copyright (C) 2026 Matthew Wette
 ;; SPDX-License-Identifier: LGPL-3.0-or-later
 
-;; v260201b
-
-;; a possible speed-up where you see (car ,exp) or (cdr ,exp), e.g.:
+;; just maybe speed-up where you see (car ,exp) or (cdr ,exp), e.g.:
 ;;   (smatch-pat (cdr ,exp) ,(cdr pat) ,kt ,kf)))
 ;; =>
 ;;   ,(let (($w (gensym)))
@@ -23,7 +21,8 @@
 
 (define-macro (smatch exp . cases)
   (let (($x (gensym)))
-    `((lambda (,$x) (smatch-1 ,$x ,cases)) ,exp)))
+    `(let ((,$x ,exp))
+       (smatch-1 ,$x ,cases))))
 
 ;; does not verify that each case is a pair
 (define-macro (smatch-1 exp cases)
@@ -73,6 +72,7 @@
            ,kt
            ,kf)))
       
+#|
 ;; test
 
 (define (test)
@@ -116,6 +116,7 @@
    (equal? (t3 'a) 2)
    #t))
 
-;;(display (test)) (newline)
+(display (test)) (newline)
+|#
 
 ;;; --- last line ---

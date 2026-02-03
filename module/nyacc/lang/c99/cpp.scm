@@ -49,13 +49,11 @@
   #:use-module (nyacc lang sx-util)
   #:use-module ((nyacc lang util) #:select (report-error)))
 (cond-expand
- (guile-test
+(mes
+  (use-modules (nyacc lang c99 cppmach))
   (use-modules (smatch))
   (define-macro (match exp . clauses)
     `((smatch-lambda . ,clauses) ,exp)))
- (mes
-  (use-modules (nyacc lang c99 cppmach))
-  (use-modules (ice-9 match)))
  (else
   (use-modules (ice-9 match))))
 

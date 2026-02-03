@@ -44,15 +44,13 @@
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (system foreign)
-  #:use-module (nyacc foreign arch-info)
-  #:use-module (ice-9 match))
+  #:use-module (nyacc foreign arch-info))
 (cond-expand
- (guile-test
+ (mes
+  (use-modules (nyacc lang c99 cxmach))
   (use-modules (smatch))
   (define-macro (match exp . clauses)
     `((smatch-lambda . ,clauses) ,exp)))
- (mes
-  (use-modules (nyacc lang c99 cxmach)))
  (else
   (use-modules (ice-9 match))))
 

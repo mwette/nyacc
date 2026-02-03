@@ -831,7 +831,7 @@
                    (*input-stack* '()))
       (with-input-from-string expr-string
         (lambda ()
-          (catch 'c99-error
+         (catch 'c99-error
             (lambda ()
               (catch 'nyacc-error
                 (lambda ()

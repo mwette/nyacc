@@ -36,13 +36,11 @@
   #:use-module (ice-9 popen)            ; gen-gcc-cpp-defs
   #:use-module (ice-9 rdelim))           ; gen-gcc-cpp-defs
 (cond-expand
- (guile-test
+ (mes
   (use-modules (smatch))
   (define-macro (match exp . clauses)
     `((smatch-lambda . ,clauses) ,exp)))
- (mes
-  (use-modules (ice-9 match)))
- (else
+(else
   (use-modules (ice-9 match))))
 
 (define c99-def-help
