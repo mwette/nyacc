@@ -339,7 +339,7 @@
 ;; broken up in order to not overflow the stack during compilation.
 ;; This uses only syntax-rules; sxml uses syntax-case.
 
-;; update ,_ is "don't care" (not used)
+;; update ,_ is "don't care" (so no binding generated)
 
 
 ;; sx-haz-attr? val
