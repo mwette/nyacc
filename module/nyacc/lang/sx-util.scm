@@ -339,6 +339,8 @@
 ;; broken up in order to not overflow the stack during compilation.
 ;; This uses only syntax-rules; sxml uses syntax-case.
 
+;; update ,_ is "don't care" (not used)
+
 
 ;; sx-haz-attr? val
 ;;(define (sx-haz-attr? sx)
@@ -411,8 +413,9 @@
 ;; sxm-sexp val pat kt kf
 ;; match sexp @var{val}
 (define-syntax sxm-sexp
-  (syntax-rules (@ unquote)
+  (syntax-rules (@ unquote _)
     ;; accept anything
+    ((_ v (unquote _) kt kf) kt)
     ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ;; capture attributes by name
     ((_ v (tag (@ (ky vl) p1 ...) . nl) kt kf)
@@ -483,8 +486,9 @@
 ;; [ht][vp] = [head,tail][value,pattern]
 ;; Can this be set up to match a string constant?
 (define-syntax sxm-node
-  (syntax-rules (unquote)
+  (syntax-rules (unquote _)
     ((_ v () kt kf) (if (null? v) kt kf))
+    ((_ v (unquote _) kt kf) kt)
     ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ((_ v (hp . tp) kt kf) (if (pair? v) (sxm-sexp v (hp . tp) kt kf) kf))
     ((_ v s kt kf)
