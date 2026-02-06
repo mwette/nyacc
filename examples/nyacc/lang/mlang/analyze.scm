@@ -16,7 +16,7 @@
 (use-modules (ice-9 format))
 (use-modules (ice-9 regex))
 (use-modules (ice-9 match))
-(use-modules ((srfi srfi-1) #:select (fold last lset-union)))
+(use-modules ((srfi srfi-1) #:select (fold last lset-union append-reverse)))
 (use-modules (srfi srfi-9))             ; define-record-type
 (use-modules (srfi srfi-11))
 (use-modules (srfi srfi-43))
@@ -42,17 +42,12 @@
 
 
 (define-syntax string-case
-  (let-syntax
-      ((check-str-case
-        (syntax-rules (else)
-          ((_ str (set ex ...) kt kf)
-           (if (member str 'set) kt kf)))))
-    (syntax-rules (else)
-      ((_ str (set ex ...) c1 ...)
-       (let ((kf (lambda () (string-case str c1 ...))))
-         (check-str-case str set (ex ...) kf)))
-      ((_ str (else ex ...)) (begin (if #f #f) ex ...))
-      ((_ str) (error "no match")))))
+  (syntax-rules (else)
+    ((_ str ((s1 ...) ex ...) c1 ...)
+     (if (member str '(s1 ...)) (begin #f ex ...) (string-case str c1 ...)))
+    ((_ str (else ex ...) c1 ...)
+     (begin #f ex ...))
+    ((_ str) (error "no match"))))
 
 
 ;; @deffn {Syntax} gen-flags flag-set flag1 flag2 ...
@@ -66,11 +61,12 @@
     (syntax-case x ()
       ((_ name flag0 ...)
        #`(begin .
-           #,(let loop ((ids #'(flag0 ...)) (ofx 0))
-               (if (null? ids) '()
-                   (cons #`(define #,(genid x #'name (car ids)) #,(ash 1 ofx))
-                         (loop (cdr ids) (1+ ofx))))))))))
-  
+                #,(let loop ((ids #'(flag0 ...)) (ofx 0))
+                    (if (null? ids) '()
+                        (cons #`(define #,(genid x #'name (car ids))
+                                  #,(ash 1 ofx))
+                              (loop (cdr ids) (1+ ofx))))))))))
+
 (define (set-flag flags flag)
   (logior flags flag))
 (define (clr-flag flags flag)
@@ -151,9 +147,9 @@
    (lambda (ix vx)
      (simple-format port "~s ~s\n" ix vx)
      #;(cond
-      ((< ix 2) (simple-format port "~s ~s\n" ix vx))
-      ((= ix (1- (vector-length vx-tree))) (simple-format port "~s ~s\n" ix vx))
-      (else #f))
+     ((< ix 2) (simple-format port "~s ~s\n" ix vx))
+     ((= ix (1- (vector-length vx-tree))) (simple-format port "~s ~s\n" ix vx))
+     (else #f))
      )
    vx-tree))
 
@@ -161,7 +157,7 @@
 ;; ============================================================================
 ;; identify tree
 
-;; need to do a full pass to convert 
+;; need to do a full pass to convert
 ;; (ident "name") => (toplevel name)|(lexical name name-123)
 ;; (ident "name") => (toplevel "name")|(lexical "name" "name-123")
 
@@ -195,18 +191,19 @@
   (let* ((name (sx-ref ident 1)))
     (cond
      ((assoc-ref dict name) dict)
-     (else 
-      (set-car! (cdr ident) (symbol->string (gensym (string-append name "-"))))
-      (acons name ident dict)))))
+     (else
+      (let ((name/tag (symbol->string (gensym (string-append name "$")))))
+        (acons name (sx-list/src ident 'ident #f name/tag) dict))))))
 
 (define (ensure-toplevel ident dict)
   (let ((name (sx-ref ident 1))
         (topd (let loop ((dict dict))
                 (or (and=> (assq-ref dict '@P) loop) dict))))
     (unless (assoc-ref topd name)
-      (set-cdr! topd (acons name ident (cdr topd))))
+      (set-cdr! topd (cons (car topd) (cdr topd)))
+      (set-car! topd (cons name ident)))
     dict))
-         
+
 (define (ensure-variable ident dict)
   (let* ((name (sx-ref ident 1)))
     (if (lookup name dict)
@@ -215,17 +212,29 @@
             (ensure-lexical ident dict)
             (ensure-toplevel ident dict)))))
 
-
-;; convert (ident ,name) to one of
-;;   (toplevel ,name)
-;;   (lexical ,name ,name-1234)
+;; convert all (ident ,name) forms to one of
+;;   IS (ident "name") WAS (toplevel ,name)
+;;   IS (ident "name-123") WAS (lexical ,name ,name-1234)
 ;;   (name ,name)
+
 ;; for is a case where an ident lives after the form
 ;; but a new form may use for another purpose, so I
 ;; create a new lexical in this case
 ;; if later we see they are used the same, we can merge.
-;;
+
 (define* (identify-tree tree #:optional (gbls '((@top . #t))))
+
+  (define (fix-function-file file-tree) ;; -> ident
+    (let loop ((oforms '()) (tform #f) (iforms (sx-tail file-tree)))
+      (sx-match-tail iforms
+        (() (values (sx-cons* 'function-file (sx-attr file-tree)
+                              (append-reverse (list tform) oforms))
+                    (sx-ref* tform 1 1)))
+        (((fctn-defn (fctn-decl (ident ,name) . ,_) . ,_) . ,_)
+         (if tform
+             (loop (cons (car iforms) oforms) tform (cdr iforms))
+             (loop oforms (car iforms) (cdr iforms))))
+        (,_ (loop (cons (car iforms) oforms) tform (cdr iforms))))))
 
   (define (fD tree seed dict)
     ;; Here we update symbol table where identifiers are defined.
@@ -237,11 +246,14 @@
               (dict (fold ensure-lexical dict inargs))
               (dict (fold ensure-lexical dict outargs))
               (dict (acons '@F #t dict)))
+         ;;(sf "fctn: ~s => ~s\n" name (lookup name dict)) (pp dict)
          (values tree '() dict)))
       ((fctn-defn . ,_)
        (error "missed fctn-defn"))
       ((assn (ident ,name) ,rhsx)
-       (values tree '() (ensure-variable (sx-ref tree 1) dict)))
+       (let* ((dict (ensure-variable (sx-ref tree 1) dict))
+              (ident (lookup name dict)))
+         (values (sx-list/src tree 'assn ident rhsx) '() dict)))
       ((assn (aref-or-call (ident ,name) ,expl) ,rhsx)
        (values tree '() (ensure-variable (sx-ref* tree 1 1) dict)))
       ((assn (sel (ident ,name) ,expr) ,rhsx)
@@ -249,8 +261,12 @@
       ;;((multi-assn ,
       #;((for (ident ,name) . ,_)
        (values tree '() (ensure-lexical (sx-ref tree 1) (push-scope dict))))
-      ((call (ident ,name) . ,_)
-       (values tree '() (ensure-toplevel (sx-ref tree 1) dict)))
+      ((call (ident ,name) . ,rest)
+       (let* ((ref (lookup name dict))
+              (dict (if ref dict (ensure-toplevel (sx-ref tree 1) dict)))
+              (ident (if ref ref (lookup name dict)))
+              (tree (sx-cons*/src tree 'call #f ident rest)))
+         (values tree '() dict)))
       ;; ident used as name
       ((sel (ident ,name) ,expr)        ; TODO: src-props
        (values `(sel (name ,name) ,expr) '() dict))
@@ -263,6 +279,11 @@
                                        (dict (ensure-toplevel ident dict)))
                                   (acons name ident dict)))
                               dict names)))
+      ((function-file . ,_)
+       (call-with-values (lambda () (fix-function-file tree))
+         (lambda (otree ident)
+           ;;(sferr "ff: ident=~s\n" ident) (pperr otree)
+           (values otree '() (push-scope (ensure-toplevel ident dict))))))
       (,_
        (values tree '() dict))))
 
@@ -283,6 +304,8 @@
          (values (cons form seed) (pop-scope kdict)))
         ;; todo branch completion
         ;;  (if exp (assn x 1)) => (if exp (assn x 1) (assn x x))
+        ((function-file . ,_)
+         (values (cons form seed) (pop-scope kdict)))
         (,_
          (values (cons form seed) kdict)))))
 
@@ -298,6 +321,13 @@
 
 (define *path* (make-parameter '("." "ex")))
 (define *trees* (make-parameter '())) ;; alist of basename, tree
+
+;; not used (yet?)
+(define (load-function name)
+  (let* ((path (find-in-path (string-append name ".m") (*path*)))
+         (tree (and path (read-mlang-file path '())))
+         (tree (and tree (identify-tree tree))))
+    tree))
 
 ;; in a file containing "addpath" calls add the paths
 (define (pathload filename)
@@ -316,37 +346,13 @@
 (define (find-file filename)
   (find-in-path filename (*path*)))
 
-(define (load-function name)
-  (let* ((path (find-in-path (string-append name ".m") (*path*)))
-         (tree (and path (read-mlang-file path '())))
-         (tree (and tree (identify-tree tree))))
-    tree))
-
-;; This will be used to initialize file-scope functions
-;; 1. for function-file: (cdr result) for (car result)
-;; 2. for script-file, result for code prior to functions
-(define (WTF-tree-function tree) ;; what is this for again?
-  "return a list of functions in the tree (script-file or function-file)"
-  (fold
-   (lambda (form name)
-     (or name
-         (sx-match form
-           ((fctn-defn (ident ,name) . ,_) name)
-           ((fctn-defn (toplevel ,name) . ,_) name)
-           (,__ name))))
-   #f
-   (sx-match tree
-     ((script-file . ,forms) forms)
-     ((function-file . ,forms) forms)
-     ((classdef-file . ,forms) forms)
-     (,_ (pperr tree) (error "missed form")))))
-
+;; needs to be fixed for function-files
 (define (tree-calls tree)
   "return calls or aref-or-call (script-file or function-file)
   should be w/o duplicates.
   "
   (foldts
-   (lambda (seed tree) tree)
+   (lambda (seed tree) '())
    (lambda (seed kseed tree)
      (sx-match tree
        ;;((assn (ident ,name) (handle ,_0)) (cons `(skip ,name) seed))
@@ -356,10 +362,45 @@
    (lambda (seed leaf) '())
    '() tree))
 
+(define (file-calls file-tree)
+
+  (define* (probe-file forms #:optional only-first)
+    ;; return public, private function names as two values
+    (let loop ((pub '()) (prv '()) (forms forms))
+      (sx-match-tail forms
+        (() (values pub prv))
+        (((fctn-defn (fctn-decl (ident ,name) . ,_) . ,_) . ,rest)
+         (if (and only-first (pair? pub))
+             (loop pub (cons name prv) rest)
+             (loop (cons name pub) prv rest)))
+        (,_ (loop pub prv (cdr forms))))))
+
+  (call-with-values
+      (lambda ()
+        (sx-match file-tree
+          ((script-file . ,forms) (probe-file (sx-tail file-tree)))
+          ((function-file . ,forms) (probe-file (sx-tail file-tree) #t))
+          ((classdef-file . ,forms) (error "not handled"))
+          (,_ (sferr "missed ~s\n" file-tree) (error "coding error"))))
+    (lambda (pub prv)
+      (foldts
+       (lambda (seed tree) '())
+       (lambda (seed kseed tree)
+         (sx-match tree
+           ;;((assn (ident ,name) (handle ,_0)) (cons `(skip ,name) seed))
+           ((call (ident ,name) . ,_)
+            (if (member name prv) seed (cons name seed)))
+           ((aref-or-call (ident ,name) . ,_)
+            (if (member name prv) seed (cons name seed)))
+           (,__ (lset-union equal? kseed seed))))
+       (lambda (seed leaf) '())
+       '() file-tree))))
+
 (define (gen-program script-file)
   ;; parse script-file => tree
   ;; extract calls and aref-or-call
   ;; add to next refs w/ .m
+
   ;; assumes tree-calls provides no duplicates (hence lset-union there)
   (parameterize ((*path* (cons (dirname script-file) (*path*))))
     (let loop ((trees '()) (done builtins) (curr '())
@@ -377,7 +418,7 @@
                    (next (fold (lambda (fn nx)
                                  (if (or (member fn done) (member fn nx))
                                      nx (cons fn nx)))
-                               next (tree-calls tree))))
+                               next (file-calls tree))))
               (loop (cons tree trees) (cons (car curr) done) (cdr curr) next))))
          (else
           (sferr "gen-program: not found: ~s\n" (car curr))
@@ -510,7 +551,7 @@
       (if changed
           (fold
            (lambda (ix c?) ;; c? = changed?
-             ;; (sf "~s ~s\n" ix (vector-ref vx ix))
+             (sf "~s ~s\n" ix (vector-ref vx ix))
              (vx-match vx ix
                ((fixed ,v)
                 (fl-join flv ix c? USE-NUM USE-INT))
@@ -593,7 +634,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
     (lambda (port)
       (set-port-filename! port srcfile)
       (read-mlang-file port '()))))
-      
+
 
 (define (main . args)
   (call-with-values
@@ -601,7 +642,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
     (lambda (opts files)
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
       (and=> (assq-ref opts 'envload) (lambda (file) (pathload file)))
-      (for-each 
+      (for-each
        (lambda (srcfile)
          (and (assq-ref opts 'sxml)
               (pp (read-mfile srcfile)))
@@ -616,13 +657,13 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
                      (prog (gen-program srcfile))
                      (idsx (identify-tree prog))
                      ;;(nelt (sxml-count prog))
-                     (idvx (sxml->vxml idsx))
+                     ;;(idvx (sxml->vxml idsx))
                      )
                 ;;(pp prog)
-                ;;(pp idsx)
+                (pp idsx)
                 ;;(pp idvx)
                 ;;(display-vxml idvx)
-                (tryme idvx)
+                ;;(tryme idvx)
                 ;;(format #t "~b\n" USE-INT)
                 #t))
          #f)
