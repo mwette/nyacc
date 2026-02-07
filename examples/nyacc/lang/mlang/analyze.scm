@@ -102,7 +102,9 @@
    ;;((pair? node) (fold (lambda (e s) (+ (sxml-count e) s)) 1 (sx-tail node)))
    ((pair? node) (fold (lambda (e s) (+ (sxml-count e) s)) 1 (cdr node)))
    ((string? node) 0)
-   (else (error "not an sxml node!"))))
+   (else
+    (pperr node) (quit)
+    (error "not an sxml node!"))))
 
 ;; @deffn {Procedure} sxml->vxml sx-tree => vxml
 ;; Convert an SXML AST to VXML, a vector where each entry
@@ -222,13 +224,13 @@
 ;; create a new lexical in this case
 ;; if later we see they are used the same, we can merge.
 
-(define* (identify-tree tree #:optional (gbls '((@top . #t))))
+(define* (identify-tree tree #:optional (gbls (list '(@top . #t))))
 
   (define (fix-function-file file-tree) ;; -> ident
     (let loop ((oforms '()) (tform #f) (iforms (sx-tail file-tree)))
       (sx-match-tail iforms
         (() (values (sx-cons* 'function-file (sx-attr file-tree)
-                              (append-reverse (list tform) oforms))
+                              (append-reverse oforms (list tform)))
                     (sx-ref* tform 1 1)))
         (((fctn-defn (fctn-decl (ident ,name) . ,_) . ,_) . ,_)
          (if tform
@@ -253,7 +255,7 @@
       ((assn (ident ,name) ,rhsx)
        (let* ((dict (ensure-variable (sx-ref tree 1) dict))
               (ident (lookup name dict)))
-         (values (sx-list/src tree 'assn ident rhsx) '() dict)))
+         (values (sx-list/src tree 'assn #f ident rhsx) '() dict)))
       ((assn (aref-or-call (ident ,name) ,expl) ,rhsx)
        (values tree '() (ensure-variable (sx-ref* tree 1 1) dict)))
       ((assn (sel (ident ,name) ,expr) ,rhsx)
@@ -656,13 +658,12 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
               (let* ((tree (read-mfile srcfile))
                      (prog (gen-program srcfile))
                      (idsx (identify-tree prog))
-                     ;;(nelt (sxml-count prog))
-                     ;;(idvx (sxml->vxml idsx))
+                     (idvx (sxml->vxml idsx))
                      )
                 ;;(pp prog)
-                (pp idsx)
-                ;;(pp idvx)
+                ;;(pp idsx)
                 ;;(display-vxml idvx)
+                ;;(pretty-print-ml (list-ref (sx-tail idsx) 2))
                 ;;(tryme idvx)
                 ;;(format #t "~b\n" USE-INT)
                 #t))
