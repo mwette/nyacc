@@ -188,6 +188,8 @@
 
       ((ident ,ident)
        (sf "~A" ident))
+      ((name ,name)
+       (sf "~A" name))
 
       ((qident . ,names)
        (sf "~A" (string-join names ".")))
