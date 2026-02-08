@@ -8,6 +8,7 @@
      ;;(eval . (add-to-list 'write-file-functions
 ;;			  (lambda () (untabify 0 (buffer-end)))))
      (eval . (put 'sx-match            'scheme-indent-function 1))
+     (eval . (put 'vx-match            'scheme-indent-function 2))
      (eval . (put 'sx-match-tail       'scheme-indent-function 1))
      (eval . (put 'with-arch           'scheme-indent-function 1))
      (eval . (put 'match               'scheme-indent-function 1))
