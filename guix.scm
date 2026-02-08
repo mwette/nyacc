@@ -34,6 +34,16 @@
  (home-page "https://github.com/mwette/nyacc")
  (synopsis "parser generator, c parser, ffi-helper for guile")
  (license (list lgpl3+))
- (description "tbd"))
+ (description
+  "NYACC, for Not Yet Another Compiler Compiler, is set of guile modules for
+generating parsers and lexical analyzers.  It also provides sample parsers
+and pretty-printers using SXML trees as an intermediate representation.
+
+It provides a decent C parser and a `FFI Helper' tool to help create
+Guile Scheme bindings for C-based libraries.
+
+It provides (partially implemented) compilers based on above mentioned
+parsers to allow execution with Guile as extension languages.
+"))
 
 ;; --- last line ---

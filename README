@@ -1,6 +1,16 @@
-This is version 3.02.0 of NYACC (Not Yet Another Compiler Compiler).
+NYACC, for Not Yet Another Compiler Compiler, is set of guile modules for
+generating parsers and lexical analyzers.  It also provides sample parsers
+and pretty-printers using SXML trees as an intermediate representation.
 
-Copyright (C) 2015-2025 Matthew Wette
+It provides a decent C parser and a `FFI Helper' tool to help create
+Guile Scheme bindings for C-based libraries.
+
+It provides (partially implemented) compilers based on above mentioned
+parsers to allow execution with Guile as extension languages.
+
+This is version 3.03.0 of NYACC (Not Yet Another Compiler Compiler).
+
+Copyright (C) 2015-2026 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
