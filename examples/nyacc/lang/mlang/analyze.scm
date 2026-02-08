@@ -307,16 +307,12 @@
             (ensure-lexical ident dict)
             (ensure-toplevel ident dict)))))
 
-;; convert all (ident ,name) forms to one of
-;;   IS (ident "name") WAS (toplevel ,name)
-;;   IS (ident "name-123") WAS (lexical ,name ,name-1234)
-;;   (name ,name)
 
-;; for is a case where an ident lives after the form
-;; but a new form may use for another purpose, so I
-;; create a new lexical in this case
-;; if later we see they are used the same, we can merge.
+;; for is a case where an ident lives after the form but a new form may
+;; use for another purpose, so I create a new lexical in this case if
+;; later we see they are used the same, we can merge.
 
+;; convert (ident ,name) forms to (ident "name") or (ident "name$123")
 (define* (identify-tree tree #:optional (gbls (list '(@top . #t))))
 
   (define (fix-function-file file-tree) ;; -> ident
@@ -615,8 +611,16 @@
                (fl-join flv ix c? USE-NUM))
               ((assn ,lval ,rval)
                (fl-join flv lval c? (vector-ref flv rval)))
+              ;; todo: sel call array-ref 
               (else
-               (sferr "not checked: ~s\n" (vector-ref (vector-ref vx ix) 0))
+               (unless (member (vector-ref (vector-ref vx ix) 0)
+                               '(filename
+                                 function-file script-file class-file program
+                                 expr-list stmt-list ident-list
+                                 fctn-defn fctn-decl
+                                 empty-stmt name return
+                                 @))          
+                 (sferr "not checked: ~s\n" (vector-ref (vector-ref vx ix) 0)))
                c?)))
           #f (iota nx))))
        (else
