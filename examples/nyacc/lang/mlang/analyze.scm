@@ -62,6 +62,10 @@
     "permute" "pinv" "rad2deg" "reshape" "sign" "sin" "sind"
     "size" "sqrt" "squeeze" "struct" "sum" "vecnorm" "zeros"))
 
+(define builtin-sigs
+  `(("struct" (USE-SCT) ())
+    ))
+
 
 ;; strategy here
 ;; 1) convert tree into vector of (tag rx ...)
@@ -108,7 +112,7 @@
     vx))
 
 ;; @deffn {Procedure} vxml->sxml vx-tree [index] => sxml
-;; Convert an VXML AST to SXML starting at index @var{index}, default 0.
+;; Convert an VXML AST to SXML for form at index @var{index}, default 0.
 ;; @end deffn
 (define* (vxml->sxml vx #:optional (ix 0))
   (let ((ev (vector-ref vx ix)))
@@ -130,6 +134,50 @@
      (else #f))
      )
    vx-tree))
+
+(define-syntax vx-match
+  (syntax-rules ()
+    ((_ vx ix c0 c1 ...)
+     (let ((vy (vector-ref vx ix)))
+        (vx-m-case vx vy c0 c1 ...)))))
+
+(define-syntax vx-m-case
+  (syntax-rules (else)
+    ((_ vx vy ((tag n1 ...) ex ...) c1 ...)
+     (let ((kf (lambda () (vx-m-case vx vy c1 ...))))
+        (if (eq? (vector-ref vy 0) 'tag)
+            (vx-m-exp vx vy 1 (n1 ...) (begin (if #f #f) ex ...) (kf))
+            (kf))))
+    ((_ vx vy (else ex ...)) (begin (if #f #f) ex ...))
+    ((_ vx vy) (error "vx-match: nothing matches"))))
+
+(define-syntax vx-m-exp
+  (syntax-rules (unquote _)
+    ((_ vx vy iy () kt kf)
+     kt)
+    ((_ vx vy iy (unquote _) kt kf)
+     kt)
+    ((_ vx vy iy (unquote v) kt kf)
+     (let ((v (vector-ref vy iy))) kt))
+
+    #|
+    ;; fingers crossed: catch a subform ; results in undefined unquoted syms
+    ((_ vx vy iy ((tag m1 ...) n2 ...) kt kf)
+     (let ((vz (vector-ref vx (vector-ref vy iy))))
+       (if (equal? 'tag (vector-ref vz 0))
+           (vx-m-exp vx vz 1 (m1 ...) (vx-m-exp vx vy (1+ iy) (n2 ...) kt kf) kf)
+           kf)))
+    |#
+
+    ((_ vx vy iy (n1 n2 ...) kt kf)
+     (vx-m-exp vx vy iy n1 (vx-m-exp vx vy (1+ iy) (n2 ...) kt kf) kf))
+    ((_ vx vy iy u kt kf)
+     (let ((vyi (vector-ref vy iy)))
+       (cond
+        ((and (integer? vyi) (symbol? u)
+              (eq? (vector-ref (vector-ref vx vyi) 0) u)) kt)
+        ((and (string? u) (string=? vyi u)) kt)
+        (else kf))))))
 
 
 ;; ============================================================================
@@ -471,7 +519,7 @@
            (else (vector-set! fv ix v1) #t))))))
 
 (gen-flags USE USE-syms
-           NUM STR SCT HDL OBJ ;; number string struct handle instance
+           NUM STR SCT HDL OBJ FTN ;; number string struct handle instance
            INT FLT CPX
            RK0 RK1 RK2 RK3 RK4 RK5 RK6 RK7)
 
@@ -524,38 +572,6 @@
 
 ;; dims : list of dims only for rk > 0
 ;; challenge is to map expressions to transformation of dims
-
-(define-syntax vx-match
-  (syntax-rules ()
-    ((_ vx ix c0 c1 ...)
-     (let ((vy (vector-ref vx ix)))
-        (vx-m-case vx vy c0 c1 ...)))))
-
-(define-syntax vx-m-case
-  (syntax-rules (else)
-    ((_ vx vy ((tag n1 ...) ex ...) c1 ...)
-     (let ((kf (lambda () (vx-m-case vx vy c1 ...))))
-        (if (eq? (vector-ref vy 0) 'tag)
-            (vx-m-exp vx vy 1 (n1 ...) (begin (if #f #f) ex ...) (kf))
-            (kf))))
-    ((_ vx vy (else ex ...)) (begin (if #f #f) ex ...))
-    ((_ vx vy) (error "vx-match: nothing matches"))))
-
-(define-syntax vx-m-exp
-  (syntax-rules (unquote)
-    ((_ vx vy iy () kt kf)
-     kt)
-    ((_ vx vy iy (unquote v) kt kf)
-     (let ((v (vector-ref vy iy))) kt))
-    ((_ vx vy iy (n1 n2 ...) kt kf)
-     (vx-m-exp vx vy iy n1 (vx-m-exp vx vy (1+ iy) (n2 ...) kt kf) kf))
-    ((_ vx vy iy u kt kf)
-     (let ((vyi (vector-ref vy iy)))
-       (cond
-        ((and (integer? vyi) (symbol? u)
-              (eq? (vector-ref (vector-ref vx vyi) 0) u)) kt)
-        ((and (string? u) (string=? vyi u)) kt)
-        (else kf))))))
 
 (define* (find-idents tree #:optional (idl '())) ;; => set of ident names
   (match tree
@@ -611,6 +627,17 @@
                (fl-join flv ix c? USE-NUM))
               ((assn ,lval ,rval)
                (fl-join flv lval c? (vector-ref flv rval)))
+              #|
+              ((call (ident ,id) ,exl)
+               (pperr (vxml->sxml vx ix)))
+              |#
+              ((call ,id ,_)
+               (let ((vz (vector-ref vx id)))
+                 (sferr "call ~s\n" (vxml->sxml vx id))
+                 (if (eq? 'ident (vector-ref vz 0))
+                     (let ((name (vector-ref vz 1)))
+                       #f)
+                     (fl-join flv id c? USE-HDL))))
               ;; todo: sel call array-ref 
               (else
                (unless (member (vector-ref (vector-ref vx ix) 0)
@@ -627,7 +654,8 @@
         (for-each
          (lambda (p)
            (let ((nm (car p)) (ix (cdr p)))
-             (sf "~s: ~s\n" nm (USE-syms (vector-ref idv ix)))))
+             #;(sf "~s: ~s\n" nm (USE-syms (vector-ref idv ix)))
+             #t))
          sxt)
         ni)))))
 
