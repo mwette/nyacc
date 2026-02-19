@@ -30,7 +30,7 @@
  
 (package
  (name "nyacc-dev")
- (version "03.03.01")
+ (version "03.03.02")
  (source (local-file "." "guile-wtf" #:recursive? #t #:select? vcs-file?))
  (build-system gnu-build-system)
  (native-inputs (list guile-3.0))
