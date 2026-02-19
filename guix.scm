@@ -21,14 +21,17 @@
              (guix git-download)
              (guix build-system gnu)
              (guix licenses)
-             (gnu packages bash)
              (gnu packages autotools)
              (gnu packages guile))
+
+(define vcs-file?
+  (or (git-predicate (current-source-directory))
+      (const #t)))
  
 (package
  (name "nyacc-dev")
- (version "3.03")
- (source (git-checkout (url (dirname (current-filename)))))
+ (version "03.03.01")
+ (source (local-file "." "guile-wtf" #:recursive? #t #:select? vcs-file?))
  (build-system gnu-build-system)
  (native-inputs (list guile-3.0))
  (home-page "https://github.com/mwette/nyacc")
