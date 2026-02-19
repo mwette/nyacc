@@ -31,7 +31,7 @@
 (package
  (name "nyacc-dev")
  (version "03.03.02")
- (source (local-file "." "guile-wtf" #:recursive? #t #:select? vcs-file?))
+ (source (local-file "." "nyacc" #:recursive? #t #:select? vcs-file?))
  (build-system gnu-build-system)
  (native-inputs (list guile-3.0))
  (home-page "https://github.com/mwette/nyacc")
