@@ -73,7 +73,7 @@ parsers to allow execution with Guile as extension languages.")))
      (method git-fetch)
      (uri (git-reference
            (url "https://github.com/mwette/nyacc")
-           (commit "dev-" version)))
+           (commit (string-append "dev-" version))))
      (file-name (string-append "nyacc-dev-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))))
 
@@ -87,7 +87,7 @@ parsers to allow execution with Guile as extension languages.")))
      (method git-fetch)
      (uri (git-reference
            (url "https://github.com/mwette/nyacc")
-           (commit "V" version)))
+           (commit (string-append "V" version))))
      (file-name (string-append "nyacc-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))))
 
