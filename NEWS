@@ -17,6 +17,7 @@ without any warranty.
         * for mes, c99 uses mach.scm instead of pre-compiled tables in mach.d
         * for mes, added hooks for simple-match
         * removed pdf files from distribution
+        * added guix.scm and etc/nyacc-guix.scm
 
 2026-01-14  V3.02.0
         * Many thanks to #lechner for persistence in testing new commits!
