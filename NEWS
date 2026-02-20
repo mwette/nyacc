@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2026-02-2X  V3.02.1
+2026-02-20  V3.02.1
         * c99/mach.scm(grammar): split "unsigned __int128_t" into two tokens
 
 2026-01-14  V3.02.0
