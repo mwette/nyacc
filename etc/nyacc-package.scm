@@ -100,7 +100,7 @@ parsers to allow execution with Guile as extension languages.")))
 ;; -- local package 
 
 (define vcs-file?
-  (or (git-predicate (dirname (current-source-directory)))) (const #t)))
+  (or (git-predicate (dirname (current-source-directory))) (const #t)))
 
 ;not in a Git checkout
 (define-public nyacc-local
