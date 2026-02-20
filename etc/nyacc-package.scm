@@ -28,6 +28,7 @@
 
 (define nyacc-sha256-base32-map
   '(("9.99.9" . "marker - do not delete")
+    ("3.02.1" . "1lf2ajzl9prv11splvv0yjppcz6myys2y8vlib1417ygi5151p49")
     ("3.02.0" . "0lkjc52x7q04ris0vndn32cylfnzfrqqj2m3s8m0kbbj5rl2ggyh")
     ("3.00.0" . "066wg0hvr7272bdxbn8b2ahn4yqrphfir8f9w9qd222s4ipd0iqa")
     ("0.00.0" . "marker - do not delete")))
