@@ -25,6 +25,10 @@
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages guile))
 
+;; nyacc uses a subtle versioning scheme:
+;;   X.YY.Z is for releases (w/ tag VX.YY.Z)
+;;   X.YY.ZZ is for deveopent towards X.YY.0 (w/ tag dev-X.YY.ZZ)
+
 (define nyacc-sha256-base32-map
   '(("9.99.9" . "marker - do not delete")
     ("3.03.03" . "0h9m3mszc2wrhvxacm9wphci5ip2g8cw3k6k677lx4mfrfys49xk")
@@ -83,7 +87,7 @@ parsers to allow execution with Guile as extension languages.")))
      (method git-fetch)
      (uri (git-reference
            (url "https://github.com/mwette/nyacc")
-           (commit "dev-" version)))
+           (commit "V" version)))
      (file-name (string-append "nyacc-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))))
 
