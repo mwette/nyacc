@@ -64,7 +64,7 @@
   #:use-module (nyacc foreign arch-info)
   #:use-module (nyacc lang c99 fh-utils)
   #:re-export (*nyacc-version*)
-  #:version (3 02 0))
+  #:version (3 02 1))
 
 (define default-renamer (lambda (name ctxt) name))
 

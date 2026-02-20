@@ -22,7 +22,7 @@ FFI Helper User Guide
 Matt Wette
 May 2024
 <<<<<<< HEAD
-With NYACC Version 3.02.0
+With NYACC Version 3.02.1
 =======
 With NYACC Version 3.01.0
 >>>>>>> dev-3.01

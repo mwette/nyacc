@@ -15,8 +15,7 @@
    ;; 1. conditional-expression => logical-or-expression
    (lambda ($1 . $rest) $1)
    ;; 2. conditional-expression => logical-or-expression "?" logical-or-expres...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(cond-expr ,$1 ,$3 ,$5))
+   (lambda ($5 $4 $3 $2 $1 . $rest) `(cond-expr ,$1 ,$3 ,$5))
    ;; 3. logical-or-expression => logical-and-expression
    (lambda ($1 . $rest) $1)
    ;; 4. logical-or-expression => logical-or-expression "||" logical-and-expre...
@@ -32,13 +31,11 @@
    ;; 9. bitwise-xor-expression => bitwise-and-expression
    (lambda ($1 . $rest) $1)
    ;; 10. bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expr...
-   (lambda ($3 $2 $1 . $rest)
-     `(bitwise-xor ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(bitwise-xor ,$1 ,$3))
    ;; 11. bitwise-and-expression => equality-expression
    (lambda ($1 . $rest) $1)
    ;; 12. bitwise-and-expression => bitwise-and-expression "&" equality-expression
-   (lambda ($3 $2 $1 . $rest)
-     `(bitwise-and ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(bitwise-and ,$1 ,$3))
    ;; 13. equality-expression => relational-expression
    (lambda ($1 . $rest) $1)
    ;; 14. equality-expression => equality-expression "==" relational-expression
@@ -102,14 +99,11 @@
    ;; 43. primary-expression => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
    ;; 44. primary-expression => '$chlit/L
-   (lambda ($1 . $rest)
-     `(char (@ (type "wchar_t")) ,$1))
+   (lambda ($1 . $rest) `(char (@ (type "wchar_t")) ,$1))
    ;; 45. primary-expression => '$chlit/u
-   (lambda ($1 . $rest)
-     `(char (@ (type "char16_t")) ,$1))
+   (lambda ($1 . $rest) `(char (@ (type "char16_t")) ,$1))
    ;; 46. primary-expression => '$chlit/U
-   (lambda ($1 . $rest)
-     `(char (@ (type "char32_t")) ,$1))
+   (lambda ($1 . $rest) `(char (@ (type "char32_t")) ,$1))
    ;; 47. primary-expression => "defined" "(" '$ident ")"
    (lambda ($4 $3 $2 $1 . $rest) `(defined ,$3))
    ;; 48. primary-expression => "defined" '$ident
@@ -117,8 +111,7 @@
    ;; 49. primary-expression => "__has_include__" "(" '$string ")"
    (lambda ($4 $3 $2 $1 . $rest) `(has-include ,$3))
    ;; 50. primary-expression => "__has_include_next__" "(" '$string ")"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(has-include-next ,$3))
+   (lambda ($4 $3 $2 $1 . $rest) `(has-include-next ,$3))
    ;; 51. primary-expression => "(" expression-list ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; 52. expression-list => conditional-expression

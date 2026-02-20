@@ -23,8 +23,7 @@
    ;; 5. postfix-expression => primary-expression
    (lambda ($1 . $rest) $1)
    ;; 6. postfix-expression => postfix-expression "[" constant-expression "]"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(array-ref ,$3 ,$1))
+   (lambda ($4 $3 $2 $1 . $rest) `(array-ref ,$3 ,$1))
    ;; 7. postfix-expression => postfix-expression "." identifier
    (lambda ($3 $2 $1 . $rest) `(d-sel ,$3 ,$1))
    ;; 8. postfix-expression => postfix-expression "->" identifier
@@ -96,13 +95,11 @@
    ;; 41. bitwise-and-expression => equality-expression
    (lambda ($1 . $rest) $1)
    ;; 42. bitwise-and-expression => bitwise-and-expression "&" equality-expression
-   (lambda ($3 $2 $1 . $rest)
-     `(bitwise-and ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(bitwise-and ,$1 ,$3))
    ;; 43. bitwise-xor-expression => bitwise-and-expression
    (lambda ($1 . $rest) $1)
    ;; 44. bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expr...
-   (lambda ($3 $2 $1 . $rest)
-     `(bitwise-xor ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(bitwise-xor ,$1 ,$3))
    ;; 45. bitwise-or-expression => bitwise-xor-expression
    (lambda ($1 . $rest) $1)
    ;; 46. bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expres...
@@ -118,8 +115,7 @@
    ;; 51. conditional-expression => logical-or-expression
    (lambda ($1 . $rest) $1)
    ;; 52. conditional-expression => logical-or-expression "?" constant-expressi...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(cond-expr ,$1 ,$3 ,$5))
+   (lambda ($5 $4 $3 $2 $1 . $rest) `(cond-expr ,$1 ,$3 ,$5))
    ;; 53. constant-expression => conditional-expression
    (lambda ($1 . $rest) $1)
    ;; 54. identifier => '$ident
@@ -131,14 +127,11 @@
    ;; 57. constant => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
    ;; 58. constant => '$chlit/L
-   (lambda ($1 . $rest)
-     `(char (@ (type "wchar_t")) ,$1))
+   (lambda ($1 . $rest) `(char (@ (type "wchar_t")) ,$1))
    ;; 59. constant => '$chlit/u
-   (lambda ($1 . $rest)
-     `(char (@ (type "char16_t")) ,$1))
+   (lambda ($1 . $rest) `(char (@ (type "char16_t")) ,$1))
    ;; 60. constant => '$chlit/U
-   (lambda ($1 . $rest)
-     `(char (@ (type "char32_t")) ,$1))
+   (lambda ($1 . $rest) `(char (@ (type "char32_t")) ,$1))
    ;; 61. string-literal => '$string
    (lambda ($1 . $rest) (make-tl 'string $1))
    ;; 62. string-literal => string-literal '$string
