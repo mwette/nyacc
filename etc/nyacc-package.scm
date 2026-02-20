@@ -61,11 +61,11 @@ Guile Scheme bindings for C-based libraries.
 It provides (partially implemented) compilers based on above mentioned
 parsers to allow execution with Guile as extension languages.")))
 
-(define-public nyacc
+(define-public nyacc-3.02.1
   (package
    (inherit nyacc-base)
    (name "nyacc")
-   (version "3.02.0")
+   (version "3.02.1")
    (source 
     (origin
      (method git-fetch)
@@ -74,7 +74,6 @@ parsers to allow execution with Guile as extension languages.")))
            (commit (string-append "V" version))))
      (file-name (string-append "nyacc-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))))
-
 
 ;; -- development versions
 
