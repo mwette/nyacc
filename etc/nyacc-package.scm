@@ -46,6 +46,7 @@
      (file-name (string-append "nyacc-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))
    (build-system gnu-build-system)
+   (arguments (list #:strip-binaries? #f))
    (native-inputs (list guile-3.0))
    (home-page "https://github.com/mwette/nyacc")
    (synopsis "parser generator, c parser, ffi-helper for guile")
