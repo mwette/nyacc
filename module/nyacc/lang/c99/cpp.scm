@@ -424,12 +424,12 @@
   (let loop ((osq '()) (isq tokl))
     (match isq
       ('() (reverse osq))
+      
       (`(($hash . ,_1) ($ident . ,ident) . ,_2)
        (let ((arg (assoc-ref argd ident)))
          (unless arg (throw 'cpp-error "not found: ~s" ident))
          (loop (acons '$string (tokl->string arg) osq) (cddr isq))))
-
-      (`(($dhash . ,_1) (#\space . ,_2) . ,rest)
+      (`(($hash . ,_1) (#\space . ,_2) . ,rest)
        (loop osq (cons (car isq) (cddr isq))))
 
       (`(($dhash . ,_1) ($ident . ,name) . ,rest)
@@ -440,7 +440,8 @@
               (osq1 (if isp (cddr osq) (cdr osq)))
               (osq (append-reverse (cdr rpl) (append-reverse tkl osq1))))
          (loop osq rest)))
-
+      (`(($dhash . ,_1) (#\space . ,_2) . ,rest)
+       (loop osq (cons (car isq) (cddr isq))))
       (`(($dhash . ,_1) ,rs . ,rest)
        (let* ((isp (eq? (caar osq) #\space))
               (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdr rs)))
