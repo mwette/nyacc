@@ -630,6 +630,13 @@
       (else
        (throw 'cpp-error "cpp.scm(tokenize-args): coding error"))))))
 
+;; given a string, add escape to implement as tring
+(define (escstr str)
+  (reverse-list->string
+   (string-fold (lambda (ch chl)
+                  (if (memq ch '(#\")) (cons* ch #\\ chl) (cons ch chl)))
+                '() str)))
+
 ;;.@deffn {Procedure} rtokl->string reverse-token-list => string
 ;; Convert reverse token-list to string.
 ;;.@end deffn
@@ -638,7 +645,7 @@
     (cond
      ((null? tkl) (string-join stl ""))
      ((memq (caar tkl) '($string $text))
-      (loop (cons (string-append "\"" (cdar tkl) "\"") stl) (cdr tkl)))
+      (loop (cons (string-append "\"" (escstr (cdar tkl)) "\"") stl) (cdr tkl)))
      ((memq (caar tkl) '($chlit $chlit/L $chlit/U))
       (loop (cons (string-append "'" (cdar tkl) "'") stl) (cdr tkl)))
      (else (loop (cons (cdar tkl) stl) (cdr tkl))))))
