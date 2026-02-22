@@ -234,7 +234,7 @@
     (and
      (equal?
       (parse-string-list
-       "#if __has_include__(\"exam.d/inc.h\")\n"
+       "#if __has_include (\"exam.d/inc.h\")\n"
        "int x;\n"
        "#else\n"
        "char x;\n"
@@ -244,7 +244,7 @@
               (init-declr-list (init-declr (ident "x"))))))
      (equal?
       (parse-string-list
-       "#if __has_include__(\"xxxx.d/inc.h\")\n"
+       "#if __has_include (<xxxx.d/inc.h>)\n"
        "int x;\n"
        "#else\n"
        "char x;\n"
