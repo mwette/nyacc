@@ -23,6 +23,7 @@
   #:use-module (guix build-system gnu)
   #:use-module (guix licenses)
   #:use-module (gnu packages autotools)
+  #:use-module (gnu packages gcc)
   #:use-module (gnu packages guile))
 
 
@@ -48,8 +49,11 @@
    (build-system gnu-build-system)
    (arguments (list #:strip-binaries? #f))
    (native-inputs (list guile-3.0))
+   ;; Use of ffi-helper may need gcc, but let the user do that?
+   ;; See nyacc/lang/c99/util.scm.
+   ;;(propagated-inputs (list gcc))
    (home-page "https://github.com/mwette/nyacc")
-   (synopsis "parser generator, c parser, ffi-helper for guile")
+   (synopsis "parser generator, C parser and ffi-helper for guile")
    (license lgpl3+)
    (description
     "NYACC, for Not Yet Another Compiler Compiler, is set of guile modules for
