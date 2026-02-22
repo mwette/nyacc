@@ -382,7 +382,7 @@
           (define (inc-stmt->file-spec stmt) ;; retain <> or ""
             (let* ((arg (cadr stmt)))
               (if (ident-like? arg) ;; #include MYFILE
-                  (expand-cpp-macro-ref arg (cpi-defs info))
+                  (macro-expand-text arg (cpi-defs info))
                   arg)))
 
           (define (file-spec->file spec)
