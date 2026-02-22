@@ -114,6 +114,10 @@
     
     (sx-match tree
 
+      ((program . ,parts)
+       (sf "%% program\n\n")
+       (for-each ppxin parts))
+
       ((script-file . ,items)
        (for-each ppxin items))
 
