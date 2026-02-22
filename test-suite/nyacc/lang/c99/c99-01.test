@@ -10,6 +10,8 @@
 ;; CPP tests
 
 (define-module (c99-01)
+  #:use-module (ice-9 match)
+  #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
   #:use-module (test-suite lib))
 
@@ -36,10 +38,27 @@
   (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
 (register-reporter full-reporter)
 
+(define cpp-define (@@ (nyacc lang c99 cpp) cpp-define))
+
+(define has-inc-defs
+  '(("__has_include" ("X")
+     ($ident . "__has_include__")
+     (#\( . "(") ($hash . "#") ($ident . "X") (#\) . ")"))
+    ("__has_include_next" ("X")
+     ($ident . "__has_include_next__")
+     (#\( . "(") ($hash . "#") ($ident . "X") (#\) . ")"))))
+
+(define (rddef . stl)
+  (let* ((str (string-join stl " "))
+         (cppdef (with-input-from-string str cpp-define)))
+    (match cppdef
+      (`(define (name ,name) (args . ,args) (repl ,repl))
+       (cons* name args (tokenize-cpp-string repl)))
+      (`(define (name ,name) (repl ,repl))
+       (cons* name (tokenize-cpp-string repl))))))
+
 ;; parser test
 (with-test-prefix "nyacc/c99-01, CPP"
-
-  ;; add ex04.c
 
   ;; Get a simple statement to parse.
   (pass-if "include in place"
@@ -244,6 +263,16 @@
               (init-declr-list (init-declr (ident "x"))))))
      (equal?
       (parse-string-list
+       "#if __has_include (<exam.d/inc.h>)\n"
+       "int x;\n"
+       "#else\n"
+       "char x;\n"
+       "#endif\n")
+      '(trans-unit
+        (decl (decl-spec-list (type-spec (fixed-type "int")))
+              (init-declr-list (init-declr (ident "x"))))))
+     (equal?
+      (parse-string-list
        "#if __has_include (<xxxx.d/inc.h>)\n"
        "int x;\n"
        "#else\n"
@@ -320,26 +349,76 @@
                 (type-spec (float-type "double")))
                (init-declr-list (init-declr (ident "xy")))))))))
 
-  #;(pass-if "bug 66626"
-    (let* ((code
-            (string-append
-             "struct { struct { int value; } elements; } global;\n"
-             "#define VALUE(elements) elements.value\n"
-             "#define elements        GLOBAL(elements)\n"
-             "#define GLOBAL(name)    global.name\n"
-             "int v2 = VALUE(elements);\n"))
-           (tree (parse-string code))
-           (decl (caddr tree)))
-      (equal?
-       decl
-       '(decl (decl-spec-list (type-spec (fixed-type "int")))
-              (init-declr-list
-               (init-declr
-                (ident "v2")
-                (initzer
-                 (d-sel (ident "value")
-                        (d-sel (ident "elements")
-                               (p-expr (ident "global")))))))))))
+  (pass-if "macro-expand-text"
+    (and
+     (equal?
+      (macro-expand-text "FILE" '(("FILE" . "<stdio.h>")))
+      "<stdio.h>")
+     (equal?
+      (macro-expand-text "__has_include(<stdio.h>)" has-inc-defs)
+      "__has_include__(\"<stdio.h>\")")
+     (equal?
+      (macro-expand-text "defined FOO" '(("FOO" ($string "random"))))
+      "defined FOO")
+     (equal?
+      (let* ((defs (list (rddef "A(x) B(x)+3")
+                         (rddef "B(y) y*B(2)"))))
+        (macro-expand-text "A(B(1))" defs))
+      "1*B(2)*B(2)+3")
+     (equal?
+      (let* ((defs (list (rddef "SQRT(x)sqrt(1+x)"))))
+        (macro-expand-text "SQRT(SQRT(3))" defs))
+      "sqrt(1+sqrt(1+3))")
+     (equal? ;; bug 66626
+      (let* ((defs (list
+                        (rddef "VALUE(elements) elements.value")
+                        (rddef "elements GLOBAL(elements)")
+                        (rddef "GLOBAL(name)global.name"))))
+        (macro-expand-text "VALUE(elements)" defs))
+      "global.elements.value")
+     (equal?
+      (let* ((defs (list
+                    (rddef "foo1(X,Y) ((X)*(Y))")
+                    (rddef "foo(A,B,...)"
+                           "foo1(A,B)+bar(0, A, B, __VA_ARGS__)"))))
+        (macro-expand-text "foo(1, 2, 3, 4, foo1(5,6))" defs))
+      "((1)*(2))+bar(0, 1, 2, 3, 4, ((5)*(6)))")
+     (equal?
+      (let* ((defs
+               (list (rddef "assert(x) ((x) ? (void)0 : assert_fail (#x))"))))
+        (macro-expand-text "assert(boo);" defs))
+      "((boo) ? (void)0 : assert_fail (\"boo\"));")
+     (equal?
+      (let ((defs (list (rddef "sqrt(X) sqrt(X)+1"))))
+        (macro-expand-text "sqrt(2)" defs))
+      "sqrt(2)+1")
+     (equal?
+      (let* ((defs (list (rddef "ELFW(type) ELF##32##_##type")
+                         (rddef "ELF32_ST_INFO(bind,type)"
+                                "(((bind) << 4) + ((type) & 0xf))"))))
+        (macro-expand-text "ELFW(ST_INFO)(1, 0)" defs))
+      "(((1) << 4) + ((0) & 0xf))")
+     (equal?
+      (let* ((defs
+               (list (rddef "DEF(id,str) ,id")
+                     (rddef "DEF_BWLX DEF_BWL")
+                     (rddef "DEF_BWL(x) DEF(TOK_ASM_ ## x, #x)"))))
+        (macro-expand-text "DEF_BWLX(mov)" defs))
+      ",TOK_ASM_mov")
+     (equal?
+      (let ((defs '(("bar" ("p" "q") . "foo(p,q)")
+                    ("foo" ("r" "s") . "bar(r,s)")
+                    ("FOO" ("x" "y") . "foo(x,y)"))))
+        (macro-expand-text "FOO(FOO(1,2),3)" defs))
+      "foo(foo(1,2),3)")
+     (equal?
+      (let* ((defs
+               (list (rddef "DEF(id,str) ,id")
+                     (rddef "DEF_BWLX DEF_BWL")
+                     (rddef "DEF_BWL(x) DEF(TOK_ASM_ ## x, #x)"))))
+        (macro-expand-text "DEF_BWLX(mov)" defs))
+      ",TOK_ASM_mov")
+     #t))
 
   #t)
 
