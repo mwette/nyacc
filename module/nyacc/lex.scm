@@ -329,18 +329,18 @@
 (define (read-esc-char)
   (let ((c2 (read-char)))
     (case c2
-      ((#\t) "\t")               ; horizontal tab U+0009
-      ((#\n) "\n")               ; newline U+000A
-      ((#\v) "\v")               ; verticle tab U+000B
-      ((#\f) "\f")               ; formfeed U+000C
-      ((#\r) "\r")               ; return U+000D
-      ((#\a) "\x07")             ; alert U+0007
-      ((#\b) "\x08")             ; backspace U+0008 not in guile 1.8
-      ((#\0) (string (integer->char (read-oct)))) ; octal
-      ((#\1 #\2 #\3 #\4 #\5 #\6 #\7)              ; octal
-       (unread-char c2) (string (integer->char (read-oct))))
-      ((#\x) (string (integer->char (read-hex)))) ; hex
-      ((#\\ #\' #\" #\? #\|) (string c2))
+      ((#\t) #\tab)               ; horizontal tab U+0009
+      ((#\n) #\newline)           ; newline U+000A
+      ((#\v) #\vtab)              ; verticle tab U+000B
+      ((#\f) #\page)              ; formfeed U+000C
+      ((#\r) #\return)            ; return U+000D
+      ((#\a) #\alarm)             ; alert U+0007
+      ((#\b) #\backspace)         ; backspace U+0008 not in guile 1.8
+      ((#\0) (integer->char (read-oct))) ; octal
+      ((#\1 #\2 #\3 #\4 #\5 #\6 #\7)     ; octal
+       (unread-char c2) (integer->char (read-oct)))
+      ((#\x) (integer->char (read-hex))) ; hex
+      ((#\\ #\' #\" #\? #\|) c2)
       (else (error "bad escape sequence" c2)))))
 
 (define (wchar t)
@@ -357,7 +357,7 @@
   (cond
    ((char=? ch #\')
     (let* ((c1 (read-char))
-           (sc (if (eqv? c1 #\\) (read-esc-char) (string c1))))
+           (sc (string (if (eqv? c1 #\\) (read-esc-char) c1))))
       (if (not (char=? #\' (read-char)))
           (throw 'nyacc-error "read-c-chlit: bad char literal"))
       (cons '$chlit sc)))
@@ -370,9 +370,10 @@
    (else #f)))
 
 ;; read multi-char literal : braindamage in gobject/glib-types.h
+;; IIRC only pango uses this as of 2026
 (define (read-c-mclit ch)
   (define (readit ch)
-    (let loop ((chl (list ch)) (ch (read-char)))
+    (let loop ((chl '()) (ch ch))
       (cond
        ((char=? ch #\') (cons '$chlit (rls chl)))
        ((char=? ch #\\) (loop (cons (read-esc-char) chl) (read-char)))
