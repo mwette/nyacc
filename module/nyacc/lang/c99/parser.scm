@@ -25,9 +25,6 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 util)
   #:re-export (c99-def-help c99-std-help))
-(cond-expand
- (mes (use-modules (nyacc lang c99 mach)))
- (else))
 
 ;; === body ==========================
 
@@ -699,16 +696,11 @@
 
 ;; === file parser ====================
 
-(cond-expand
- (mes
   (define c99-tables
     (map (lambda (key) (cons key (assq-ref c99-mach key)))
          '(mtab ntab len-v rto-v pat-v)))
   (define c99-act-v (assq-ref c99-mach 'act-v))
   (define c99-mtab (assq-ref c99-mach 'mtab)))
- (else
-  (include-from-path "nyacc/lang/c99/mach.d/c99-act.scm")
-  (include-from-path "nyacc/lang/c99/mach.d/c99-tab.scm")))
 
 (define c99-raw-parser
   (make-lalr-parser
@@ -783,16 +775,12 @@
 
 ;; === expr parser ====================
 
-(cond-expand
- (mes
-  (define c99x-tables
-    (map (lambda (key) (cons key (assq-ref c99x-mach key)))
-         '(mtab ntab len-v rto-v pat-v)))
-  (define c99x-act-v (assq-ref c99x-mach 'act-v))
-  (define c99x-mtab (assq-ref c99x-mach 'mtab)))
- (else
-  (include-from-path "nyacc/lang/c99/mach.d/c99x-act.scm")
-  (include-from-path "nyacc/lang/c99/mach.d/c99x-tab.scm")))
+(use-modules (nyacc lang c99 mach))
+(define c99x-tables
+  (map (lambda (key) (cons key (assq-ref c99x-mach key)))
+       '(mtab ntab len-v rto-v pat-v)))
+(define c99x-act-v (assq-ref c99x-mach 'act-v))
+(define c99x-mtab (assq-ref c99x-mach 'mtab))
 
 (define c99x-raw-parser
   (make-lalr-parser

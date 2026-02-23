@@ -47,7 +47,6 @@
   #:use-module (nyacc foreign arch-info))
 (cond-expand
  (mes
-  (use-modules (nyacc lang c99 cxmach))
   (use-modules (smatch))
   (define-macro (match exp . clauses)
     `((smatch-lambda . ,clauses) ,exp)))
@@ -65,16 +64,12 @@
 (define (sizeof-string-const value)
   #f)
 
+(use-modules (nyacc lang c99 cxmach))
 (cond-expand
- (mes
-  (define c99cx-tables
-    (map (lambda (key) (cons key (assq-ref c99cx-mach key)))
-         '(mtab ntab len-v rto-v pat-v)))
-  (define c99cx-act-v (assq-ref c99cx-mach 'act-v))
-  (define c99cx-mtab (assq-ref c99cx-mach 'mtab)))
- (else
-  (include-from-path "nyacc/lang/c99/mach.d/c99cx-act.scm")
-  (include-from-path "nyacc/lang/c99/mach.d/c99cx-tab.scm")))
+  (map (lambda (key) (cons key (assq-ref c99cx-mach key)))
+       '(mtab ntab len-v rto-v pat-v)))
+(define c99cx-act-v (assq-ref c99cx-mach 'act-v))
+(define c99cx-mtab (assq-ref c99cx-mach 'mtab))
 
 (define c99cx-raw-parser
   (make-lalr-parser

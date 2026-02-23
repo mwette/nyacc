@@ -50,7 +50,6 @@
   #:use-module ((nyacc lang util) #:select (report-error)))
 (cond-expand
 (mes
-  (use-modules (nyacc lang c99 cppmach))
   (use-modules (smatch))
   (define-macro (match exp . clauses)
     `((smatch-lambda . ,clauses) ,exp)))
@@ -245,17 +244,12 @@
          (else '(null)))))))
 
 
-(cond-expand
- (mes
-  (define cpp-tables
-    (map (lambda (key) (cons key (assq-ref cpp-mach key)))
-         '(mtab ntab len-v rto-v pat-v)))
-  (define cpp-act-v (assq-ref cpp-mach 'act-v))
-  (define cpp-mtab (assq-ref cpp-mach 'mtab)))
- (else
-  (include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
-  (include-from-path "nyacc/lang/c99/mach.d/cpp-act.scm")))
-  
+(use-modules (nyacc lang c99 cppmach))
+(define cpp-tables
+  (map (lambda (key) (cons key (assq-ref cpp-mach key)))
+       '(mtab ntab len-v rto-v pat-v)))
+(define cpp-act-v (assq-ref cpp-mach 'act-v))
+(define cpp-mtab (assq-ref cpp-mach 'mtab))
 
 (define cpp-raw-parser
   (make-lalr-parser (acons 'act-v cpp-act-v cpp-tables)))
