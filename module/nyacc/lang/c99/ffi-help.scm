@@ -879,19 +879,14 @@
 
 ;; @deffn {Procedure} udecl->sexp udecl udict defined seed)
 ;; Given @var{udecl} produce scheme FFI wrappers for C types, C functions,
-;; and C variables. Return updated @var{defined}, a string based vhash of
-;; types defined. The list is used used in the conversion subroutines.
-;; Returns (values defined term), where defined is a list of defined
-;; types, and wrapped is the same, not used. FIXME
+;; and C variables. Return two values: a list of defined declarations, and
+;; a list of the converted declarations.
 ;; @end deffn
 (define (udecl->sexp udecl udict defined-lz seed)
-  ;; this used to be cnvt-udecl
   "- Procedure: udecl->sexp udecl udict defined seed)
      Given UDECL produce scheme FFI wrappers for C types, C functions,
-     and C variables.  Return updated DEFINED, a string based vhash of
-     types defined.  The list is used used in the conversion
-     subroutines.  Returns (values defined term), where defined is a
-     list of defined types, and wrapped is the same, not used.  FIXME"
+     and C variables.  Return two values: a list of defined
+     declarations, and a list of the converted declarations."
 
   (define defined (if (vhash? defined-lz) defined-lz
                       (alist->vhash (map (lambda (n) (cons n #t)) defined-lz))))
