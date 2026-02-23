@@ -306,6 +306,7 @@
      ("unsigned" "__int128" ($$ '(fixed-type "unsigned __int128")))
      ;; gnu extensions
      ("__int128_t" ($$ '(fixed-type "__int128")))
+     ("__uint128_t" ($$ '(fixed-type "unsigned __int128"))) ;; not documented
      ("unsigned" "__int128_t" ($$ '(fixed-type "unsigned __int128")))
      ;; fixes 250627
      ("short" "signed" ($prec 'imp) ($$ '(fixed-type "short")))
