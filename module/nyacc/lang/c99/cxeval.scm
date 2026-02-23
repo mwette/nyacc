@@ -44,7 +44,8 @@
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (system foreign)
-  #:use-module (nyacc foreign arch-info))
+  #:use-module (nyacc foreign arch-info)
+  #:use-module (nyacc lang c99 cxmach))
 (cond-expand
  (mes
   (use-modules (smatch))
@@ -64,8 +65,7 @@
 (define (sizeof-string-const value)
   #f)
 
-(use-modules (nyacc lang c99 cxmach))
-(cond-expand
+(define c99cx-tables
   (map (lambda (key) (cons key (assq-ref c99cx-mach key)))
        '(mtab ntab len-v rto-v pat-v)))
 (define c99cx-act-v (assq-ref c99cx-mach 'act-v))

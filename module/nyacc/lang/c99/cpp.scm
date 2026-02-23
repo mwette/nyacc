@@ -47,7 +47,8 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang sx-util)
-  #:use-module ((nyacc lang util) #:select (report-error)))
+  #:use-module ((nyacc lang util) #:select (report-error))
+  #:use-module (nyacc lang c99 cppmach))
 (cond-expand
 (mes
   (use-modules (smatch))
@@ -244,7 +245,6 @@
          (else '(null)))))))
 
 
-(use-modules (nyacc lang c99 cppmach))
 (define cpp-tables
   (map (lambda (key) (cons key (assq-ref cpp-mach key)))
        '(mtab ntab len-v rto-v pat-v)))

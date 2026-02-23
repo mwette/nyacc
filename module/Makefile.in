@@ -78,14 +78,6 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/munge.scm		\
 	nyacc/lang/c99/cxmach.scm		\
 	nyacc/lang/c99/cxeval.scm		\
-	nyacc/lang/c99/mach.d/cpp-act.scm	\
-	nyacc/lang/c99/mach.d/cpp-tab.scm	\
-	nyacc/lang/c99/mach.d/c99-act.scm	\
-	nyacc/lang/c99/mach.d/c99-tab.scm	\
-	nyacc/lang/c99/mach.d/c99x-act.scm	\
-	nyacc/lang/c99/mach.d/c99x-tab.scm	\
-	nyacc/lang/c99/mach.d/c99cx-act.scm	\
-	nyacc/lang/c99/mach.d/c99cx-tab.scm	\
 	nyacc/lang/c99/fh-utils.scm		\
 	nyacc/lang/c99/ffi-help.scm		\
 	nyacc/foreign/arch-info.scm		\

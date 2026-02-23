@@ -24,6 +24,7 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 util)
+  #:use-module (nyacc lang c99 mach)
   #:re-export (c99-def-help c99-std-help))
 
 ;; === body ==========================
@@ -696,11 +697,11 @@
 
 ;; === file parser ====================
 
-  (define c99-tables
-    (map (lambda (key) (cons key (assq-ref c99-mach key)))
-         '(mtab ntab len-v rto-v pat-v)))
-  (define c99-act-v (assq-ref c99-mach 'act-v))
-  (define c99-mtab (assq-ref c99-mach 'mtab)))
+(define c99-tables
+  (map (lambda (key) (cons key (assq-ref c99-mach key)))
+       '(mtab ntab len-v rto-v pat-v)))
+(define c99-act-v (assq-ref c99-mach 'act-v))
+(define c99-mtab (assq-ref c99-mach 'mtab))
 
 (define c99-raw-parser
   (make-lalr-parser
