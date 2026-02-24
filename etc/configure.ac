@@ -1,13 +1,13 @@
 dnl configure.ac for guile-nyacc
 
-dnl Copyright (C) 2019-2020 Matthew R. Wette
+dnl Copyright (C) 2019-2020,2026 Matthew Wette
 dnl
 dnl Copying and distribution of this file, with or without modification,
 dnl are permitted in any medium without royalty provided the copyright
 dnl notice and this notice are preserved.  This file is offered as-is,
 dnl without any warranty.
 
-AC_INIT([nyacc], [3.02.0], [], [], [https://savannah.nongnu.org/project/nyacc])
+AC_INIT([nyacc], [3.02.0], [], [], [https://github.com/mwette/nyacc])
 AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
