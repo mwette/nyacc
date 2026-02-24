@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # -*- scheme -*-
 CFLAGS="-g -I/opt/local/include/guile/3.0 -Wunused"
-libdir=$(guile -c "(display (assoc-ref %guile-build-info 'libdir))")
+libdir=`guile -c "(display (assoc-ref %guile-build-info 'libdir))"`
 LIBS="-L$libdir -Wl,--rpath=$libdir -lguile-3.0"
 gcc -o chkarch.so chkarch.c $CFLAGS -shared -fPIC $LIBS
-export LD_LIBRARY_PATH=$(pwd)
+export LD_LIBRARY_PATH=`pwd`
 exec guile -s $0
 !#
 
