@@ -1,6 +1,6 @@
 ;;; scripts/compile-ffi.scm --- NYACC's command-line FFI compiler
 
-;; Copyright (C) 2017-2021,2024-2025 Matthew Wette
+;; Copyright (C) 2017-2021,2024-2026 Matthew Wette
 ;;
 ;; This program is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -95,6 +95,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -R, --dont-recurse    don't do recursive compile on dep's
   -a, --any-suffix      allow any suffix (if not, must be .ffi)
   -w, --no-foreign-library  guile has no (system foreign-library) module
+  -x, --external-cdata  for cdata backend, use external cdata package
 
 See the FFI-Helper User's Manual for help generating a .ffi file.
 Report bugs to https://github.com/mwette/nyacc/issues.\n"))
@@ -151,7 +152,11 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
              (values (acons 'any-suffix #t opts) files)))
    (option '(#\w "no-foreign-library") #f #f
            (lambda (opt name arg opts files)
-             (values (acons 'no-foreign-library #t opts) files)))))
+             (values (acons 'no-foreign-library #t opts) files)))
+   (option '("external-cdata") #f #f
+           (lambda (opt name arg opts files)
+             (values (acons 'ext-cdata #t opts) files)))
+   ))
 
 ;; from scripts/compile.scm
 (define (parse-args args)

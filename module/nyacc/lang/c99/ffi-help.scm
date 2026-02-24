@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2025 Matthew Wette
+;; Copyright (C) 2016-2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -382,7 +382,9 @@
 
 (define (cdata-header)
   `(begin
-     (use-modules (nyacc foreign cdata))
+     ,(if (assq-ref (*options*) 'ext-cdata)
+         '(use-modules (foreign cdata))
+         '(use-modules (nyacc foreign cdata)))
      (define arg->number cdata-arg->number)
      (define arg->pointer cdata-arg->pointer)
      (define (extern-ref obj) (cdata-sel obj '*))
