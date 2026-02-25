@@ -28,7 +28,7 @@ October 2024
 @ifnottex
 @dircategory Software development
 @direntry 
-* NYACC CData User Guide: (nyacc).    The NYACC CData User guide.
+* CData User Guide: (nyacc).    The CData User guide.
 @end direntry
 
 @node Top, Introduction, (dir), (dir)
@@ -36,7 +36,7 @@ October 2024
 @* Matt Wette
 @* October 2024
 @*
-@* This is a user guide for the NYACC CData module for Guile.
+@* This is a user guide for the CData module for Guile.
 @end ifnottex
 
 @menu
