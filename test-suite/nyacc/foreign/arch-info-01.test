@@ -48,7 +48,6 @@
 (use-modules ((srfi srfi-1)
               #:select (lset-difference fold)))
 (define-public (cmp-arch arch-name base-name)
-  (sferr "\ncmp-arch: ~s vs ~s\n" arch-name base-name)
   (let* ((arch (assq-ref (*arch-map*) arch-name))
          (base (assq-ref (*arch-map*) base-name))
          (atm (arch-mtype-map arch)) (akeys (map car atm))
@@ -58,16 +57,10 @@
          (b-a-keys (lset-difference equal? bkeys akeys))
          (zzz (lambda (k s)
                 (let ((av (assoc-ref atm k)) (bv (assoc-ref btm k)))
-                  ;;(sferr "(eq? av bv) => (eq? ~s ~s)\n" av bv)
                   (cond
                    ((eq? av bv) s)
                    (else (sferr "missmatch on ~s: ~s vs ~s\n" k av bv) #f)))))
          (ab-comp (fold zzz #t akeys)))
-    ;;(sferr "akeys: ~s\n" akeys)
-    ;;(sferr "bkeys: ~s\n" bkeys)
-    ;;(sferr "a-b-keys: ~s\n" a-b-keys)
-    ;;(sferr "b-a-keys: ~s\n" b-a-keys)
-    ;;(sferr "ab-comp: ~s\n" ab-comp)
     (cond
      ((pair? a-b-keys) (sferr "bkeys-akeys = ~s\n" a-b-keys) #f)
      ((pair? b-a-keys) (sferr "bkeys-akeys = ~s\n" b-a-keys) #f)
@@ -94,9 +87,10 @@
       (if chkarch-compiled
             (fold
              (lambda (n s)
-               (let ((g-sz (sizeof-basetype n))
-                     (n-sz (arch-sizeof n)))
-                 (and s (= n-sz g-sz))))
+               (false-if-exception
+                (let ((g-sz (sizeof-basetype n))
+                      (n-sz (arch-sizeof n)))
+                  (and s (= n-sz g-sz)))))
              #t base-type-symbol-testers)
             'untested))
 
@@ -104,9 +98,10 @@
       (if chkarch-compiled
           (fold
            (lambda (n s)
-             (let ((g-sz (sizeof-basetype n))
-                   (n-sz (arch-sizeof n)))
-               (and s (= n-sz g-sz))))
+             (false-if-exception
+              (let ((g-sz (sizeof-basetype n))
+                    (n-sz (arch-sizeof n)))
+                (and s (= n-sz g-sz)))))
            #t base-type-symbol-testers)
           'untested))
   

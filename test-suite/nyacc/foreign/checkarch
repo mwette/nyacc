@@ -1,7 +1,8 @@
 #!/bin/sh
 # -*- scheme -*-
-CFLAGS="-g -I/opt/local/include/guile/3.0 -Wunused"
+incdir=`guile -c "(display (assoc-ref %guile-build-info 'includedir))"`
 libdir=`guile -c "(display (assoc-ref %guile-build-info 'libdir))"`
+CFLAGS="-g -I$incdir/guile/3.0 -Wunused"
 LIBS="-L$libdir -Wl,--rpath=$libdir -lguile-3.0"
 gcc -o chkarch.so chkarch.c $CFLAGS -shared -fPIC $LIBS
 export LD_LIBRARY_PATH=`pwd`
