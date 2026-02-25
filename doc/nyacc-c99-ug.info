@@ -16,7 +16,6 @@ END-INFO-DIR-ENTRY
 C99 Parser User Guide
 Matt Wette
 June 2019
-With NYACC Version 3.02.0
 
 
 File: nyacc-c99-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -210,8 +209,8 @@ Manual.  It is included with the NYACC source as COPYING.DOC.
 
 
 Tag Table:
-Node: Top695
-Node: Introduction900
+Node: Top669
+Node: Introduction874
 
 End Tag Table
 
