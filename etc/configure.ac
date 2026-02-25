@@ -7,7 +7,7 @@ dnl are permitted in any medium without royalty provided the copyright
 dnl notice and this notice are preserved.  This file is offered as-is,
 dnl without any warranty.
 
-AC_INIT([nyacc], [3.02.0], [], [], [https://github.com/mwette/nyacc])
+AC_INIT([nyacc], [3.03.0], [], [], [https://github.com/mwette/nyacc])
 AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
