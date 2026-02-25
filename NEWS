@@ -18,6 +18,9 @@ without any warranty.
         * for mes, added hooks for simple-match
         * removed pdf files from distribution
         * added guix.scm and etc/nyacc-guix.scm
+        * added `--external-cdata` option to compile-ffi; planning separation
+          of (nyacc foreign cdata) to a separate package (foreign cdata);
+          see https://github.com/mwette/guile-cdata
 
 2026-01-14  V3.02.0
         * Many thanks to #lechner for persistence in testing new commits!
