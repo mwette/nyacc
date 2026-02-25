@@ -22,6 +22,9 @@ without any warranty.
           of (nyacc foreign cdata) to a separate package (foreign cdata);
           see https://github.com/mwette/guile-cdata
 
+2026-02-20  V3.02.1
+        * c99/mach.scm(grammar): split "unsigned __int128_t" into two tokens
+
 2026-01-14  V3.02.0
         * Many thanks to #lechner for persistence in testing new commits!
         * Updated ffi-helper to allow other backends (e.g, bstruct,
