@@ -15,13 +15,18 @@ without any warranty.
         * For C, define __has_include and __has_include_next in util.scm.
         * Updated arch-info to add `-linux' to most arch names.
           In the future use `(with-arch "x86_64-linux"' to be more specific.
-        * for mes, c99 uses mach.scm instead of pre-compiled tables in mach.d
+        * removed c99/mach.d/*; c99 now uses module mach.scm directly
+          - no intermediate files in mach.d/*, but more dependencies for parser
         * for mes, added hooks for simple-match
+        * fixed bad (int8_t) arch-info for aarch64 and riscv64
         * removed pdf files from distribution
         * added guix.scm and etc/nyacc-guix.scm
         * added `--external-cdata` option to compile-ffi; planning separation
           of (nyacc foreign cdata) to a separate package (foreign cdata);
-          see https://github.com/mwette/guile-cdata
+          + see https://github.com/mwette/guile-cdata
+          + for nyacc V4.0 release we will remove 
+              nyacc/foreign/{arch-info,cdata}.scm
+        * removed NYACC version number from documents
 
 2026-02-20  V3.02.1
         * c99/mach.scm(grammar): split "unsigned __int128_t" into two tokens
