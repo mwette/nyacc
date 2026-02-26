@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2026-02-2X  V3.03.0
+2026-02-26  V3.03.0
         * Reworked C99 preprocessor to be token-based. Tests show
           the C parser is running more than 15% faster on my x86_64 laptop.
           + For guild compoile-ffi ffi/gtk2.ffi, 3.03 is 15% faster than 3.02:
