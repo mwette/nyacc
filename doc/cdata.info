@@ -9,7 +9,7 @@ Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 INFO-DIR-SECTION Software development
 START-INFO-DIR-ENTRY
-* NYACC CData User Guide: (nyacc).    The NYACC CData User guide.
+* CData User Guide: (nyacc).    The CData User guide.
 END-INFO-DIR-ENTRY
 
 
@@ -22,7 +22,7 @@ CData Reference Manual
 Matt Wette
 October 2024
 
-This is a user guide for the NYACC CData module for Guile.
+This is a user guide for the CData module for Guile.
 
 * Menu:
 
@@ -612,8 +612,8 @@ References
 
 
 Tag Table:
-Node: Top611
-Node: Introduction851
+Node: Top599
+Node: Introduction833
 
 End Tag Table
 
