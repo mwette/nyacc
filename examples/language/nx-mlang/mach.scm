@@ -151,24 +151,35 @@
 
     (function-sig
      ;; fctn-decl name input-args output-args
-     ("[" ident-list "]" "=" ident "(" ident-list ")"
+     ("[" ident-list-out "]" "=" ident "(" ident-list-in ")"
       ($$ `(fctn-decl ,$5 ,$7 ,$2)))
-     ("[" ident-list "]" "=" ident "(" ")"
+     ("[" ident-list-out "]" "=" ident "(" ")"
       ($$ `(fctn-decl ,$5 (ident-list) ,$2)))
-     (ident "=" ident "(" ident-list ")"
-      ($$ `(fctn-decl ,$3 ,$5 (ident-list ,$1))))
-     (ident "=" ident "(" ")"
-      ($$ `(fctn-decl ,$3 (ident-list) (ident-list ,$1))))
-     (ident "(" ident-list ")"
-      ($$ `(fctn-decl ,$1 ,$3 (ident-list))))
+     (ident-out "=" ident "(" ident-list-in ")"
+            ($$ `(fctn-decl ,$3 ,$5 (ident-list ,$1))))
+     (ident-out "=" ident "(" ")"
+            ($$ `(fctn-decl ,$3 (ident-list) (ident-list ,$1))))
+     (ident "(" ident-list-in ")"
+            ($$ `(fctn-decl ,$1 ,$3 (ident-list))))
      (ident "(" ")"
-      ($$ `(fctn-decl ,$1 (ident-list) (ident-list)))))
+            ($$ `(fctn-decl ,$1 (ident-list) (ident-list)))))
 
-    (ident-list
-     (ident-list-1 ($$ (tl->list $1))))
-    (ident-list-1
+    (ident-out (ident) ("varargout" ($$ '(varargout))))
+
+    (ident-list-in
+     (ident-list-in-1 ($$ (tl->list $1)))
+     ("varargin" ($$ (list 'ident-list '(varargin))))
+     (ident-list-in-1 "varargin" ($$ (tl->list (tl-append $1 '(varargin))))))
+    (ident-list-in-1
      (ident ($$ (make-tl 'ident-list $1)))
-     (ident-list-1 "," ident ($$ (tl-append $1 $3))))
+     (ident-list-in-1 "," ident ($$ (tl-append $1 $3))))
+
+    (ident-list-out
+     (ident-list-out-1 ($$ (tl->list $1)))
+     (ident-list-out-1 "varargout" ($$ (tl->list (tl-append $1 '(varargout))))))
+    (ident-list-out-1
+     (ident ($$ (make-tl 'ident-list $1)))
+     (ident-list-out-1 "," ident ($$ (tl-append $1 $3))))
 
     ;; For handle signatures ???
     (q-ident-list
@@ -425,6 +436,8 @@
 
     (primary-expr
      (ident)
+     ("nvarargin" ($$ '(ident "nvarargin")))
+     ("nvarargout" ($$ '(ident "nvarargout")))
      (number)
      (string)
      ("(" expr ")" ($$ $2))
