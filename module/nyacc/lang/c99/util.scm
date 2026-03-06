@@ -28,20 +28,14 @@
             ;; deprecated:
             merge-inc-trees! get-gcc-cpp-defs get-gcc-inc-dirs
             )
-  #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-util)
+  #:use-module (ice-9 match)
+  #:use-module (ice-9 popen)            ; gen-gcc-cpp-defs
+  #:use-module (ice-9 rdelim)           ; gen-gcc-cpp-defs
   #:use-module ((srfi srfi-1) #:select (append-reverse fold fold-right))
   #:use-module (srfi srfi-2)            ; and-let*
   #:use-module (sxml fold)
-  #:use-module (ice-9 popen)            ; gen-gcc-cpp-defs
-  #:use-module (ice-9 rdelim))           ; gen-gcc-cpp-defs
-(cond-expand
- (mes
-  (use-modules (smatch))
-  (define-macro (match exp . clauses)
-    `((smatch-lambda . ,clauses) ,exp)))
-(else
-  (use-modules (ice-9 match))))
+  #:use-module (nyacc lang util)
+  #:use-module (nyacc lang sx-util))
 
 (define c99-def-help
   (let ((base

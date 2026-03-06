@@ -83,27 +83,19 @@
                udecl->mdecl split-udecl
                declr-ident declr-name
                clean-field-list clean-fields)
+  #:use-module (ice-9 match)
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove))
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module ((sxml xpath) #:hide (filter))
   #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 munge-base)
-  #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 util)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
   ;; debugging:
   #:use-module (system vm trace)
   #:use-module (ice-9 pretty-print))
-(cond-expand
- (mes
-  (use-modules (nyacc lang c99 cppmach))
-  (use-modules (smatch))
-  (define-macro (match exp . clauses)
-    `((smatch-lambda . ,clauses) ,exp)))
- (else
-  (use-modules (ice-9 match))))
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define (pperr exp)

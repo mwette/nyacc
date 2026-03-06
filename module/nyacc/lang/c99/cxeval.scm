@@ -33,26 +33,17 @@
             cx-incr-size
             cx-incr-bit-size
             cx-maxi-size)
+  #:use-module (ice-9 match)
+  #:use-module (rnrs arithmetic bitwise)
+  #:use-module (system foreign)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)            ; may need to convert to c99/parse
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
   #:use-module (nyacc lang sx-util)
-  #:use-module (nyacc lang c99 cpp)
-  #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 munge-base)
-  #:use-module (rnrs arithmetic bitwise)
-  #:use-module (system foreign)
-  #:use-module (nyacc foreign arch-info)
-  #:use-module (nyacc lang c99 cxmach))
-(cond-expand
- (mes
-  (use-modules (smatch))
-  (define-macro (match exp . clauses)
-    `((smatch-lambda . ,clauses) ,exp)))
- (else
-  (use-modules (ice-9 match))))
+  #:use-module (nyacc foreign arch-info))
 
 
 (use-modules (ice-9 pretty-print))
@@ -65,11 +56,8 @@
 (define (sizeof-string-const value)
   #f)
 
-(define c99cx-tables
-  (map (lambda (key) (cons key (assq-ref c99cx-mach key)))
-       '(mtab ntab len-v rto-v pat-v)))
-(define c99cx-act-v (assq-ref c99cx-mach 'act-v))
-(define c99cx-mtab (assq-ref c99cx-mach 'mtab))
+(include-from-path "nyacc/lang/c99/mach.d/c99cx-act.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99cx-tab.scm")
 
 (define c99cx-raw-parser
   (make-lalr-parser

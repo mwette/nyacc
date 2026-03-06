@@ -118,18 +118,12 @@
 ;; @item gen-cpp-files [dir] => #t
 ;; Update or generate the files @quot{cppact.scm} and @quot{cpptab.scm}.
 ;; If there are no changes to existing files, no update occurs.
-(define (gen-cpp-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
-
-  (write-lalr-actions cpp-mach (xtra-dir "cpp-act.scm.new") #:prefix "cpp-")
-  (write-lalr-tables cpp-mach (xtra-dir "cpp-tab.scm.new") #:prefix "cpp-")
-  (let ((a (move-if-changed (xtra-dir "cpp-act.scm.new")
-                            (xtra-dir "cpp-act.scm")))
-        (b (move-if-changed (xtra-dir "cpp-tab.scm.new")
-                            (xtra-dir "cpp-tab.scm"))))
+(define* (gen-cpp-files #:optional (path "."))
+  (define (mdir file) (mach-dir path file))
+  (write-lalr-actions cpp-mach (mdir "cpp-act.scm.new") #:prefix "cpp-")
+  (write-lalr-tables cpp-mach (mdir "cpp-tab.scm.new") #:prefix "cpp-")
+  (let ((a (move-if-changed (mdir "cpp-act.scm.new") (mdir "cpp-act.scm")))
+        (b (move-if-changed (mdir "cpp-tab.scm.new") (mdir "cpp-tab.scm"))))
     (or a b)))
 
 ;; --- last line ---

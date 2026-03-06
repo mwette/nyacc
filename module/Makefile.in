@@ -8,6 +8,10 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
+# Note: Before parser modules cpp, parser, cxeval can be compiled, the
+#       parse tables need to be generated, by the gen-XXX-files routines
+#       in cppmach, mach and cxmach.
+
 GUILE = @GUILE@
 GUILD = @abs_top_builddir@/etc/guild
 
@@ -51,10 +55,10 @@ NYACC_BASE_SRCS =				\
 	nyacc/lang/util.scm
 
 NYACC_C99_BINS =				\
-	nyacc/lang/c99/cpp.go			\
 	nyacc/lang/c99/cppmach.go		\
-	nyacc/lang/c99/parser.go		\
+	nyacc/lang/c99/cpp.go			\
 	nyacc/lang/c99/mach.go			\
+	nyacc/lang/c99/parser.go		\
 	nyacc/lang/c99/pprint.go		\
 	nyacc/lang/c99/util.go			\
 	nyacc/lang/c99/munge-base.go		\
@@ -68,10 +72,10 @@ NYACC_C99_BINS =				\
 	scripts/compile-ffi.go
 
 NYACC_C99_SRCS =				\
-	nyacc/lang/c99/cpp.scm			\
 	nyacc/lang/c99/cppmach.scm		\
-	nyacc/lang/c99/parser.scm		\
+	nyacc/lang/c99/cpp.scm			\
 	nyacc/lang/c99/mach.scm			\
+	nyacc/lang/c99/parser.scm		\
 	nyacc/lang/c99/pprint.scm		\
 	nyacc/lang/c99/util.scm			\
 	nyacc/lang/c99/munge-base.scm		\
@@ -88,10 +92,17 @@ BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 
 SOURCES = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 
+C99MACH_SRCS = \
+	cpp-act.scm cpp-tab.scm c99-act.scm c99-tab.scm \
+	c99x-act.scm c99x-tab.scm c99cx-act.scm c99cx-tab.scm
+
+all: nyacc-bins
+
 %.go: %.scm
-	GUILE_LOAD_PATH=$(SCMDIR):$(GUILE_LOAD_PATH) \
-	GUILE_LOAD_COMPILED_PATH=$(GODIR):$(GUILE_LOAD_COMPILED_PATH) \
+	GUILE_LOAD_PATH=.:$(SCMDIR) GUILE_LOAD_COMPILED_PATH=$(GODIR) \
 	  $(GUILD) compile $(GUILE_TARGET) $(GUILE_DEBUG) -o $@ $<
+
+$(NYACC_C99_BINS): $(NYACC_BASE_BINS)
 
 .PHONY: nyacc-bins
 nyacc-bins: $(BINARIES)
@@ -102,7 +113,7 @@ install:
 	@$(MAKE) install-srcs install-bins 
 
 .PHONY: install-srcs
-install-srcs:
+install-srcs: install-c99mach-srcs
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
 	@echo "installing NYACC sources in $(DESTDIR)$(SITE_SCM_DIR)"
 	@for file in $(SOURCES); do \
@@ -114,6 +125,14 @@ install-srcs:
 	  fi; \
 	done
 	@cp $(TOPDIR)/README $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
+
+.PHONY: install-c99mach-srcs
+install-c99mach-srcs:
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/nyacc/lang/c99/mach.d
+	@for file in $(C99MACH_SRCS); do \
+	  cp $(GODIR)/nyacc/lang/c99/mach.d/$$file \
+	  $(DESTDIR)$(SITE_SCM_DIR)/nyacc/lang/c99/mach.d/$$file; \
+	done
 
 .PHONY: install-bins
 install-bins: $(BINARIES)
@@ -130,13 +149,53 @@ install-bins: $(BINARIES)
 
 .PHONY: clean
 clean:
-	(cd nyacc; rm -f *.go)
-	(cd nyacc/lang; rm -f *.go)
-	(cd nyacc/lang/c99; rm -f *.go)
-	(cd scripts; rm -f *.go)
+	if [ -d nyacc]; then (cd nyacc; rm -f *.go); fi
+	if [ -d nyacc]; then (cd nyacc/lang; rm -f *.go); fi
+	if [ -d nyacc]; then (cd nyacc/lang/c99; rm -f *.go); fi
+	if [ -d nyacc]; then (cd scripts; rm -f *.go); fi
 
 .PHONY: dist-files
 dist-files:
 	@true
+
+nyacc/lang/c99/munge.go: nyacc/lang/c99/munge.scm \
+	nyacc/lang/c99/cxeval.go \
+	nyacc/lang/c99/munge-base.go
+
+nyacc/lang/c99/cpp.go: nyacc/lang/c99/cpp.scm \
+	nyacc/lang/c99/mach.d/cpp-act.scm \
+	nyacc/lang/c99/mach.d/cpp-tab.scm
+
+nyacc/lang/c99/mach.d/cpp-act.scm \
+nyacc/lang/c99/mach.d/cpp-tab.scm : nyacc/lang/c99/cppmach.go
+	@mkdir -p $(GODIR)/nyacc/lang/c99/mach.d
+	$(GUILE) -L $(SCMDIR) -C $(GODIR) -c \
+	  '((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
+
+nyacc/lang/c99/parser.go: nyacc/lang/c99/parser.scm \
+	nyacc/lang/c99/mach.d/c99-act.scm \
+	nyacc/lang/c99/mach.d/c99-tab.scm \
+	nyacc/lang/c99/mach.d/c99x-act.scm \
+	nyacc/lang/c99/mach.d/c99x-tab.scm \
+	nyacc/lang/c99/cpp.go
+
+nyacc/lang/c99/mach.d/c99-act.scm \
+nyacc/lang/c99/mach.d/c99-tab.scm \
+nyacc/lang/c99/mach.d/c99x-act.scm \
+nyacc/lang/c99/mach.d/c99x-tab.scm : nyacc/lang/c99/mach.go
+	@mkdir -p $(GODIR)/nyacc/lang/c99/mach.d
+	$(GUILE) -L $(SCMDIR) -C $(GODIR) -c \
+	  '((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
+
+nyacc/lang/c99/cxeval.go: nyacc/lang/c99/cxeval.scm \
+	nyacc/lang/c99/mach.d/c99cx-act.scm \
+	nyacc/lang/c99/mach.d/c99cx-tab.scm \
+	nyacc/lang/c99/munge-base.go
+
+nyacc/lang/c99/mach.d/c99cx-act.scm \
+nyacc/lang/c99/mach.d/c99cx-tab.scm : nyacc/lang/c99/cxmach.go
+	@mkdir -p $(GODIR)/nyacc/lang/c99/mach.d
+	$(GUILE) -L $(SCMDIR) -C $(GODIR) -c \
+	  '((@ (nyacc lang c99 cxmach) gen-c99cx-files) "nyacc/lang/c99")'
 
 # --- last line ---
