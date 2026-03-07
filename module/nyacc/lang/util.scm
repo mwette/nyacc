@@ -35,16 +35,6 @@
             lang-crn-lic)
   #:use-module ((srfi srfi-1) #:select (find fold fold-right))
   #:use-module (ice-9 pretty-print))
-(cond-expand
- (mes
-  (define (string-every chr str)
-    (let loop ((k 0))
-      (if (>= k (string-length str))
-          #t
-          (if (char=? (string-ref str k) chr)
-              (loop (+ k 1))
-              #f)))))
- (else))
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
