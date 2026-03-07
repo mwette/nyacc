@@ -670,6 +670,7 @@
 ;; can't reject the full deal so we parse here and return as ($pragma . str)
 ;; which the parser can ignore.  (Should the make-lalr-parser have a hook
 ;; for language pramgas?
+#|
 (define (finish-pragma)
   (define (sk-ws ch)
     (if (char-whitespace? ch) (sk-ws (read-char)) ch))
@@ -678,7 +679,7 @@
     (unless str (throw 'c99-error "_Pragma: 2"))
     (unless (char=? #\) (sk-ws (read-char))) (throw 'c99-error "_Pragma: 3"))
     (cons '$pragma (cdr str))))
-(export finish-pragma)
+|#
 
 
 ;; @deffn {Procedure} expand-cpp-macro-ref ident defs sp => repl | #f

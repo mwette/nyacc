@@ -242,8 +242,6 @@
   (if (char? delim)
       (lambda (ch) (and (char=? ch delim) (doit ch)))
       (lambda (ch) (and=> (assq-ref delim ch) doit))))
-;;(export new-make-string-reader)
-;; string-literal -> parser -> pretty-print => string-literal
 
 ;; @deffn {Procedure} read-oct => 123 | #f
 ;; Read octal number, assuming @code{\0} have already been read.
@@ -751,7 +749,6 @@
          (guts (string-join (map (lambda (i) (number->string i 16)) iseq) "%"))
          (name (string-append "%" guts)))
     (string->symbol name)))
-(export chseq->symbol) ;; for debugging
 
 ;; @deffn chseq->canon-map cst
 ;; @deffnx chseq->canon-unmap cst

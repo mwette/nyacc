@@ -387,7 +387,6 @@
        (unless ixval (throw 'c99-error "cxeval: can't convert index: ~S" ix))
        (unwrap-designator ex udict (cons ixval seed))))
     (,_ (throw 'c99-error "unwrap-designator: bad arg ~S\n" (list expr)))))
-(export unwrap-designator)
 
 ;; @deffn {Procedure} eval-offsetof tree [udict]
 ;; NEEDS WORK.  This should return a list for indices
