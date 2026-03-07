@@ -265,8 +265,8 @@
 (with-test-prefix "nyacc/foreign/cdata-01"
 
   (pass-if "struct layout vs C (with bitfields)"
-    ;; exec 10 random layouts with 10 random field values each
-    (do-test/struct 10 10))
+    ;; exec 100 random layouts with 20 random field values each
+    (do-test/struct 100 20))
 
   (pass-if "union layout vs C"
     ;; exec 10 random layouts with 10 random field values each
