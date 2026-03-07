@@ -1111,11 +1111,11 @@
         ((bitfield)
          (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
                 (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                (sx (cbitfield-signed? bi)) (am (1- (expt 2 wd)))
-                (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
-                (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
-           (mtype-bv-set! mt bv ix (logior (logand mx dmi)
-                                           (ash value sh)))))
+                (mm (1- (expt 2 (* 8 (mtype-size mt))))) ; mtype mask
+                (vm (1- (expt 2 wd)))                    ; var mask
+                (cm (logxor mm (ash vm sh))))            ; neighbors
+           (mtype-bv-set! mt bv ix (logior (logand (mtype-bv-ref mt bv ix) cm)
+                                           (ash (logand value vm) sh)))))
         ((enum)
          (let* ((info (ctype-info ct)) (mtype (cenum-mtype info)))
            (cond

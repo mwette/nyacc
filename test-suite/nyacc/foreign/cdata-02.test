@@ -8,6 +8,7 @@
 ;; without any warranty.
 
 (define-module (cdata-01)
+  #:use-module (nyacc foreign arch-info)
   #:use-module (nyacc foreign cdata)
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module ((system foreign) #:prefix ffi:)
@@ -103,6 +104,20 @@
                                   ((x . 3.5) (y . 4.5))
                                   ((x . 2.5) (y . 5.5))))))
 
+  ;; issue #58
+  (pass-if "issue#58: negative bitfield"
+    (let* ((str (cstruct (list `(a ,(cbase 'short))
+                               `(b ,(cbase 'unsigned) 1)
+                               `(c ,(cbase 'unsigned) 2)
+                               `(d ,(cbase 'int) 3)
+                               `(e ,(cbase 'short)))))
+           (dat (make-cdata str)))
+      (cdata-set! dat -1 'd)
+      (case (arch-name (*arch*))
+        ((x86_64-linux aarch64-linux)
+         (equal? (cdata-bv dat) #vu8(0 0 56 0 0 0 0 0)))
+        (else #t))))
+  
   )
       
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
