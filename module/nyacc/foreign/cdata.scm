@@ -1109,7 +1109,7 @@
                              ((cfunction-proc->ptr (ctype-info pt)) value))))
             (else (error "cdata-set!: bad value for pointer:" value)))))
         ((bitfield)
-         (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+         (let* ((bi (ctype-info ct)) (mt (unsigned-mtype (cbitfield-mtype bi)))
                 (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
                 (mm (1- (expt 2 (* 8 (mtype-size mt))))) ; mtype mask
                 (vm (1- (expt 2 wd)))                    ; var mask
