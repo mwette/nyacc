@@ -39,6 +39,7 @@
             mtype-size mtype-alignment mtype-endianness
             sizeof-basetype alignof-basetype
             mtypeof-basetype sizeof-mtype alignof-mtype
+            unsigned-mtype
             base-type-name-list base-type-symbol-list
             c-strname->symname c-symname->strname
             mtype-bv-ref mtype-bv-set!
@@ -412,6 +413,18 @@
     ;;
     (else (error "mtype-bv-set!: bad type " mtype))))
 
+(define (unsigned-mtype mtype)
+  (case mtype
+    ((u8 s8) 'u8)
+    ((u16le s16le) 'u16le)
+    ((u32le s32le) 'u32le)
+    ((u64le s26le) 'u64le)
+    ((u16be s16be) 'u16be)
+    ((u32be s32be) 'u32be)
+    ((u64be s26be) 'u64be)
+    ((u128le s128le) 'u128le)
+    ((u128be s128be) 'u128be)
+    (else (error "unsigned-mtype: bad arg:" mtype))))
 
 ;; === maps ====================================================================
 
