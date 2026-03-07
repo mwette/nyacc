@@ -94,19 +94,6 @@
                           (set-cdr! (last-pair $1) (list $2))
                           $1)))))
 
-;; @deffn {Procedure} reserved? grammar-symbol
-;; Determine whether the syntax argument is a reserved symbol, that is.
-;; So instead of writing @code{'$fixed} for syntax one can write
-;; @code{$fixed}.  We may want to change this to
-;; @example
-;; (reserved-terminal? grammar-symbol)
-;; (reserved-non-term? grammar-symbol)
-;; @end example
-;; @end deffn
-(define (reserved? grammar-symbol)
-  ;; If the first character `$' then it's reserved.
-  (eqv? #\$ (string-ref (symbol->string (syntax->datum grammar-symbol)) 0)))
-  
 ;; @deffn {Syntax} lalr-spec grammar => spec
 ;; This routine reads a grammar in a scheme-like syntax and returns an a-list.
 ;; This spec' can be an input for @item{make-parser-generator} or 
@@ -122,11 +109,14 @@
 ;; @end itemize
 ;; Currently, the number of arguments for items is computed in the routine
 ;; @code{process-grammar}.
+;; @*Note: Any symbol starting with @code{$} is automatically a terminal.
 ;; @end deffn
 
 (cond-expand
  (mes
   ;; MES does not have syntax-case.
+  (define (reserved? grammar-symbol)
+    (eqv? #\$ (string-ref (symbol->string grammar-symbol) 0)))
   (define-macro (wrap-term term)
     `(cons (quote ,(if (symbol? term)
                        (if (reserved? term)
@@ -135,6 +125,8 @@
                        'terminal))
            (quote ,term))))
  (else
+  (define (reserved? grammar-symbol)
+    (eqv? #\$ (string-ref (symbol->string (syntax->datum grammar-symbol)) 0)))
   (define-syntax wrap-term
     (lambda (x)
       (syntax-case x ()
