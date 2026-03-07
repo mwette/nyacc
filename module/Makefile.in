@@ -55,6 +55,8 @@ NYACC_BASE_SRCS =				\
 	nyacc/lang/util.scm
 
 NYACC_C99_BINS =				\
+	nyacc/foreign/arch-info.go		\
+	nyacc/foreign/cdata.go			\
 	nyacc/lang/c99/cppmach.go		\
 	nyacc/lang/c99/cpp.go			\
 	nyacc/lang/c99/mach.go			\
@@ -67,11 +69,11 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/cxeval.go		\
 	nyacc/lang/c99/fh-utils.go		\
 	nyacc/lang/c99/ffi-help.go		\
-	nyacc/foreign/arch-info.go		\
-	nyacc/foreign/cdata.go			\
 	scripts/compile-ffi.go
 
 NYACC_C99_SRCS =				\
+	nyacc/foreign/arch-info.scm		\
+	nyacc/foreign/cdata.scm			\
 	nyacc/lang/c99/cppmach.scm		\
 	nyacc/lang/c99/cpp.scm			\
 	nyacc/lang/c99/mach.scm			\
@@ -84,8 +86,6 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/cxeval.scm		\
 	nyacc/lang/c99/fh-utils.scm		\
 	nyacc/lang/c99/ffi-help.scm		\
-	nyacc/foreign/arch-info.scm		\
-	nyacc/foreign/cdata.scm			\
 	scripts/compile-ffi.scm
 
 BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
