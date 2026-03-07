@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2026-03-XX  V3.04.0
+2026-03-07  V3.04.0
         * fixed issue #58: cdata bitfield setter broken for unique? case
         * reverted to included C99 parser tables; for MES, but now the
           tables are generated at build time and not included with the
