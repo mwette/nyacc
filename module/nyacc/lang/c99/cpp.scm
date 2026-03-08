@@ -642,7 +642,7 @@
 
 ;; The question is whether to tokenize all cpp-defs
 ;; or keep the strings and convert to tokens on the fly.
-(define-public (lookup-def defs ident)
+(define (lookup-def defs ident)
   (let* ((def (assoc ident defs)) (ref (and def (cdr def))))
     (cond
      ((not ref))                        ; catch ("FOO" . #f)
