@@ -666,21 +666,6 @@
              (repl (rtokl->string rtkl)))
         repl))))
 
-;; This of bit of a kludge to deal with _Pragma in odd places.  The parser
-;; can't reject the full deal so we parse here and return as ($pragma . str)
-;; which the parser can ignore.  (Should the make-lalr-parser have a hook
-;; for language pramgas?
-#|
-(define (finish-pragma)
-  (define (sk-ws ch)
-    (if (char-whitespace? ch) (sk-ws (read-char)) ch))
-  (unless (char=? #\( (sk-ws (read-char))) (throw 'c99-error "_Pragma: 1"))
-  (let ((str (read-c-string (sk-ws (read-char)))))
-    (unless str (throw 'c99-error "_Pragma: 2"))
-    (unless (char=? #\) (sk-ws (read-char))) (throw 'c99-error "_Pragma: 3"))
-    (cons '$pragma (cdr str))))
-|#
-
 
 ;; @deffn {Procedure} expand-cpp-macro-ref ident defs sp => repl | #f
 ;; Given an identifier seen in the current input, this checks for associated
