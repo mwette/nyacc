@@ -1,4 +1,5 @@
 #!/bin/sh
+mkdir -p mach.d
 # -*- scheme -*-
 exec guile $0
 !#
