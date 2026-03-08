@@ -5,6 +5,12 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2026-03-08  V3.04.1
+        * lalr.scm: split reserverd? for mes-specific version
+        * cpp.scm: make lookup-def local (was define-public)
+        * remove unused exports where found
+        * cpp.scm: remove finish-pragma: not used
+
 2026-03-07  V3.04.0
         * fixed issue #58: cdata bitfield setter broken for unique? case
         * reverted to included C99 parser tables; for MES, but now the
