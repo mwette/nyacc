@@ -36,6 +36,7 @@
             *arch* with-arch native-arch *arch-map*
             arch-cbase-map set-arch-cbase-map!
             arch-name arch-endianness
+            host-type->host-type-name
             mtype-size mtype-alignment mtype-endianness
             sizeof-basetype alignof-basetype
             mtypeof-basetype sizeof-mtype alignof-mtype
@@ -989,11 +990,19 @@
 (add-to-arch-map "sparc64" arch/sparc64-linux)
 (add-to-arch-map "x86_64" arch/x86_64-linux)
 
+(add-to-arch-map "arm-linux" arch/armv8l-linux)
+(add-to-arch-map "armhf-linux" arch/armv8l-linux)
+(add-to-arch-map "i386-linux" arch/i686-linux)
+(add-to-arch-map "mipsel-linux" arch/mips-linux)
+(add-to-arch-map "parisc64-linux" arch/hppa-linux)
+(add-to-arch-map "powerpc64be-linux" arch/powerpc64-linux)
+(add-to-arch-map "ppc64-linux" arch/powerpc64-linux)
+(add-to-arch-map "ppc64le-linux" arch/powerpc64le-linux)
+
 (add-to-arch-map "arm" arch/armv8l-linux)
 (add-to-arch-map "armhf" arch/armv8l-linux)
 (add-to-arch-map "i386" arch/i686-linux)
 (add-to-arch-map "mipsel" arch/mips-linux)
-(add-to-arch-map "mips64el" arch/mips64el-linux)
 (add-to-arch-map "parisc64" arch/hppa-linux)
 (add-to-arch-map "powerpc64be" arch/powerpc64-linux)
 (add-to-arch-map "ppc64" arch/powerpc64-linux)
@@ -1006,19 +1015,20 @@
 ;; native type and arch
 (eval-when (expand load eval)
   (begin
-    (define host-type-name
-      (let loop ((ma #f) (os "unknown") (fl (string-split %host-type #\-)))
+    (define (host-type->host-type-name host-type)
+      (let loop ((ma #f) (os "unknown") (fl (string-split host-type #\-)))
         (cond
          ((null? fl) (string-append ma "-" os))
          ((not ma) (loop (car fl) os (cdr fl)))
          ((member (car fl) '("linux" "eabi")) (loop ma (car fl) '()))
          (else (loop ma os (cdr fl))))))
+    (define host-type-name
+      (host-type->host-type-name %host-type))
     (define host-arch-name
       (and=> (string-split %host-type #\-) car))))
 
 (define native-arch
   (assoc-ref (*arch-map*) host-type-name))
-
 
 (add-to-arch-map "native" native-arch)
 

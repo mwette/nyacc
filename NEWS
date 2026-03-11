@@ -5,6 +5,13 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2026-XX-XX  V3.04.2
+        * add arch info for mips64el
+        * fix module name in cdata-02.test
+        * added arch-info procedure host-type->host-type-name
+          which can convert %host-type to a simple march-os name
+          (e.g. "x86_64-linux")
+
 2026-03-08  V3.04.1
         * lalr.scm: split reserverd? for mes-specific version
         * cpp.scm: make lookup-def local (was define-public)
