@@ -87,6 +87,41 @@
 (define (parse-string-list . str-l)
   (parse-string (apply string-append str-l)))
 
+(eval-when (expand load eval)
+  (define (read-longstring reader-char port)
+    "- procedure: read-longstring reader-char port
+     This reader macro procedure reads extended strings using the
+     delimiter ‘\"\"\"’.  Enable and disable its use via the syntax
+     ‘(enable-longstring)’ and ‘(disable-longstring)’.  Example use:
+          (define text #\"\"\"
+            \"Run. Matt. Run.\", he said.
+          \"\"\")"
+    (define start-sq '(#\" #\" #\"))
+    (define end-sq '(#\" #\" #\"))
+
+    (define (skip-seq seq ch)
+      (let loop ((bs seq) (ch ch))
+        (cond
+         ((null? bs) ch)
+         ((eof-object? ch) (error "bad longstring expression"))
+         ((char=? ch (car bs)) (loop (cdr bs) (read-char port)))
+         (else (error "longstring: coding error")))))
+
+    (let loop ((chl '()) (ex '()) (es end-sq)
+               (ch (let ((ch (skip-seq start-sq reader-char)))
+                     (if (char=? #\newline ch) (read-char port) ch))))
+      (cond
+       ((eof-object? ch) (error "bad longstring expression"))
+       ((char=? ch (car es))
+        (let ((es (cdr es)))
+          (if (null? es)
+              (reverse-list->string chl)
+              (loop chl (cons ch ex) es (read-char port)))))
+       ((pair? ex) (loop (append ex chl) '() end-sq ch))
+       (else (loop (cons ch chl) ex es (read-char port))))))
+
+  (read-hash-extend #\" read-longstring))
+
 #|
 (define (fold p s l)
   (let loop ((s s) (l l))
