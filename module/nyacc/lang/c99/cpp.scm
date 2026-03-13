@@ -405,8 +405,6 @@
 ;; expanded token sequence from @var{argd}, and identifiers are marked for
 ;; no further expansion.
 ;; @end defun
-(display "cpp.scm: TODO empty args, #define ninp() handle_stray_noerror(0)\n")
-(display "cpp.scm: TODO #define ninp() handle_stray_noerror(0)\n")
 (define (cpp-subst tokl argd defs used)
   (let loop ((osq '()) (isq tokl))
     (match isq
@@ -485,7 +483,7 @@
                  (lp (cons tk atkl) (if (eq? k '%29) (1- lv) lv) (cdr tkl)))
                 ((or (eq? k mark) (and mark (eq? k '%29)))
                  (loop (acons anam (finish atkl) argd)
-                       (car tkl) (cdr tkl) (cdr argl)))
+                       (car tkl) (cdr tkl) (if (null? argl) argl (cdr argl))))
                 (else (lp (cons tk atkl) lv (cdr tkl))))))))
         ((%29)                         ; end of args (#\))
          (cond
