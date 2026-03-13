@@ -371,7 +371,7 @@
            (cond
             ((null? rhs)
              (loop osq used rest))
-            ((string? (caar rhs))
+            ((or (null? (car rhs)) (string? (caar rhs)))
              (call-with-values (lambda () (get-args (car rhs) rest))
                (lambda (argd rest)
                  (if argd
@@ -380,6 +380,7 @@
                             (csq (cpp-expand tkl defs uzed '() keep-comm))
                             (rest (append-reverse csq rest)))
                        (loop osq used rest))
+
                      (loop (cons (car isq) osq) used (cdr isq))))))
             (else
              (let* ((tkl (cpp-subst rhs '() defs used))
@@ -404,6 +405,8 @@
 ;; expanded token sequence from @var{argd}, and identifiers are marked for
 ;; no further expansion.
 ;; @end defun
+(display "cpp.scm: TODO empty args, #define ninp() handle_stray_noerror(0)\n")
+(display "cpp.scm: TODO #define ninp() handle_stray_noerror(0)\n")
 (define (cpp-subst tokl argd defs used)
   (let loop ((osq '()) (isq tokl))
     (match isq
@@ -419,6 +422,7 @@
       (`(($dhash . ,_1) ($ident . ,name) . ,rest)
        (let* ((isp (eq? (caar osq) #\space))
               (rpl (or (assoc-ref argd name) (list (cadr isq))))
+              (rpl (if (null? rpl) '(($string . "")) rpl))
               (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdar rpl)))
               (tkl (tokenize-cpp-string txt))
               (osq1 (if isp (cddr osq) (cdr osq)))
