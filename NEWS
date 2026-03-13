@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2026-03-13  V3.04.3
+        * add lang/c99/cpp.scm fixes for mescc on tinycc
+          + attribute args can use ()
+          + fixed cases of zero-arg function macros 
+
 2026-03-11  V3.04.2
         * add arch info for mips64el
         * fix module name in cdata-02.test
