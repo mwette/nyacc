@@ -54,7 +54,7 @@
 ;;.@deffn Procedure split-cppdef defstr => form | #f
 ;; Convert string @var{defstr} to CPP def for use in macro expansion.
 ;; If a macro replacment is @code{"#f"}, then effectively it has been
-;; @code{undef}'d.  The replacment part is tokenized.
+;; @code{undef}'d.  The replacment part is not tokenized.
 ;; @* Examples:
 ;; @example
 ;; "ABC=123" => '("ABC" ($fixed . "123"))
