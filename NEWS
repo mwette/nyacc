@@ -1,9 +1,17 @@
-Copyright (C) 2017-2025 Matthew Wette
+Copyright (C) 2017-2026 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
+
+2026-03-14  V3.04.4 - pi release
+        * lex.scm(read-c-number): change behavior, if "illegal" trailing
+	  character for C, just stop parsing and return instead of issuing
+	  error; this makes the token-based cpp work.  Since no legal
+	  C code has number followed by ident, I think it should be OK.
+	* c99/cpp.scm(cpp-subst): reworked this for ## so that entire macro
+	  argument is pasted and then retokenized.
 
 2026-03-13  V3.04.3
         * add lang/c99/cpp.scm fixes for mescc on tinycc
