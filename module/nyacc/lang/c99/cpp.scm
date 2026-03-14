@@ -410,30 +410,32 @@
     (match isq
       ('() (reverse osq))
       
-      (`(($hash . ,_1) ($ident . ,ident) . ,_2)
+      (`(($hash . ,_) ($ident . ,ident) . ,_)
        (let ((arg (assoc-ref argd ident)))
          (unless arg (throw 'cpp-error "not found: ~s" ident))
          (loop (acons '$string (tokl->string arg) osq) (cddr isq))))
-      (`(($hash . ,_1) (#\space . ,_2) . ,rest)
+      (`(($hash . ,_) (#\space . ,_) . ,rest)
        (loop osq (cons (car isq) (cddr isq))))
 
-      (`(($dhash . ,_1) ($ident . ,name) . ,rest)
-       (let* ((isp (eq? (caar osq) #\space))
-              (rpl (or (assoc-ref argd name) (list (cadr isq))))
-              (rpl (if (null? rpl) '(($string . "")) rpl))
-              (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdar rpl)))
-              (tkl (tokenize-cpp-string txt))
-              (osq1 (if isp (cddr osq) (cdr osq)))
-              (osq (append-reverse (cdr rpl) (append-reverse tkl osq1))))
-         (loop osq rest)))
-      (`(($dhash . ,_1) (#\space . ,_2) . ,rest)
+      (`(,_ (#\space . ,_) ($dhash . ,_) . ,_)
        (loop osq (cons (car isq) (cddr isq))))
-      (`(($dhash . ,_1) ,rs . ,rest)
-       (let* ((isp (eq? (caar osq) #\space))
-              (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdr rs)))
-              (tkl (tokenize-cpp-string txt))
-              (osq (append tkl (if isp (cddr osq) (cdr osq)))))
-         (loop osq rest)))
+      (`(,_ ($dhash . ,_) (#\space . ,_) . ,_)
+       (loop osq (cons* (car isq) (cadr isq) (cdddr isq))))
+      (`(,lhs ($dhash . ,_) ,rhs . ,rest)
+       (let* ((ltxt (cond
+                     ((and (eq? '$ident (car lhs)) (assoc-ref argd (cdr lhs)))
+                      => (lambda (tl) (tokl->string tl)))
+                     (else (cdr lhs))))
+              (rtxt (cond
+                     ((and (eq? '$ident (car rhs)) (assoc-ref argd (cdr rhs)))
+                      => (lambda (tl) (tokl->string tl)))
+                     (else (cdr rhs)))))
+         (loop osq (acons '$retok (string-append ltxt rtxt) rest))))
+      (`(($retok . ,text) . ,rest)
+       (loop osq (append-reverse
+                  (with-input-from-string text
+                    (lambda () (reverse-tokenize-to-mark #f)))
+                  rest)))
 
       (`(($ident . ,ident) . ,rest)
        (loop
@@ -457,7 +459,8 @@
 ;;.@end deffn
 (define (collect-args argl tokl) ;; => argd | #f tail
   (define (finish atkl)
-    (reverse (if (and (pair? atkl) (eqv? (caar atkl) #\space)) (cdr atkl) atkl)))
+    (reverse
+     (if (and (pair? atkl) (eqv? (caar atkl) #\space)) (cdr atkl) atkl)))
 
   ;; #\(=%28  #\)=%29  #\,=%2c
   (cond
@@ -548,14 +551,13 @@
 ;;
 ;;.@end deffn
 (define (tokenize-to-mark mark)
+  (reverse (reverse-tokenize-to-mark mark)))
+
+(define (reverse-tokenize-to-mark mark)
   ;; assert (memq mark '(#f %29 %2c))
 
   (define (ctx id cx)
     (if (string=? id "defined") #\D cx))
-
-  (define (finish tkl)
-    (reverse tkl))
-  ;;(reverse (if (and mark (pair? tkl) (eq? #\space (caar tkl))) (cdr tkl) tkl)))
 
   ;; cx(context, see ctx above):, #\D=def #\I=inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (tk (read-cpp-token)))
@@ -567,11 +569,11 @@
               (ctx v #\nul) lv (read-cpp-token)))
        ((eq? k '%28) (loop (cons tk tkl) cx (1+ lv) (read-cpp-token)))
 
-       ((eq? k '$end) (if mark (throw 'cpp-error "yuck") (finish tkl)))
+       ((eq? k '$end) (if mark (throw 'cpp-error "yuck") tkl))
        ((positive? lv)
         (loop (cons tk tkl) cx (if (eq? '%29 k) (1- lv) lv) (read-cpp-token)))
        ((or (eq? k mark) (and mark (eq? k '%29)))
-        (unread-char (case k ((%29) #\)) ((%2c) #\,))) (finish tkl))
+        (unread-char (case k ((%29) #\)) ((%2c) #\,))) tkl)
        (else (loop (cons tk tkl) cx lv (read-cpp-token)))))))
 
 (define (tokenize-cpp-string str)
