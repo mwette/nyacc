@@ -673,7 +673,8 @@
       ((68) ;; got (d|D), look for dDfFlL or 0-9
        (cond
         ((eof-object? ch) (bad-sfx chl))
-        ((memq ch '(#\D #\d #\F #\f #\L #\l)) (loop (cons ch chl) '$decfl 72 ch))
+        ((memq ch '(#\D #\d #\F #\f #\L #\l))
+         (loop (cons ch chl) '$decfl 72 ch))
         ((char-numeric? ch) (loop (cons ch chl) ty 69 (read-char)))
         (else (bad-sfx chl))))
       ((69) ;; special float suffixes: F128 F32x F16 BF16
@@ -686,7 +687,6 @@
       ((70) ;; check char
        (cond
         ((eof-object? ch) (cons ty (rls chl)))
-        ((char-set-contains? c:ir ch) (bad-sfx (cons ch chl)))
         (else (loop chl ty 71 ch))))
       ((71) ;; pushback 1 char
        (unread-char ch) (cons ty (rls chl)))
