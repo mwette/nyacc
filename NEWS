@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2026-03-14  V3.04.5
+        * (lex-01.test): fix for new read-c-number
+
 2026-03-14  V3.04.4 - pi release
         * lex.scm(read-c-number): change behavior, if "illegal" trailing
 	  character for C, just stop parsing and return instead of issuing
