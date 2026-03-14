@@ -551,4 +551,36 @@ __asm__(\"bswapl %0 ; bswapl %1 ; xchgl %0,%1\"
     ;;(pp (parse-string code))
     (pp (ccode->sexp code))))
 
+;; ADD to test-suite: tinycc examples
+(when #f
+  (let* (
+         (code #"""
+#define DEF(id, str) ,id
+#define DEF_ASM_REGS(prefix) \
+  DEF(TOK_ASM_##prefix##0, #prefix "0") \
+  DEF(TOK_ASM_##prefix##1, #prefix "1")
+#define DEF_ASM_VEC_REGS(suffix) \
+  DEF(TOK_ASM_v0_##suffix, "v0." #suffix) \
+  DEF(TOK_ASM_v1_##suffix, "v1." #suffix)
+enum foo { TOK_LAST = 0 DEF_ASM_REGS(B8) DEF_ASM_VEC_REGS(B8) };
+""")
+         (tree (parse-string code))
+         )
+    (display code) (newline)
+    (pp tree)
+    #f))
+
+(when #f
+  (let* (
+         (code #"""
+#define DEF(id, str) ,id
+#define DEF_ASM(x) DEF(TOK_ASM_ ## x, #x)
+enum foo { TOK_LAST = 0 DEF_ASM(sp) };
+""")
+         (tree (parse-string code))
+         )
+    (display code) (newline)
+    (pp tree)
+    #f))
+
 ;; --- last line ---
