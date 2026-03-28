@@ -447,8 +447,8 @@ See the file COPYING included with the this distribution.")
   (define (doit)
     (let ((sav-file (if (pair? rest) (car rest) #f)))
       (if (and sav-file (access? sav-file W_OK))
-          (system* "mv" dst-file sav-file))
-      (system* "mv" src-file dst-file)
+          (rename-file dst-file sav-file))
+      (rename-file src-file dst-file)
       #t))
 
   (cond
@@ -457,7 +457,7 @@ See the file COPYING included with the this distribution.")
 
    ;; dst-file does not exist, update anyhow
    ((not (access? dst-file F_OK))
-    (system* "mv" src-file dst-file) #t)
+    (rename-file src-file dst-file) #t)
 
    ;; both exist, but no changes
    ((zero? (with-output-to-port (%make-void-port "w")
