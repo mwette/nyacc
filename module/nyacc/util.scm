@@ -89,7 +89,8 @@
 ;; @end deffn
 (define (atomize-terminal terminal)
   (if (string? terminal)
-      (string->symbol (string-append "$:" terminal))
+      ;;(string->symbol (string-append "$:" terminal)) ;; <= deprecate?
+      (string->symbol terminal)
       terminal))
 
 ;; @deffn {Procedure} make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
