@@ -75,11 +75,11 @@
    ((string=? str "__FILE__")
     `(($string . ,(or (assq-ref sl 'filename) "(unknown)"))))
    ((string=? str "__LINE__")
-    `(($string . ,(number->string (or (assq-ref sl 'line) 0)))))
-   ((string=? str "__TIME__") '(($strings . "00:00:00")))
-   ((string=? str "__STDC__") '(($strings . "1")))
-   ((string=? str "__STDC_HOSTED__") '(($strings . "0")))
-   ((string=? str "__STDC_VERSION__") '(($strings . "199901L")))
+    `(($fixed . ,(or (assq-ref sl 'line) 0))))
+   ((string=? str "__TIME__") '(($string . "00:00:00")))
+   ((string=? str "__STDC__") '(($fixed . "1")))
+   ((string=? str "__STDC_HOSTED__") '(($fixed . "0")))
+   ((string=? str "__STDC_VERSION__") '(($fixed . "199901L")))
    (else #f)))
 
 (define inline-whitespace (list->char-set '(#\space #\tab)))
@@ -388,6 +388,8 @@
                     (csq (cpp-expand tkl defs uzed '() keep-comm))
                     (rest (append-reverse csq rest)))
                (loop osq used rest))))))
+        ((c99-std-val ident (source-properties (car isq))) =>
+         (lambda (res) (loop (append-reverse res osq) used (cdr isq))))
         ((string=? ident "_Pragma")
          (call-with-values (lambda () (get-args '("x") rest))
            (lambda (argd rest)
@@ -397,6 +399,7 @@
          (loop (cons (car isq) osq) used (cdr isq)))))
       (_ (loop (cons (car isq) osq) used (cdr isq))))))
 
+     
 ;; @deffn {Procedure} cpp-subst argd repl defs used => tokl
 ;; Given an alist of function argument names and values @var{argd}, and
 ;; tokenized macro replacement text @var{repl}, perform the preexpansion.
