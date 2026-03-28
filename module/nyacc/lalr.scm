@@ -26,7 +26,7 @@
 
 (define-module (nyacc lalr)
   #:export (lalr-spec process-spec
-            make-lalr-machine compact-machine hashify-machine 
+            make-lalr-machine compact-machine hashify-machine
             lalr-start lalr-match-table
             restart-spec add-recovery-logic!
             pp-lalr-notice pp-lalr-grammar pp-lalr-machine
@@ -96,7 +96,7 @@
 
 ;; @deffn {Syntax} lalr-spec grammar => spec
 ;; This routine reads a grammar in a scheme-like syntax and returns an a-list.
-;; This spec' can be an input for @item{make-parser-generator} or 
+;; This spec' can be an input for @item{make-parser-generator} or
 ;; @item{pp-spec}.
 ;;.This will return the specification.  Notably the grammar will have rhs
 ;; arguments decorated with type (e.g., @code{(terminal . #\,)}).
@@ -153,7 +153,7 @@
      (cons (cons 'prec <tok>) (parse-rhs <e2> ...)))
     ((_ $empty <e2> ...)      ; TODO: propagate to processor
      (parse-rhs <e2> ...))
-    
+
     ;; (experimental) proxies
     ((_ ($? <s1> <s2> ...) <e2> ...)
      (cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
@@ -164,7 +164,7 @@
     ((_ ($* <s1> <s2> ...) <e2> ...)
      (cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
                    (parse-rhs <e2> ...)))
-    
+
     ;; terminals and non-terminals
     ((_ (quote <e1>) <e2> ...)
      (cons '(terminal . <e1>) (parse-rhs <e2> ...)))
@@ -227,11 +227,11 @@
            (lalr-spec-1 <e> ...)))
     ((_ (grammar <prod> ...) <e> ...)
      (cons (cons 'grammar (parse-grammar <prod> ...))
-           (lalr-spec-1 <e> ...))) 
+           (lalr-spec-1 <e> ...)))
     ((_) '())))
 
 (define-syntax lalr-spec
-  (syntax-rules () 
+  (syntax-rules ()
     ((_ <expr> ...)
      (process-spec (lalr-spec-1 <expr> ...)))))
 
@@ -263,7 +263,7 @@
     (if (null? tl) #f
         (if (eqv-terminal? symb (car tl)) (car tl)
             (loop (cdr tl))))))
-  
+
 ;; @deffn {Procedure} process-spec tree => specification (as a-list)
 ;; Here we sweep through the production rules. We flatten and order the rules
 ;; and place all p-rules with like LHSs together.  There is a non-trivial
@@ -334,7 +334,7 @@
       (if (pair? cf)
           (cons (fmtstr "*** symbol is terminal and non-terminal: ~S" cf)
                 err-l) err-l)))
-               
+
   ;; @deffn gram-check-3 ll nl err-l
   ;; Check for fatal: non-terminal's w/o production rule.
   ;; @end deffn
@@ -462,7 +462,7 @@
        ((pair? tail)
         ;; Check the next CAR of the tail.  If it matches
         ;; the current LHS process it, else skip it.
-        (loop ll @l tl nl head prox lhs (cdr tail) 
+        (loop ll @l tl nl head prox lhs (cdr tail)
               (if (eqv? (caar tail) lhs) (cdar tail) '())
               attr pel #f))
 
@@ -513,7 +513,7 @@
                (cons 'act-v (map-attr->vector al 'act))
                (cons 'ref-v (map-attr->vector al 'ref)) ; action references
                (cons 'err-l err-l)))))))))
-  
+
 ;;; === Code for processing the specification. ================================
 
 ;; @subsubheading Note
@@ -722,7 +722,7 @@
   (let* ((core (fluid-ref *lalr-core*))
          (rhs-v (core-rhs-v core)))
     (vector-any (lambda (e) (eqv? e '$error)) (vector-ref rhs-v gx))))
-     
+
 ;; @deffn {Procedure} non-kernels symb => list of prule indices
 ;; Compute the set of non-kernel rules for symbol @code{symb}.  If grammar
 ;; looks like
@@ -799,7 +799,7 @@
     (if (null? itsl) #f
         (if (its-equal? its (cdar itsl)) (caar itsl)
             (loop (cdr itsl))))))
-  
+
 ;; @deffn {Procedure} its-trans itemset => alist of (symb . itemset)
 ;; Compute transitions from an itemset.   Thatis, map a list of kernel
 ;; items to a list of (symbol post-shift items).
@@ -926,7 +926,7 @@
 ;; @deffn {Procedure} merge2 v l al
 ;; add v to l if not in l or al
 ;; @end deffn
-(define (merge2 v l al) 
+(define (merge2 v l al)
   (if (memq v l) l (if (memq v al) l (cons v l))))
 
 ;; @deffn {Procedure} first symbol-list end-token-list
@@ -961,7 +961,7 @@
            (else ;; non-terminal, add to todo/done, goto next
             (loop rslt stng hzeps
                   (merge1 sym done) (merge2 sym todo done) p-range '())))))
-       
+
        ((pair? p-range)                 ; next one to do
         ;; run through next rule
         (loop rslt stng hzeps done todo
@@ -1168,7 +1168,7 @@
                (kx -1)                  ; current index
                (ktal '())               ; (item . LA) list for kx
                (toks '())               ; LA tokens being propagated
-               (item '())               ; from item 
+               (item '())               ; from item
                (prop '()))              ; to items
       (cond
        ((pair? prop)
@@ -1197,7 +1197,7 @@
 ;; The a-list pairs are make of a token and a list of prule indicies.
 ;; CHECK the following.  We are brute-force using @code{closure} here.
 ;; It works, but there should be a better algorithm.
-;; Note on reductions: We reduce if the kernel-item is an end-item or a 
+;; Note on reductions: We reduce if the kernel-item is an end-item or a
 ;; non-kernel item with an epsilon-production.  That is, if we have a
 ;; kernel item of the form
 ;; @example
@@ -1233,7 +1233,7 @@
 
      ((pair? laits) ;; process a la-itemset
       (if (last-item? (caar laits))
-          ;; last item, add it 
+          ;; last item, add it
           (loop ral klais (cdr laits) (caaar laits) (cdar laits))
           ;; else skip to next
           (loop ral klais (cdr laits) 0 '())))
@@ -1262,7 +1262,7 @@
   (let loop ((res '()) (sal sft-al) (ral red-al))
     (cond
      ((pair? sal)
-      (let* ((term (caar sal))           ; terminal 
+      (let* ((term (caar sal))           ; terminal
              (goto (cdar sal))           ; target state
              (redp (assq term ral))      ; a-list entry, may be removed
              (redl (and=> redp cdr)))   ; reductions on terminal
@@ -1463,7 +1463,7 @@
               ((rrconf) "reduce-reduce")
               (else "unknown"))
             (obj->str (find-terminal tok terms)))))
-                     
+
 ;; @deffn {Procedure} gen-match-table mach => mach
 ;; Generate the match-table for a machine.  The match table is a list of
 ;; pairs: the car is the token used in the grammar specification, the cdr
@@ -1471,7 +1471,7 @@
 ;;
 ;; The match-table may be passed to
 ;; the lexical analyzer builder to identify strings or string-types as tokens.
-;; The associated key in the machine is @code{mtab}. 
+;; The associated key in the machine is @code{mtab}.
 ;; @enumerate
 ;; @item
 ;; @sc{nyacc}-reserved symbols are provided as symbols
@@ -1499,7 +1499,7 @@
 ;; @deffn {Procedure} gen-nterm-table mach => mach
 ;; Generate table mapping maybe hash value to symbol value,
 ;; of non-terminals, for use in debugging output.
-;; @end deffn 
+;; @end deffn
 (define (gen-nterm-table mach)
   (acons 'ntab
          (map (lambda (non-term) (cons non-term non-term))
@@ -1690,7 +1690,7 @@
                 (cnt-p (cons ix cnt)))
            (loop sx (cdr trn-l) (cons cnt-p cnt-al)
                  (if (> cnt (cdr p-max)) cnt-p p-max))))))
-              
+
        ((null? trn-l)
         ;; We have processed all transitions. If more than @code{keep} common
         ;; reductions then generate default rule to replace those.
@@ -1850,12 +1850,12 @@
     (fmt port "~A =>" lhs)
     (vector-for-each (lambda (ix e) (fmt port " ~A" (elt->str e tl))) rhs)
     (newline port)))
-         
+
 ;; @deffn {Procedure} pp-item item => string
 ;; This could be called item->string.
 ;; This needs terminals to work correctly, like pp-lalr-grammar.
 ;; @end deffn
-(define (pp-item item) 
+(define (pp-item item)
   (let* ((core (fluid-ref *lalr-core*))
          (tl (core-terminals core))
          (gx (car item))
@@ -2026,7 +2026,7 @@
 ;; This specifies the output language.  Currently only the default
 ;; @code{'scheme} is supported.
 ;; @end table
-;; @noindent 
+;; @noindent
 ;; For example,
 ;; @example
 ;; write-lalr-tables mach "tables.scm"
@@ -2064,7 +2064,7 @@
          (tl (core-terminals core))
          (line (string-append
                 (symbol->string lhs) " => "
-                (string-join 
+                (string-join
                  (map (lambda (elt) (elt->str elt tl))
                       (vector->list rhs))
                  " "))))
@@ -2080,7 +2080,7 @@
          (tl (core-terminals core))
          (line (string-append
                 (symbol->string lhs) " => "
-                (string-join 
+                (string-join
                  (map (lambda (elt) (elt->str elt tl))
                       (vector->list rhs))
                  " "))))
