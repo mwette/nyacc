@@ -75,7 +75,7 @@
    ((string=? str "__FILE__")
     `(($string . ,(or (assq-ref sl 'filename) "(unknown)"))))
    ((string=? str "__LINE__")
-    `(($fixed . ,(or (assq-ref sl 'line) 0))))
+    `(($fixed . ,(number->string (or (assq-ref sl 'line) 0)))))
    ((string=? str "__TIME__") '(($string . "00:00:00")))
    ((string=? str "__STDC__") '(($fixed . "1")))
    ((string=? str "__STDC_HOSTED__") '(($fixed . "0")))
