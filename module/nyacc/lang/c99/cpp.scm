@@ -344,7 +344,7 @@
          (if (eq? (car tok) '$ident) `($idnox . ,(cdr tok)) tok))
        tokl))
 
-;; @deffn {Procedure} macro-expand tokl defs [used [seed [keep-comm]]]
+;; @deffn {Procedure} cpp-expand tokl defs [used [seed]]
 ;; Process the token list @var{tokl}, using alist of macro definitions
 ;; @var{defs}.  The list of strings @var{used} defined macros already used.
 ;; Return the result as a list of reversed tokens, prepened to @var{seed}
@@ -352,52 +352,52 @@
 ;; to be option to keep comments from macros, but is not yet implemented.
 ;; Return the processed token sequence in @emph{reverse order}.
 ;; @end deffn
-(define* (cpp-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
+(define* (cpp-expand tokl defs #:optional (used '()) (seed '()))
 
   (define (get-args argl rest)
     (if (pair? rest)
         (collect-args argl rest)
-        (values (tokenize-args argl) '())))
+        (if seed
+            (values (tokenize-args argl) '())
+            (values #f '()))))
 
-  (let loop ((osq seed) (used used) (isq tokl))
+  (let loop ((osq (or seed '())) (isq tokl))
     (match isq
       ('() osq)
       (`(($ident . ,ident) . ,rest)
        (cond
         ((member ident used)
-         (loop (cons `($idnox . ,ident) osq) used (cdr isq)))
+         (loop (cons `($idnox . ,ident) osq) (cdr isq)))
         ((lookup-def defs ident) =>
          (lambda (rhs)
            (cond
             ((null? rhs)
-             (loop osq used rest))
+             (loop osq rest))
             ((or (null? (car rhs)) (string? (caar rhs)))
              (call-with-values (lambda () (get-args (car rhs) rest))
                (lambda (argd rest)
                  (if argd
                      (let* ((tkl (cpp-subst (cdr rhs) argd defs used))
-                            (uzed (cons ident used))
-                            (csq (cpp-expand tkl defs uzed '() keep-comm))
+                            (csq (cpp-expand tkl defs (cons ident used) #f))
                             (rest (append-reverse csq rest)))
-                       (loop osq used rest))
-
-                     (loop (cons (car isq) osq) used (cdr isq))))))
+                       (loop osq rest))
+                     (loop (cons (car isq) osq) (cdr isq))))))
             (else
              (let* ((tkl (cpp-subst rhs '() defs used))
                     (uzed (cons ident used))
-                    (csq (cpp-expand tkl defs uzed '() keep-comm))
+                    (csq (cpp-expand tkl defs uzed '()))
                     (rest (append-reverse csq rest)))
-               (loop osq used rest))))))
+               (loop osq rest))))))
         ((c99-std-val ident (source-properties (car isq))) =>
-         (lambda (res) (loop (append-reverse res osq) used (cdr isq))))
+         (lambda (res) (loop (append-reverse res osq) (cdr isq))))
         ((string=? ident "_Pragma")
          (call-with-values (lambda () (get-args '("x") rest))
            (lambda (argd rest)
              (let ((arg (rtokl->string (cpp-expand (cdar argd) defs used '()))))
-               (loop (acons '$pragma arg osq) used rest)))))
+               (loop (acons '$pragma arg osq) rest)))))
         (else
-         (loop (cons (car isq) osq) used (cdr isq)))))
-      (_ (loop (cons (car isq) osq) used (cdr isq))))))
+         (loop (cons (car isq) osq) (cdr isq)))))
+      (_ (loop (cons (car isq) osq) (cdr isq))))))
 
      
 ;; @deffn {Procedure} cpp-subst argd repl defs used => tokl
@@ -662,7 +662,7 @@
 ;; === exports =======================
 
 ;; @deffn {Procedure} macro-expand-text text defs => text
-;; Like @code{macro-expand} but processes text entirely and generates
+;; Like @code{cpp-expand} but processes text entirely and generates
 ;; text result.
 ;;.@end deffn
 (define (macro-expand-text text defs)

@@ -418,8 +418,17 @@
                      (rddef "DEF_BWL(x) DEF(TOK_ASM_ ## x, #x)"))))
         (macro-expand-text "DEF_BWLX(mov)" defs))
       ",TOK_ASM_mov")
+     (equal?                            ; issue #67
+      (let* ((defs (list (rddef "EXPAND(macro) macro"))))
+        (macro-expand-text "EXPAND(__STDC__)" defs))
+      "1")
+     (equal?                            ; issue #67
+      (let* ((defs (list (rddef "MACRO(value) MACRO_##value")
+                         (rddef "MACRO_VALUE(value) value"))))
+        (macro-expand-text "MACRO(VALUE)(MACRO(VALUE)(i))" defs))
+      "i")
      #t))
-
+  
   #t)
 
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))

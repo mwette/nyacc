@@ -583,4 +583,22 @@ enum foo { TOK_LAST = 0 DEF_ASM(sp) };
     (pp tree)
     #f))
 
+(when #f
+  (let* (
+         (code #"""
+#define EXPAND(macro)      macro
+#define MACRO(name)        MACRO_##name
+#define MACRO_VALUE(value) value
+int main(void) {
+   int i = EXPAND(__LINE__);
+   return MACRO(VALUE)(MACRO(VALUE)(i));
+}
+""")
+         (tree (parse-string code)))
+    ;;(display code) (newline)
+    ;;(pp tree)
+    (pp99 tree)
+    ;;(pp99 expect)
+    #f))
+
 ;; --- last line ---
