@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2026-03-XX  V3.04.6
+2026-03-29  V3.04.6
         * nyacc/util.scm(atomize-terminal): remove "$:" prefix, to 
           (hopefully) save lots of allocations; this may mean one cannot
           use same charater sequence string and symbol in grammar
