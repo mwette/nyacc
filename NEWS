@@ -1,9 +1,42 @@
-Copyright (C) 2017-2025 Matthew Wette
+Copyright (C) 2017-2026 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
+
+2026-03-29  V3.04.6
+        * nyacc/util.scm(atomize-terminal): remove "$:" prefix, to 
+          (hopefully) save lots of allocations; this may mean one cannot
+          use same charater sequence string and symbol in grammar
+        * In nyacc/lang/util.scm, use rename-file instead of system "mv".
+        * In nyacc/util.scm, in atomize-terminal, remove "$:" prefix.
+          This may break parsers, but highly unlikely.
+        * fix issue #67 for mes: incorrect cpp on MACRO(VALUE)(MACRO(VALUE)(i))
+        * fix issue #68 for mes: use rename-file instead of system "mv"
+
+2026-03-14  V3.04.5
+        * (lex-01.test): fix for new read-c-number
+
+2026-03-14  V3.04.4 - pi release
+        * lex.scm(read-c-number): change behavior, if "illegal" trailing
+	  character for C, just stop parsing and return instead of issuing
+	  error; this makes the token-based cpp work.  Since no legal
+	  C code has number followed by ident, I think it should be OK.
+	* c99/cpp.scm(cpp-subst): reworked this for ## so that entire macro
+	  argument is pasted and then retokenized.
+
+2026-03-13  V3.04.3
+        * add lang/c99/cpp.scm fixes for mescc on tinycc
+          + attribute args can use ()
+          + fixed cases of zero-arg function macros 
+
+2026-03-11  V3.04.2
+        * add arch info for mips64el
+        * fix module name in cdata-02.test
+        * added arch-info procedure host-type->host-type-name
+          which can convert %host-type to a simple march-os name
+          (e.g. "x86_64-linux")
 
 2026-03-08  V3.04.1
         * lalr.scm: split reserverd? for mes-specific version

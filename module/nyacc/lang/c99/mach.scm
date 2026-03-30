@@ -536,6 +536,7 @@
      ("_Alignof" "(" type-name ")" ($$ `(alignof-type ,$3))))
     (attr-primary-expr
      ($fixed ($$ `(fixed ,$1)))
+     ("(" attr-additive-expr ")" ($$ $2))
      (identifier))
      
     ;; --- declarators

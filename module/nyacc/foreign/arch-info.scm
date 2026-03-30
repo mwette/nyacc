@@ -36,6 +36,7 @@
             *arch* with-arch native-arch *arch-map*
             arch-cbase-map set-arch-cbase-map!
             arch-name arch-endianness
+            host-type->host-type-name
             mtype-size mtype-alignment mtype-endianness
             sizeof-basetype alignof-basetype
             mtypeof-basetype sizeof-mtype alignof-mtype
@@ -694,6 +695,39 @@
 (add-to-arch-map "mips-linux" arch/mips-linux)
 
 
+(define mtype-map/mips64el-linux
+ '((void* . u64le)
+   (char . s8) (signed-char . s8) (unsigned-char . u8)
+   (short . s16le) (unsigned-short . u16le)
+   (int . s32le) (unsigned . u32le)
+   (long . s64le) (unsigned-long . u64le)
+   (long-long . s64le) (unsigned-long-long . u64le)
+   (float . f32le) (double . f64le)
+   (int8_t . s8) (uint8_t . u8) (int16_t . s16le) (uint16_t . u16le)
+   (int32_t . s32le) (uint32_t . u32le) (int64_t . s64le) (uint64_t . u64le)
+   (size_t . u64le) (ssize_t . s64le)
+   (ptrdiff_t . s64le) (intptr_t . s64le) (uintptr_t . u64le)
+   (_Bool . u8) (bool . u8)
+   (wchar_t . s32le) (char16_t . u16le) (char32_t . u32le)
+   (long-double . f128le) (_Float16 . #f) (_Float128 . f128le)
+   (float-_Complex . #f) (double-_Complex . #f)
+   (long-double-_Complex . #f)
+   (__int128 . s128le) (unsigned-__int128 . u128le)
+   (unsigned-int . u32le)))
+
+(define align-map/mips64el-linux
+ '((s8 . 1) (u8 . 1) (s16le . 2) (u16le . 2)
+   (s32le . 4) (u32le . 4) (s64le . 8) (u64le . 8)
+   (f32le . 4) (f64le . 8) (f128le . 16)
+   (s128le . 16) (u128le . 16)))
+
+(define arch/mips64el-linux
+  (make-arch-info
+   'mips64-linux 64 'big mtype-map/mips64el-linux align-map/mips64el-linux))
+
+(add-to-arch-map "mips64el-linux" arch/mips64el-linux)
+
+
 ;; 64 bit powerpc, aka ppc64 (big endian)
 (define mtype-map/powerpc64-linux
  '((void* . u64be)
@@ -947,6 +981,7 @@
 (add-to-arch-map "loongarch64" arch/loongarch64-linux)
 (add-to-arch-map "m68k" arch/m68k-linux)
 (add-to-arch-map "mips" arch/mips-linux)
+(add-to-arch-map "mips64el" arch/mips64el-linux)
 (add-to-arch-map "powerpc64" arch/powerpc64-linux)
 (add-to-arch-map "powerpc64le" arch/powerpc64le-linux)
 (add-to-arch-map "riscv64" arch/riscv64-linux)
@@ -954,6 +989,15 @@
 (add-to-arch-map "sparc32" arch/sparc32-linux)
 (add-to-arch-map "sparc64" arch/sparc64-linux)
 (add-to-arch-map "x86_64" arch/x86_64-linux)
+
+(add-to-arch-map "arm-linux" arch/armv8l-linux)
+(add-to-arch-map "armhf-linux" arch/armv8l-linux)
+(add-to-arch-map "i386-linux" arch/i686-linux)
+(add-to-arch-map "mipsel-linux" arch/mips-linux)
+(add-to-arch-map "parisc64-linux" arch/hppa-linux)
+(add-to-arch-map "powerpc64be-linux" arch/powerpc64-linux)
+(add-to-arch-map "ppc64-linux" arch/powerpc64-linux)
+(add-to-arch-map "ppc64le-linux" arch/powerpc64le-linux)
 
 (add-to-arch-map "arm" arch/armv8l-linux)
 (add-to-arch-map "armhf" arch/armv8l-linux)
@@ -971,19 +1015,20 @@
 ;; native type and arch
 (eval-when (expand load eval)
   (begin
-    (define host-type-name
-      (let loop ((ma #f) (os "unknown") (fl (string-split %host-type #\-)))
+    (define (host-type->host-type-name host-type)
+      (let loop ((ma #f) (os "unknown") (fl (string-split host-type #\-)))
         (cond
          ((null? fl) (string-append ma "-" os))
          ((not ma) (loop (car fl) os (cdr fl)))
          ((member (car fl) '("linux" "eabi")) (loop ma (car fl) '()))
          (else (loop ma os (cdr fl))))))
+    (define host-type-name
+      (host-type->host-type-name %host-type))
     (define host-arch-name
       (and=> (string-split %host-type #\-) car))))
 
 (define native-arch
   (assoc-ref (*arch-map*) host-type-name))
-
 
 (add-to-arch-map "native" native-arch)
 

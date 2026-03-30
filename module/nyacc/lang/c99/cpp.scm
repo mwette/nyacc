@@ -75,11 +75,11 @@
    ((string=? str "__FILE__")
     `(($string . ,(or (assq-ref sl 'filename) "(unknown)"))))
    ((string=? str "__LINE__")
-    `(($string . ,(number->string (or (assq-ref sl 'line) 0)))))
-   ((string=? str "__TIME__") '(($strings . "00:00:00")))
-   ((string=? str "__STDC__") '(($strings . "1")))
-   ((string=? str "__STDC_HOSTED__") '(($strings . "0")))
-   ((string=? str "__STDC_VERSION__") '(($strings . "199901L")))
+    `(($fixed . ,(number->string (or (assq-ref sl 'line) 0)))))
+   ((string=? str "__TIME__") '(($string . "00:00:00")))
+   ((string=? str "__STDC__") '(($fixed . "1")))
+   ((string=? str "__STDC_HOSTED__") '(($fixed . "0")))
+   ((string=? str "__STDC_VERSION__") '(($fixed . "199901L")))
    (else #f)))
 
 (define inline-whitespace (list->char-set '(#\space #\tab)))
@@ -344,7 +344,7 @@
          (if (eq? (car tok) '$ident) `($idnox . ,(cdr tok)) tok))
        tokl))
 
-;; @deffn {Procedure} macro-expand tokl defs [used [seed [keep-comm]]]
+;; @deffn {Procedure} cpp-expand tokl defs [used [seed]]
 ;; Process the token list @var{tokl}, using alist of macro definitions
 ;; @var{defs}.  The list of strings @var{used} defined macros already used.
 ;; Return the result as a list of reversed tokens, prepened to @var{seed}
@@ -352,50 +352,54 @@
 ;; to be option to keep comments from macros, but is not yet implemented.
 ;; Return the processed token sequence in @emph{reverse order}.
 ;; @end deffn
-(define* (cpp-expand tokl defs #:optional (used '()) (seed '()) keep-comm)
+(define* (cpp-expand tokl defs #:optional (used '()) (seed '()))
 
   (define (get-args argl rest)
     (if (pair? rest)
         (collect-args argl rest)
-        (values (tokenize-args argl) '())))
+        (if seed
+            (values (tokenize-args argl) '())
+            (values #f '()))))
 
-  (let loop ((osq seed) (used used) (isq tokl))
+  (let loop ((osq (or seed '())) (isq tokl))
     (match isq
       ('() osq)
       (`(($ident . ,ident) . ,rest)
        (cond
         ((member ident used)
-         (loop (cons `($idnox . ,ident) osq) used (cdr isq)))
+         (loop (cons `($idnox . ,ident) osq) (cdr isq)))
         ((lookup-def defs ident) =>
          (lambda (rhs)
            (cond
             ((null? rhs)
-             (loop osq used rest))
-            ((string? (caar rhs))
+             (loop osq rest))
+            ((or (null? (car rhs)) (string? (caar rhs)))
              (call-with-values (lambda () (get-args (car rhs) rest))
                (lambda (argd rest)
                  (if argd
                      (let* ((tkl (cpp-subst (cdr rhs) argd defs used))
-                            (uzed (cons ident used))
-                            (csq (cpp-expand tkl defs uzed '() keep-comm))
+                            (csq (cpp-expand tkl defs (cons ident used) #f))
                             (rest (append-reverse csq rest)))
-                       (loop osq used rest))
-                     (loop (cons (car isq) osq) used (cdr isq))))))
+                       (loop osq rest))
+                     (loop (cons (car isq) osq) (cdr isq))))))
             (else
              (let* ((tkl (cpp-subst rhs '() defs used))
                     (uzed (cons ident used))
-                    (csq (cpp-expand tkl defs uzed '() keep-comm))
+                    (csq (cpp-expand tkl defs uzed '()))
                     (rest (append-reverse csq rest)))
-               (loop osq used rest))))))
+               (loop osq rest))))))
+        ((c99-std-val ident (source-properties (car isq))) =>
+         (lambda (res) (loop (append-reverse res osq) (cdr isq))))
         ((string=? ident "_Pragma")
          (call-with-values (lambda () (get-args '("x") rest))
            (lambda (argd rest)
              (let ((arg (rtokl->string (cpp-expand (cdar argd) defs used '()))))
-               (loop (acons '$pragma arg osq) used rest)))))
+               (loop (acons '$pragma arg osq) rest)))))
         (else
-         (loop (cons (car isq) osq) used (cdr isq)))))
-      (_ (loop (cons (car isq) osq) used (cdr isq))))))
+         (loop (cons (car isq) osq) (cdr isq)))))
+      (_ (loop (cons (car isq) osq) (cdr isq))))))
 
+     
 ;; @deffn {Procedure} cpp-subst argd repl defs used => tokl
 ;; Given an alist of function argument names and values @var{argd}, and
 ;; tokenized macro replacement text @var{repl}, perform the preexpansion.
@@ -409,29 +413,32 @@
     (match isq
       ('() (reverse osq))
       
-      (`(($hash . ,_1) ($ident . ,ident) . ,_2)
+      (`(($hash . ,_) ($ident . ,ident) . ,_)
        (let ((arg (assoc-ref argd ident)))
          (unless arg (throw 'cpp-error "not found: ~s" ident))
          (loop (acons '$string (tokl->string arg) osq) (cddr isq))))
-      (`(($hash . ,_1) (#\space . ,_2) . ,rest)
+      (`(($hash . ,_) (#\space . ,_) . ,rest)
        (loop osq (cons (car isq) (cddr isq))))
 
-      (`(($dhash . ,_1) ($ident . ,name) . ,rest)
-       (let* ((isp (eq? (caar osq) #\space))
-              (rpl (or (assoc-ref argd name) (list (cadr isq))))
-              (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdar rpl)))
-              (tkl (tokenize-cpp-string txt))
-              (osq1 (if isp (cddr osq) (cdr osq)))
-              (osq (append-reverse (cdr rpl) (append-reverse tkl osq1))))
-         (loop osq rest)))
-      (`(($dhash . ,_1) (#\space . ,_2) . ,rest)
+      (`(,_ (#\space . ,_) ($dhash . ,_) . ,_)
        (loop osq (cons (car isq) (cddr isq))))
-      (`(($dhash . ,_1) ,rs . ,rest)
-       (let* ((isp (eq? (caar osq) #\space))
-              (txt (string-append (if isp (cdadr osq) (cdar osq)) (cdr rs)))
-              (tkl (tokenize-cpp-string txt))
-              (osq (append tkl (if isp (cddr osq) (cdr osq)))))
-         (loop osq rest)))
+      (`(,_ ($dhash . ,_) (#\space . ,_) . ,_)
+       (loop osq (cons* (car isq) (cadr isq) (cdddr isq))))
+      (`(,lhs ($dhash . ,_) ,rhs . ,rest)
+       (let* ((ltxt (cond
+                     ((and (eq? '$ident (car lhs)) (assoc-ref argd (cdr lhs)))
+                      => (lambda (tl) (tokl->string tl)))
+                     (else (cdr lhs))))
+              (rtxt (cond
+                     ((and (eq? '$ident (car rhs)) (assoc-ref argd (cdr rhs)))
+                      => (lambda (tl) (tokl->string tl)))
+                     (else (cdr rhs)))))
+         (loop osq (acons '$retok (string-append ltxt rtxt) rest))))
+      (`(($retok . ,text) . ,rest)
+       (loop osq (append-reverse
+                  (with-input-from-string text
+                    (lambda () (reverse-tokenize-to-mark #f)))
+                  rest)))
 
       (`(($ident . ,ident) . ,rest)
        (loop
@@ -455,7 +462,8 @@
 ;;.@end deffn
 (define (collect-args argl tokl) ;; => argd | #f tail
   (define (finish atkl)
-    (reverse (if (and (pair? atkl) (eqv? (caar atkl) #\space)) (cdr atkl) atkl)))
+    (reverse
+     (if (and (pair? atkl) (eqv? (caar atkl) #\space)) (cdr atkl) atkl)))
 
   ;; #\(=%28  #\)=%29  #\,=%2c
   (cond
@@ -481,7 +489,7 @@
                  (lp (cons tk atkl) (if (eq? k '%29) (1- lv) lv) (cdr tkl)))
                 ((or (eq? k mark) (and mark (eq? k '%29)))
                  (loop (acons anam (finish atkl) argd)
-                       (car tkl) (cdr tkl) (cdr argl)))
+                       (car tkl) (cdr tkl) (if (null? argl) argl (cdr argl))))
                 (else (lp (cons tk atkl) lv (cdr tkl))))))))
         ((%29)                         ; end of args (#\))
          (cond
@@ -546,14 +554,13 @@
 ;;
 ;;.@end deffn
 (define (tokenize-to-mark mark)
+  (reverse (reverse-tokenize-to-mark mark)))
+
+(define (reverse-tokenize-to-mark mark)
   ;; assert (memq mark '(#f %29 %2c))
 
   (define (ctx id cx)
     (if (string=? id "defined") #\D cx))
-
-  (define (finish tkl)
-    (reverse tkl))
-  ;;(reverse (if (and mark (pair? tkl) (eq? #\space (caar tkl))) (cdr tkl) tkl)))
 
   ;; cx(context, see ctx above):, #\D=def #\I=inc
   (let loop ((tkl '()) (cx #\nul) (lv 0) (tk (read-cpp-token)))
@@ -565,11 +572,11 @@
               (ctx v #\nul) lv (read-cpp-token)))
        ((eq? k '%28) (loop (cons tk tkl) cx (1+ lv) (read-cpp-token)))
 
-       ((eq? k '$end) (if mark (throw 'cpp-error "yuck") (finish tkl)))
+       ((eq? k '$end) (if mark (throw 'cpp-error "yuck") tkl))
        ((positive? lv)
         (loop (cons tk tkl) cx (if (eq? '%29 k) (1- lv) lv) (read-cpp-token)))
        ((or (eq? k mark) (and mark (eq? k '%29)))
-        (unread-char (case k ((%29) #\)) ((%2c) #\,))) (finish tkl))
+        (unread-char (case k ((%29) #\)) ((%2c) #\,))) tkl)
        (else (loop (cons tk tkl) cx lv (read-cpp-token)))))))
 
 (define (tokenize-cpp-string str)
@@ -655,7 +662,7 @@
 ;; === exports =======================
 
 ;; @deffn {Procedure} macro-expand-text text defs => text
-;; Like @code{macro-expand} but processes text entirely and generates
+;; Like @code{cpp-expand} but processes text entirely and generates
 ;; text result.
 ;;.@end deffn
 (define (macro-expand-text text defs)

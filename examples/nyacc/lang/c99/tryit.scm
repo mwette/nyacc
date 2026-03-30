@@ -87,6 +87,41 @@
 (define (parse-string-list . str-l)
   (parse-string (apply string-append str-l)))
 
+(eval-when (expand load eval)
+  (define (read-longstring reader-char port)
+    "- procedure: read-longstring reader-char port
+     This reader macro procedure reads extended strings using the
+     delimiter ‘\"\"\"’.  Enable and disable its use via the syntax
+     ‘(enable-longstring)’ and ‘(disable-longstring)’.  Example use:
+          (define text #\"\"\"
+            \"Run. Matt. Run.\", he said.
+          \"\"\")"
+    (define start-sq '(#\" #\" #\"))
+    (define end-sq '(#\" #\" #\"))
+
+    (define (skip-seq seq ch)
+      (let loop ((bs seq) (ch ch))
+        (cond
+         ((null? bs) ch)
+         ((eof-object? ch) (error "bad longstring expression"))
+         ((char=? ch (car bs)) (loop (cdr bs) (read-char port)))
+         (else (error "longstring: coding error")))))
+
+    (let loop ((chl '()) (ex '()) (es end-sq)
+               (ch (let ((ch (skip-seq start-sq reader-char)))
+                     (if (char=? #\newline ch) (read-char port) ch))))
+      (cond
+       ((eof-object? ch) (error "bad longstring expression"))
+       ((char=? ch (car es))
+        (let ((es (cdr es)))
+          (if (null? es)
+              (reverse-list->string chl)
+              (loop chl (cons ch ex) es (read-char port)))))
+       ((pair? ex) (loop (append ex chl) '() end-sq ch))
+       (else (loop (cons ch chl) ex es (read-char port))))))
+
+  (read-hash-extend #\" read-longstring))
+
 #|
 (define (fold p s l)
   (let loop ((s s) (l l))
@@ -515,5 +550,55 @@ __asm__(\"bswapl %0 ; bswapl %1 ; xchgl %0,%1\"
   (let ((code "int foo(int x) asm (\"\" \" foo64\");"))
     ;;(pp (parse-string code))
     (pp (ccode->sexp code))))
+
+;; ADD to test-suite: tinycc examples
+(when #f
+  (let* (
+         (code #"""
+#define DEF(id, str) ,id
+#define DEF_ASM_REGS(prefix) \
+  DEF(TOK_ASM_##prefix##0, #prefix "0") \
+  DEF(TOK_ASM_##prefix##1, #prefix "1")
+#define DEF_ASM_VEC_REGS(suffix) \
+  DEF(TOK_ASM_v0_##suffix, "v0." #suffix) \
+  DEF(TOK_ASM_v1_##suffix, "v1." #suffix)
+enum foo { TOK_LAST = 0 DEF_ASM_REGS(B8) DEF_ASM_VEC_REGS(B8) };
+""")
+         (tree (parse-string code))
+         )
+    (display code) (newline)
+    (pp tree)
+    #f))
+
+(when #f
+  (let* (
+         (code #"""
+#define DEF(id, str) ,id
+#define DEF_ASM(x) DEF(TOK_ASM_ ## x, #x)
+enum foo { TOK_LAST = 0 DEF_ASM(sp) };
+""")
+         (tree (parse-string code))
+         )
+    (display code) (newline)
+    (pp tree)
+    #f))
+
+(when #f
+  (let* (
+         (code #"""
+#define EXPAND(macro)      macro
+#define MACRO(name)        MACRO_##name
+#define MACRO_VALUE(value) value
+int main(void) {
+   int i = EXPAND(__LINE__);
+   return MACRO(VALUE)(MACRO(VALUE)(i));
+}
+""")
+         (tree (parse-string code)))
+    ;;(display code) (newline)
+    ;;(pp tree)
+    (pp99 tree)
+    ;;(pp99 expect)
+    #f))
 
 ;; --- last line ---

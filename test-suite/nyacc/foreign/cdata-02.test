@@ -1,13 +1,13 @@
 ;; nyacc/foreign/cdata-02.test		-*- scheme -*-
 ;;
-;; Copyright (C) 2024-2025 Matthew Wette
+;; Copyright (C) 2024-2026 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(define-module (cdata-01)
+(define-module (cdata-02)
   #:use-module (nyacc foreign arch-info)
   #:use-module (nyacc foreign cdata)
   #:use-module ((srfi srfi-1) #:select (fold))

@@ -116,9 +116,11 @@
        ;; bizarro float
        ("1.23e45F128-" . $float)
        ("1.23e45F32x-" . $float)
-       ;; errors and #f
-       ("08-" . $error) ("0b12-" . $error) ("3f-" . $error)
-       ("3dd-" . $error) (".-" . #f) ("." . #f)
+       ;; was error/#f
+       ("08" . $fixed) ("0b12" . $fixed)
+       ("3f" . $fixed) ("3d" . $fixed)
+       ;; error and #f
+       (".-" . #f) ("." . #f)
        )))
 
   (pass-if "C strings"
