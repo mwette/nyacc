@@ -1168,9 +1168,12 @@
                       ((init-declr (ftn-declr . ,_1) (asm-expr (string . ,sa)))
                        (string-trim (string-join sa) #\space))
                       (,__ #f))))
-        (values defined (if aname
-                            (cnvt-fctn name return params seed #:asm-name aname)
-                            (cnvt-fctn name return params seed)))))
+        (if (dmem? name defined)
+            (values defined seed)
+            (values (dcons name defined)
+                    (if aname
+                        (cnvt-fctn name return params seed #:asm-name aname)
+                        (cnvt-fctn name return params seed))))))
 
 
      ((sx-match tspec
