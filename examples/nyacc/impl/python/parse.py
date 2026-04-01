@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # Copyright (C) 2025 - Matthew Wette
 # 
