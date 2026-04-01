@@ -12,13 +12,17 @@ To play with example code and try modifications without installing:
 
   $ cd examples
   $ source env.sh
+  $ cd ../module/nyacc/lang/c99
+  $ mkdir mach.d
+  $ ./mach.gen
+  $ cd ../../../..
 
 === Hacking on the C99 parser ====
 
 To play with the C99 code, in place, I recommend the following:
 After sourcing env.sh in the examples subdirectory, execute
 
-  $ cd nyacc/lang/c99
+  $ cd examples/nyacc/lang/c99
   $ ./cxp hello.c
 
 The Guile source program cxp will print out the parse tree for hello.c
