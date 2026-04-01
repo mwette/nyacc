@@ -462,7 +462,7 @@ See the file COPYING included with the this distribution.")
    ;; both exist, but no changes
    ((zero? (with-output-to-port (%make-void-port "w")
              (lambda () (system* "cmp" src-file dst-file))))
-    (system* "rm" src-file) #f)
+    (delete-file src-file) #f)
 
    ;; both exist, update
    ((access? dst-file W_OK)

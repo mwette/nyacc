@@ -150,9 +150,9 @@ install-bins: $(BINARIES)
 .PHONY: clean
 clean:
 	if [ -d nyacc ]; then (cd nyacc; rm -f *.go); fi
-	if [ -d nyacc ]; then (cd nyacc/lang; rm -f *.go); fi
-	if [ -d nyacc ]; then (cd nyacc/lang/c99; rm -f *.go); fi
-	if [ -d nyacc ]; then (cd scripts; rm -f *.go); fi
+	if [ -d nyacc/lang ]; then (cd nyacc/lang; rm -f *.go); fi
+	if [ -d nyacc/lang/c99 ]; then (cd nyacc/lang/c99; rm -f *.go); fi
+	if [ -d scripts ]; then (cd scripts; rm -f *.go); fi
 
 .PHONY: dist-files
 dist-files:
