@@ -113,7 +113,9 @@
 (define-syntax xcons*
   (syntax-rules ()
     ((_ tail) tail)
-    ((_ tail last next ...) (xcons* (cons last tail) next ...))))
+    ((_ tail last next ...)
+     (let ((lval last))
+       (xcons* (cons lval tail) next ...)))))
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args)
