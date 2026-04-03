@@ -839,6 +839,7 @@
           (ctype-equal? foo_t struct-foo) => #t
      It is recommended that one use symbols for names rather than
      strings, so that ‘pretty-print-ctype’ will use names effectively."
+  (assert-ctype 'name-ctype type)
   (%make-ctype (ctype-size type) (ctype-align type)
                (ctype-kind type) (ctype-info type)
                name))
