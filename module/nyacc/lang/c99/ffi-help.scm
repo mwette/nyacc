@@ -297,7 +297,8 @@
    (clean-and-dictize-fields fields)))
 
 ;; Should be processed with canize-enum-def-list first
-(define (enum-def-list->alist enum-def-list)
+;; => (('name 1) ..
+(define (enum-def-list->dlist enum-def-list)
   (map (lambda (defn)
          (sx-match defn
            ((enum-defn (ident ,name) (fixed ,value))
@@ -524,8 +525,8 @@
          ((enum-def (@ . ,attr) ,edl)
           (let ((def-list (canize-enum-def-list edl (*udict*) (*ddict*))))
             (if (packed? attr)
-                (be-enum ',(enum-def-list->alist def-list) #t)
-                (be-enum ',(enum-def-list->alist def-list)))))
+                (be-enum ',(enum-def-list->dlist def-list) #t)
+                (be-enum ',(enum-def-list->dlist def-list)))))
          ((enum-ref (ident ,name)) (strings->symbol "enum-" name))
          (,otherwise (fherr "mtail->be-type missed:\n~A" (ppstr mtail))))))))
 
@@ -1087,13 +1088,16 @@
 
              ((enum-def ,enum-def-list)
               (let* ((defs (canize-enum-def-list enum-def-list udict (*ddict*)))
-                     (enums (enum-def-list->alist defs))
+                     (enums (enum-def-list->dlist defs))
+                     (dl-name (sfsym "~a-dlist" name))
                      (al-name (sfsym "~a-alist" name)))
                 (values
                  (dcons name defined)
                  (xcons* seed
-                   `(define ,al-name ',enums)
-                   (be-typedef type (be-enum al-name))
+                   `(define ,dl-name ',enums)
+                   `(define ,al-name (map (lambda (l) (cons (car l) (cadr l)))
+                                          ,dl-name))
+                   (be-typedef type (be-enum dl-name))
                    `(define-public ,(sfsym "unwrap-~A" name)
                       (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                    `(define-public ,(sfsym "wrap-~A" name)
@@ -1103,13 +1107,16 @@
              ((enum-def (ident ,enum-name) ,enum-def-list)
               (let* ((enum-name (rename enum-name 'type))
                      (defs (canize-enum-def-list enum-def-list udict (*ddict*)))
-                     (enums (enum-def-list->alist defs))
+                     (enums (enum-def-list->dlist defs))
+                     (dl-name (sfsym "~a-dlist" name))
                      (al-name (sfsym "~a-alist" name)))
                 (values
                  (dcons name (w/enum enum-name) defined)
                  (xcons* seed
-                   `(define ,al-name ',enums)
-                   (be-typedef type (be-enum al-name))
+                   `(define ,dl-name ',enums)
+                   `(define ,al-name (map (lambda (l) (cons (car l) (cadr l)))
+                                          ,dl-name))
+                   (be-typedef type (be-enum dl-name))
                    `(define-public ,(sfsym "unwrap-~A" name)
                       (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                    `(define-public ,(sfsym "wrap-~A" name)
@@ -1248,13 +1255,16 @@
             (else
              (let* ((type (sfsym "enum-~a" enum-name))
                     (defs (canize-enum-def-list enum-def-list udict (*ddict*)))
-                    (enums (enum-def-list->alist defs))
+                    (enums (enum-def-list->dlist defs))
+                    (dl-name (sfsym "~a-dlist" type))
                     (al-name (sfsym "~a-alist" type)))
                (values
                 (dcons (w/enum enum-name) defined)
                 (xcons* seed
-                  `(define ,al-name ',enums)
-                  (be-typedef type (be-enum al-name))
+                  `(define ,dl-name ',enums)
+                  `(define ,al-name (map (lambda (l) (cons (car l) (cadr l)))
+                                         ,dl-name))
+                  (be-typedef type (be-enum dl-name))
                   `(define-public ,(sfsym "unwrap-~A" type)
                      (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                   `(define-public ,(sfsym "wrap-~A" type)
