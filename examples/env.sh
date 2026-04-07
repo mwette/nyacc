@@ -9,5 +9,10 @@ fi;
 GUILE_LOAD_PATH=$topdir/examples:$GUILE_LOAD_PATH
 GUILE_LOAD_PATH=$topdir/test-suite:$GUILE_LOAD_PATH
 export GUILE_LOAD_PATH
-echo 'please:'
-echo '  (cd ../module/nyacc/lang/c99; ./mach.gen)'
+if [ ! -d ../module/nyacc/lang/c99/mach.d ]; then
+ mkdir ../module/nyacc/lang/c99/mach.d
+fi
+if [ ! -f ../module/nyacc/lang/c99/mach.d/c99-act.scm ]; then
+ echo 'please:'
+ echo '  (cd ../module/nyacc/lang/c99; ./mach.gen)'
+fi
