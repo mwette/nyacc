@@ -662,6 +662,7 @@ enable_option_checking
 with_guile
 with_target
 enable_debug
+enable_fast_install
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1285,6 +1286,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          build for debugging in guile
+  --enable-fast-install   ignored
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1764,6 +1766,15 @@ then :
   enableval=$enable_debug;
 else case e in #(
   e) debug=unspecified ;;
+esac
+fi
+
+# Check whether --enable-fast-install was given.
+if test ${enable_fast_install+y}
+then :
+  enableval=$enable_fast_install;
+else case e in #(
+  e) fast_install=no ;;
 esac
 fi
 

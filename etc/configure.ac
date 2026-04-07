@@ -18,6 +18,8 @@ AC_ARG_WITH(target, [  --with-target           guild target flag],
             ,target=unspecified)
 AC_ARG_ENABLE(debug,[  --enable-debug          build for debugging in guile],
             ,debug=unspecified)
+AC_ARG_ENABLE(fast-install,[  --enable-fast-install   ignored],
+            ,fast_install=no)
 
 if test "_$with_guile" != "_unspecified"; then
   GUILE=$with_guile
