@@ -181,7 +181,9 @@
           (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (if (not nl-val) (error "mlang setup error"))
     (lambda ()
-      (let ((qms #f) (bol #t)) ; qms: quote means string
+      (let* ((qms #f) (bol #t) (port (current-input-port))
+             (spt (acons 'filename (port-filename port) '())))
+        ;; qms: quote means string; spt source properties tail
         (define (loop ch)
           (cond
            ((eof-object? ch)
@@ -211,20 +213,37 @@
            (else (cons ch (string ch)))))
         (lambda ()
           (let* ((lxm (loop (read-char)))
-                 (port (current-input-port))
-                 (props `((filename . ,(port-filename port))
-                          (line . ,(1+ (port-line port)))
-                          (column . ,(port-column port)))))
-            (set-source-properties! lxm props)
+                 (sp (acons 'line (1+ (port-line port)) spt)))
+            (set-source-properties! lxm sp)
             lxm))))))
 
 
 ;; === static semantics
 
+#;(define (x-foldts*-values fdown fup fhere tree . seeds)
+  (if (atom? tree)
+      (apply fhere tree seeds)
+      (call-with-values
+          (lambda () (apply fdown tree seeds))
+        (lambda (tree . kseeds)
+          (call-with-values
+              (lambda ()
+                (apply fold-values
+                       (lambda (tree . seeds)
+                         (apply foldts*-values
+                                fdown fup fhere tree seeds))
+                       tree kseeds))
+            (lambda kseeds
+              (apply fup tree (append seeds kseeds))))))))
+
 ;; 1) aref-or-call => array-ref | call
 ;; 2) assn: "[ ... ] = expr" => assn-many
 ;; 3) can't do: x.a(1) means array if x is struct or call if x is object
-(define (Xapply-mlang-statics tree) tree)
+(define (reverse/src s l)
+  (let ((r (reverse l)))
+    (cons-source s (car r) (cdr r))))
+
+;;(define (Xapply-mlang-statics tree) tree)
 (define (apply-mlang-statics tree)
 
   (define (tag-source orig pair) (cons-source orig (car pair) (cdr pair)))
@@ -274,7 +293,7 @@
       (,__ (values tree '() vars))))
 
   (define (fU tree seed vars kseed kvars) ; => seed vars
-    (let ((form (reverse kseed)))
+    (let ((form (reverse/src tree kseed)))
       (sx-match form
         ((*TOP* ,subform) (values (tag-source tree subform) kvars))
         ((aref-or-call (@ . ,attr) (handle (q-ident . ,_)) . ,rest)

@@ -29,6 +29,8 @@
 
 (define nyacc-sha256-base32-map
   '(("9.99.9" . "marker - do not delete")
+    ("3.04.6" . "1i51qwsid6vx5na83glc2lnvjp30an0phwkl57a15wlqjp8l6mpc")
+    ("3.03.0" . "08ldrvs8igp9701jx6s7lgic5qlv399khwld5i5z1qaw1nqy8p1d")
     ("3.02.1" . "1lf2ajzl9prv11splvv0yjppcz6myys2y8vlib1417ygi5151p49")
     ("3.02.0" . "0lkjc52x7q04ris0vndn32cylfnzfrqqj2m3s8m0kbbj5rl2ggyh")
     ("3.00.0" . "066wg0hvr7272bdxbn8b2ahn4yqrphfir8f9w9qd222s4ipd0iqa")
@@ -42,18 +44,18 @@
     (origin
      (method git-fetch)
      (uri (git-reference
-           (url "https://github.com/mwette/nyacc")
+           (url "https://github.com/mwette/nyacc/")
            (commit (string-append "V" version))))
      (file-name (string-append "nyacc-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))
    (build-system gnu-build-system)
-   (arguments (list #:strip-binaries? #f))
+   (arguments '(#:strip-binaries? #f #:parallel-build? #f))
    (native-inputs (list guile-3.0))
    ;; Use of ffi-helper may need gcc, but let the user do that?
    ;; See nyacc/lang/c99/util.scm.
    ;;(propagated-inputs (list gcc))
    (home-page "https://github.com/mwette/nyacc")
-   (synopsis "parser generator, C parser and ffi-helper for guile")
+   (synopsis "Parser generator, C parser and FFI-helper for Guile")
    (license lgpl3+)
    (description
     "NYACC, for Not Yet Another Compiler Compiler, is set of guile modules for
@@ -66,16 +68,16 @@ Guile Scheme bindings for C-based libraries.
 It provides (partially implemented) compilers based on above mentioned
 parsers to allow execution with Guile as extension languages.")))
 
-(define-public nyacc-3.02.1
+(define-public nyacc-next
   (package
    (inherit nyacc-base)
-   (name "nyacc")
-   (version "3.02.1")
-   (source 
+   (name "nyacc-next")
+   (version (caadr nyacc-sha256-base32-map))
+   (source
     (origin
      (method git-fetch)
      (uri (git-reference
-           (url "https://github.com/mwette/nyacc")
+           (url "https://github.com/mwette/nyacc/")
            (commit (string-append "V" version))))
      (file-name (string-append "nyacc-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))))
@@ -117,5 +119,6 @@ parsers to allow execution with Guile as extension languages.")))
     (local-file ".." "nyacc-local" #:recursive? #t #:select? vcs-file?))))
 
 nyacc-local
+;;nyacc-next
 
 ;; --- last line ---
