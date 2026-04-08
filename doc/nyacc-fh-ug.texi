@@ -20,7 +20,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 @format
 FFI Helper User Guide
 Matt Wette
-May 2024
+April 2026
 @end format
 
 @ifnottex
@@ -138,9 +138,13 @@ something like the following:
 
 @example
 (define-module (ffi cairo)
-  #:use-module ((system foreign) #:prefix ffi:)
+  #:export (M_PI M_2PI make-cairo-unit-matrix)
   #:use-module (system foreign-library)
-  #:use-module (nyacc foreign cdata))
+  #:use-module ((system foreign) #:prefix ffi:))
+
+(begin
+  (use-modules (nyacc foreign cdata))
+@dots{}
 
 ;; extern int cairo_version(void);
 (define-public cairo_version
