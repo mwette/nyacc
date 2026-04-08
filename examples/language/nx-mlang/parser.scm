@@ -220,22 +220,6 @@
 
 ;; === static semantics
 
-#;(define (x-foldts*-values fdown fup fhere tree . seeds)
-  (if (atom? tree)
-      (apply fhere tree seeds)
-      (call-with-values
-          (lambda () (apply fdown tree seeds))
-        (lambda (tree . kseeds)
-          (call-with-values
-              (lambda ()
-                (apply fold-values
-                       (lambda (tree . seeds)
-                         (apply foldts*-values
-                                fdown fup fhere tree seeds))
-                       tree kseeds))
-            (lambda kseeds
-              (apply fup tree (append seeds kseeds))))))))
-
 ;; 1) aref-or-call => array-ref | call
 ;; 2) assn: "[ ... ] = expr" => assn-many
 ;; 3) can't do: x.a(1) means array if x is struct or call if x is object
