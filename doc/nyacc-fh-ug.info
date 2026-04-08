@@ -15,7 +15,7 @@ END-INFO-DIR-ENTRY
 
 FFI Helper User Guide
 Matt Wette
-May 2024
+April 2026
 
 
 File: nyacc-fh-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -115,9 +115,13 @@ Though the file ‘cairo/cairo.ffi’ is only three lines long, the file
 something like the following:
 
      (define-module (ffi cairo)
-       #:use-module ((system foreign) #:prefix ffi:)
+       #:export (M_PI M_2PI make-cairo-unit-matrix)
        #:use-module (system foreign-library)
-       #:use-module (nyacc foreign cdata))
+       #:use-module ((system foreign) #:prefix ffi:))
+
+     (begin
+       (use-modules (nyacc foreign cdata))
+     ...
 
      ;; extern int cairo_version(void);
      (define-public cairo_version
@@ -798,8 +802,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 
 Tag Table:
-Node: Top667
-Node: Introduction847
+Node: Top669
+Node: Introduction849
 
 End Tag Table
 

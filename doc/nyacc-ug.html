@@ -45,7 +45,7 @@ ul.mark-bullet {list-style-type: disc}
 <div class="format">
 <pre class="format-preformatted">NYACC User&rsquo;s Guide
 Matt Wette
-May 2024
+April 2026
 </pre></div>
 
 
@@ -1262,6 +1262,55 @@ state 8, token &quot;\n&quot;	=&gt; shift, goto 10
 </pre></div>
 <p>Currently, when parsers are hashed (using <code class="code">hashify-machine</code> the
 non-terminals (e.g., <code class="code">expr</code> above) are reported as integers.
+</p>
+
+<h4 class="subheading" id="The-Parser"><span>The Parser<a class="copiable-link" href="#The-Parser"> &para;</a></span></h4>
+
+<p>One advantage of nyacc over the provided <code class="code">lalr</code> parser in Guile is
+that in Scheme, the lalr parser is simple enough that one could hack it.
+The following is a stripped-down (but not by much) parser routine from
+the module <code class="code">(nyacc parse)</code>.  This assumes tables have not been
+compacted (so we don&rsquo;t have to deal with default).  The generator
+outputs a procedure that takes one argument: the lexical analyzer.
+</p>
+<div class="example">
+<pre class="example-preformatted">(define (make-lalr-parser/sym mach)
+  (let* ((len-v (assq-ref mach 'len-v))
+         (rto-v (assq-ref mach 'rto-v))
+         (pat-v (assq-ref mach 'pat-v))
+         (xct-v (make-xct (assq-ref mach 'act-v) env))
+         (start (assq-ref (assq-ref mach 'mtab) '$start)))
+    (lambda (lexr)
+      (let loop ((state (list 0))       ; state stack
+                 (stack (list '$@))     ; semantic value stack
+                 (nval #f)              ; non-terminal from prev reduction
+                 (lval #f))             ; lexical value (from lex'er)
+        (cond
+         ((not (or nval lval))
+          (loop state stack nval (lexr)))) ; reload
+         (else
+          (let* ((laval (or nval lval))
+                 (tval (car laval))
+                 (sval (cdr laval))
+                 (stal (vector-ref pat-v (car state)))
+                 (stx (assq-ref stal tval)))
+            (cond
+             ((not stx)                 ; error
+              (parse-error state laval))
+             ((eq? 'shift (car stx))    ; shift
+              (loop (cons (cdr stx) state) (cons sval stack)
+                    #f (if nval lval #f)))
+             ((eq? 'reduce (car stx))   ; reduce
+              (let* ((gx (cdr stx))
+                     (gl (vector-ref len-v gx))
+                     ($$ (apply (vector-ref xct-v gx) stack))
+                     (tval (cons (vector-ref rto-v gx) $$)))
+                (loop (list-tail state gl) (list-tail stack gl) tval lval)))
+             (else                      ; accept
+              (car stack)))))))))
+</pre></div>
+
+<p>More to go ...
 </p>
 <hr>
 <a class="node" id="Translation"></a><div class="nav-panel">

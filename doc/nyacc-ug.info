@@ -11,7 +11,7 @@ copy of the license is included with the distribution as ‘COPYING.DOC’.
 
 NYACC User's Guide
 Matt Wette
-May 2024
+April 2026
 
 
 File: nyacc-ug.info,  Node: Top,  Next: Demonstration,  Prev: (dir),  Up: (dir)
@@ -1033,6 +1033,53 @@ out).
    Currently, when parsers are hashed (using ‘hashify-machine’ the
 non-terminals (e.g., ‘expr’ above) are reported as integers.
 
+The Parser
+----------
+
+One advantage of nyacc over the provided ‘lalr’ parser in Guile is that
+in Scheme, the lalr parser is simple enough that one could hack it.  The
+following is a stripped-down (but not by much) parser routine from the
+module ‘(nyacc parse)’.  This assumes tables have not been compacted (so
+we don't have to deal with default).  The generator outputs a procedure
+that takes one argument: the lexical analyzer.
+
+     (define (make-lalr-parser/sym mach)
+       (let* ((len-v (assq-ref mach 'len-v))
+              (rto-v (assq-ref mach 'rto-v))
+              (pat-v (assq-ref mach 'pat-v))
+              (xct-v (make-xct (assq-ref mach 'act-v) env))
+              (start (assq-ref (assq-ref mach 'mtab) '$start)))
+         (lambda (lexr)
+           (let loop ((state (list 0))       ; state stack
+                      (stack (list '$@))     ; semantic value stack
+                      (nval #f)              ; non-terminal from prev reduction
+                      (lval #f))             ; lexical value (from lex'er)
+             (cond
+              ((not (or nval lval))
+               (loop state stack nval (lexr)))) ; reload
+              (else
+               (let* ((laval (or nval lval))
+                      (tval (car laval))
+                      (sval (cdr laval))
+                      (stal (vector-ref pat-v (car state)))
+                      (stx (assq-ref stal tval)))
+                 (cond
+                  ((not stx)                 ; error
+                   (parse-error state laval))
+                  ((eq? 'shift (car stx))    ; shift
+                   (loop (cons (cdr stx) state) (cons sval stack)
+                         #f (if nval lval #f)))
+                  ((eq? 'reduce (car stx))   ; reduce
+                   (let* ((gx (cdr stx))
+                          (gl (vector-ref len-v gx))
+                          ($$ (apply (vector-ref xct-v gx) stack))
+                          (tval (cons (vector-ref rto-v gx) $$)))
+                     (loop (list-tail state gl) (list-tail stack gl) tval lval)))
+                  (else                      ; accept
+                   (car stack)))))))))
+
+   More to go ...
+
 
 File: nyacc-ug.info,  Node: Translation,  Next: Coding to the Compiler Tower,  Prev: Parsing,  Up: Top
 
@@ -1338,29 +1385,29 @@ References
 
 
 Tag Table:
-Node: Top523
-Node: Demonstration778
-Node: Parsing9956
-Ref: Specification10406
-Ref: Actions19716
-Ref: Recovery from Syntax Errors20394
-Ref: sublanguage21272
-Ref: Parser21593
-Ref: match table25524
-Ref: lex27339
-Ref: parser-lexer34584
-Ref: Parser Tables36174
-Ref: Hashing and Compacting37526
-Ref: Debugging39287
-Ref: Human Readable Output39398
-Node: Translation42455
-Ref: Tagged Lists45027
-Ref: SXML Parse Trees47021
-Node: Coding to the Compiler Tower48958
-Ref: Pretty Print50174
-Node: Administrative50370
-Node: TODOs51396
-Node: References52421
+Node: Top525
+Node: Demonstration780
+Node: Parsing9958
+Ref: Specification10408
+Ref: Actions19718
+Ref: Recovery from Syntax Errors20396
+Ref: sublanguage21274
+Ref: Parser21595
+Ref: match table25526
+Ref: lex27341
+Ref: parser-lexer34586
+Ref: Parser Tables36176
+Ref: Hashing and Compacting37528
+Ref: Debugging39289
+Ref: Human Readable Output39400
+Node: Translation44637
+Ref: Tagged Lists47209
+Ref: SXML Parse Trees49203
+Node: Coding to the Compiler Tower51140
+Ref: Pretty Print52356
+Node: Administrative52552
+Node: TODOs53578
+Node: References54603
 
 End Tag Table
 

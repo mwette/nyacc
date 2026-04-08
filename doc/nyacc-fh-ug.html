@@ -45,7 +45,7 @@ ul.mark-bullet {list-style-type: disc}
 <div class="format">
 <pre class="format-preformatted">FFI Helper User Guide
 Matt Wette
-May 2024
+April 2026
 </pre></div>
 
 <div class="top-level-extent" id="Top">
@@ -159,9 +159,13 @@ something like the following:
 </p>
 <div class="example">
 <pre class="example-preformatted">(define-module (ffi cairo)
-  #:use-module ((system foreign) #:prefix ffi:)
+  #:export (M_PI M_2PI make-cairo-unit-matrix)
   #:use-module (system foreign-library)
-  #:use-module (nyacc foreign cdata))
+  #:use-module ((system foreign) #:prefix ffi:))
+
+(begin
+  (use-modules (nyacc foreign cdata))
+...
 
 ;; extern int cairo_version(void);
 (define-public cairo_version

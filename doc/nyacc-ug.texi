@@ -23,7 +23,7 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @format
 NYACC User's Guide
 Matt Wette
-May 2024
+April 2026
 @end format
 
 @c @clear skip
@@ -1242,6 +1242,55 @@ state 8, token "\n"	=> shift, goto 10
 @end example
 Currently, when parsers are hashed (using @code{hashify-machine} the
 non-terminals (e.g., @code{expr} above) are reported as integers.
+
+
+@subheading The Parser
+
+One advantage of nyacc over the provided @code{lalr} parser in Guile is
+that in Scheme, the lalr parser is simple enough that one could hack it.
+The following is a stripped-down (but not by much) parser routine from
+the module @code{(nyacc parse)}.  This assumes tables have not been
+compacted (so we don't have to deal with default).  The generator
+outputs a procedure that takes one argument: the lexical analyzer.
+
+@example
+(define (make-lalr-parser/sym mach)
+  (let* ((len-v (assq-ref mach 'len-v))
+         (rto-v (assq-ref mach 'rto-v))
+         (pat-v (assq-ref mach 'pat-v))
+         (xct-v (make-xct (assq-ref mach 'act-v) env))
+         (start (assq-ref (assq-ref mach 'mtab) '$start)))
+    (lambda (lexr)
+      (let loop ((state (list 0))       ; state stack
+                 (stack (list '$@@))     ; semantic value stack
+                 (nval #f)              ; non-terminal from prev reduction
+                 (lval #f))             ; lexical value (from lex'er)
+        (cond
+         ((not (or nval lval))
+          (loop state stack nval (lexr)))) ; reload
+         (else
+          (let* ((laval (or nval lval))
+                 (tval (car laval))
+                 (sval (cdr laval))
+                 (stal (vector-ref pat-v (car state)))
+                 (stx (assq-ref stal tval)))
+            (cond
+             ((not stx)                 ; error
+              (parse-error state laval))
+             ((eq? 'shift (car stx))    ; shift
+              (loop (cons (cdr stx) state) (cons sval stack)
+                    #f (if nval lval #f)))
+             ((eq? 'reduce (car stx))   ; reduce
+              (let* ((gx (cdr stx))
+                     (gl (vector-ref len-v gx))
+                     ($$ (apply (vector-ref xct-v gx) stack))
+                     (tval (cons (vector-ref rto-v gx) $$)))
+                (loop (list-tail state gl) (list-tail stack gl) tval lval)))
+             (else                      ; accept
+              (car stack)))))))))
+@end example
+
+More to go ...
 
 @c ==================================
 @node Translation
