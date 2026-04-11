@@ -89,7 +89,7 @@
 	 (else (let* ((dbus-type (car args))
 		      (ffi-type (dbus->ffi-type dbus-type))
 		      (arg-value (cadr args)))
-		 (cons* (cons ffi:int (unwrap~enum dbus-type))
+		 (cons* (cons ffi:int (unwrap-enum dbus-type))
 			(cons ffi-type arg-value)
 			(loop (cddr args)))))))))))
 
