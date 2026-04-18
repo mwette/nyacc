@@ -1,6 +1,6 @@
 ;;; language/spec.scm - NYACC's calculator demo
 
-;; Copyright (C) 2015,2018,2019 Matthew R. Wette
+;; Copyright (C) 2015,2018,2019,2026 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -20,8 +20,8 @@
 (define-module (language calc spec)
   #:export (calc)
   #:use-module (system base language)
-  #:use-module (nyacc lang calc parser)
-  #:use-module (nyacc lang calc compiler))
+  #:use-module (language calc parser)
+  #:use-module (language calc compiler))
 
 (define-language calc
   #:title       "calc"
