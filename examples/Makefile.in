@@ -63,6 +63,14 @@ install-examples:
 	(cd $(XSRCDIR); tar cf - nyacc | (cd $(DESTDIR)$(XDSTDIR); tar xf -))
 	(cd $(XSRCDIR); tar cf - system | (cd $(DESTDIR)$(XDSTDIR); tar xf -))
 
+.PHONY: uninstall
+uninstall:
+	@for subdir in ffi language nyacc system; do \
+	  if test -d $(DESTDIR)$(XDSTDIR)/$${subdir}; then \
+	  rm -rf $(DESTDIR)$(XDSTDIR)/$${subdir}; \
+	  fi; \
+	done
+
 # -------------------------------------
 
 .PHONY:	install-nx-languages \
