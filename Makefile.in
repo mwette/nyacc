@@ -32,7 +32,9 @@ install:
 
 .PHONY: uninstall
 uninstall:
-	@echo "not smart enough to uninstall"
+	@(cd module; $(MAKE) DESTDIR=$(DESTDIR) uninstall)
+	@(cd doc; $(MAKE) DESTDIR=$(DESTDIR) uninstall)
+	@(cd examples; $(MAKE) DESTDIR=$(DESTDIR) uninstall)
 
 .PHONY: install-srcs
 install-srcs:

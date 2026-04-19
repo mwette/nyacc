@@ -147,6 +147,21 @@ install-bins: $(BINARIES)
 	  fi; \
 	done
 
+.PHONY: uninstall
+uninstall:
+	@echo "uninstalling NYACC sources in $(DESTDIR)$(SITE_SCM_DIR)"
+	@for file in $(SOURCES); do \
+	  rm -f $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	done
+	@rm $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
+	@for file in $(C99MACH_SRCS); do \
+	  rm -f $(DESTDIR)$(SITE_SCM_DIR)/nyacc/lang/c99/mach.d/$$file; \
+	done
+	@echo "uninstalling NYACC binaries in $(DESTDIR)$(SITE_GO_DIR)"
+	@for file in $(BINARIES); do \
+	   rm -f $(DESTDIR)$(SITE_GO_DIR)/$${file}; \
+	done
+
 .PHONY: clean
 clean:
 	if [ -d nyacc ]; then (cd nyacc; rm -f *.go); fi
