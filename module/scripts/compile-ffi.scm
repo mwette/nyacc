@@ -132,7 +132,7 @@ Report bugs to https://github.com/mwette/nyacc/issues.\n"))
    (option '(#\s "show-incs") #f #f
            (lambda (opt name arg opts files)
              (values (acons 'show-incs #t opts) files)))
-   (option '(#\L "load-path") #f #f
+   (option '(#\L "load-path") #t #f
            (lambda (opt name arg opts files)
              (values (acons/seed 'load-path arg opts) files)))
    (option '(#\I "inc-dir") #t #f
