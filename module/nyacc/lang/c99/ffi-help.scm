@@ -475,11 +475,13 @@
       (`((pointer-to) (struct-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
          (cond
+          ((dmem? (w/struct* name) defined) (sfsym "struct-~a*" name))
           ((dmem? (w/struct name) defined) (be-pointer aggr-name))
           (else (be-pointer `(delay ,aggr-name))))))
       (`((pointer-to) (union-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "union-~a" name)))
          (cond
+          ((dmem? (w/struct* name) defined) (sfsym "union-~a*" name))
           ((dmem? (w/struct name) defined) (be-pointer aggr-name))
           (else (be-pointer `(delay ,aggr-name))))))
       (`((pointer-to) . ,rest)
@@ -1238,13 +1240,14 @@
                             (xcons* seed (be-typedef type atype)
                                     `(export ,type)))))
                 name-list
-                (dcons (w/struct agname) defined)
+                (dcons (w/struct agname) (w/struct* agname) defined)
                 (xcons* seed
                   (be-typedef atype agdef)
-                  (be-typedef atype* (be-pointer atype))))))
+                  (be-typedef atype* (be-pointer atype))
+                  (export ,atype ,atype*)))))
             ((not (dmem? (w/struct agname) defined))
              (values
-              (dcons (w/struct agname) defined)
+              (dcons (w/struct agname) (w/struct* agname) defined)
               (xcons* seed
                 (be-typedef atype agdef)
                 (be-typedef atype* (be-pointer atype))
@@ -1270,7 +1273,7 @@
                               (be-typedef type atype)
                               `(export ,type)))))
                 name-list
-                (dcons (w/union agname) defined)
+                (dcons (w/union agname) (w/union* agname) defined)
                 (xcons* seed
                   (be-typedef atype agdef)
                   (be-typedef atype* (be-pointer atype))
@@ -1322,9 +1325,7 @@
              (mdecl (udecl->mdecl udecl))
              (name (md-label mdecl))
              (rname (rename name 'variable))
-             (mtail (cdr (md-tail mdecl))) ; remove (extern)
-             ;;(mtail* `((pointer-to) . ,mtail))
-             ;;(type* (mtail->be-type mtail*))
+             (mtail (cdr (md-tail mdecl)))
              (ctype (mtail->be-type mtail))
              (type* (be-pointer ctype))
              (name* (strings->symbol name "*")))
