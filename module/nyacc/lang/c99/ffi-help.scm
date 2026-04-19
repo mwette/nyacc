@@ -178,9 +178,10 @@
 ;; Run pkg-config
 (define (pkg-config name . args)
   (if name
-      (let* ((pkg-config (or (getenv "PKG_CONFIG") "pkg-config"))
-             (cmdstr (string-append pkg-config " "
-                                    (string-join args) " " name))
+      (let* ((namelist (if (string? name) (list name) name))
+             (pkg-config-cmd (or (getenv "PKG_CONFIG") "pkg-config"))
+             (cmdstr (string-append pkg-config-cmd " " (string-join args)
+                                    " " (string-join namelist)))
              (port (open-input-pipe cmdstr))
              (ostr (read-line port))
              (status (close-pipe port))
@@ -826,7 +827,7 @@
          (call `((force ~proc) ,@names))
          (va-call `(apply ~proc ,@names (map cdr ~rest))))
     (xcons* seed
-      `(define-public ,(string->symbol rname)
+      `(define ,(string->symbol rname)
          ,(if varargs?
               `(lambda (,@names . ~rest)
                  (let ((~proc (ffi:pointer->procedure
@@ -844,7 +845,8 @@
                    (let ,urap-par
                      ,(if exec-ret
                           `((lambda (~ret) ,exec-ret) ,call)
-                          call)))))))))
+                          call))))))
+      `(export ,(string->symbol rname)))))
 
 (define (cnvt-fctn-to-C name return params seed)
   ;; simple values return that, for complex, encode as bytevector & return
@@ -1303,9 +1305,9 @@
                   `(define ,al-name (map (lambda (l) (cons (car l) (cadr l)))
                                          ,dl-name))
                   (be-typedef type (be-enum dl-name))
-                  `(define-public ,uw-name
+                  `(define ,uw-name
                      (lambda (arg) (or (assq-ref ,al-name arg) arg)))
-                  `(define-public ,wr-name
+                  `(define ,wr-name
                      (let ((ral (rev-alist ,al-name)))
                        (lambda (arg) (or (assq-ref ral arg) arg))))
                   `(export ,type ,al-name ,uw-name ,wr-name))))))))
@@ -1330,13 +1332,14 @@
          defined
          (xcons* seed
            `(define ,name* ,type*)
-           `(define-public ,(string->symbol rname)
+           `(define ,(string->symbol rname)
               (let* ((obj
                       (delay
                         ,(be-makeobj name* `(foreign-pointer-search ,name)))))
                 (case-lambda
                   (() (extern-ref (force obj)))
-                  ((arg) (extern-set! (force obj) arg)))))))))
+                  ((arg) (extern-set! (force obj) arg)))))
+           `(export ,(string->symbol rname))))))
 
      ((memq 'const sspec)
       (let ((udecl (expand-typerefs udecl udict defined))
@@ -1572,7 +1575,7 @@
                    (cond
                     ((pair? ifl)
                      (match (car ifl)
-                       (`(export . ,terms)
+                       (`(NOT-export . ,terms)
                         (loop ofl (cons (car ifl) seed) (cdr ifl)))
                        (_
                         (loop (cons (car ifl) ofl) seed (cdr ifl)))))
