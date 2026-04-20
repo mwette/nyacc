@@ -671,7 +671,7 @@
 ;; Returns the primary type for pointers and arrays.
 ;; @end deffn
 (define (ctype-primary type)
-  (assert-type 'ctype-primary type)
+  (assert-ctype 'ctype-primary type)
   (case (ctype-kind type)
     ((pointer) (cpointer-type (ctype-info type)))
     ((array) (carray-type (ctype-info type)))
