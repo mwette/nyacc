@@ -98,7 +98,7 @@
 
             cdata-kind cdata& cdata* cdata-sel
             cdata*-sel cdata*-ref cdata&-sel cdata&-ref
-            ctype-sel make-cdata-getter make-cdata-setter
+            ctype-sel make-cdata-getter make-cdata-setter ctype-primary
             ?make-cdata-accessor
             %make-cdata
             ctype->ffi
@@ -666,6 +666,16 @@
   (let ((type (cbase 'void*)) (mtype (mtypeof-basetype 'void*)))
     (%make-ctype (ctype-size type) (ctype-align type) 'function
                  (%make-cfunction proc->ptr ptr->proc variadic? mtype) #f)))
+
+;; @deffn {Procedure} ctype-primary type => type
+;; Returns the primary type for pointers and arrays.
+;; @end deffn
+(define (ctype-primary type)
+  (assert-type 'ctype-primary type)
+  (case (ctype-kind type)
+    ((pointer) (cpointer-type (ctype-info type)))
+    ((array) (carray-type (ctype-info type)))
+    (else #f)))
 
 ;; @deffn {Procedure} ctype-detag type ix tag => type ix
 ;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
