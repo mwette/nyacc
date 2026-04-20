@@ -1016,7 +1016,7 @@
           (__
            (sx-match (car mtail)
 
-             ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
+             ((struct-def (@ . ,attr) (ident ,agname) ,_)
               (let ((agname (rename agname 'type)))
                 (values
                  (dcons name (w/* name) (w/struct agname)
@@ -1030,7 +1030,7 @@
                      (be-typedef aname* type*)
                      `(export ,type ,type* ,aname ,aname*))))))
 
-             ((struct-def ,field-list)
+             ((struct-def ,_)
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
@@ -1038,7 +1038,7 @@
                  (be-typedef type* (be-pointer type))
                  `(export ,type ,type*))))
 
-             ((union-def (ident ,agname) ,field-list)
+             ((union-def (ident ,agname) ,_)
               (let ((agname (rename agname 'type)))
                 (values
                  (dcons name (w/* name) (w/union agname)
@@ -1052,7 +1052,7 @@
                      (be-typedef aname* type*)
                      `(export ,type ,type* ,aname ,aname*))))))
 
-             ((union-def ,field-list)
+             ((union-def ,_)
               (values
                (dcons name (w/* name) defined)
                (xcons* seed
