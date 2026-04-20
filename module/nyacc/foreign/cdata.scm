@@ -336,11 +336,11 @@
        (else (format port " ~a" kind)))
       (format port " 0x~x>" (+ bv-addr ix)))))
 
-(define-inlinable (assert-ctype v p)
+(define (assert-ctype v p)
   (unless (ctype? v)
     (error (simple-format #f "~a: expected <ctype>, got ~s" p v))))
 
-(define-inlinable (assert-cdata v p)
+(define (assert-cdata v p)
   (unless (cdata? v)
     (error (simple-format #f "~a: expected <cdata>, got ~s" p v))))
 
