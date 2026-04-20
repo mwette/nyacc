@@ -336,11 +336,11 @@
        (else (format port " ~a" kind)))
       (format port " 0x~x>" (+ bv-addr ix)))))
 
-(define-inlinable (assert-ctype p v)
+(define-inlinable (assert-ctype v p)
   (unless (ctype? v)
     (error (simple-format #f "~a: expected <ctype>, got ~s" p v))))
 
-(define-inlinable (assert-cdata p v)
+(define-inlinable (assert-cdata v p)
   (unless (cdata? v)
     (error (simple-format #f "~a: expected <cdata>, got ~s" p v))))
 
@@ -582,7 +582,7 @@
      Create an array of TYPE with LENGTH.  If LENGTH is zero, the array
      length is unbounded: it's length can be specified as argument to
      ‘make-cdata’."
-  (assert-ctype 'carray type)
+  (assert-ctype type 'carray)
   (%make-ctype (* n (ctype-size type)) (ctype-align type)
                'array (%make-carray type n) #f))
 
@@ -686,7 +686,7 @@
 ;; MAYBE JUST MAYBE make this return a list of (ix ct) (ix ct) ...
 ;;
 (define (ctype-detag ct ix tag)
-  (assert-ctype 'ctype-detag ct) ;; not needed assuming stable mod
+  (assert-ctype ct 'ctype-detag) ;; not needed assuming stable mod
   (unless (integer? ix) (error "ctype-detag: expecting integer, got" ix))
   (let ((ti (ctype-info ct)))
     (case (ctype-kind ct)
@@ -716,7 +716,7 @@
      This generate a list of (offset, type) pairs for a type.  The
      result is used to create getters and setter for foreign machine
      architectures.  See _make-cdata-getter_ and _make-cdata-setter_."
-  (assert-ctype 'ctype-sel type)
+  (assert-ctype type 'ctype-sel)
   (let loop ((res '()) (ct type) (ix 0) (tags tags))
     (cond
      ((null? tags)
@@ -849,7 +849,7 @@
           (ctype-equal? foo_t struct-foo) => #t
      It is recommended that one use symbols for names rather than
      strings, so that ‘pretty-print-ctype’ will use names effectively."
-  (assert-ctype 'name-ctype type)
+  (assert-ctype type 'name-ctype)
   (%make-ctype (ctype-size type) (ctype-align type)
                (ctype-kind type) (ctype-info type)
                name))
@@ -873,7 +873,7 @@
     (let* ((data (%make-cdata (make-bytevector (ctype-size type) 0) 0 type)))
       (if value (cdata-set! data value))
       data))
-  (assert-ctype 'make-cdata type)
+  (assert-ctype type 'make-cdata)
   (if (and value
            (integer? value)
            (eq? 'array (ctype-kind type)))
@@ -890,7 +890,7 @@
 ;; @code{pointer->bytevector}.
 ;; @end deffn
 (define (make-cdata/* type pointer)
-  (assert-ctype 'make-cdata/* type)
+  (assert-ctype type 'make-cdata/*)
   (let* ((size (ctype-size type))
          (bvec (pointer->bytevector pointer size))
          (data (%make-cdata bvec 0 type)))
@@ -922,7 +922,7 @@
           $1 = #<cdata s32le 0x77bbf8e52260>
           > (cdata-ref $1)
           $2 = 42"
-  (assert-cdata 'cdata-sel data)
+  (assert-cdata data 'cdata-sel)
   (if (null? tags) data
       (let loop ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
                  (tags tags))
@@ -1177,7 +1177,7 @@
      _pointer_, _procedure_, _array_ (an array) and _struct_ (an alist).
      For _union_ an exception is raised.  The returned values are
      freshly allocated copies.  If want a cdata object, use ‘cdata-sel’."
-  (assert-cdata 'cdata-ref data)
+  (assert-cdata data 'cdata-ref)
   (let ((data (apply cdata-sel data tags)))
     (Xcdata-ref (cdata-bv data) (cdata-ix data) (cdata-ct data))))
 
@@ -1199,7 +1199,7 @@
      If VALUE is a ‘<cdata>’ object then copy that (if types match).
      The VALUE argument can be a Scheme procedure when the associated
      ctype is a pointer to function."
-  (assert-cdata 'cdata-set! data)
+  (assert-cdata data 'cdata-set!)
   (let ((data (apply cdata-sel data tags)))
     (Xcdata-set! (cdata-bv data) (cdata-ix data) (cdata-ct data) value)))
 
@@ -1210,7 +1210,7 @@
   "- Procedure: cdata-copy src) => <cdata>
      Copy a data object (which might be a reference from another data
      object)."
-  (assert-cdata 'cdata-copy data)
+  (assert-cdata data 'cdata-copy)
   (let* ((bv (cdata-bv data))
          (ix (cdata-ix data))
          (ct (cdata-ct data))
@@ -1227,7 +1227,7 @@
   "- Procedure: cdata& data => cdata
      Generate a reference (i.e., cpointer) to the contents in the
      underlying bytevector."
-  (assert-cdata 'cdata& data)
+  (assert-cdata data 'cdata&)
   (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
          (pa (+ (pointer-address (bytevector->pointer bv)) ix)))
     (make-cdata (cpointer ct) pa)))
@@ -1240,7 +1240,7 @@
   "- Procedure: cdata* data
      De-reference a pointer.  Returns a _cdata_ object representing the
      contents at the address in the underlying bytevector."
-  (assert-cdata 'cdata* data)
+  (assert-cdata data 'cdata*)
   (unless (and (cdata? data) (eq? 'pointer (ctype-kind (cdata-ct data))))
     (error "cdata*: bad arg"))
   (let* ((cptr (ctype-info (cdata-ct data)))
@@ -1263,7 +1263,7 @@
 (define (cdata-kind data)
   "- Procedure: cdata-kind data
      Return the kind of DATA: pointer, base, struct, ..."
-  (assert-cdata 'cdata-kind data)
+  (assert-cdata data 'cdata-kind)
   (ctype-kind (cdata-ct data)))
 
 ;; @deffn {Procedure} cdata*-sel data [tag ...] => value
@@ -1288,7 +1288,7 @@
 (define (cdata&-sel data . tags)
   "- Procedure: cdata&-sel data [tag ...] => value
      Provide a pointer ctype for the address of the selected value."
-  (assert-cdata 'cdata&-sel data)
+  (assert-cdata data 'cdata&-sel)
   (let* ((data (apply cdata-sel data tags))
          (bptr (bytevector->pointer (cdata-bv data)))
          (addr (+ (pointer-address bptr) (cdata-ix data)))
@@ -1301,7 +1301,7 @@
 (define (cdata&-ref data . tags)
   "- Procedure: cdata&-ref data [tag ...] => value
      Provide a (Guile) pointer to the selected value."
-  (assert-cdata 'cdata&-ref data)
+  (assert-cdata data 'cdata&-ref)
   (let* ((data (apply cdata-sel data tags))
          (bptr (bytevector->pointer (cdata-bv data)))
          (addr (+ (pointer-address bptr) (cdata-ix data))))
@@ -1345,8 +1345,8 @@
           $2 = 42
           > (cdata-ref p2 '* 'base 'a)
           $3 = 42"
-  (assert-ctype 'cdata-cast type)
-  (assert-cdata 'cdata-cast data)
+  (assert-ctype type 'cdata-cast)
+  (assert-cdata data 'cdata-cast)
   (define (type-miss)
     (error "ccast: incompatible type:" (list (cdata-ct data) type)))
   (define (type-check ft tt)
@@ -1475,11 +1475,11 @@
     (error "make-cdata-setter: bad OFFSET arg"))
   (case-lambda
     ((data) 
-     (assert-cdata 'make-cdata-accessor data)
+     (assert-cdata data 'make-cdata-accessor)
      (call-with-values (lambda () (Xloop sel offset data '()))
        Xcdata-ref))
     ((data value)
-     (assert-cdata 'make-cdata-accessor data)
+     (assert-cdata data 'make-cdata-accessor)
      (call-with-values (lambda () (Xloop sel offset data '()))
       (lambda (bv ix ct) (Xcdata-set! bv ix ct value))))))
 
@@ -1519,7 +1519,7 @@
                   `(,name ,call #:offset ,offs)
                   `(,name ,call))))))
 
-  (assert-ctype 'pretty-print-ctype type)
+  (assert-ctype type 'pretty-print-ctype)
   (define (cnvt type)
     (let ((info (ctype-info type)) (name (ctype-name type)))
 
@@ -1586,7 +1586,7 @@
   "- Procedure: ctype->ffi type
      Generate a argument spec for Guile's ffi interface.  Example:
           (ctype->ffi (cpointer (cbase int))) => '*"
-  (assert-ctype 'ctype->ffi type)
+  (assert-ctype type 'ctype->ffi)
   (let ((info (ctype-info type)))
     (case (ctype-kind type)
       ((base) (mtype->ffi info))
