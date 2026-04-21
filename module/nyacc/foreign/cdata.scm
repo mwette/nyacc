@@ -1,6 +1,6 @@
 ;;; nyacc/foreign/cdata.scm -
 
-;; Copyright (C) 2023-2025 Matthew Wette
+;; Copyright (C) 2023-2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -671,7 +671,7 @@
 ;; Returns the primary type for pointers and arrays.
 ;; @end deffn
 (define (ctype-primary type)
-  (assert-ctype 'ctype-primary type)
+  (assert-ctype type 'ctype-primary)
   (case (ctype-kind type)
     ((pointer) (cpointer-type (ctype-info type)))
     ((array) (carray-type (ctype-info type)))
