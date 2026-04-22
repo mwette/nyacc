@@ -363,6 +363,10 @@ they are pointer types with delays.  The implementation of
 @code{ctype-eqv?}.
 @end deffn
 
+@deffn {Procedure} ctype-primary type => type
+Returns the primary type for pointers and arrays.
+@end deffn
+
 @deffn {Procedure} ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
 This generate a list of (offset, type) pairs for a type.  The result is
 used to create getters and setter for foreign machine architectures.

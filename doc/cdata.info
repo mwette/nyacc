@@ -293,6 +293,9 @@ Working with Types
      delays.  The implementation of ‘ctype-equal?’ is not complete: it
      is currently the same as ‘ctype-eqv?’.
 
+ -- Procedure: ctype-primary type => type
+     Returns the primary type for pointers and arrays.
+
  -- Procedure: ctype-sel type ix [tag ...] => ((ix . ct) (ix . ct) ...)
      This generate a list of (offset, type) pairs for a type.  The
      result is used to create getters and setter for foreign machine

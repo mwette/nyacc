@@ -392,6 +392,11 @@ they are pointer types with delays.  The implementation of
 </p></dd></dl>
 
 <dl class="first-deffn">
+<dt class="deffn" id="index-ctype_002dprimary"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-primary</strong> <var class="def-var-arguments">type =&gt; type</var><a class="copiable-link" href="#index-ctype_002dprimary"> &para;</a></span></dt>
+<dd><p>Returns the primary type for pointers and arrays.
+</p></dd></dl>
+
+<dl class="first-deffn">
 <dt class="deffn" id="index-ctype_002dsel"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-sel</strong> <var class="def-var-arguments">type ix [tag ...] =&gt; ((ix . ct) (ix . ct) ...)</var><a class="copiable-link" href="#index-ctype_002dsel"> &para;</a></span></dt>
 <dd><p>This generate a list of (offset, type) pairs for a type.  The result is
 used to create getters and setter for foreign machine architectures.
