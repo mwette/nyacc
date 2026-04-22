@@ -475,7 +475,7 @@
                         (function*-wraps return params)))
          (lambda (pc->pr pr->pc)
            (be-pointer (be-function pc->pr pr->pc)))))
-      (`((pointer-to) (pointer-to) (function-returning . ,_1) . ,_2)
+      (`((pointer-to) (pointer-to) (function-returning . ,_) . ,_)
        (be-pointer (be-pointer (be-base 'void))))
       (`((pointer-to) (struct-ref (ident ,name)))
        (let* ((name (rename name 'type)) (aggr-name (sfsym "struct-~a" name)))
@@ -553,19 +553,19 @@
 
   (define (cnvt mtail)
     (match mtail
-      (`((pointer-to) . ,_1) ''*)
+      (`((pointer-to) . ,_) ''*)
       (`((fixed-type ,name))
        (or (assoc-ref ffi-typemap name)
            (fherr/once "no FFI type for ~S" name)))
       (`((float-type ,name))
        (or (assoc-ref ffi-typemap name)
            (fherr/once "no FFI type for ~S" name)))
-      (`((typename ,name) . ,_1)
+      (`((typename ,name) . ,_)
        (or (assoc-ref ffi-typemap name)
            (fherr "no FFI type for ~S" name)))
       (`((void)) 'ffi:void)
-      (`((enum-def . ,_1) . ,_2) 'ffi:int)
-      (`((enum-ref . ,_1) . ,_2) 'ffi:int)
+      (`((enum-def . ,_) . ,_) 'ffi:int)
+      (`((enum-ref . ,_) . ,_) 'ffi:int)
 
       (`((array-of ,dim) . ,rest)
        `(make-list ,(eval-dim dim) ,(cnvt rest)))
@@ -591,7 +591,7 @@
       (`((union-def (ident ,name) ,field-list))
        (cnvt `((union-def ,field-list))))
 
-      (`((function-returning . ,_0) . ,_1) ''*) ;; alias for ptr-to ftn
+      (`((function-returning . ,_) . ,_) ''*) ;; alias for ptr-to ftn
 
       (otherwise
        (fherr "mtail->ffi-decl missed:\n~A" (ppstr mtail)))))
@@ -608,11 +608,11 @@
                          '((enum . "*any*")))) ;; hack provided
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
-      (`((pointer-to) . ,_1) `(arg->pointer ,mname ,(string->symbol name)))
+      (`((pointer-to) . ,_) `(arg->pointer ,mname ,(string->symbol name)))
       (`((fixed-type ,name)) `(arg->number ,mname))
       (`((float-type ,name)) `(arg->number ,mname))
-      (`((enum-def . ,_1)) `(unwrap-enum ,mname))
-      (`((enum-ref . ,_1)) `(unwrap-enum ,mname))
+      (`((enum-def . ,_)) `(unwrap-enum ,mname))
+      (`((enum-ref . ,_)) `(unwrap-enum ,mname))
       (__ #f))))
 
 (define (unwrap-mdecl mdecl)
@@ -645,16 +645,16 @@
                 (let ((pc '(lambda (p) 'unused))) ; only proc->ptr is used
                   `(arg->pointer
                     ,mname ,(be-pointer (be-function pr pc))))))))
-         (`((pointer-to) . ,_1)
+         (`((pointer-to) . ,_)
           `(arg->pointer ,mname))))
-      (`(function-returning . _0)
+      (`(function-returning . _)
        (unwrap-mdecl (cons (md-label mdecl) (cons '(pointer-to) mtail))))
-      (`(enum-def (ident ,name) ,_1)
+      (`(enum-def (ident ,name) ,_)
        (cond
         ((dmem? (w/enum name) defined)
          (list (strings->symbol "unwrap-enum-" name) mname))
         (else `(unwrap-enum ,mname))))
-      (`(enum-def ,_1) `(unwrap-enum ,mname))
+      (`(enum-def ,_) `(unwrap-enum ,mname))
       (`(enum-ref (ident ,name))
        (cond
         ((dmem? (w/enum name) defined)
@@ -666,8 +666,8 @@
       (`(array-of) `(arg->pointer ,mname))
       ;; not expected
       (`(void) #f)
-      (`(struct-def . ,_1) `(cdata&-ref ,mname))
-      (`(union-def . ,_1) `(cdata&-ref ,mname))
+      (`(struct-def . ,_) `(cdata&-ref ,mname))
+      (`(union-def . ,_) `(cdata&-ref ,mname))
       (otherwise
        (fherr "unwrap-mdecl: missed:\n") (pperr mtail)))))
 
@@ -678,11 +678,11 @@
                          '((enum . "*any*")))) ;; hack provided
          (mdecl (udecl->mdecl udecl)))
     (match (md-tail mdecl)
-      (`((fixed-type . ,_1)) #f)
-      (`((float-type . ,_1)) #f)
-      (`((enum-def . ,_1)) (list (sfsym "wrap-~a" name) mname))
-      (`((enum-ref . ,_1)) (list (sfsym "wrap-~a" name) mname))
-      (__ (be-makeobj (string->symbol name) mname)))))
+      (`((fixed-type . ,_)) #f)
+      (`((float-type . ,_)) #f)
+      (`((enum-def . ,_)) (list (sfsym "wrap-~a" name) mname))
+      (`((enum-ref . ,_)) (list (sfsym "wrap-~a" name) mname))
+      (_ (be-makeobj (string->symbol name) mname)))))
 
 (define (wrap-mdecl mdecl)
   (let ((defined (*defined*))
@@ -700,7 +700,7 @@
       (`((enum-def (ident ,name) ,rest))
        (and (dmem? (w/enum name) defined)
             (list (sfsym "wrap-enum-~A" name) mname)))
-      (`((enum-def ,_1)) #f)
+      (`((enum-def ,_)) #f)
       (`((enum-ref (ident ,name)))
        (cond
         ((dmem? (w/enum name) defined) (sfsym "wrap-enum-~A" name))
@@ -725,7 +725,7 @@
            (be-makeobj sname mname)))
         (else #f)))
       (`((pointer-to) . ,otherwise) #f)
-      (`((array-of . ,_1) . ,rest)
+      (`((array-of . ,_) . ,rest)
        (wrap-mdecl (cons* (car mdecl) '(pointer-to) rest)))
       (otherwise
        (fherr "wrap-mdecl missed:\n~A" (ppstr mdecl))))))
@@ -1204,7 +1204,7 @@
                   (let ((xdecl (expand-typerefs udecl udict defined)))
                     (udecl->sexp xdecl udict defined seed))))))
 
-             (,__
+             (,_
               (sferr "udecl->sexp missed typedef:\n") (pperr mdecl)
               (values defined seed)))))))
 
@@ -1216,9 +1216,9 @@
              (return (mdecl->udecl (cons "~ret" (cdr (md-tail mdecl)))))
              (params (cdadar (md-tail mdecl)))
              (aname (sx-match declr
-                      ((init-declr (ftn-declr . ,_1) (asm-expr (string . ,sa)))
+                      ((init-declr (ftn-declr . ,_) (asm-expr (string . ,sa)))
                        (string-trim (string-join sa) #\space))
-                      (,__ #f))))
+                      (,_ #f))))
         (if (dmem? name defined)
             (values defined seed)
             (values (dcons name defined)
@@ -1326,7 +1326,7 @@
         ((enum-def ,enum-def-list)
          (values defined seed))
 
-        (,__ (values #f #f))) (lambda (a b) a) => values)
+        (,_ (values #f #f))) (lambda (a b) a) => values)
 
      ((memq 'extern sspec)
       (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
