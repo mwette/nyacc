@@ -310,9 +310,14 @@
 (define def-def-list
   '("void" "char" "signed char" "unsigned char" "short" "unsigned short"
     "int" "unsigned" "long" "unsigned long" "long long" "unsigned long long"
-    "float" "double" "int8_t" "uint8_t" "int16_t" "uint16_t"
-    "int32_t" "uint32_t" "int64_t" "uint64_t" "size_t" "ssize_t" "ptrdiff_t"
-    "intptr_t" "uintptr_t" "_Bool" "bool" "wchar_t" "char16_t" "char32_t"
+    "float" "double"
+    ;; See issue #73: these are not really pre-defined by C.
+    ;; We assume these are OK to use from base types.
+    "int8_t" "uint8_t" "int16_t" "uint16_t"
+    "int32_t" "uint32_t" "int64_t" "uint64_t"
+    "size_t" "ssize_t" "ptrdiff_t" "intptr_t" "uintptr_t"
+    ;;
+    "_Bool" "bool" "wchar_t" "char16_t" "char32_t"
     "long double" "_Float16" "_Float128" "float _Complex" "double _Complex"
     "long double _Complex" "__int128" "unsigned __int128" "unsigned int"))
 
@@ -937,7 +942,7 @@
       (let* ((specl `(decl-spec-list (type-spec ,tspec)))
              (mdecl (udecl->mdecl (sx-list 'udecl #f specl declr)))
              (name (rename (md-label mdecl) 'type))
-             (type (strings->symbol name))
+             (type (string->symbol name))
              (type* (strings->symbol name "*"))
              (mtail (md-tail mdecl)))
 
@@ -1176,21 +1181,24 @@
              ((typename ,typename)
               (let ((typerename (rename typename 'type)))
                 (cond
+                 ((member typename base-type-name-list)
+                  (values
+                   (dcons name defined)
+                   (xcons* seed
+                     (be-typedef type (be-base (string->symbol typename)))
+                     `(export ,type))))
                  ((dmem? typerename defined)
                   (let* ((typename typerename)
-                         (aka (string->symbol typename))
-                         (atype (strings->symbol typename))
                          (defined (dcons name defined))
-                         (seed (cons (be-typedef type atype) seed)))
+                         (seed (xcons* seed
+                                 (be-typedef type (string->symbol typename))
+                                 `(export ,type))))
                     (if (dmem? (w/* typename) defined)
-                        (let* ((name* (strings->symbol name "*"))
-                               (aka* (strings->symbol typename "*"))
-                               (atype* (strings->symbol typename "*")))
-                          (values
-                           (dcons (w/* name) defined)
-                           (xcons* seed
-                             (be-typedef type* atype*)
-                             `(export ,type*))))
+                        (values
+                         (dcons (w/* name) defined)
+                         (xcons* seed
+                           (be-typedef type* (strings->symbol typename "*"))
+                           `(export ,type*)))
                         (values defined seed))))
                  (else
                   (let ((xdecl (expand-typerefs udecl udict defined)))
