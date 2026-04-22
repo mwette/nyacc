@@ -92,7 +92,8 @@
    (else ch)))
 
 ;; This reads the rest of the input, with ch and returns a string;
-;; Replaces get-string-all from (ice-9 textual-ports).
+;; Replaces (buggy) get-string-all implementation from (ice-9 textual-ports)
+;; which returns zero-length string instead of <eof> on end of file.
 (define (read-rest ch)
   (reverse-list->string
    (let loop ((res '()) (ch ch))
