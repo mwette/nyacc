@@ -1244,7 +1244,7 @@
                 (xcons* seed
                   (be-typedef atype agdef)
                   (be-typedef atype* (be-pointer atype))
-                  (export ,atype ,atype*)))))
+                  `(export ,atype ,atype*)))))
             ((not (dmem? (w/struct agname) defined))
              (values
               (dcons (w/struct agname) (w/struct* agname) defined)
