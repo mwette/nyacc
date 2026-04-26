@@ -29,9 +29,8 @@
   #:export (define-ffi-module
             compile-ffi-file
             load-include-file
-            ccode->sexp
-            udecl->sexp
-            *fh-backend*)
+            ccode->sexp udecl->sexp
+            make-fh-backend *fh-backend*)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 pretty-print)
@@ -62,7 +61,6 @@
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:use-module (nyacc foreign arch-info)
-  #:use-module (nyacc lang c99 fh-utils)
   #:re-export (*nyacc-version*)
   #:version (3 04 6))
 
@@ -82,7 +80,29 @@
 
 (define *defined* (make-parameter (alist->vhash '())))
 
+(define *errmsgs* (make-parameter '())) ; list of warnings
+
 (define *fh-backend* (make-parameter #f))
+
+(define-record-type <fh-backend>
+  (make-fh-backend name header trailer
+                   mt-base mt-array mt-pointer mt-struct
+                   mt-bitfield mt-union mt-function mt-enum
+                   make-type-defn make-object)
+  fhbe-impl?
+  (name fhbe-name)
+  (header fhbe-header)
+  (trailer fhbe-trailer)
+  (mt-base fhbe-base)
+  (mt-array fhbe-array)
+  (mt-pointer fhbe-pointer)
+  (mt-struct fhbe-struct)
+  (mt-bitfield fhbe-bitfield)
+  (mt-union fhbe-union)
+  (mt-function fhbe-function)
+  (mt-enum fhbe-enum)
+  (make-type-defn fhbe-typedef)
+  (make-object fhbe-makeobj))
 
 (define-syntax be-name (identifier-syntax (fhbe-name (*fh-backend*))))
 (define-syntax be-header (identifier-syntax (fhbe-header (*fh-backend*))))
@@ -100,6 +120,18 @@
 
 
 ;; === utilities
+
+(define (fherr fmt . args)
+  (apply throw 'ffi-help-error fmt args))
+
+(define (fherr/once fmt . args)
+  (let ((errmsgs (*errmsgs*)))
+    (cond
+     ((member fmt errmsgs)
+      (apply throw 'ffi-help-error #f '()))
+     (else
+      (*errmsgs* (cons fmt errmsgs))
+      (apply throw 'ffi-help-error fmt args)))))
 
 ;; like cons* but intended for use w/ *defined*
 (define-syntax dcons

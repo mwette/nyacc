@@ -67,7 +67,6 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
 	nyacc/lang/c99/cxeval.go		\
-	nyacc/lang/c99/fh-utils.go		\
 	nyacc/lang/c99/ffi-help.go		\
 	scripts/compile-ffi.go
 
@@ -84,7 +83,6 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/munge.scm		\
 	nyacc/lang/c99/cxmach.scm		\
 	nyacc/lang/c99/cxeval.scm		\
-	nyacc/lang/c99/fh-utils.scm		\
 	nyacc/lang/c99/ffi-help.scm		\
 	scripts/compile-ffi.scm
 
