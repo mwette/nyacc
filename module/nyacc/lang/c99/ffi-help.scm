@@ -1933,7 +1933,7 @@
                 (let loop ((exp (read iport)))
                   (cond
                    ((eof-object? exp)
-                    (display "\n;; --- last line ---\n" oport)
+                    (simple-format oport "\n;; --- last line ---\n")
                     output)
                    ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
                     (eval exp env)
