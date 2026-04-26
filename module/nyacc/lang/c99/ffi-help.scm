@@ -1363,7 +1363,7 @@
 
 ;; === output ffi-module header ================================================
 
-(define *mport* (make-parameter #t))       ; output module port
+(define *mport* (make-parameter #f))       ; output module port
 
 (define (sfscm fmt . args)
   (apply simple-format (*mport*) fmt args))
