@@ -30,6 +30,7 @@
             compile-ffi-file
             load-include-file
             ccode->sexp udecl->sexp
+            fherr fherr/once
             make-fh-backend *fh-backend*)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
