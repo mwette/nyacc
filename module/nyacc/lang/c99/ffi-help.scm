@@ -1717,8 +1717,8 @@
 
 ;; === translators ================
 
-;; @deffn {Procedure} ccode->sexp string [attrs] => tree
-;; Convert a snippet of C code to list of scheme forms.
+;; @deffn {Procedure} ccode->sexp string [attrs] => sexp
+;; Convert a snippet of C code to list of scheme forms.  For example,
 ;; @example
 ;; > (ccode->sexp "double sqrt(double x);")
 ;; $1 = (begin
@@ -1729,7 +1729,7 @@
 ;;                           (list ffi:double)))))
 ;;       (lambda (x)
 ;;         (let ((x (arg->number x))) ((force ~proc) x))))))
-;; > (ccode->sexp "typedef struct { int x; double y; } foo_t;")
+;; > (ccode->sexp "typedef struct @{ int x; double y; @} foo_t;")
 ;; $2 = (begin
 ;;   (define-public foo_t
 ;;     (name-ctype
@@ -1739,22 +1739,56 @@
 ;;   (define-public foo_t*
 ;;     (name-ctype 'foo_t* (cpointer foo_t))))
 ;; @end example
-;; The optional argument @var{attrs} is an alist of ffi-module
-;; including
-;; @table code
-;; @ #:pkg-config
+;; The optional argument @var{attrs} is an alist associated with ffi-module 
+;; options, including
+;; @table @code
+;; @item pkg-config
 ;; a string denoting the pkgconfig package
-;; @ #:cpp-defs
+;; @item cpp-defs
 ;; a quoted list of strings for cpp defs
-;; @ #:inc-dirs
+;; @item inc-dirs
 ;; a quoted list of strings denoting include directories
-;; @ #:inc-filter
+;; @item inc-filter
 ;; usually a procedure of two arguments, the include spec (e.g.
 ;; @code{<foo.h>} and the path (e.g., @code{/usr/include/foo.h})
 ;; it should return @code{#f} if declarations from the file should
 ;; not be included in the output
+;; @end table
 ;; @end deffn
-(define* (ccode->sexp code #:optional attrs)
+(define* (ccode->sexp code #:optional (attrs '()))
+  "- Procedure: ccode->sexp string [attrs] => sexp
+     Convert a snippet of C code to list of scheme forms.  For example,
+          > (ccode->sexp \"double sqrt(double x);\")
+          $1 = (begin
+            (define-public sqrt
+              (let ((~proc (delay (ffi:pointer->procedure
+                                    ffi:double
+                                    (foreign-pointer-search \"sqrt\")
+                                    (list ffi:double)))))
+                (lambda (x)
+                  (let ((x (arg->number x))) ((force ~proc) x))))))
+          > (ccode->sexp \"typedef struct { int x; double y; } foo_t;\")
+          $2 = (begin
+            (define-public foo_t
+              (name-ctype
+                'foo_t
+                (cstruct
+                  (list `(x ,(cbase 'int)) `(y ,(cbase 'double))))))
+            (define-public foo_t*
+              (name-ctype 'foo_t* (cpointer foo_t))))
+     The optional argument ATTRS is an alist associated with ffi-module
+     options, including
+     ‘pkg-config’
+          a string denoting the pkgconfig package
+     ‘cpp-defs’
+          a quoted list of strings for cpp defs
+     ‘inc-dirs’
+          a quoted list of strings denoting include directories
+     ‘inc-filter’
+          usually a procedure of two arguments, the include spec (e.g.
+          ‘<foo.h>’ and the path (e.g., ‘/usr/include/foo.h’) it should
+          return ‘#f’ if declarations from the file should not be
+          included in the output"
   (let* ((tree (parse-code code attrs))
          (udict (c99-trans-unit->udict/deep tree))
          (udecls (c99-trans-unit->udict tree))
