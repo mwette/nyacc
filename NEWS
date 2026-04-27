@@ -8,16 +8,16 @@ without any warranty.
 2026-XX-XX  V3.05.0
         * ffi-help.scm(udecl->sexp): track function decl's in defined list
         * ffi-help.scm(udecl->sexp): replace define-public with define+export
-        * ffi-help #:pkg-config takes string or list of strings
-        * */Makefile.in: add target `uninstall'
+        * ffi-help #:pkg-config now takes string or list of strings
+        * all Makefile.in: add target `uninstall'
         * ffi-help.scm(udecl->sexp,mtail->be-type): for struct foo *v include
           the (w/struct-* "foo") in declared, for unions too, and use them
         * cdata.scm(ctype-primary): new procedure to return primary type for
           pointers and arrays
         * ffi-help.scm: fix missing stdint types (e.g. int64_t), which are not
-          intrinsic to C but used by the backends, so call (be-base 'int64_t)
+          intrinsic to C but in the backends, so call (be-base 'int64_t)
         * Eliminated use of (nyacc lang c99 fh-utils); merged into ffi-help:
-          The separate package guile-fhbe now provides:
+          A separate package `guile-fhbe' on github now provides:
           + ccode->bstructs-sexp
           + ccode->bytestructures-sexp
 
