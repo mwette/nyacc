@@ -1781,6 +1781,10 @@
 ;; a quoted list of strings for cpp defs
 ;; @item inc-dirs
 ;; a quoted list of strings denoting include directories
+;; @item decl-filter
+;; predicate taking one argument, the (qualified) name of a declaration,
+;; indicating whether it should be expaneded;  for @code{struct foo} use
+;; @code{'(struct . "foo")}
 ;; @item inc-filter
 ;; usually a procedure of two arguments, the include spec (e.g.
 ;; @code{<foo.h>} and the path (e.g., @code{/usr/include/foo.h})
@@ -1817,6 +1821,10 @@
           a quoted list of strings for cpp defs
      ‘inc-dirs’
           a quoted list of strings denoting include directories
+     ‘decl-filter’
+          predicate taking one argument, the (qualified) name of a
+          declaration, indicating whether it should be expaneded; for
+          ‘struct foo’ use ‘'(struct . \"foo\")’
      ‘inc-filter’
           usually a procedure of two arguments, the include spec (e.g.
           ‘<foo.h>’ and the path (e.g., ‘/usr/include/foo.h’) it should
