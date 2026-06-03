@@ -25,7 +25,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang calc compiler)
+(define-module (language calc compiler)
   #:export (compile-tree-il compile-cps))
 
 (use-modules (sxml match))

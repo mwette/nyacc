@@ -14,7 +14,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang calc mach)
+(define-module (language calc mach)
   #:export (full-spec full-mach stmt-spec stmt-mach gen-calc-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
@@ -35,7 +35,7 @@
      (expr "\n" ($$ `(expr-stmt ,$1)))
      (assn "\n" ($$ `(assn-stmt ,$1))))
     (expr
-     (expr "+" expr ($$ `(add ,$1 ,$3))) x
+     (expr "+" expr ($$ `(add ,$1 ,$3)))
      (expr "-" expr ($$ `(sub ,$1 ,$3)))
      (expr "*" expr ($$ `(mul ,$1 ,$3)))
      (expr "/" expr ($$ `(div ,$1 ,$3)))

@@ -1,4 +1,4 @@
-;; mach.d/calc-full-tab.scm
+;; calc-full-tab.scm
 
 (define calc-full-mtab
   '(($start . 20) ("=" . 3) (")" . 4) ("(" . 5) ($ident . 6) ($float . 7) 
@@ -37,4 +37,4 @@
    (cons 'pat-v calc-full-pat-v)
    ))
 
-;;; end tables
+;; --- last line ---

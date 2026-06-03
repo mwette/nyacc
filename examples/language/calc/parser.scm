@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-(define-module (nyacc lang calc parser)
+(define-module (language calc parser)
   #:export (parse-calc read-calc)       ; parse full, read stmt
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
@@ -27,11 +27,11 @@
 ;; Include the reduction actions that get called when a production
 ;; rule is reduced.  This is a separate file to it could be changed
 ;; by hand and place in lexical context with routines called.
-(include-from-path "nyacc/lang/calc/mach.d/calc-full-act.scm")
+(include-from-path "language/calc/mach.d/calc-full-act.scm")
 
 ;; Include the automaton tables.  These are used by the parser defined
 ;; in nyacc/parser.scm.
-(include-from-path "nyacc/lang/calc/mach.d/calc-full-tab.scm")
+(include-from-path "language/calc/mach.d/calc-full-tab.scm")
 
 ;; Generate a lexer.  Look in nyacc/lex.scm to see how this is formulated.
 ;; The object calc-mtab is defined in mach.d/calc-tab.scm.
@@ -54,8 +54,8 @@
 
 ;;; Stmt parser
 
-(include-from-path "nyacc/lang/calc/mach.d/calc-stmt-act.scm")
-(include-from-path "nyacc/lang/calc/mach.d/calc-stmt-tab.scm")
+(include-from-path "language/calc/mach.d/calc-stmt-act.scm")
+(include-from-path "language/calc/mach.d/calc-stmt-tab.scm")
 
 (define gen-stmt-lexer
   (make-lexer-generator calc-stmt-mtab #:space-chars " \t"))

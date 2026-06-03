@@ -7,7 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (nyacc lang calc mach))
+(use-modules (language calc mach))
 (use-modules (nyacc lalr))
 
 (gen-calc-files)
