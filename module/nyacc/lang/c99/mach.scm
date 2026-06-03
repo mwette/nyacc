@@ -260,7 +260,7 @@
      (float-type-specifier ($$ `(type-spec ,$1)))
      (fixpt-type-specifier ($$ `(type-spec ,$1)))
      ("_Sat" fixpt-type-specifier ($$ `(type-spec ,(string-append "_Sat " $2))))
-     ("_Bool" ($$/ref 's5.1.5-01 '(type-spec (fixed-type "_Bool"))))
+     ("_Bool" ($$ '(type-spec (fixed-type "_Bool"))))
      (complex-type-specifier ($$ `(type-spec ,$1)))
      (struct-or-union-specifier ($$ `(type-spec ,$1)))
      (enum-specifier ($$ `(type-spec ,$1)))
