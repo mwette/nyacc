@@ -20,11 +20,8 @@
 (define-module (nyacc lang c99 cxmach)
   #:export (c99cx-spec c99cx-mach gen-c99cx-files)
   #:use-module (nyacc lalr)
-  #:use-module (nyacc lex)
   #:use-module (nyacc util)
-  #:use-module (nyacc lang util)
-  #:use-module (rnrs arithmetic bitwise)
-  #:use-module (system foreign))
+  #:use-module (nyacc lang util))
 
 (define c99cx-spec
   (lalr-spec

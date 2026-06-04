@@ -20,10 +20,7 @@
 (define-module (nyacc lang c99 cppmach)
   #:export (cpp-spec cpp-mach gen-cpp-files)
   #:use-module (nyacc lalr)
-  #:use-module (nyacc parse)
-  #:use-module (nyacc lex)
-  #:use-module (nyacc lang util)
-  #:use-module (rnrs arithmetic bitwise))
+  #:use-module (nyacc lang util))
 
 (define cpp-spec
   (lalr-spec
