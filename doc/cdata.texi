@@ -46,8 +46,8 @@ October 2024
 @node Introduction
 @heading Introduction
 
-The @emph{cdata} module (@code{(nyacc foreign cdata)} and its
-partner @emph{arch-info} (@code{(nyacc foreign arch-info)} provide a
+The @emph{cdata} module (@code{(nyacc foreign cdata)} along with its
+partner @emph{arch-info} @code{(nyacc foreign arch-info)}) provide a
 way to work with data originating from C libraries.  We hope the module
 is reasonably easy to understand and use.  Size and alignment is
 tracked for all types.  Types are classified into the following kinds:
