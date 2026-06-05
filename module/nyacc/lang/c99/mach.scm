@@ -34,7 +34,6 @@
   #:export (c99-spec c99-mach c99x-spec c99x-mach gen-c99-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
-  ;;#:use-module (nyacc lex)
   #:use-module (nyacc util))
 
 ;; @deffn {Variable} c99-spec

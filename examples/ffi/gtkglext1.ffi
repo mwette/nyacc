@@ -1,0 +1,36 @@
+;; gtkglext1.ffi			-*- Scheme -*-
+
+;; Copyright (C) 2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+(define-ffi-module (ffi gtkglext1)
+  #:use-ffi-module (ffi gdk2)
+  #:use-ffi-module (ffi gtk2)
+  #:use-ffi-module (ffi glugl)
+  #:pkg-config "gtkglext-1.0"
+  #:include '("gtk/gtkgl.h")
+  #:inc-filter (lambda (f p) (string-contains p "gtkglext-1.0/" 0)))
+
+(define-public gtkgl-symval ffi-gtkglext1-symbol-val)
+
+(define-public (gtk_widget_get_gl_drawable widget)
+  (make-GdkGLDrawable*
+   (fh-unwrap GdkGLWindow* (gtk_widget_get_gl_window widget))))
+
+;;#define GDK_TYPE_GL_DRAWABLE              (gdk_gl_drawable_get_type ())
+;;#define GDK_GL_DRAWABLE(inst)             (G_TYPE_CHECK_INSTANCE_CAST ((inst), GDK_TYPE_GL_DRAWABLE, GdkGLDrawable))
+;;#define GDK_GL_DRAWABLE_CLASS(vtable)     (G_TYPE_CHECK_CLASS_CAST ((vtable), GD
+
+;; --- last line ---
