@@ -652,8 +652,8 @@
 (define (lookup-def defs ident)
   (let* ((def (assoc ident defs)) (ref (and def (cdr def))))
     (cond
-     ((not ref))                        ; catch ("FOO" . #f)
-     ((null? ref))
+     ((not ref) ref)                    ; catch undef
+     ((null? ref) ref)
      ((string? ref) (set-cdr! def (tokenize-cpp-string ref)))
      ((string? (cdr ref)) (set-cdr! ref (tokenize-cpp-string (cdr ref)))))
     (and ref (cdr def))))
