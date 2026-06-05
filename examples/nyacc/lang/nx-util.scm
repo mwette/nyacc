@@ -43,7 +43,7 @@
 ;;                     (("c" . v3) ("b" . v2) ("a" . v1) (@P . '()))
 ;;   (("b" . v4) (@P . ^))
 ;; which we will write in the eqivalent form
-;;   (("b" . v4) @P ("c" . v3) ("b" . v2) ("a" . v1) @P)
+;;   (("b" . v4) (@P ("c" . v3) ("b" . v2) ("a" . v1)))
 ;; and where @P is a key for the parent scope.
 ;;
 ;; Reserved tags are @P (parent scope), @M (module), @env and @top.
@@ -65,28 +65,27 @@
 ;;
 ;; If you run across an identifier that should be in the current fuction
 ;; you would call, say, @code{(ensure-variable/tagged name dict '@F)}
-;;   ensure-variable name dict
-;;   ensure-variable/scope name dict
-;;   ensure-variable/tagged name dict tag
-;;   ensure-variable/global name dict
+;;   ensure-variable dict name
+;;   ensure-variable/scope dict name
+;;   ensure-variable/tagged dict tag tag
+;;   ensure-variable/global dict name
 
 ;; FIXME:
-;; 1. Currently assumes dict has @top tag at top.  We should allow '() also.
+;; 1. Currently assumes dict has @top tag at top.
 ;; 2. Include modules
 
 ;;  used like this
-;;    [local] -> (@F) -> [return] -> @P -> [global]
+;;    [local] -> (@F) -> [return] -> (@P -> [global])
 ;;
 ;;  TODO: discuss @M for modules
-;;    ((@top . #t)
-;;     (@env . #<directory (guile-user) 7fdad962cc80>)
+;;    ((@env . #<directory (guile-user) 7fdad962cc80>)
 ;;     ("puts" @@ (nyacc lang tsh xlib) tsh:puts)
 ;;     ("format" @@ (nyacc lang tsh xlib) tsh:format)
 ;;     ("avec" @@ (nyacc lang tsh xlib) tsh:avec)
 ;;     ("fvec" @@ (nyacc lang tsh xlib) tsh:fvec)
 ;;     ("ivec" @@ (nyacc lang tsh xlib) tsh:ivec)
 ;;     ("vlen" @@ (nyacc lang tsh xlib) tsh:vlen)
-;;
+;;     (@top . #t)
 ;;; Code:
 
 (define-module (nyacc lang nx-util)
@@ -97,25 +96,26 @@
             nx-push-scope nx-pop-scope nx-add-tag
             nx-lookup-env nx-env-lookup
 
-            nx-add-variable
-            nx-add-taglevel
             nx-add-toplevel
-            nx-add-lexical
-            nx-add-lexicals
+            nx-add-taglevel nx-add-taglevel*
+            nx-add-at-scope nx-add-at-scope*
+            nx-add-variable
+            
+            ;;nx-add-lexical
+            ;;nx-add-lexicals
 
-            nx-lookup
-            nx-lookup/scope
-            nx-lookup/tagged
             nx-lookup/global
-            nx-lookup/env
+            nx-lookup/tagged
+            nx-lookup/scope
+            nx-lookup
 
-            nx-ensure
-            nx-ensure/scope
-            nx-ensure/tagged
             nx-ensure/global
+            nx-ensure/tagged
+            nx-ensure/scope
+            nx-ensure
 
             nx-insert-nonlocals         ; ???
-            nx-lookup-gensym
+            nx-lexical-ref
 
             ;; decprecate:
             nx-lookup-in-frame
@@ -194,15 +194,16 @@
    (if (string? str-or-sym) str-or-sym (symbol->string str-or-sym))
    (if (symbol? str-or-sym) str-or-sym (string->symbol str-or-sym))))
 
-;; @deffn {Procedure} nx-env-lookup name env
+;; @deffn {Procedure} nx-env-lookup env name
 ;; Lookup (string) @var{name} in @var{env}.  The argument
 ;; @var{env} can be a Guile module or an alist.  If not found,
 ;; (or @code{env} is @code{#f}, say) return @code{#f}.
 ;; @end deffn
-(define (nx-env-lookup name env)
+(define (nx-env-lookup env name)
   (cond
-   ((module? env) (false-if-exception (module-ref env (string->symbol name))))
-   ((and (pair? env) (pair? (car env))) (assoc-ref env name))
+   ((module? env)
+    (let ((mname (module-name env)) (sname (string->symbol name)))
+      (and (module-variable env sname) `(@@ ,mname ,sname))))
    (else #f)))
 
 ;; @deffn {Procedure} nx-lookup-env dict
@@ -221,10 +222,7 @@
 ;; This is a predicate to indicate if @var{dict}'s scope is at the top level.
 ;; @end deffn
 (define (nx-top-level? dict)
-  "- Procedure: nx-top-level? dict
-     This is a predicate to indicate if DICT's scope is at the top
-     level."
-  (and (not (assoc-ref dict '@P)) #t))
+  (and (not (assq-ref dict '@P)) #t))
 
 ;; @deffn {Procedure} nx-push-scope dict
 ;; Push scope level of dict, returning new dict.
@@ -250,176 +248,203 @@
 ;; is commonly used to add function level variables.
 ;; @end deffn
 (define* (nx-add-tag dict tag #:optional name)
-  "- Procedure: nx-add-tag dict tag [name]
-     Add the given tag in the current scope.  This allows the current
-     scope level to be referenced perhaps several scope levels down.  It
-     is commonly used to add function level variables."
   (acons tag name dict))
 
 
-
-;; @deffn {Procedure} nx-add-variable name dict
-;; Add a variable (aka symbol) to the current scope.  It may be lexical or
-;; toplevel. The dictionary @var{dict} is not mutated.   A new dictionary is
-;; returned.
-;; @end deffn
-(define (nx-add-variable name dict)
-  "- Procedure: nx-add-variable name dict
-     Add a variable (aka symbol) to the current scope.  It may be
-     lexical or toplevel.  The dictionary DICT is not mutated.  A new
-     dictionary is returned."
-  (if (nx-top-level? dict)
-      (nx-add-toplevel name dict)
-      (nx-add-lexical name dict)))
-
-;; @deffn {Procedure} nx-add-taglevel name dict tag
-;; Add lexical or toplevel symbol based on level.
-;; The first form adds to the current scope and may be lexical or toplevel.
-;; @end deffn
-;; to add to scope (@P) or frame (@F) etc
-;; Given
-;;  (("a" ..) ("b" ..) @F ("c" ..) @P
-;; the expression (nx-add-taglevel "d" dict '@F) generates
-;;  (("a" ..) ("b" ..) @F ("d" ..) ("c" ..) @P
-;;
-(define (nx-add-taglevel entry dict tag)
-  (if (assq-ref dict tag)
-      (cons entry dict)
-      (let loop ((@P (assq '@P dict)))
-        (and @P (let ((d (cdr @P)))
-                  (cond
-                   ((not @P) #f)
-                   ((assq-ref d tag) (set-cdr! @P (cons entry d)) dict)
-                   (else (loop (assq '@P d)))))))))
-
-;; @deffn {Procedure} nx-add-taglevels name dict tag
-;; to be documented
-;; @end deffn
-(define (nx-add-taglevel* dict tag . entries)
-  (define (finish head tail)
-    (append-reverse head (append-reverse entries tail)))
-  (let loop ((head '()) (tail dict))
-    (cond
-     ((eq? (caar tail) '@P) (finish head tail))
-     ((eq? (caar tail) '@top) (finish head tail))
-     (else (loop (cons (car tail) head) (cdr tail))))))
-
-
-;; @deffn {Procedure} nx-add-toplevel name dict
+;; @deffn {Procedure} nx-add-toplevel dict name
 ;; Add a toplevel lexical to the current scope.  The dictionary @var{dict} may
 ;; be mutated.  Returns the mutates dictionary or a new dictionary.
 ;; @end example
 ;; @end deffn
-(define (nx-add-toplevel name dict)
-  (call-with-values (lambda () (str-and-sym name))
-    (lambda (str sym)
-      (nx-add-taglevel (cons str `(toplevel ,sym)) dict '@top))))
+(define (nx-add-toplevel dict name)
+  (nx-add-taglevel dict '@top name))
 
+;; generate a pair, one of
+;;   ("name" . (toplevel name))
+;;   ("name" . (lexical name name-123))
+;; depending on if toplevel or not
+(define (mk-entry name dict)
+  (let ((symrep (if (string? name) (string->symbol name) name))
+        (strrep (if (symbol? name) (symbol->string name) name)))
+    (cons strrep (if (nx-top-level? dict)
+                     `(toplevel ,symrep)
+                     `(lexical ,symrep ,(gensym strrep))))))
 
-;; @deffn {Procedure} nx-lexical-symbol? name dict
-;; This is a predicate to indicate if @var{name} is a lexical symbol.
-;; @end deffn
-(define (nx-lexical-symbol? name dict)
-  (let ((ref (nx-lookup name dict)))
-    (and ref (eq? 'lexical (car ref)))))
-
-;; @deffn {Procedure} nx-add-lexical name dict
-;; Given a string @var{name} and dictionary @var{dict} return a new
-;; dictionary with a lexical reference added.  The reference can be
-;; retrieved with @code{nx-lookup name dict} where @code{dict} is the
-;; return value.
+;; @deffn {Procedure} nx-add-taglevel dict tag name
+;; Add @var{name} a symbol or string (maybe narrow later?).
+;; Example: Given @code{dict}
 ;; @example
-;; (let ((dict (nx-add-lexical "foo" dict)))
-;;    (nx-lookup "foo" dict)) => (lexical foo foo-123)
+;;  (("a" ..) ("b" ..) (@F . "") ("c" ..) @P ...)
+;; @end example
+;; the expression 
+;; @example
+;; (nx-add-taglevel dict '@F "d")
+;; @end example
+;; generates the a-list
+;; @example
+;;  (("a" ..) ("b" ..) ("d" ..) (@F . "") ("c" ..) @P)
 ;; @end example
 ;; @end deffn
-(define (nx-add-lexical name dict)
+(define (nx-add-taglevel dict tag name)
+  (if (eq? tag (caar dict))
+      (cons (mk-entry name dict) dict)
+      (let loop ((fst (car dict)) (rst (cdr dict)))
+        (cond
+         ((null? rst) #f)
+         ((eq? tag (caar rst))
+          (set-cdr! fst (cons (mk-entry name rst) rst))
+          dict)
+         ((eq? '@P (caar rst)) (loop (car rst) (cdar rst)))
+         (else (loop (car rst) (cdr rst)))))))
+
+;; @deffn {Procedure} nx-add-taglevel* dict tag name ...
+;; Add multiple names at taglevel.  See @code{nx-add-taglevel}.
+;; @end deffn
+(define (nx-add-taglevel* dict tag . names)
+  (let loop ((dt dict))
+    (cond
+     ((null? dt) #f)
+     ((eq? tag (caar dt))
+      (set-cdr! dt (fold (lambda (n d) (cons (mk-entry n dt) d))
+                         (cdr dt) names))
+      dict)
+     ((eq? '@P (caar dt)) (loop (cdar dict)))
+     (else (loop (cdr dt))))))
+
+(define (nx-add-at-scope dict name)
+  (cons (mk-entry name dict) dict))
+
+(define (nx-add-at-scope* dict . names)
+  (let loop ((dt dict) (nl names))
+    (if (pair? nl) (loop (cons (mk-entry (car nl) dict) dt) (cdr nl)) dt)))
+
+;; @deffn {Procedure} nx-add-variable dict name
+;; Add a variable (aka symbol) to the current scope.  It may be lexical or
+;; toplevel. The dictionary @var{dict} is not mutated.   A new dictionary is
+;; returned.
+;; @end deffn
+(define (nx-add-variable dict name)
+  (if (nx-top-level? dict)
+      (nx-add-toplevel dict name)
+      (nx-add-lexical dict name)))
+
+
+
+;; @deffn {Procedure} nx-lexical-symbol? dict name
+;; This is a predicate to indicate if @var{name} is a lexical symbol.
+;; @end deffn
+(define (nx-lexical-symbol? dict name)
+  (let ((ref (nx-lookup dict name)))
+    (and ref (eq? 'lexical (car ref)))))
+
+;; @deffn {Procedure} nx-add-lexical dict name
+;; Given a string @var{name} and dictionary @var{dict} return a new
+;; dictionary with a lexical reference added.  The reference can be
+;; retrieved with @code{nx-lookup dict name} where @code{dict} is the
+;; return value.
+;; @example
+;; (let ((dict (nx-add-lexical dict "foo")))
+;;    (nx-lookup dict "foo")) => (lexical foo foo-123)
+;; @end example
+;; @end deffn
+(define (nx-add-lexical dict name)
   (acons name `(lexical ,(string->symbol name) ,(genxsym name)) dict))
 
 
-;; @deffn {Procedure} nx-add-lexicals name1 ... nameN dict
-;; A fold-right with @code{nx-add-lexical}, equivalent to
+;; @deffn {Procedure} nx-add-lexicals dict name ...
+;; Evaluate @code{nx-add-lexical} for each @var{NAME}
 ;; @example
-;; (fold-right nx-add-lexical dict (name1 ... nameN))
+;; (nx-add-lexical dict '("foo" "bar" "baz"))
 ;; @end example
 ;; @end deffn
-(define (nx-add-lexicals . args)
-  (let iter ((args args))
-    (if (null? (cddr args)) (nx-add-lexical (car args) (cadr args))
-        (nx-add-lexical (car args) (iter (cdr args))))))
+(define (nx-add-lexicals dict . names)
+  (for-each (lambda (name) (nx-add-lexical dict name)) names))
 
 
-;; @deffn nx-lookup name dict
+;; @deffn nx-lookup dict name
 ;; needs documentation @*
 ;; for nonlocals either push between
 ;; @end deffn
-(define (nx-lookup name dict)
+(define (nx-lookup dict name)
   (cond
    ((not dict) #f)
    ((assoc-ref dict name))
-   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup name dict)))
-   ((nx-env-lookup name (assoc-ref dict '@env))
-    `(toplevel ,(string->symbol name)))
-   ((nx-env-lookup (x_y->x-y name) (assoc-ref dict '@env))
-    `(toplevel ,(string->symbol (x_y->x-y name))))
-   ((nx-lookup/modules name dict))
+   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup dict name)))
+   ((nx-env-lookup (nx-lookup-env dict) name))
+   ((nx-lookup/modules dict name))
    (else #f)))
 
-;; @deffn nx-lookup/scope name dict
+;; @deffn nx-lookup/tagged name dict tag
+;; Lookup @var{name} in the scope with @var{tag}
+;; @end deffn
+(define (nx-lookup/tagged dict tag name)
+  (let loop ((dict dict))
+    (cond
+     ((null? dict) #f)
+     ((equal? name (caar dict))
+      (let ((ref (cdar dict)))
+        (and (eq? 'lexical (car ref)) ref)))
+     ((eq? '@P (caar dict))
+      (loop (cdar dict)))
+     ((eq? tag (caar dict))
+      (assoc-ref (cdr dict) name))
+     (else (loop (cdr dict))))))
+
+;; @deffn nx-lookup/scope dict name
 ;; Lookup @var{name} in the current @var{dict} scope.
 ;; @end deffn
-(define (nx-lookup/scope name dict)
+(define (nx-lookup/scope dict name)
   (assoc-ref dict name))
 
-;; @deffn {Procedure} nx-lookup/modules name dict
+;; @deffn {Procedure} nx-lookup/modules dict name
 ;; Lookup in the dictionary modules.
 ;; @end deffn
-(define (nx-lookup/modules name dict)
+(define (nx-lookup/modules dict name)
   (cond
-   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup/modules name dict)))
-   ((assoc '@M dict) => (lambda (mods) (or (nx-env-lookup name (car mods))
-                                           (nx-lookup/modules name (cdr mods)))))
+   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup/modules dict name)))
+   ((assoc '@M dict) => (lambda (mods) (or (nx-env-lookup (car mods) name)
+                                           (nx-lookup/modules (cdr mods) name))))
    (else #f)))
 
-;; @deffn nx-ensure name dict => dict
-;; @xdeffn nx-ensure/scope name dict => dict
-;; @xdeffn nx-ensure/tagged name dict tag => dict
-;; @xdeffn nx-ensure/global name dict => dict
+;; @deffn nx-ensure dict name => dict
+;; @xdeffn nx-ensure/scope dict name => dict
+;; @xdeffn nx-ensure/tagged dict name tag => dict
+;; @xdeffn nx-ensure/global dict name => dict
 ;; Ensure @var{name} is defined in the table, scope, (tagged) frame,
 ;; or global.  If not existing, add to local scope.
 ;; A mutated dict may be returned in the @code{/} forms.
 ;; @end deffn
-(define (nx-ensure name dict)
-  (if (nx-lookup name dict)
+(define (nx-ensure dict name)
+  (if (nx-lookup dict name)
       dict
       (if (nx-top-level? dict)
-          (nx-add-toplevel name dict)
-          (nx-add-lexical name dict))))
+          (nx-add-toplevel dict name)
+          (nx-add-lexical dict name))))
 
-(define (nx-ensure/scope name dict)
-  (if (nx-lookup/scope name dict)
+(define (nx-ensure/scope dict name)
+  (if (nx-lookup/scope dict name)
       dict
       (if (nx-top-level? dict)
-          (nx-add-toplevel name dict)
-          (nx-add-lexical name dict))))
+          (nx-add-toplevel dict name)
+          (nx-add-lexical dict name))))
 
-(define (nx-ensure/tagged name dict)
-  (if (nx-lookup-in-frame name dict)
+(define (nx-ensure/tagged dict tag name)
+  (if (nx-lookup/tagged dict tag name)
       dict
-      (or (nx-add-framelevel name dict)
-          (nx-add-toplevel name dict))))
+      (or (nx-add-taglevel dict tag name)
+          (nx-add-toplevel dict name))))
 
-(define (nx-ensure/global name dict)
-  (if (nx-lookup-in-frame name dict)
+(define (nx-ensure/global dict name)
+  (if (nx-lookup-in-frame dict name)
       dict
-      (or (nx-add-framelevel name dict)
-          (nx-add-toplevel name dict))))
+      (or (nx-add-framelevel dict name)
+          (nx-add-toplevel dict name))))
 
 (define (nx-insert-nonlocals dict names)
   (define (finish head tail)
     (let ((entries
            (map (lambda (name)
-                  (let* ((ref (nx-lookup name dict))
+                  (let* ((ref (nx-lookup dict name))
                          (val (if ref ref `(toplevel ,(string->symbol name)))))
                     (unless ref (sferr "warning: ~S not defined\n" name))
                     (cons name val)))
@@ -436,14 +461,14 @@
      ((eq? (caar tail) '@top) (finish head tail))
      (else (loop (cons (car tail) head) (cdr tail))))))
 
-;; @deffn {Procedure} nx-lookup-gensym name dict [label] => gensym
+;; @deffn {Procedure} nx-lexical-ref dict name [label] => gensym
 ;; Lookup up nearest parent lexical and return associated gensym.
 ;; @lisp
-;; (nx-lookup-gensym "foo" dict) => JS~1234
-;; (nx-lookup-gensym "foo" dict #:label "oloop") => JS~432
+;; (nx-lookup-gensym dict "foo") => JS~1234
+;; (nx-lookup-gensym dict "foo" #:label "oloop") => JS~432
 ;; @end lisp
 ;; @end deffn
-(define* (nx-lookup-gensym name dict #:key label)
+(define* (nx-lexical-ref dict name #:key label)
   (if label
       (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
         (if (not pdict) #f
@@ -451,7 +476,7 @@
                      (assoc-ref "~exit" cdict))
                 (assoc-ref name cdict)
                 (iter pdict (assoc-ref pdict '@P)))))
-      (let* ((sym (nx-lookup name dict)))
+      (let* ((sym (nx-lookup dict name)))
         (if (not sym) (error "nx-util: not found:" name))
         (caddr sym))))
 
@@ -463,13 +488,13 @@
 (define* (nx-add-frametag dict #:optional name)
   (acons '@F name dict))
 
-;; @deffn nx-lookup-in-frame name dict
-;; @xdeffn nx-lookup-in-scope name dict
+;; @deffn nx-lookup-in-frame dict name
+;; @xdeffn nx-lookup-in-scope dict name
 ;; in frame, lookup to end of frame scope, so
 ;; for dict = (... (@F . "def") ("xx" toplevel xx) (@P . (more)))
 ;; (lookup-in-frame "xx" dict) => (toplevel "xx")
 ;; @end deffn
-(define (nx-lookup-in-frame name dict)
+(define (nx-lookup-in-frame dict name)
   (let loop ((dict dict))
     (cond
      ((null? dict) #f)
@@ -741,8 +766,8 @@
 ;; TODO #:key (break "break") (continue "continue")
 (define* (make-loop expr body dict ilsym tbody)
   (let* ((olsym (genxsym "oloop"))
-         (bsym (nx-lookup-gensym "break" dict))
-         (csym (nx-lookup-gensym "continue" dict))
+         (bsym (nx-lexical-ref "break" dict))
+         (csym (nx-lexical-ref "continue" dict))
          (icall `(call (lexical iloop ,ilsym)))
          (ocall `(call (lexical oloop ,olsym)))
          (iloop (make-thunk `(seq ,body (if ,expr ,icall (void))) #:name 'iloop))
@@ -825,7 +850,7 @@
 ;; deprecate
 (define nx-add-symbol nx-add-variable)
 
-(define (nx-add-framelevel name dict)
+(define (nx-add-framelevel dict name)
   (call-with-values (lambda () (str-and-sym name))
     (lambda (str sym)
       (nx-add-taglevel (cons str `(lexical ,sym ,(genxsym str))) dict '@F))))

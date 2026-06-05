@@ -1,22 +1,36 @@
+object tags: SYM, INT, FLT, STR, PROC, REC, ARY,
+
 set sym 1
+identifier symbols are C syntax 
 defines sym as a box, if not already there
 $ is the unbox operator
-( introduces expression scope
+( introduces expression scope (including sequences using `,')
 { introduces code scope
 [ .. ] is command eval
-"" are immutable ascii strings
+"hello world" is an immutable ascii strings
 -<letter>. is a keychar (except in expression lexical context)
 --<letter>+ is a keyword (except in expression lexical context)
 --<letter>+=<nonspace>* is a keypair (except in expression lexical context)
+foo(.) indices must be integers or symbols, and not mixed
+  array-arity: (I x S x ...)
+lambda (a, b, c) { code }
+
+will need to include line continuation. e.g.
+     > cmd arg1 ... argN \
+           argN+1
+
+Is `foo (1)' the same as foo(1) ?  have to say no
 
 booleans are 0 false, else true
 
+contexts: eval, code, expr
+
 vectors
   have: [fvec 1.0 2.0 ]  or [ivec 1 2 3] [avec a 1 3.0]
-  how about [any 1.0 2 abc] ?? NEED for rest-args
+  how about [any 1.0 2 abc] ?? NEED for rest-args 
   how about [sym a b c]
-make-fvec 32 0.0
-make-ivec 32 0
+make_fvec 32 0.0
+make_ivec 32 0
 idea: add | as symbol and use [fmat 1.0 2.0 | 3.0 4.0]
 add bytevectors
 
@@ -42,7 +56,7 @@ struct/array refs:
 
 NO $$abc => $($abc)
 NO $$abc(1) => $($abc(1)) or $($abc)(1)  [prefer second]
-NO ambiguity: $$abc(1) : is this $($abc(1))
+NO ambiguity: $$abc(1) : is this $($abc(1)) or $($abc)(1)
    check var-expr in mach.scm
 NO $($a(1))(2)
 
@@ -60,6 +74,11 @@ shared arrays?  array slices? ...   Better for ca
 set mat [f64mat (1.0, 2.0) (3.0, 4.0)]
 set xyz [i32mat (1, 2) (3, 4)]
 So could do $mat(1:3,0:end)
+
+procedure decls:
+  lexical foo # lexical
+  #dynamic bar # dynamic variable
+  set baz     # local
 
 ===============================================================================
 

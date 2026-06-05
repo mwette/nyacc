@@ -1,6 +1,5 @@
-tsh> (1.0 + 3.0)
-(4.0) should be 4.0
-
+ambiguity: $$abc(1) : is this $($abc(1)) or $($abc)(1)
+   $ has precedence over ()
 
 (define (nx-add-taglevel entry dict tag) #f)
 (define (nx-add-toplevel name dict) #f)
@@ -22,9 +21,6 @@ tsh> (1.0 + 3.0)
 (define (nx-ensure-variable/scope name dict) #f)
 
 (define (nx-islocal ???) #f)
-
-
-
 
 (("lvar" . (lexical ...))
  (@F . "*anon*")
