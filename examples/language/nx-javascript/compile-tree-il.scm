@@ -178,13 +178,6 @@
 (define pop-scope nx-pop-scope)
 (define top-level? nx-top-level?)
 (define add-toplevel nx-add-toplevel)
-(define add-lexical nx-add-lexical)
-(define add-lexicals nx-add-lexicals)
-(define add-symbol nx-add-symbol)
-(define lookup nx-lookup)
-#;(define (lookup name dict)
-  (or (nx-lookup name dict)
-      (nx-lookup-in-env name xlib-module)))
 
 
 ;; === codegen procedures =============
@@ -565,48 +558,47 @@
          (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((do . ,rest)
-       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
+       (values tree '() (add-lexicals (push-scope dict) "break" "continue")))
 
       ((while . ,rest)
-       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
+       (values tree '() (add-lexicals (push-scope dict) "break" "continue")))
 
       ((for . ,rest)
-       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
+       (values tree '() (add-lexicals (push-scope dict) "break" "continue")))
 
       ((for-in . ,rest)
-       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
+       (values tree '() (add-lexicals (push-scope dict) "break" "continue")))
 
       ((SwitchStatement . ,rest)
-       (values tree '() (add-lexicals "swx~val" "break" (push-scope dict))))
+       (values tree '() (add-lexicals (push-scope dict) "swx~val" "break")))
 
       ((LabelledStatement (Identifier ,name) ,stmt)
        (values tree '() (add-label name dict)))
 
       ((TryStatement . ,expr)
-       (values tree '() (add-lexical "catch" (push-scope dict))))
+       (values tree '() (add-lexical (push-scope dict) "catch")))
       
       ((Catch (Identifier ,name) ,block)
-       (values tree '() (add-lexical name dict)))
+       (values tree '() (add-lexical dict name)))
       
       ((FunctionDeclaration (Identifier ,name) . ,rest)
        (values
         tree '()
-        (add-lexicals "this" "return" (push-scope (add-symbol name dict)))))
+        (add-lexicals (push-scope (add-symbol name dict)) "this" "return")))
       
       ((FunctionExpression (Identifier ,name) . ,rest)
-       (values tree '() (add-lexicals "this" "return" name (push-scope dict))))
+       (values tree '() (add-lexicals (push-scope dict) "this" "return" name)))
 
       ((FunctionExpression . ,rest)
        (values tree '()
-               (add-lexicals "this" "return"
-                             (push-scope (add-symbol "*anon*" dict)))))
+               (add-lexicals (push-scope (add-symbol "*anon*" dict))
+                             "this" "return")))
       
       ((FormalParameterList . ,idlist)
        (values
         tree '()
         (acons 'arguments-used? #f
-               (add-lexical "arguments"
-                            (fold add-lexical dict (map cadr idlist))))))
+               (add-lexicals dict (cons "arguments" (map cadr idlist))))))
       
       ((FunctionElements . ,elts)
        ;; Fix up list of function elements:
@@ -974,7 +966,7 @@
                        (`((seq . ,def) (let . ,B-clz))
                         (block (cons `(let . ,B-clz) def)))
                        (`((let . ,A-clz)) `(let . ,A-clz))))
-               (vsym (nx-lookup-gensym "swx~val" kdict))
+               (vsym (nx-lexical-ref "swx~val" kdict))
                (body `(let (swx~val) (,vsym) (,expr) ,body))
                (body (with-escape (lookup "break" kdict) body)))
           (values (cons body seed) (pop-scope kdict))))
@@ -1035,7 +1027,7 @@
        ((TryStatement)
         (let* ((rseed (rtail kseed))
                (try-stmts (car rseed))
-               (ctag (nx-lookup-gensym "catch" kdict))
+               (ctag (nx-lexical-ref "catch" kdict))
                (catch (match (cdr rseed)
                         ((`(catch ,hdlr) . rest) hdlr)
                         (otherwise (make-handler '() '(void)))))
@@ -1054,7 +1046,7 @@
        ((Catch)
         (let* ((arg-name (cadr (cadr tree)))     ; arg name as string
                (a-sym (string->symbol arg-name)) ; as symbol
-               (a-gsym (nx-lookup-gensym arg-name kdict)) ; its gensym
+               (a-gsym (nx-lexical-ref arg-name kdict)) ; its gensym
                (jcatch `(lambda ()
                           (lambda-case (((k ,a-sym) #f #f #f ()
                                          (,(jsym) ,a-gsym)) ,(car kseed))))))
