@@ -58,15 +58,6 @@
 (define push-scope nx-push-scope)
 (define pop-scope nx-pop-scope)
 
-(define (x-pop-scope dict)
-  (let ((pdict (nx-pop-scope dict)))
-    (let loop ((prev #f) (next dict))
-      (cond
-       ((eq? '@L (caar next)) (cond (prev (set-cdr! next pdict) dict)
-                                    (else pdict)))
-       ((eq? '@P (caar next)) (cdar next))
-       (else (loop (car next) (cdr next)))))))
-
 ;; @deffn {Procedure} function-scope? dict
 ;; Looks up the dict levels to see if there exists a @code{'@F} tag,
 ;; which denotes that context is in a function.
@@ -130,8 +121,8 @@
          (next `(call ,(xlib-ref 'ml:iter-next) ,rval ,ivar)) ; ???
          (ilsym (genxsym "iloop"))
          (olsym (genxsym "oloop"))
-         (bsym (nx-lookup-gensym "break" dict))
-         (csym (nx-lookup-gensym "continue" dict))
+         (bsym (nx-lexical-ref "break" dict))
+         (csym (nx-lexical-ref "continue" dict))
          (inext `(call (lexical iloop ,ilsym) ,next))
          (ifrst `(call (lexical iloop ,ilsym) ,frst))
          (ocall `(call (lexical oloop ,olsym)))
