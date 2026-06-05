@@ -123,9 +123,9 @@
      (exec-stmt-list-1 term exec-stmt ($$ (tl-append $1 $3)))
      (exec-stmt-list-1 term lone-comm ($$ (tl-append $1 $3)))
      (exec-stmt-list-1 term))
-     
+
     (decl-stmt
-     ("proc" ident "{" arg-list "}" "{" proc-stmt-list "}"
+     ("proc" ident "(" arg-list ")" "{" proc-stmt-list "}"
       ($$ `(proc ,$2 ,$4 ,$7)))
      #;("proc" ident symbol "{" proc-stmt-list "}"
       ($$ `(proc ,$2 (arg-list (arg ,$3)) ,$5)))
@@ -134,12 +134,17 @@
      ("local" name-seq ($$ `(local ,@(cdr $2)))))
 
     (arg-list
+     ($empty ($$ (make-tl 'arg-list)))
      (arg-list-1 ($$ (tl->list $1))))
     (arg-list-1
-     ($empty ($$ (make-tl 'arg-list)))
-     (arg-list-1 ident ($$ (tl-append $1 `(arg ,$2))))
+     (ident ($$ (make-tl 'arg-list $1)))
+     (arg-list-1 "," ident ($$ (tl-append $1 `(arg ,$3))))
+     #|
      (arg-list-1 "{" ident unit-expr "}" ($$ (tl-append $1 `(opt-arg ,$3 ,$4))))
      (arg-list-1 "args" ($$ (tl-append $1 `(rest-arg (ident "args"))))))
+     ;; maybe (a, [opt-arg c], [key-arg b], [rest-arg rest])
+     |#
+     )
 
     (name-seq ;; "foo" "bar" ...
      (name-seq-1 ($$ (tl->list $1))))
@@ -149,13 +154,13 @@
 
     (exec-stmt
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
-     ("set" $deref/ix "(" expr-or-tuple ")" unit-expr
+     ("set" $deref/ix "(" expr-list ")" unit-expr
       ($$ `(set-indexed (ident ,$2)
                         ,(if (eq? 'expr (sx-tag $4)) `(expr-list ,$4) $4)
                         ,$6)))
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
-     ("lambda" "{" arg-list "}" "{" proc-stmt-list "}" ($$ `(lambda ,$3 ,$6)))
-     ("(" expr-or-tuple ")" ($$ $2))
+     ("lambda" "(" arg-list ")" "{" proc-stmt-list "}" ($$ `(lambda ,$3 ,$6)))
+     ("(" expr-list ")" ($$ `(last ,$2)))
      ;;("{" stmt-list "}" ($$ $2))
      (if-stmt)
      ("switch" unit-expr "{" case-list "}" ($$ `(switch ,$2 ,@(cdr $4))))
@@ -264,7 +269,7 @@
      ("$" 'no-ws $ident 'no-ws "(" expr-list ")" ($$ `(deref-indexed ,$3 ,$6)))
      |#
      ($deref ($$ `(deref ,$1)))
-     ($deref/ix "(" expr-or-tuple ")" ($$ `(deref-indexed ,$1 ,$3)))
+     ($deref/ix "(" expr-list ")" ($$ `(deref-indexed ,$1 ,$3)))
      (fixed)
      (float)
      (string)
@@ -272,18 +277,16 @@
      (keychar)
      (keyword)
      ;;($chlit ($$ `(char ,$1)))
-     ("(" expr-or-tuple ")" ($$ `(last ,$2)))
+     ("(" expr-list ")" ($$ `(last ,$2)))
      ("[" exec-stmt "]" ($$ `(eval ,$2)))
      )
 
-    (expr-or-tuple
-     (expression ($$ `(expr ,$1)))
-     (expression "," ($$ `(expr-list ,$1)))
-     (expression "," expr-list ($$ (tl-insert $3 $1) (tl->list $3)))
-     (expression "," expr-list "," ($$ (tl-insert $3 $1) (tl->list $3))))
     (expr-list
+     (expr-list-1 ($$ (tl->list $1)))
+     (expr-list-1 "," ($$ (tl->list $1))))
+    (expr-list-1
      (expression ($$ (make-tl 'expr-list $1)))
-     (expr-list "," expression ($$ (tl-append $1 $3))))
+     (expr-list-1 "," expression ($$ (tl-append $1 $3))))
 
     (expr-seq
      (expr-seq-1 ($$ (tl->list $1))))

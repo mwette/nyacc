@@ -206,7 +206,7 @@
 	  (lambda () (set-current-input-port port))
 	  (lambda ()
 	    (catch 'nyacc-error
-	      (lambda () (raw-ia-parser lexer #:debug #f))
+	      (lambda () (raw-ia-parser lexer #:debug #t))
 	      (lambda (key fmt . args)
 		;;(apply simple-format (current-error-port) fmt args)
 		;;(newline (current-error-port))

@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tsh/compile-tree-il.scm - compile tclish sxml to tree-il
 
-;; Copyright (C) 2021,2023 Matthew Wette
+;; Copyright (C) 2021,2023,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -60,6 +60,7 @@
   (define (fD tree seed dict) ;; => tree seed dict
     (define +SP (make-+SP tree))
 
+    ;;(sferr "fD tree=:\n") (pperr tree)
     (sx-match tree
 
       ;; optimizations
@@ -86,19 +87,19 @@
        (values '() (+SP `(const ,(string->symbol sval))) dict))
 
       ((eval . ,stmts)
-       (values tree '() (nx-add-lexical "return" (nx-push-scope dict))))
+       (values tree '() (nx-add-at-scope (nx-push-scope dict) "return")))
 
       ((switch . ,stmts)
        (values tree '()
-               (nx-add-lexicals "swx~val" (nx-push-scope dict))))
+               (nx-add-at-scope* (nx-push-scope dict) "swx~val")))
 
       ((for . ,stmts)
        (values tree '()
-               (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
+               (nx-add-at-scope* (nx-push-scope dict) "continue" "break")))
 
       ((while . ,stmts)
        (values tree '()
-               (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
+               (nx-add-at-scope* (nx-push-scope dict) "continue" "break")))
 
       ((proc (ident ,name) ,args ,body)
        (let ((form `(set (ident ,name) (lambda (@ (name ,name)) ,args ,body))))
@@ -107,17 +108,17 @@
       ((lambda (arg-list . ,args) ,body)
        (let* ((arg-name (lambda (x) (cadadr x)))
               (dict (nx-push-scope dict))
-	      (dict (nx-add-lexical "return" dict))
+	      (dict (nx-add-at-scope dict "return"))
               (dict (fold               ; add args to local scope
-                     (lambda (a d) (nx-add-lexical (arg-name a) d))
+                     (lambda (a d) (nx-add-at-scope d (arg-name a)))
                      dict args))
 	      (args (fold-right         ; ident -> lexical
 		     (lambda (a l)
-                       (let ((ref (nx-lookup (arg-name a) dict)))
+                       (let ((ref (nx-lookup dict (arg-name a))))
 		         (cons (cons* (car a) ref (cddr a)) l)))
                      '() args))
               (form `(lambda (arg-list . ,args) ,body)))
-	 (values (+SP form) '() (acons '@F "*anon*" dict))))
+	 (values (+SP form) '() (nx-add-tag dict '@F "*anon*"))))
 
       ((incr (ident ,var) ,val)
        (values (+SP `(incr ,var ,val)) '() dict))
@@ -129,20 +130,21 @@
        (values (+SP `(incr/ix ,var ,ix (const 1))) '() dict))
 
       ((call (ident ,name) . ,args)
-       (let ((ref (nx-lookup name dict)))
+       (let ((ref (nx-lookup dict name)))
 	 (unless ref (nx-error "not defined: ~A" name))
 	 (values (+SP `(call ,ref . ,args)) '() dict)))
 
       ((set-indexed (ident ,name) ,index ,value)
        ;; FIXME: If name is not local then this will look up.
        ;; Should be an error instead.
-       (let ((nref (nx-lookup name dict)))
+       (let ((nref (nx-lookup dict name)))
 	 (unless nref (nx-error "not defined: ~A" name))
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((set (ident ,name) ,value)
-       (let* ((dict (nx-ensure-variable/frame name dict))
-              (nref (nx-lookup name dict)))
+       ;;(sferr "fD/set: name=~S dict:\n" name) (pperr dict)
+       (let* ((dict (nx-ensure/tagged dict '@F name))
+              (nref (nx-lookup dict name)))
          ;;(sferr "fD/set: name=~S dict\n" name) (pperr dict)
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
@@ -159,12 +161,12 @@
               (parg `(primcall list ,@path))
               (stmt `(call (@@ (nyacc lang nx-lib) nx-use-module) ,parg))
               (dict (hash-fold
-                     (lambda (key val dict) (nx-add-toplevel key dict))
+                     (lambda (key val dict) (nx-add-toplevel dict key))
                      dict (module-obarray (resolve-interface sympath)))))
          (values '() (+SP stmt) dict)))
 
       ((script . ,stmts)
-       (values tree '() (nx-add-lexical "sreturn" (nx-push-scope dict))))
+       (values tree '() (nx-add-at-scope (nx-push-scope dict) "sreturn")))
 
       ((@@ ,module ,symbol)             ; don't process resolved references
        (values '() tree dict))
@@ -182,7 +184,7 @@
     (define +SP (make-+SP tree))
     (define pass-through '(@@ toplevel lexical abort
                            arg-list arg opt-arg rest-arg))
-
+    ;;(sferr "fU tree=:\n") (pperr tree)
     (if
      (null? tree)
      (if (null? kseed)
@@ -199,12 +201,12 @@
            (when (null? dict) (error "coding at TOP"))
            (if (eq? '@top (caar dict))
                form
-               (loop `(seq (define ,(caddar dict) ,nx-undefined-xtil) ,form)
+               (loop `(seq (define ,(caddar dict) ,nx-unspecified-xtil) ,form)
                      (cdr dict))))
          kdict))
 
        ((script)
-        (let* ((ptag (nx-lookup "sreturn" kdict))
+        (let* ((ptag (nx-lookup kdict "sreturn"))
                (form (with-escape/arg ptag (block (rtail kseed)))))
 	  (values (cons form seed) (nx-pop-scope kdict))))
 
@@ -222,7 +224,7 @@
                (attr (and (pair? (car tail)) (eq? '@ (caar tail)) (car tail)))
 	       (argl (list-ref tail (if attr 1 0)))
 	       (body (block (list-tail tail (if attr 2 1))))
-	       (ptag (nx-lookup "return" kdict))
+	       (ptag (nx-lookup kdict "return"))
 	       (arity (make-arity argl))
                (body (wrap-locals body kdict))
 	       (body (with-escape/arg ptag body))
@@ -231,7 +233,7 @@
 	  (values (cons form seed) (nx-pop-scope kdict))))
 
        ((return)
-	(let ((ret `(abort ,(nx-lookup "return" kdict)
+	(let ((ret `(abort ,(nx-lookup kdict "return")
 			   (,(if (> (length kseed) 1) (car kseed) '(void)))
 			   (const ()))))
 	  (values (cons (+SP ret) seed) kdict)))
@@ -258,7 +260,7 @@
 
        ((switch)
         ;; no break
-	(let* ((val (nx-lookup "swx~val" kdict))
+	(let* ((val (nx-lookup kdict "swx~val"))
 	       (sw (if (eq? (caar kseed) 'default)
 		       (make-switch val (cdr kseed) (car kseed))
 		       (make-switch val kseed '(void)))))
@@ -289,12 +291,12 @@
 
        ((continue)
         (values
-         (cons `(abort ,(nx-lookup "continue" kdict) () (const ())) seed)
+         (cons `(abort ,(nx-lookup kdict "continue") () (const ())) seed)
          kdict))
 
        ((break)
         (values
-         (cons `(abort ,(nx-lookup "break" kdict) '() (const ())) seed)
+         (cons `(abort ,(nx-lookup kdict "break") '() (const ())) seed)
          kdict))
 
        ((set)
@@ -312,10 +314,15 @@
 	  (values (cons (+SP val) seed) kdict)))
 
        ((call)
+        ;; TODO: check for lone symbol
+        #;(let ((proc (car (rtail kseed))))
+          (pperr (rtail kseed))
+          (and=> (match proc (`(const ,name) (nx-lookup dict name)) (_ #f))
+            (lambda (val) (sferr "call ~s\n" val))))
 	(values (cons (+SP `(call . ,(rtail kseed))) seed) kdict))
 
        ((eval)
-	(let ((body (with-escape/arg (nx-lookup "return" kdict) (car kseed))))
+	(let ((body (with-escape/arg (nx-lookup kdict "return") (car kseed))))
  	  (values (cons (+SP body) seed) (nx-pop-scope kdict))))
 
        ((empty-stmt)
@@ -325,7 +332,7 @@
 	(let* ((tail (rtail kseed))
 	       (name (car tail))
 	       (expr (cadr tail))
-	       (vref (nx-lookup name kdict))
+	       (vref (nx-lookup kdict name))
 	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
 	  (values (cons (+SP stmt) seed) kdict)))
 
@@ -376,15 +383,17 @@
        ((ge) (values (+SP (cons (op-call 'tsh:ge kseed) seed)) kdict))
 
        ((deref)
+        ;;(sferr "fU.deref: name=~s, kdict:\n" (car kseed)) (pperr kdict)
         (let* ((name (car kseed))
-               (ref (nx-lookup name kdict)))
+               (ref (or (nx-lookup kdict name)
+                        '(@@ (guile-user) ,(string->symbol name)))))
 	  (unless ref (nx-error "undefined variable: ~A" name))
           (values (+SP (cons ref seed)) kdict)))
 
        ((deref-indexed)
         (let* ((tail (rtail kseed))
                (name (car tail))
-               (ref (nx-lookup name kdict))
+               (ref (nx-lookup kdict name))
                (args (cdr tail))
                (proc (xlib-ref 'tsh:indexed-ref)))
 	  (unless ref (nx-error "undefined variable: ~A" name))
@@ -410,9 +419,9 @@
 	     (string-append "*** tsh: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #f)
+(define show-sxml #t)
 (define (show-tsh-sxml v) (set! show-sxml v))
-(define show-xtil #f)
+(define show-xtil #t)
 (define (show-tsh-xtil v) (set! show-xtil v))
 (define* (debug-tsh #:optional (arg #t))
   (set! show-sxml arg) (set! show-xtil arg))
@@ -422,16 +431,18 @@
   (when show-sxml (sferr "sxml:\n") (pperr exp) (unless exp (quit)))
   ;; Need to make an interp.  All TCLish commands execute in an interp
   ;; so need (interp-lookup at turntime)
-  (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
+  (let ((cenv (cons* `(@top . #t) `(@env . ,env) xdict)))
+    ;;(pperr cenv)
     (if exp
 	(call-with-values
 	    (lambda () (sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
 	    (when show-xtil
               (sferr "tree-il:\n") (pperr exp)
-              (force-output (current-error-port))
-              )
-	    (values (parse-tree-il exp) env cenv)))
+              (force-output (current-error-port)))
+	    ;;(values (parse-tree-il '(void)) env cenv)
+	    (values (parse-tree-il exp) env cenv)
+            ))
 	(values (parse-tree-il '(void)) env cenv))))
 
 ;; --- last line ---
