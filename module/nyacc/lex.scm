@@ -369,6 +369,7 @@
 
 ;; read multi-char literal : braindamage in gobject/glib-types.h
 ;; IIRC only pango uses this as of 2026
+;; but this is faster than read-c-chlit !!
 (define (read-c-mclit ch)
   (define (readit ch)
     (let loop ((chl '()) (ch ch))
