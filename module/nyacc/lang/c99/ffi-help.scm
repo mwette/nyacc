@@ -70,16 +70,16 @@
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
 (define *debug-parse* (make-parameter #f)) ; parse debug mode
-(define *show-incs* (make-parameter #f))   ; show include directories
-(define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
+(define *show-incs* (make-parameter #f))   ; show include dir's
+(define *echo-decls* (make-parameter #f))  ; for debugging
 
-(define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
+(define *prefix* (make-parameter ""))               ; name prefix
 (define *renamer* (make-parameter default-renamer)) ; renamer from ffi-module
 
-(define *udict* (make-parameter '()))      ; udecl dict
-(define *ddict* (make-parameter '()))      ; cpp-def based dict
+(define *udict* (make-parameter '()))       ; udecl dict
+(define *ddict* (make-parameter vlist-null)) ; cpp-def based dict
 
-(define *defined* (make-parameter (alist->vhash '())))
+(define *defined* (make-parameter vlist-null))
 
 (define *errmsgs* (make-parameter '())) ; list of warnings
 
@@ -1548,18 +1548,10 @@
             (get-sys-cpp-defs)))
    (else (get-sys-cpp-defs))))
 
-(define fh-cpp-dict
-  (map (lambda (ent)
-         (let ((elts (string-split ent #\=)))
-           (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
-       fh-cpp-defs))
-
 (define fh-inc-dirs
   (append
    `("." ,(assq-ref %guile-build-info 'includedir) "/usr/include")
    (get-sys-inc-dirs)))
-
-(define fh-inc-help c99-def-help)
 
 ;; @deffn parse-code code [attrs]
 ;; Parse @var{code}, a Scheme string, using cpp-defs and inc-dirs from
@@ -1569,29 +1561,22 @@
 (define* (parse-code code #:optional (attrs '()))
   (let* ((cpp-defs (resolve-attr-val (assq-ref attrs 'cpp-defs)))
          (inc-dirs (resolve-attr-val (assq-ref attrs 'inc-dirs)))
-         (inc-help (resolve-attr-val (assq-ref attrs 'inc-help)))
          ;;
          (pkg-config (assq-ref attrs 'pkg-config))
          (cpp-defs (append (pkg-config-defs pkg-config) cpp-defs))
          (inc-dirs (append (pkg-config-incs pkg-config) inc-dirs))
          ;;
          (cpp-defs (append cpp-defs fh-cpp-defs))
-         (inc-dirs (append inc-dirs fh-inc-dirs))
-         (inc-help (append inc-help fh-inc-help)))
+         (inc-dirs (append inc-dirs fh-inc-dirs)))
     (or (with-input-from-string code
           (lambda ()
-            (call-with-values
-                (lambda ()
-                  (parse-c99 #:cpp-defs cpp-defs
-                             #:inc-dirs inc-dirs
-                             #:inc-help inc-help
-                             #:mode 'decl
-                             #:xdef? #t ; expand CPP-defines (dev-1.02)
-                             #:return-defs #t
-                             #:show-incs (*show-incs*)
-                             #:debug (*debug-parse*)))
-              (lambda (tree defs)
-                (*ddict* defs) tree))))
+            (parse-c99 #:cpp-defs cpp-defs
+                       #:inc-dirs inc-dirs
+                       #:mode 'decl
+                       #:xdef? #t ; expand CPP-defines (since 1.02)
+                       #:ddict *ddict*
+                       #:show-incs (*show-incs*)
+                       #:debug (*debug-parse*))))
         (fherr "parse failed"))))
 
 ;; @deffn parse-includes attrs
@@ -1746,7 +1731,9 @@
     (let* ((modd (c99-trans-unit->ddict tree #:inc-filter incf #:skip-fdefs #t))
            (modd (udict-enums->ddict udecls modd))
            (xtra (or (assq-ref module-options 'def-keepers) '()))
-           (mod-def-names (fold (lambda (p s) (cons (car p) s)) xtra modd)))
+           (mod-def-names (vhash-fold
+                           (lambda (k v s) (if (member k s) s (cons k s)))
+                           xtra modd)))
       (gen-lookup-proc mod-def-names udict (*ddict*) ext-mods))
 
     ;; output list of defined types
@@ -1886,7 +1873,7 @@
 ;; + first need to cut up intro-ffi
 ;; options:
 ;;   api-code cpp-defs decl-filter
-;;   inc-dirs inc-filter inc-help include
+;;   inc-dirs inc-filter include
 ;;   library pkg-config renamer
 (define* (load-include-file filename
                             #:key pkg-config)
@@ -1973,7 +1960,7 @@
       (and (keyword? key)
            (member key '(#:api-code
                          #:cpp-defs #:decl-filter #:inc-dirs #:inc-filter
-                         #:inc-help #:include #:library #:pkg-config #:renamer
+                         #:include #:library #:pkg-config #:renamer
                          #:use-ffi-module #:def-keepers #:lib-dirs))))
     (define (module-option? key) (keyword? key))
 
@@ -2015,7 +2002,7 @@
 (define* (compile-ffi-file filename #:optional (options '()))
   (parameterize ((*options* options) (*defined* '())
                  (*renamer* default-renamer) (*errmsgs* '()) (*prefix* "")
-                 (*mport* #t) (*udict* '()) (*ddict* '()))
+                 (*mport* #t) (*udict* '()) (*ddict* vlist-null))
     (if (not (access? filename R_OK))
         (fherr "ERROR: not found: ~S" filename))
     (call-with-input-file filename

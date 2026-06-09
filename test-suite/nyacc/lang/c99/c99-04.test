@@ -20,7 +20,7 @@
 (define (parse-string str)
   (with-input-from-string str
     (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'decl #:inc-help c99-std-help))))
+      (parse-c99 #:inc-dirs incs #:mode 'decl))))
 
 (define (parse-file file)
   (with-input-from-file file

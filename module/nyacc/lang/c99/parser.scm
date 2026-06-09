@@ -18,27 +18,41 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 parser)
-  #:export (parse-c99 parse-c99x gen-c99-lexer gen-c99x-lexer gen-c-lexer)
+  #:export (parse-c99 parse-c99x gen-c99-lexer gen-c99x-lexer c99-builtins)
+  #:use-module (ice-9 vlist)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right partition))
+  #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module (nyacc lex)
+  #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang util)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang c99 cpp)
-  #:use-module (nyacc lang c99 util)
-  #:re-export (c99-def-help c99-std-help))
+  ;;#:use-module (nyacc lang c99 util)
+  ;;#:re-export (c99-def-help c99-std-help)
+  )
 
 ;; === body ==========================
 
-(use-modules (nyacc lang sx-util))
-(use-modules (nyacc lang util))
-(use-modules ((srfi srfi-1) #:select (fold fold-right append-reverse)))
-(use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules (ice-9 pretty-print))      ; for debugging
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define pp pretty-print)
 
+(define c99-builtins
+  '("__builtin_va_list=void*"
+    "__inline__=inline" "__inline=__inline__"
+    "__restrict__=restrict" "__restrict=__restrict__"
+    "__signed__=signed" "__signed=__signed__"
+    "__has_include(X)=__has_include__(#X)"
+    "__has_include_next(X)=__has_include_next__(#X)"
+    "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
+    "__attribute(X)=__attribute__(X)"
+    "__volatile__=volatile" "__volatile=__volatile__"
+    "__extension__=" "__extension=__extension__"
+    "asm=__asm__" "__asm=__asm__"))
+    
 ;; C parser info
 (define-record-type cpi
-  (make-cpi-1)
+  (%make-cpi)
   cpi?
   (debug cpi-debug set-cpi-debug!)      ; debug #t #f
   (shinc cpi-shinc set-cpi-shinc!)      ; show includes
@@ -47,8 +61,6 @@
   (ptl cpi-ptl set-cpi-ptl!)            ; parent typename list
   (ctl cpi-ctl set-cpi-ctl!)            ; current typename list
   (tna cpi-itn set-cpi-itn!)            ; inhibit typename
-  (inc-tynd cpi-itynd set-cpi-itynd!)   ; a-l of incfile => typenames
-  (inc-defd cpi-idefd set-cpi-idefd!)   ; a-l of incfile => defines
   (blev cpi-blev set-cpi-blev!))        ; curr brace/block level
 
 ;;.@deffn Procedure split-cppdef defstr => form | #f
@@ -83,47 +95,23 @@
 ;; The (CPP) defines can appear as pairs: then they have already been split.
 ;; (This is used by @code{parse-c99x}.)
 ;; @end deffn
-(define (make-cpi debug shinc defines incdirs inchelp)
-  ;; convert inchelp into inc-file->typenames and inc-file->defines
-  ;; Any entry for an include file which contains `=' is considered
-  ;; a define; otherwise, the entry is a typename.
+(define (make-cpi debug shinc defines incdirs)
 
-  (define (split-helper helper)
-    (let ((file (car helper)))
-      (let loop ((tyns '()) (defs '()) (ents (cdr helper)))
-        (cond
-         ((null? ents) (values (cons file tyns) (cons file defs)))
-         ((string-contains (car ents) "=")
-          (loop tyns (cons (split-cppdef (car ents)) defs) (cdr ents)))
-         (else (loop (cons (car ents) tyns) defs (cdr ents)))))))
+  (define (def-cons def tab)
+    (let ((pair (split-cppdef def))) (vhash-cons (car pair) (cdr pair) tab)))
 
-  (define (split-if-needed def tail)
-    (cons (if (pair? def) def (split-cppdef def)) tail))
-
-  (let* ((cpi (make-cpi-1)))
-    (set-cpi-debug! cpi debug)          ; print states debug
-    (set-cpi-shinc! cpi shinc)          ; print includes
-    (set-cpi-defs! cpi (fold split-if-needed '() defines)) ; def's as pairs
+  (let ((cpi (%make-cpi)) (defs (fold def-cons vlist-null defines)))
+    ;;(sferr "split:\n") (pperr (map split-cppdef defines))
+    ;;(sferr "lkup ~s\n" (vhash-assoc "FOO" defs))
+    ;;(quit)
+    (set-cpi-debug! cpi debug)          ; flag: parse debug
+    (set-cpi-shinc! cpi shinc)          ; flag: show include files
+    (set-cpi-defs! cpi defs)            ; def's as vhash
     (set-cpi-incs! cpi incdirs)         ; list of include dir's
     (set-cpi-ptl! cpi '())              ; list of lists of typenames
     (set-cpi-ctl! cpi '())              ; list of current typenames
     (set-cpi-itn! cpi #f)               ; don't inhibit typename
     (set-cpi-blev! cpi 0)               ; brace/block level
-    ;; Break up the helpers into typenames and defines.
-    (let loop ((itynd '()) (idefd '()) (helpers inchelp))
-      (cond ((null? helpers)
-             (set-cpi-itynd! cpi itynd)
-             (set-cpi-idefd! cpi idefd))
-            (else
-             (call-with-values
-                 (lambda () (split-helper (car helpers)))
-               (lambda (ityns idefs)
-                 (loop (cons ityns itynd) (cons idefs idefd) (cdr helpers)))))))
-    ;; Assign builtins.
-    (and=> (assoc-ref (cpi-itynd cpi) "__builtin")
-           (lambda (tl) (set-cpi-ctl! cpi (append (cpi-ctl cpi) tl))))
-    (and=> (assoc-ref (cpi-idefd cpi) "__builtin")
-           (lambda (dl) (set-cpi-defs! cpi (append (cpi-defs cpi) dl))))
     cpi))
 
 (define *info* (make-parameter #f))
@@ -361,20 +349,11 @@
                    (args (assq-ref tail 'args))
                    (rtxt (car (assq-ref tail 'repl)))
                    (rtkl (tokenize-cpp-string rtxt))
-                   (cell (cons name (if args (cons args rtkl) rtkl))))
-              (set-cpi-defs! info (cons cell (cpi-defs info)))))
+                   (val (if args (cons args rtkl) rtkl)))
+              (set-cpi-defs! info (vhash-cons name val (cpi-defs info)))))
 
           (define (rem-define name)
-            (set-cpi-defs! info (acons name #f (cpi-defs info))))
-
-          (define (apply-helper file)
-            ;; file will include <> or "", need to strip
-            (let* ((tyns (assoc-ref (cpi-itynd info) file))
-                   (defs (assoc-ref (cpi-idefd info) file)))
-              (when tyns
-                (for-each add-typename tyns)
-                (set-cpi-defs! info (append defs (cpi-defs info))))
-              tyns))
+            (set-cpi-defs! info (vhash-cons name #f (cpi-defs info))))
 
           (define (inc-stmt->file-spec stmt) ;; retain <> or ""
             (let* ((arg (cadr stmt)))
@@ -433,7 +412,6 @@
                    (path (inc-file-spec->path spec next)))
               (if show-incs (sf "include ~A => ~S\n" spec path))
               (cond
-               ((apply-helper file) stmt)
                ((not path) (c99-err "not found: ~S" file))
                (else (set! bol #t)
                      (push-input (open-input-file path))
@@ -446,7 +424,6 @@
                    (path (inc-file-spec->path spec next)))
               (if show-incs (sf "include ~A => ~S\n" spec path))
               (cond
-               ((apply-helper file) stmt)
                ((not path) (c99-err "not found: ~S" file))
                ((with-input-from-file path run-parse) =>
                 (lambda (tree) ;; add tree
@@ -681,9 +658,34 @@
 
 ;; Routines to process specifier-lists and declarators, indended
 ;; to provide option to convert attribute-specifiers elements into
-;; SXML attributes.  See move-attributes in util.scm.
-;;(define process-specs identity)
-;;(define process-declr identity)
+;; SXML attributes.
+  (define (attrl->attrs attr-list)
+    (define (spec->str spec)
+      (sx-match spec
+        ((ident ,name) name)
+        ((attribute ,name) (spec->str name))
+        ((attribute ,n ,a) (string-append (spec->str n) "(" (spec->str a) ")"))
+        ((attr-expr-list . ,exl) (string-join (map spec->str exl) ","))
+        ((fixed ,val) val)
+        ((float ,val) val)
+        ((char ,val) val)
+        ((string . ,val) (string-append "\"" (string-join val "") "\""))
+        ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
+        ((fixed-type ,name) name)
+        ((float-type ,name) name)
+        (,_ (sferr "not processed: ~s\n" spec) "MISSED")))
+    (if (null? attr-list) '()
+        `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
+
+(define (move-attributes sexp)
+  (define (attr? item) (and (pair? item) (eq? (car item) 'attribute-list)))
+  
+  (call-with-values (lambda () (sx-split sexp))
+    (lambda (tag attr tail)
+      (call-with-values (lambda () (partition attr? tail))
+        (lambda (attrl clean-tail)
+          (sx-cons* tag (append (attrl->attrs attrl) attr) clean-tail))))))
+
 (define (process-specs exp) (move-attributes exp))
 (define (process-declr exp) (move-attributes exp))
 
@@ -718,8 +720,6 @@
 ;; @i{NAME} or @i{NAME=VALUE}.
 ;; @item #:inc-dirs @i{dir-list}
 ;; @{dir-list} is a list of strings of paths to look for directories.
-;; @item #:inc-help @i{helpers}
-;; @i{helpers} is an a-list where keys are include files (e.g.,
 ;; @code{"stdint.h"}) and the value is a list of type aliases or CPP define
 ;; (e.g., @code{"foo_t" "FOO_MAX=3"}).
 ;; @item #:mode @i{mode}
@@ -729,6 +729,8 @@
 ;; Return two values: the parse tree and the list of CPP definitions.
 ;; @item #:debug @i{bool}
 ;; a boolean which if true prints states from the parser
+;; @item #:ddict @i{#f|vhash parameter}
+;; default is @code{vlist-null}.
 ;; @end table
 ;; @example
 ;; (with-input-from-file "abc.c"
@@ -741,34 +743,50 @@
 ;; expressions can be fully evaluated, which may mean adding compiler generated
 ;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
+
+(define (def/str val)
+  (cond
+   ((string? val) val)
+   ((null? val) "")
+   ((string? (cdr val)) val)
+   ((symbol? (caar val)) (tokl->string val))
+   (else (cons (car val) (tokl->string (cdr val))))))
+;;n  "repl" 
+;;n  ("a" "b") . "repl"
+;;y  ()
+;;y  ((ident . "repl") ...)
+;;y  ("a" "b") . ()
+;;y  ("a" "b") . ((ident . "repl"))
+
 (define* (parse-c99 #:optional (tyns '())
                     #:key
-                    (cpp-defs '())          ; CPP defines
+                    (cpp-defs c99-builtins) ; CPP defines
                     (inc-dirs '())          ; include dirs
-                    (inc-help c99-def-help) ; include helpers
                     (mode 'code)        ; mode: 'file, 'code or 'decl
                     (xdef? #f)          ; pred to determine expand
                     (show-incs #f)      ; show include files
-                    (return-defs #f)    ; return (values tree defs)
+                    (ddict #f)          ; optional parameter for defs dict
                     (debug #f))         ; debug
-  (let ((info
-         (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
+  (let ((info (make-cpi debug show-incs cpp-defs (cons "." inc-dirs))))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (parameterize ((*info* info)
                    (*input-stack* '()))
       (catch 'c99-error
         (lambda ()
           (catch 'nyacc-error
-            (lambda () (let ((sx (c99-raw-parser
-                                  (gen-c99-lexer #:mode mode
-                                                 #:xdef? xdef?
-                                                 #:show-incs show-incs)
-                                  #:debug debug)))
-                         (if return-defs (values sx (cpi-defs info)) sx)))
+            (lambda ()
+              (let ((sx (c99-raw-parser
+                         (gen-c99-lexer #:mode mode #:xdef? xdef?
+                                        #:show-incs show-incs)
+                         #:debug debug)))
+                (when (parameter? ddict)
+                  (ddict
+                   (vhash-fold-right
+                    (lambda (key val seed) (vhash-cons key (def/str val) seed))
+                    (ddict) (cpi-defs (*info*)))))
+                sx))
             (lambda (key fmt . args) (apply throw 'c99-error fmt args))))
-        (lambda (key fmt . args)
-          (report-error fmt args)
-          (if return-defs (values #f '()) #f))))))
+        (lambda (key fmt . args) (report-error fmt args) #f)))))
 
 ;; === expr parser ====================
 
@@ -784,10 +802,9 @@
 (define gen-c99x-lexer
   (make-c99-lexer-generator c99x-mtab c99x-raw-parser))
 
-;; @deffn {Procedure} parse-c99x string [typenames] [options]
-;; where @var{string} is a string C expression, @var{typenames}
-;; is a list of strings to be treated as typenames
-;; and @var{options} may be any of
+;; @deffn {Procedure} parse-c99x string [options]
+;; Parse the c99 expression to a sxml tree, where @var{string} is a
+;; string C expression and @var{options} may be any of
 ;; @table
 ;; @item cpp-defs
 ;; a list of strings to be treated as preprocessor definitions
@@ -796,17 +813,14 @@
 ;; @item debug
 ;; a boolean which if true prints states from the parser
 ;; @end table
-;; This needs to be explained in some detail.
-;; [tyns '("foo_t")]
 ;; @end deffn
 (define* (parse-c99x expr-string
-                     #:optional
-                     (tyns '())         ; defined typenames
+                     #:optional (tyns '())
                      #:key
-                     (cpp-defs '())     ; CPP defines
-                     (xdef? #f)         ; pred to determine expand
-                     (debug #f))        ; debug?
-  (let ((info (make-cpi debug #f cpp-defs '(".") '())))
+                     (cpp-defs c99-builtins) ; CPP defines
+                     (xdef? #f)              ; pred to determine expand
+                     (debug #f))             ; debug?
+  (let ((info (make-cpi debug #f cpp-defs '("."))))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (parameterize ((*info* info)
                    (*input-stack* '()))

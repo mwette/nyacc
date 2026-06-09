@@ -38,11 +38,13 @@
             eval-cpp-cond-text          ; #if etc
             find-incl-in-dirl           ; #include
             tokenize-cpp-string         ; #define
+            tokl->string                ; undo tokenize
             ;; not used directly
             macro-expand-text
             parse-cpp-expr
             eval-cpp-expr)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 vlist)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -203,7 +205,7 @@
         `(define (name ,name) (args . ,args) (repl ,repl))
         `(define (name ,name) (repl ,repl)))))
 
-;; @deffn {Procedure} cpp-line->stmt line defs => (stmt-type text)
+;; @deffn {Procedure} cpp-line->stmt line => (stmt-type text)
 ;; Parse a line from a CPP statement and return a parse tree.
 ;; @example
 ;; (parse-cpp-stmt "define X 123") => (define "X" "123")
@@ -283,7 +285,7 @@
 ;; Options include optional dictionary for defines and values
 ;; and @code{#:inc-dirs} for @code{has_include} etc
 ;; @end deffn
-(define* (eval-cpp-expr tree #:optional (defs '()) #:key (inc-dirs '()))
+(define* (eval-cpp-expr tree #:optional (defs vlist-null) #:key (inc-dirs '()))
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
@@ -296,7 +298,7 @@
           (case (car tree)
             ((fixed) (string->number (cnumstr->scm (tx1 tree))))
             ((char) (char->integer (string-ref (tx1 tree) 0)))
-            ((defined) (if (assoc-ref defs (tx1 tree)) 1 0))
+            ((defined) (if (and=> (vhash-assoc (tx1 tree) defs) cdr) 1 0))
             ((has-include)
              (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #f) 1 0))
             ((has-include-next)
@@ -326,10 +328,7 @@
             ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
             ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
             ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-            ;; If ident is not defined it should be zero:
-            ((ident) (if (assoc-ref defs (tx1 tree))
-                         (throw 'cpp-error "ident not expanded ???")
-                         0))
+            ((ident) 0)                 ; undefined ident is zero
             ((p-expr) (ev1 tree))
             ((cast) (ev2 tree))
             (else (throw 'cpp-error "eval-cpp-expr: incomplete impl"))))))
@@ -647,28 +646,34 @@
 (define (tokl->string tokl)
   (rtokl->string (reverse tokl)))
 
-;; The question is whether to tokenize all cpp-defs
-;; or keep the strings and convert to tokens on the fly.
+;; If found but not tokenized, then tokenize.
 (define (lookup-def defs ident)
-  (let* ((def (assoc ident defs)) (ref (and def (cdr def))))
+  (let* ((pair (vhash-assoc ident defs)) (ref (and (pair? pair) (cdr pair))))
     (cond
-     ((not ref) ref)                    ; catch undef
+     ((not ref) ref)
      ((null? ref) ref)
-     ((string? ref) (set-cdr! def (tokenize-cpp-string ref)))
-     ((string? (cdr ref)) (set-cdr! ref (tokenize-cpp-string (cdr ref)))))
-    (and ref (cdr def))))
+     ((string? ref)
+      (let ((ref (tokenize-cpp-string ref)))
+        (set-cdr! pair ref)
+        ref))
+     ((string? (cdr ref))
+      (let ((ref (cons (car ref) (tokenize-cpp-string (cdr ref)))))
+        (set-cdr! pair ref)
+        ref))
+     (else ref))))
 
 
 ;; === exports =======================
 
 ;; @deffn {Procedure} macro-expand-text text defs => text
 ;; Like @code{cpp-expand} but processes text entirely and generates
-;; text result.
+;; text result.  defs should be alist or vlist
 ;;.@end deffn
 (define (macro-expand-text text defs)
   (with-input-from-string text
     (lambda ()
-      (let* ((tokl (tokenize-to-mark #f))
+      (let* ((defs (if (vlist? defs) defs (alist->vhash defs)))
+             (tokl (tokenize-to-mark #f))
              (rtkl (cpp-expand tokl defs))
              (repl (rtokl->string rtkl)))
         repl))))
@@ -690,7 +695,7 @@
 ;; expand text, you must use (with-input-from-string "" ...)
 ;; The argument @var{sp} is source properties (aka location info).
 ;; @end deffn
-(define* (expand-cpp-macro-ref ident defs #:optional (sp '()))
+(define* (expand-cpp-macro-ref ident cppdefs #:optional (sp '()))
 
   (define (cleanup seq)
     (let loop ((out '()) (in seq))
@@ -700,24 +705,27 @@
        ((eq? '$idnox (caar in)) (loop (acons '$ident (cdar in) out) (cdr in)))
        (else (loop (cons (car in) out) (cdr in))))))
 
-  (identity ;; false-if-exception
-   (cond
-    ((lookup-def defs ident)
-     (cleanup (cpp-expand `(($ident . ,ident)) defs '() '())))
-    ((c99-std-val ident sp)
-     => (lambda (s) (list (cons '$string s))))
-    (else #f))))
+  (let ((defs (if (vlist? cppdefs) cppdefs (alist->vhash cppdefs))))
+    (false-if-exception
+     (cond
+      ((lookup-def defs ident)
+       (cleanup (cpp-expand `(($ident . ,ident)) defs '() '())))
+      ((c99-std-val ident sp)
+       => (lambda (s) (list (cons '$string s))))
+      (else #f)))))
 
 
 ;; @deffn {Procedure} eval-cpp-cond-text text [defs] => 0 | 1
 ;; Evaluate CPP condition expression (text).
 ;; Undefined identifiers are replaced with @code{0}.
 ;; @end deffn
-(define* (eval-cpp-cond-text text #:optional (defs '()) #:key (inc-dirs '()))
+(define* (eval-cpp-cond-text text #:optional (defs vlist-null)
+                             #:key (inc-dirs '()))
   (with-throw-handler
       'cpp-error
     (lambda ()
-      (let* ((repl (macro-expand-text text defs))
+      (let* ((defs (if (vlist? defs) defs (alist->vhash defs)))
+             (repl (macro-expand-text text defs))
              (exp (parse-cpp-expr repl)))
         (eval-cpp-expr exp defs #:inc-dirs inc-dirs)))
     (lambda (key fmt . args)

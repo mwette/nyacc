@@ -84,6 +84,7 @@
                declr-ident declr-name
                clean-field-list clean-fields)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 vlist)
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove))
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((sxml fold) #:select (foldts foldts*))
@@ -544,22 +545,28 @@
 ;; === enums and defines ===============
 
 ;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [#:key ...]
-;; Extract the #defines from a tree as
+;; Extract the #defines from a tree as a dict.   The dict is a vhash.
 ;; @*
 ;; Example:
 ;; @example
 ;;  (define (name "ABC") (repl "repl"))
 ;;  (define (name "MAX") (args "X" "Y") (repl "(X)..."))
-;; =>
+;; => [vhash containing]
 ;;  (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
 ;; @end example
 ;; @noindent
 ;; The entries appear in reverse order wrt how in file.
-;; @*
-;; New option: #:skip-fdefs to skip function defs
+;; Options:
+;; @table @code
+;; @item #:inc-filter
+;; Either @code{#t}, @code{#f}, or a predicate to indicate
+;; if include file should be scanned too.
+;; @item #:skip-fdefs
+;; If @code{#t}, skip function macros def's.
+;; @end table
 ;; @end deffn
 (define* (c99-trans-unit->ddict tree
-                                #:optional (ddict '())
+                                #:optional (ddict vlist-null)
                                 #:key inc-filter skip-fdefs)
   (define (can-def-stmt tree)
     (sx-match tree
@@ -573,7 +580,8 @@
       (fold
        (lambda (tree ddict)
          (cond
-          ((can-def-stmt tree) => (lambda (def) (cons def ddict)))
+          ((can-def-stmt tree) =>
+           (lambda (def) (vhash-cons (car def) (cdr def) ddict)))
           ((inc-keeper? tree inc-filter) =>
            (lambda (tree)
              (c99-trans-unit->ddict tree ddict
@@ -583,30 +591,27 @@
        ddict (sx-tail tree))
       ddict))
 
-;; @deffn {Procedure} udict-enums->ddict udict [ddict] => defs
+;; @deffn {Procedure} udict-enums->ddict udict [seed] => defs
 ;; Given a udict this generates a list that looke like the internal
 ;; CPP define structure.  That is,
 ;; @example
-;; (enum-def-list (enum-def (ident "ABC")) ...)
-;; @end example
-;; @noindent
-;; to
-;; @example
-;; (("ABC" . "0") ...)
+;;   (enum-def-list (enum-def (ident "ABC")) ...)
+;; => [vhash for]
+;;   (("ABC" . "0") ...)
 ;; @end example
 ;; @end deffn
-(define* (udict-enums->ddict udict #:optional (ddict '()))
+(define* (udict-enums->ddict udict #:optional (ddict vlist-null))
   (define (gen-nvl edef-list ddict)
     (let ((def-list (and=> (canize-enum-def-list edef-list udict ddict) cdr)))
       (fold (lambda (edef dd)
-              (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) dd))
+              (vhash-cons (sx-ref* edef 1 1) (sx-ref* edef 2 1) dd))
             ddict def-list)))
   (fold
    (lambda (pair ddict)
      ;; not sure why I'm filtering out ("" . decl)
      ;;     => because it's a duplicate to "*anon*"
      ;;        ("" . decl) should be deprecated
-     (if (or (pair? (car pair)) (positive? (string-length (car pair))))
+     (if (pair? (car pair))
          (let* ((specs (sx-ref (cdr pair) 1))
                 (tspec (sx-find 'type-spec specs))
                 (tspec (and tspec (sx-ref tspec 1))))
@@ -619,14 +624,14 @@
          ddict))
    ddict udict))
 
-;; add enum symbols to dict as @code{(fixed "1")}
-(define* (udict-add-enums udict #:optional (ddict '()))
+;; add enum symbols to dict as, e.g., @code{(fixed "1")}
+(define* (udict-add-enums udict #:optional (ddict vlist-null))
   (define (gen-nvl edef-list udict ddict)
     (let ((def-list (and=> (canize-enum-def-list edef-list udict ddict) cdr)))
       (fold
-       (lambda (edef dd)
+       (lambda (edef ud)
          (let ((name (sx-ref* edef 1 1)))
-           (if (member name dd) dd (acons name (sx-ref* edef 2) dd))))
+           (if (member name ud) ud (acons name (sx-ref* edef 2) ud))))
        udict def-list)))
   (reverse
    (fold
@@ -670,7 +675,7 @@
     (cons (sx-list 'enum-defn attr id `(fixed ,(number->string val))) enums))
 
   (define (idcons ident ival ddict)
-    (acons (sx-ref ident 1) (number->string ival) ddict))
+    (vhash-cons (sx-ref ident 1) (number->string ival) ddict))
 
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
     (cond

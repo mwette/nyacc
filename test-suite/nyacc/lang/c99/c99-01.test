@@ -28,7 +28,7 @@
   (with-input-from-string str
     (lambda ()
       (parse-c99 #:inc-dirs incs
-                 #:cpp-defs (or cpp-defs '())
+                 #:cpp-defs (or cpp-defs c99-builtins)
                  #:mode 'code))))
 
 (define (parse-string-list . str-l)

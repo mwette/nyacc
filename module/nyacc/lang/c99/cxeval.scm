@@ -34,6 +34,7 @@
             cx-incr-bit-size
             cx-maxi-size)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 vlist)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (system foreign)
   #:use-module (nyacc lalr)
@@ -527,7 +528,7 @@
 
 ;; =============================================================================
 
-;; @deffn {Procedure} eval-c99-cx tree [udict] [#:fail-proc fail-proc]
+;; @deffn {Procedure} eval-c99-cx tree [udict [ddict]] [#:fail-proc fail-proc]
 ;; Evaluate the constant expression or return #f (for unimplemented or
 ;; non-expressions). If @code{fail-proc} is provided it is called with
 ;; the tree that could not be parsed.  If provided, it should return
@@ -539,7 +540,9 @@
     (and fail-proc (apply fail-proc fmt args)))
 
   (define (ddict-lookup name)
-    (let ((repl (assoc-ref ddict name)))
+    (let ((repl (if (vlist? ddict)
+                    (and=> (vhash-assoc name ddict) cdr)
+                    (assoc-ref ddict name))))
       (cond
        ((not repl) #f)
        ((pair? repl) #f)

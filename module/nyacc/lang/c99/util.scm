@@ -18,8 +18,7 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 util)
-  #:export (c99-def-help
-            c99-std-help
+  #:export (c99-def-help c99-std-help   ; deprecated
             get-sys-cpp-defs get-sys-inc-dirs split-cpp-defs 
             remove-comments remove-comments!
             remove-inc-trees merge-includes!
@@ -103,6 +102,8 @@
      ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
      ("wctype.h" "wctrans_t" "wctype_t" "wint_t"))))
 
+(define c99-builtins (assoc-ref c99-def-help "__builtin"))
+
 (define (resolve-CC CC)
   (cond
    (CC CC)
@@ -141,7 +142,7 @@
   (let* ((cmd (string-append (resolve-CC CC) " -dM -E - </dev/null"))
          (ip (open-input-pipe cmd)))
     (let loop ((line (read-line ip 'trim)))
-      (if (eof-object? line) '()
+      (if (eof-object? line) c99-builtins
           (cons (convert-line line) (loop (read-line ip 'trim)))))))
 
 
@@ -242,6 +243,7 @@
 
 ;; @deffn extract-attr tail => (values attr-tree tail)
 ;; Extract attributes from a sexp tail.
+;; (attr-or-not ...) => (attr ...) (not ...)
 ;; @end deffn
 (define (extract-attr tail) ;; => (values attr-tree tail)
   (let loop ((atl '()) (tail1 '()) (tail0 tail))
@@ -254,37 +256,6 @@
       (loop (append (sx-tail (car tail0)) atl) tail1 (cdr tail0)))
      (else
       (loop atl (cons (car tail0) tail1) (cdr tail0))))))
-
-;; (attribute-list (attribute (ident "__packed__")) ...)
-;;  =>
-;; (attributes "__packed__;...")
-;; OR
-;; () => ()
-(define (attrl->attrs attr-list)
-  (define (spec->str spec)
-    (sx-match spec
-      ((ident ,name) name)
-      ((attribute ,name) (spec->str name))
-      ((attribute ,name ,args)
-       (string-append (spec->str name) "(" (spec->str args) ")"))
-      ((attr-expr-list . ,expr-list)
-       (string-join (map spec->str expr-list) ","))
-      ((fixed ,val) val)
-      ((float ,val) val)
-      ((char ,val) val)
-      ((string . ,val) (string-append "\"" (string-join val "") "\""))
-      ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
-      ((fixed-type ,name) name)
-      ((float-type ,name) name)
-      ;;((mul ,lt ,rt) (c99
-      (,_ (let* ((sp (source-properties spec))
-                 (fn (assq-ref sp 'filename))
-                 (ln (assq-ref sp 'line))
-                 (wm "warning: c99 attribute not processed"))
-            (if sp (sferr "~a at ~a:~a\n" wm fn ln) (sferr "~a: ~s\n" wm spec))
-            "MISSED"))))
-  (if (null? attr-list) '()
-      `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
 
 ;; (attributes "__packed__;__aligned__;__alignof__(8)")
 ;;   =>
@@ -330,6 +301,29 @@
           (attl (string-split attrs #\;)))
      `(attribute-list ,@(map astng->atree attl)))))
 
+;; (attribute-list (attribute (ident "__packed__")) ...)
+;;  =>
+;; (attributes "__packed__;...")
+;; OR
+;; () => ()
+(define (attrl->attrs attr-list)
+  (define (spec->str spec)
+    (sx-match spec
+      ((ident ,name) name)
+      ((attribute ,name) (spec->str name))
+      ((attribute ,n ,a) (string-append (spec->str n) "(" (spec->str a) ")"))
+      ((attr-expr-list . ,exl) (string-join (map spec->str exl) ","))
+      ((fixed ,val) val)
+      ((float ,val) val)
+      ((char ,val) val)
+      ((string . ,val) (string-append "\"" (string-join val "") "\""))
+      ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
+      ((fixed-type ,name) name)
+      ((float-type ,name) name)
+      (,_ (sferr "not processed: ~s\n" spec) "MISSED")))
+  (if (null? attr-list) '()
+      `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
+
 ;; @deffn {Procedure} move-attributes sexp
 ;; Given a sexpr, combine attribute-list kids and move to attribute ??
 ;; @example
@@ -345,17 +339,32 @@
 ;;       (declr-init-list ...))
 ;; @end example
 ;; @end deffn
-(define (move-attributes sexp)
-  (let ((tag (sx-tag sexp)) (attr (sx-attr sexp)) (tail (sx-tail sexp)))
-    (call-with-values (lambda () (extract-attr tail))
-      (lambda (attrl stail)
-        (sx-cons*
-         tag 
-         (cond
-          ((null? attrl) attr)
-          ((null? attr)`(@ ,(attrl->attrs attrl)))
-          (else (append attr (list (attrl->attrs attrl)))))
-         stail)))))
+#;(define (move-attributes sexp)
+  (define (attrl->attrs attr-list)
+    (define (spec->str spec)
+      (sx-match spec
+        ((ident ,name) name)
+        ((attribute ,name) (spec->str name))
+        ((attribute ,n ,a) (string-append (spec->str n) "(" (spec->str a) ")"))
+        ((attr-expr-list . ,exl) (string-join (map spec->str exl) ","))
+        ((fixed ,val) val)
+        ((float ,val) val)
+        ((char ,val) val)
+        ((string . ,val) (string-append "\"" (string-join val "") "\""))
+        ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
+        ((fixed-type ,name) name)
+        ((float-type ,name) name)
+        (,_ (sferr "not processed: ~s\n" spec) "MISSED")))
+    (if (null? attr-list) '()
+        `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
+  
+  (define (attr? item) (and (pair? item) (eq? (car item) 'attribute-list)))
+  
+  (call-with-values (lambda () (sx-split sexp))
+    (lambda (tag attr tail)
+      (call-with-values (lambda () (partition attr? tail))
+        (lambda (attrl clean-tail)
+          (sx-cons* tag (append (attrl->attrs attrl) attr) clean-tail))))))
 
 ;; --- random stuff 
 

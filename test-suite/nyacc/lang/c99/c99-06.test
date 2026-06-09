@@ -10,13 +10,14 @@
 ;; test C99 munge utilities
 
 (define-module (c99-06)
+  #:use-module (ice-9 vlist)
+  #:use-module ((sxml xpath) #:select (sxpath))
+  #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 util)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 cxeval)
-  #:use-module (nyacc lang sx-util)
-  #:use-module ((sxml xpath) #:select (sxpath))
   #:use-module (test-suite lib))
 
 (define cep current-error-port)
@@ -34,7 +35,7 @@
 (define* (parse-string str #:optional (tyns '()))
   (with-input-from-string str
     (lambda ()
-      (parse-c99 tyns #:inc-dirs incs #:mode 'decl #:inc-help c99-std-help))))
+      (parse-c99 tyns #:inc-dirs incs #:mode 'decl))))
 
 (define (parse-file file)
   (with-input-from-file file
@@ -315,8 +316,8 @@
            (udict (c99-trans-unit->udict tree))
            (ddict (c99-trans-unit->ddict tree))
            (ddict (udict-enums->ddict udict ddict)))
-      (and (string= "1" (or (assoc-ref ddict "FOO") "X"))
-           (string= "2" (or (assoc-ref ddict "BAR") "X")))))
+      (and (string= "1" (or (and=> (vhash-assoc "FOO" ddict) cdr) "X"))
+           (string= "2" (or (and=> (vhash-assoc "BAR" ddict) cdr) "X")))))
   )
 
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
