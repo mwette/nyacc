@@ -6,6 +6,8 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2026-XX-XX  V3.05.0
+        * c99/parser,ffi-help: converted cpp-define dict from alist to vhash,
+	  resulting in TBD% speedup of compile-ffi on gtk2.ffi
         * ffi-help.scm(udecl->sexp): track function decl's in defined list
         * ffi-help.scm(udecl->sexp): replace define-public with define+export
         * ffi-help #:pkg-config now takes string or list of strings
@@ -20,6 +22,10 @@ without any warranty.
           A separate package `guile-fhbe' on github now provides:
           + ccode->bstructs-sexp
           + ccode->bytestructures-sexp
+	* Started removing c99 "helper" concept which would allow short-
+	  cutting include files.  This was useful in the early days of the
+	  NYACC c99 parser when it could not parse some /usr/include files.
+	* c99: instead of return-defs, pass a parameter for defs
 
 2026-03-29  V3.04.6
         * nyacc/util.scm(atomize-terminal): remove "$:" prefix, to 
