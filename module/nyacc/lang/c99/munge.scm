@@ -666,7 +666,7 @@
 ;; @noindent
 ;; @end deffn
 (define* (canize-enum-def-list enum-def-list
-                               #:optional (udict '()) (ddict '())
+                               #:optional (udict '()) (ddict vlist-null)
                                #:key fail-proc)
   (define (fail fmt . args)
     (and fail-proc (apply fail-proc fmt args) #f))
