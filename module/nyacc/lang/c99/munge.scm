@@ -171,7 +171,7 @@
        (lambda (declr seed)
          (acons (declr-name declr) (sx-list tag attr specl declr) seed))
        seed declrs)
-      (acons "*anon*" (sx-list tag attr specl) seed)))
+      seed))
 
 ;; @deffn {Procedure} split-decl decl => values
 ;; This routine splits a declaration (or comp-decl or param-decl) into
