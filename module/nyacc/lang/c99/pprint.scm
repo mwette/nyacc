@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/pprint.scm - C pretty-printer
 
-;; Copyright (C) 2015-2018,2021-2024 Matthew R. Wette
+;; Copyright (C) 2015-2018,2021-2024,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -190,24 +190,27 @@
     (if (ptr-declr? declr) (sf ")")))
 
   ;; now ((comment xxx) (attributes "aaa;yyy;zzz"))
-  (define (pp-attr attr)
+  (define (fmt-attr attr-list)
     (string-join
      (fold-right
-      (lambda (pair seed)
-        (if (eqv? 'attributes (car pair))
-            ;; FIXME: should really parse-attributes, then ppx
-            (append (string-split (cadr pair) #\;) seed)
-            seed))
-      '() attr)
-     " "))
+      (lambda (entry seed)
+        (case (car entry)
+          ((attributes)
+           (let ((terms (string-split (cadr entry) #\;)))
+             (cons
+              (string-append "__attributes__((" (string-join terms ",") "))")
+              seed)))
+          (else
+           seed)))
+      '() attr-list) " "))
 
   (define (struct-union-def struct-or-union attr name fields)
     (if name
         (if (pair? attr)
-            (sf "~A ~A ~A {\n" struct-or-union (pp-attr attr) name)
+            (sf "~A ~A ~A {\n" struct-or-union (fmt-attr attr) name)
             (sf "~A ~A {\n" struct-or-union name))
         (if (pair? attr)
-            (sf "~A ~A {\n" struct-or-union (pp-attr attr))
+            (sf "~A ~A {\n" struct-or-union (fmt-attr attr))
             (sf "~A {\n" struct-or-union)))
     (push-il)
     (for-each ppx fields)
@@ -418,9 +421,9 @@
          ((fixed-type) (sf "~A" (sx-ref arg 1)))
          ((float-type) (sf "~A" (sx-ref arg 1)))
          ((struct-ref) (ppx arg))
-         ((struct-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
+         ((struct-def) (if (pair? aattr) (sf " ~S" (fmt-attr aattr))) (ppx arg))
          ((union-ref) (ppx arg))
-         ((union-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
+         ((union-def) (if (pair? aattr) (sf " ~S" (fmt-attr aattr))) (ppx arg))
          ((enum-ref) (ppx arg))
          ((enum-def) (ppx arg))
          ((typename) (sf "~A" (sx-ref arg 1)))

@@ -659,32 +659,66 @@
 ;; Routines to process specifier-lists and declarators, indended
 ;; to provide option to convert attribute-specifiers elements into
 ;; SXML attributes.
-  (define (attrl->attrs attr-list)
-    (define (spec->str spec)
-      (sx-match spec
-        ((ident ,name) name)
-        ((attribute ,name) (spec->str name))
-        ((attribute ,n ,a) (string-append (spec->str n) "(" (spec->str a) ")"))
-        ((attr-expr-list . ,exl) (string-join (map spec->str exl) ","))
-        ((fixed ,val) val)
-        ((float ,val) val)
-        ((char ,val) val)
-        ((string . ,val) (string-append "\"" (string-join val "") "\""))
-        ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
-        ((fixed-type ,name) name)
-        ((float-type ,name) name)
-        (,_ (sferr "not processed: ~s\n" spec) "MISSED")))
-    (if (null? attr-list) '()
-        `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
+
+;; This is used directly in mach.scm
+;; (attribute-list (attribute ...) ...) => (attributes "__packed__;...")
+(define (attrl->attrs attr-list)
+  (define (spec->str spec)
+    (sx-match spec
+      ((ident ,name) name)
+      ((attribute ,name) (spec->str name))
+      ((attribute ,n ,a) (string-append (spec->str n) "(" (spec->str a) ")"))
+      ((attr-expr-list . ,exl) (string-join (map spec->str exl) ","))
+      ((fixed ,val) val)
+      ((float ,val) val)
+      ((char ,val) val)
+      ((string . ,val) (string-append "\"" (string-join val "") "\""))
+      ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
+      ((fixed-type ,name) name)
+      ((float-type ,name) name)
+      (,_ (sferr "not processed: ~s\n" spec) "MISSED")))
+  (if (null? attr-list) '()
+      `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
 
 (define (move-attributes sexp)
   (define (attr? item) (and (pair? item) (eq? (car item) 'attribute-list)))
-  
   (call-with-values (lambda () (sx-split sexp))
     (lambda (tag attr tail)
       (call-with-values (lambda () (partition attr? tail))
-        (lambda (attrl clean-tail)
-          (sx-cons* tag (append (attrl->attrs attrl) attr) clean-tail))))))
+        (lambda (attrll clean-tail)
+          (if (null? attrll) sexp
+              (let* ((attrl `(attribute-list ,@(apply append (map cdr attrll))))
+                     (attrs (attrl->attrs attrl))
+                     (attr (cond ((null? attrl) attr)
+                                 ((not attr) (list attrs))
+                                 (else (cons attrs attr)))))
+                (sx-cons* tag attr clean-tail))))))))
+
+#;(define (move-attributes sexp)
+
+  (define (extract-attr tail) ;; => (values attr-tree tail)
+    (let loop ((atl '()) (tail1 '()) (tail0 tail))
+      (cond
+       ((null? tail0)
+        (if (null? atl)
+            (values '() tail)
+            (values `(attribute-list . ,atl) (reverse tail1))))
+       ((eq? 'attribute-list (sx-tag (car tail0)))
+        (loop (append (sx-tail (car tail0)) atl) tail1 (cdr tail0)))
+       (else
+        (loop atl (cons (car tail0) tail1) (cdr tail0))))))
+
+  (let ((tag (sx-tag sexp)) (attr (sx-attr sexp)) (tail (sx-tail sexp)))
+    (call-with-values (lambda () (extract-attr tail))
+      (lambda (attrl stail)
+        (sx-cons*
+         tag 
+         (cond
+          ((null? attrl) attr)
+          ((null? attr) (list (attrl->attrs attrl)))
+          (else (cons (attrl->attrs attrl) attr)))
+         stail)))))
+(export move-attributes)
 
 (define (process-specs exp) (move-attributes exp))
 (define (process-declr exp) (move-attributes exp))
@@ -744,19 +778,33 @@
 ;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
 
-(define (def/str val)
+;; "repl" => self
+;; () => ""
+;; (...) => tl2s
+;; ("a" "b") . "repl" => self
+;; ("a" "b") . () => (cons car tl2s-cdr)
+;; ("a" "b") . (...) => (cons car tl2s-cdr)
+;; () . "repl" => self    
+;; () . () => () . ""
+;; () . (...) => () . ""
+(define (old-def/str val)
   (cond
    ((string? val) val)
    ((null? val) "")
    ((string? (cdr val)) val)
-   ((symbol? (caar val)) (tokl->string val))
-   (else (cons (car val) (tokl->string (cdr val))))))
-;;n  "repl" 
-;;n  ("a" "b") . "repl"
-;;y  ()
-;;y  ((ident . "repl") ...)
-;;y  ("a" "b") . ()
-;;y  ("a" "b") . ((ident . "repl"))
+   
+   ((or (null? (car val)) (string? (caar val)))
+    (cons (car val) (tokl->string (cdr val))))
+   (else (tokl->string val))
+   ))
+(define (def/str val)
+  (if (string? val) val
+      (if (null? val) ""
+          (if (pair? (car val))
+              (if (symbol? (caar val)) (tokl->string val)
+                  (if (string? (cdr val)) val
+                      (cons (car val) (tokl->string (cdr val)))))))))
+
 
 (define* (parse-c99 #:optional (tyns '())
                     #:key
@@ -782,7 +830,8 @@
                 (when (parameter? ddict)
                   (ddict
                    (vhash-fold-right
-                    (lambda (key val seed) (vhash-cons key (def/str val) seed))
+                    (lambda (key val seed)
+                      (if val (vhash-cons key (def/str val) seed) seed))
                     (ddict) (cpi-defs (*info*)))))
                 sx))
             (lambda (key fmt . args) (apply throw 'c99-error fmt args))))

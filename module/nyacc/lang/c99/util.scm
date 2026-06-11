@@ -22,7 +22,7 @@
             get-sys-cpp-defs get-sys-inc-dirs split-cpp-defs 
             remove-comments remove-comments!
             remove-inc-trees merge-includes!
-            move-attributes attrl->attrs attrs->attrl extract-attr
+            move-attributes attrl->attrs attrs->attrl
             elifify
             ;; deprecated:
             merge-inc-trees! get-gcc-cpp-defs get-gcc-inc-dirs
@@ -241,22 +241,6 @@
 ;; ((attribute-list ...) (type-spec ...) (attribute-list ...)) =>
 ;;   (values (attribute-list ...)  ((type-spec ...) ...))
 
-;; @deffn extract-attr tail => (values attr-tree tail)
-;; Extract attributes from a sexp tail.
-;; (attr-or-not ...) => (attr ...) (not ...)
-;; @end deffn
-(define (extract-attr tail) ;; => (values attr-tree tail)
-  (let loop ((atl '()) (tail1 '()) (tail0 tail))
-    (cond
-     ((null? tail0)
-      (if (null? atl)
-          (values '() tail)
-          (values `(attribute-list . ,atl) (reverse tail1))))
-     ((eq? 'attribute-list (sx-tag (car tail0)))
-      (loop (append (sx-tail (car tail0)) atl) tail1 (cdr tail0)))
-     (else
-      (loop atl (cons (car tail0) tail1) (cdr tail0))))))
-
 ;; (attributes "__packed__;__aligned__;__alignof__(8)")
 ;;   =>
 ;; (attribute-list (attribute "__packed
@@ -323,48 +307,6 @@
       (,_ (sferr "not processed: ~s\n" spec) "MISSED")))
   (if (null? attr-list) '()
       `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
-
-;; @deffn {Procedure} move-attributes sexp
-;; Given a sexpr, combine attribute-list kids and move to attribute ??
-;; @example
-;; (decl (decl-spec-list
-;;         (attributes "__packed__" "__aligned__")
-;;         (attributes "__alignof__(8)"))
-;;         (type-spec (fixed-type "int")))
-;;       (declr-init-list ...))
-;;  =>
-;; (decl (decl-spec-list
-;;         (@ (attributes "__packed__;__aligned__;__alignof__(8)"))
-;;         (type-spec (fixed-type "int")))
-;;       (declr-init-list ...))
-;; @end example
-;; @end deffn
-#;(define (move-attributes sexp)
-  (define (attrl->attrs attr-list)
-    (define (spec->str spec)
-      (sx-match spec
-        ((ident ,name) name)
-        ((attribute ,name) (spec->str name))
-        ((attribute ,n ,a) (string-append (spec->str n) "(" (spec->str a) ")"))
-        ((attr-expr-list . ,exl) (string-join (map spec->str exl) ","))
-        ((fixed ,val) val)
-        ((float ,val) val)
-        ((char ,val) val)
-        ((string . ,val) (string-append "\"" (string-join val "") "\""))
-        ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
-        ((fixed-type ,name) name)
-        ((float-type ,name) name)
-        (,_ (sferr "not processed: ~s\n" spec) "MISSED")))
-    (if (null? attr-list) '()
-        `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
-  
-  (define (attr? item) (and (pair? item) (eq? (car item) 'attribute-list)))
-  
-  (call-with-values (lambda () (sx-split sexp))
-    (lambda (tag attr tail)
-      (call-with-values (lambda () (partition attr? tail))
-        (lambda (attrl clean-tail)
-          (sx-cons* tag (append (attrl->attrs attrl) attr) clean-tail))))))
 
 ;; --- random stuff 
 
