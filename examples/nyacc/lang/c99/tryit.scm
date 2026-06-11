@@ -13,6 +13,7 @@
 (use-modules (ice-9 popen))
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 match))
+(use-modules (ice-9 vlist))
 (use-modules ((srfi srfi-1) #:select (last fold-right fold)))
 (use-modules (srfi srfi-11))            ; let-values
 (use-modules (rnrs arithmetic bitwise))
@@ -20,6 +21,12 @@
 (use-modules (sxml fold))
 (use-modules ((sxml xpath) #:hide (filter)))
 
+(use-modules (nyacc lex))
+(use-modules (nyacc util))
+(use-modules (nyacc foreign arch-info))
+(use-modules (nyacc foreign cdata))
+(use-modules (nyacc lang util))
+(use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang c99 ffi-help))
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
@@ -28,12 +35,6 @@
 (use-modules (nyacc lang c99 munge-base))
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 util))
-(use-modules (nyacc foreign arch-info))
-(use-modules (nyacc foreign cdata))
-(use-modules (nyacc lang sx-util))
-(use-modules (nyacc lang util))
-(use-modules (nyacc lex))
-(use-modules (nyacc util))
 
 (set! *random-state* (random-state-from-platform))
 
@@ -53,7 +54,7 @@
 
 (define *cpp-defs* (make-parameter (get-gcc-cpp-defs)))
 (define *inc-dirs* (make-parameter (get-gcc-inc-dirs)))
-(define *inc-help* (make-parameter c99-def-help))
+;;(define *inc-help* (make-parameter c99-def-help))
 
 (define *mode* (make-parameter 'code))
 (define *debug* (make-parameter #f))
@@ -64,7 +65,7 @@
     (lambda ()
       (parse-c99 #:cpp-defs (or cpp-defs (*cpp-defs*))
                  #:inc-dirs (or inc-dirs (*inc-dirs*))
-                 #:inc-help (*inc-help*)
+                 ;;#:inc-help (*inc-help*)
                  #:mode (or mode (*mode*))
                  #:debug (or debug (*debug*))
                  #:show-incs #f
@@ -78,7 +79,7 @@
       (parse-c99 tyns
                  #:cpp-defs (or cpp-defs (*cpp-defs*))
                  #:inc-dirs (or inc-dirs (*inc-dirs*))
-                 #:inc-help (*inc-help*)
+                 ;;#:inc-help (*inc-help*)
                  #:mode (or mode (*mode*))
                  #:debug (or debug (*debug*))
                  #:show-incs #f
@@ -600,5 +601,6 @@ int main(void) {
     (pp99 tree)
     ;;(pp99 expect)
     #f))
+
 
 ;; --- last line ---
