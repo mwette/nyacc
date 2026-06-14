@@ -104,6 +104,7 @@
   (mt-enum fhbe-enum)
   (make-type-defn fhbe-typedef)
   (make-object fhbe-makeobj))
+;; make-obj/ptr fhbe-make/ptr
 
 (define-syntax be-name (identifier-syntax (fhbe-name (*fh-backend*))))
 (define-syntax be-header (identifier-syntax (fhbe-header (*fh-backend*))))
@@ -143,16 +144,6 @@
 ;; is item (string or pair) defined (#t) in the table? 
 (define (d-mem? item table)
   (and=> (vhash-assoc item table) cdr))
-
-;; make a slot but mark w/ #f so d-mem? => #f
-(define-syntax d-slot*
-  (syntax-rules ()
-    ((_ last) last)
-    ((_ item1 rest ...) (vhash-cons item1 #f (d-slot* rest ...)))))
-
-;; get the (key . value) pair from the table
-(define (d-find item table)
-  (vhash-assoc item table))
 
 (define-syntax xcons*
   (syntax-rules ()
@@ -771,6 +762,11 @@
       (`((pointer-to) . ,otherwise) #f)
       (`((array-of . ,_) . ,rest)
        (wrap-mdecl (cons* (car mdecl) '(pointer-to) rest)))
+      (`((struct-ref (ident ,agn)))
+       ;; FIXME: libffi returns a pointer (to ephemeral data?)
+       (be-makeobj (sfsym "struct-~A*" agn) mname))
+      (`((union-ref (ident ,agn)))
+       (be-makeobj (sfsym "union-~A*" agn) mname))
       (otherwise
        (fherr "wrap-mdecl missed:\n~A" (ppstr mdecl))))))
 
@@ -968,26 +964,6 @@
                           (select-kids (node-typeof? 'ident))))))
       (lambda (declr) (pair? (ff (list '*TOP* declr))))))
 
-  ;; If we get (e.g., for gdk2.ffi)
-  ;;    typedef struct foo bar1; typedef struct foo bar2; ...
-  ;; we just issue the pointer decls as
-  ;;    (define bar1* (cpointer (delay bar1)))
-  ;; then later when we get struct foo { ... }; we issue
-  ;;    (define bar1 (cstruct ...)
-  (define (bkref-extend! decl typename)
-    (let* ((aval (sx-attr-ref decl 'typedef))
-           (tdef (if aval (string-append aval "," typename) typename)))
-      (sx-attr-set! decl 'typedef tdef)))
-  (define (bkref-getall attr)
-    (and=> (assq-ref attr 'typedef)
-      (lambda (t) (string-split (car t) #\,))))
-  ;; But the above does not work for (say glugl.ffi) where we have
-  ;;   typedef struct foo bar;  typedef bar baz1;
-  ;; and no struct foo { } comes later.  Currently we don't issue
-  ;; anything for bar, but we do for baz1:
-  ;;   (define baz1 (name-ctype 'baz1 bar))
-  ;; Oh, but what if bar is not defined.
-
   (*defined* defined)                   ; set global for converters
   (let* ((tag attr specl declr (split-udecl udecl))
          (sspec tqual tspec (specl-props specl)))
@@ -1081,7 +1057,7 @@
               (let ((agname (rename agname 'type)))
                 (values
                  (d-cons* name (w/* name) (w/struct agname)
-                        (w/struct* agname) defined)
+                          (w/struct* agname) defined)
                  (let ((aname (strings->symbol "struct-" agname))
                        (aname* (strings->symbol "struct-" agname "*")))
                    (xcons* seed
@@ -1103,7 +1079,7 @@
               (let ((agname (rename agname 'type)))
                 (values
                  (d-cons* name (w/* name) (w/union agname)
-                        (w/union* agname) defined)
+                          (w/union* agname) defined)
                  (let ((aname (strings->symbol "union-" agname))
                        (aname* (strings->symbol "union-" agname "*")))
                    (xcons* seed
@@ -1122,53 +1098,56 @@
                  `(export ,type ,type*))))
 
              ((struct-ref (ident ,agname))
-              (let ((agname (rename agname 'type))
-                    (defined (d-cons* name (w/* name) defined)))
+              (let ((agname (rename agname 'type)))
                 (cond
-                 ((d-mem? (w/struct agname) defined) ;; defined previously
+                 ((d-mem? (w/struct agname) defined) ; defined previously
                   (values
-                   defined
+                   (d-cons* name (w/* name) defined)
                    (xcons* seed
                      (be-typedef type (mtail->be-type mtail))
                      (be-typedef type* (sfsym "struct-~A*" agname))
                      `(export ,type ,type*))))
-                 ((udict-struct-ref udict agname) ;; defined later
-                  =>
+                 ((udict-struct-ref udict agname) => ; defined later
                   (lambda (decl)
-                    (bkref-extend! decl name)
-                    (values
-                     (d-slot* (w/struct agname) defined)
-                     (xcons* seed
-                       (be-typedef type* (be-pointer `(delay ,type)))
-                       `(export ,type*)))))
-                 (else ;; not defined
+                    (let ((ag-sym (strings->symbol "struct-" agname)))
+                      (values
+                       (d-cons* (w/* name) defined)
+                       (xcons* seed
+                         (be-typedef type* (be-pointer `(delay ,ag-sym)))
+                         `(export ,type*))))))
+                 (else                  ; not defined
                   (values
-                   defined
+                   (d-cons* name (w/* name) defined)
                    (xcons* seed
-                     (be-typedef type* (be-pointer (be-base 'void)))
-                     `(export ,type*)))))))
+                     (be-typedef type (be-base 'void))
+                     (be-typedef type* (be-pointer type))
+                     `(export ,type ,type*)))))))
 
              ((union-ref (ident ,agname))
               (let ((agname (rename agname 'type)))
-                (values
-                 (d-cons* name (w/* name) defined)
-                 (cond
-                  ((d-mem? (w/union agname) defined) ;; defined previously
+                (cond
+                 ((d-mem? (w/union agname) defined) ;; defined previously
+                  (values
+                   (d-cons* name (w/* name) defined)
                    (xcons* seed
                      (be-typedef type (mtail->be-type mtail))
                      (be-typedef type* (sfsym "union-~A*" agname))
-                     `(export ,type ,type*)))
-                  ((udict-union-ref udict agname) ;; defined later
-                   =>
-                   (lambda (decl)
-                     (bkref-extend! decl name)
-                     (xcons* seed
-                       (be-typedef type* (be-pointer `(delay ,type)))
-                       `(export ,type*))))
-                  (else ;; not defined
+                     `(export ,type ,type*))))
+                 ((udict-union-ref udict agname) => ;; defined later
+                  (lambda (decl)
+                    (let ((ag-sym (strings->symbol "union-" agname)))
+                      (values
+                       (d-cons* (w/* name) defined)
+                       (xcons* seed
+                         (be-typedef type* (be-pointer `(delay ,ag-sym)))
+                         `(export ,type*))))))
+                 (else ;; not defined
+                  (values
+                   (d-cons* name (w/* name) defined)
                    (xcons* seed
-                     (be-typedef type* (be-pointer (be-base 'void)))
-                     `(export ,type*)))))))
+                     (be-typedef type (be-base 'void))
+                     (be-typedef type* (be-pointer type))
+                     `(export ,type ,type*)))))))
 
              (((fixed-type float-type) ,basename)
               (values (d-cons* name defined)
@@ -1240,20 +1219,19 @@
                  `(export ,type ,type*))))
 
              ((typename ,typename)
-              (let ((typerename (rename typename 'type)))
+              (let* ((origname typename) (typename (rename typename 'type)))
                 (cond
-                 ((member typename base-type-name-list)
+                 ((member origname base-type-name-list)
                   (values
                    (d-cons* name defined)
                    (xcons* seed
-                     (be-typedef type (be-base (string->symbol typename)))
+                     (be-typedef type (be-base (string->symbol origname)))
                      `(export ,type))))
-                 ((d-mem? typerename defined)
-                  (let* ((typename typerename)
-                         (defined (d-cons* name defined))
-                         (seed (xcons* seed
-                                 (be-typedef type (string->symbol typename))
-                                 `(export ,type))))
+                 ((d-mem? typename defined)
+                  (let ((defined (d-cons* name defined))
+                        (seed (xcons* seed
+                                (be-typedef type (string->symbol typename))
+                                `(export ,type))))
                     (if (d-mem? (w/* typename) defined)
                         (values
                          (d-cons* (w/* name) defined)
@@ -1261,6 +1239,12 @@
                            (be-typedef type* (strings->symbol typename "*"))
                            `(export ,type*)))
                         (values defined seed))))
+                 ((d-mem? (w/* typename) defined) ;; typename is fwd ref
+                  (values
+                   (d-cons* (w/* name) defined)
+                   (xcons* seed
+                     (be-typedef type* (strings->symbol typename "*"))
+                     `(export ,type*))))
                  (else
                   (let ((xdecl (expand-typerefs udecl udict defined)))
                     (udecl->sexp xdecl udict defined seed))))))
@@ -1299,32 +1283,12 @@
                 (agdef (if (packed? aggr-attr)
                            (be-struct sflds #t)
                            (be-struct sflds))))
-           (cond
-            ((bkref-getall attr) =>
-             (lambda (name-list)
-               ;; gtk2.ffi: struct-_GdkDrawable =>
-               ;;      ("GdkDrawable" "GdkBitmap" "GdkPixmap" "GdkWindow")
-               (fold-values
-                (lambda (name defined seed)
-                  (let ((type (strings->symbol name)))
-                    (values (d-cons* name defined)
-                            (xcons* seed (be-typedef type atype)
-                                    `(export ,type)))))
-                name-list
-                (d-cons* (w/struct agname) (w/struct* agname) defined)
-                (xcons* seed
-                  (be-typedef atype agdef)
-                  (be-typedef atype* (be-pointer atype))
-                  `(export ,atype ,atype*)))))
-            ((not (d-mem? (w/struct agname) defined))
-             (values
-              (d-cons* (w/struct agname) (w/struct* agname) defined)
-              (xcons* seed
-                (be-typedef atype agdef)
-                (be-typedef atype* (be-pointer atype))
-                `(export ,atype ,atype*))))
-            (else
-             (values defined seed)))))
+           (values
+            (d-cons* (w/struct agname) (w/struct* agname) defined)
+            (xcons* seed
+              (be-typedef atype agdef)
+              (be-typedef atype* (be-pointer atype))
+              `(export ,atype ,atype*)))))
 
         ((union-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
          (let* ((agname (rename agname 'type))
@@ -1333,31 +1297,12 @@
                 (field-list (expand-field-list-typerefs field-list))
                 (sflds (cnvt-fields (sx-tail field-list) mtail->be-type))
                 (agdef (be-union sflds)))
-           (cond
-            ((bkref-getall attr) =>
-             (lambda (name-list)
-               (fold-values
-                (lambda (name defined seed)
-                  (let ((type (strings->symbol name)))
-                    (values (d-cons* name defined)
-                            (xcons* seed
-                              (be-typedef type atype)
-                              `(export ,type)))))
-                name-list
-                (d-cons* (w/union agname) (w/union* agname) defined)
-                (xcons* seed
-                  (be-typedef atype agdef)
-                  (be-typedef atype* (be-pointer atype))
-                  `(export ,atype ,atype*)))))
-            ((not (d-mem? (w/union agname) defined))
-             (values
-              (d-cons* (w/union agname) defined)
-              (xcons* seed
-                (be-typedef atype agdef)
-                (be-typedef atype* (be-pointer atype))
-                `(export ,atype ,atype*))))
-            (else
-             (values defined seed)))))
+           (values
+            (d-cons* (w/union agname) defined)
+            (xcons* seed
+              (be-typedef atype agdef)
+              (be-typedef atype* (be-pointer atype))
+              `(export ,atype ,atype*)))))
 
         ((enum-def (ident ,enum-name) ,enum-def-list)
          (let ((enum-name (rename enum-name 'type)))
@@ -1614,32 +1559,22 @@
      ;; seed: list of delayed forms (not output here)
      (catch 'ffi-help-error
        (lambda ()
-         (cond
-          ((and ;; Process the declaration if all conditions met:
-            (declf name)                  ; 1) user wants it
-            (not (d-mem? name defined))    ; 2) not already defined
-            (not (if (pair? name)         ; 3) not anonymous
-                     (string=? "*anon*" (cdr name))
-                     (string=? "*anon*" name))))
-           (let ((udecl (udict-ref udict name)))
-             (nlscm) (c99scm udecl)
-             (if (*echo-decls*)
-                 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
-             (call-with-values
-                 (lambda () (udecl->sexp udecl udict defined '()))
-               (lambda (defined forms)
-                 (let loop ((ofl '()) (seed seed) (ifl forms))
-                   (cond
-                    ((pair? ifl)
-                     (match (car ifl)
-                       (`(NOT-export . ,terms)
-                        (loop ofl (cons (car ifl) seed) (cdr ifl)))
-                       (_
-                        (loop (cons (car ifl) ofl) seed (cdr ifl)))))
-                    (else
-                     (for-each ppscm ofl)
-                     (values defined seed))))))))
-          (else (values defined seed))))
+         (if (and                         ; Process decl if:
+              (declf name)                ; 1) user wants it
+              (not (d-mem? name defined)) ; 2) not already defined
+              (not (if (pair? name)       ; 3) not anonymous
+                       (string=? "*anon*" (cdr name))
+                       (string=? "*anon*" name))))
+             (let ((udecl (udict-ref udict name)))
+               (nlscm) (c99scm udecl)
+               (if (*echo-decls*)
+                   (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
+               (call-with-values
+                   (lambda () (udecl->sexp udecl udict defined '()))
+                 (lambda (defined forms)
+                   (for-each ppscm (reverse forms))
+                   (values defined seed))))
+             (values defined seed)))
        ;; exception handler:
        (lambda (key fmt . args)
          (if fmt (apply simple-format (current-error-port)
@@ -1721,6 +1656,12 @@
           (let ((nl (fold (lambda (f l) (match f (`(export . ,r) (append r l))))
                           '() seed)))
             (ugly-print (cons 'export nl) (*mport*))))
+        ;; Define void type for missing (struct, union) forward ref's.
+        (vhash-fold
+         (lambda (name expr seed)
+           (unless (or expr (and=> (vhash-assoc name defined) cdr))
+             (ppscm (be-typedef name (be-base 'void))))
+           seed) #f defined)
         ;; Set ffimod-defined for including, but removed built-in types.
         (set! ffimod-defined
               (vhash-fold

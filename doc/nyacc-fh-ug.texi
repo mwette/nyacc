@@ -77,7 +77,7 @@ backend implementation.
 To generate Guile Scheme for smaller C code units one can
 write a ffi-module with the @code{#:api-code} or import the
 @code{ffi-help} module an use the functions @code{load-include-file},
-@code{ccode->sexp}.   The latter functions are not well tested, though.
+@code{ccode->sexp}.   The latter functions are exhaustively.
 
 The compiler for the FFI Helper (FH) is based on the C parser and utilities
 which are included in the @uref{https://www.nongnu.org/nyacc,@sc{NYACC}}
@@ -303,6 +303,18 @@ guile> (eval sx (current-module))
 guile> struct-foo
 $5 = #<ctype struct struct-foo 0x73af1fc95480>
 @end example
+
+Note: the helper now uses @code{define} and @code{export} in liu
+of @code{define-public}.
+
+@subheading TODO
+
+This document needs an explanation that wrapped C functions that return
+structs or unions will instead pass `cdata' data for pointers to
+those types.
+
+This document needs an explanation of the backend capability.
+
 
 @c ======================================
 
