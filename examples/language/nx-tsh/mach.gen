@@ -7,7 +7,7 @@ exec guile $0
 (use-modules (nyacc lalr))
 
 (when (gen-tsh-files)
-  (system "touch parser.scm")
+  ;;(system "touch parser.scm")
   (with-output-to-file ",file.txt"
     (lambda ()
       (pp-lalr-grammar tsh-file-spec)

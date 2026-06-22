@@ -141,13 +141,12 @@
       ((#t) 'any))))
 
 (define-public (tsh:struct . args)
-  (throw 'nx-error "foo bar" '())
   (let loop ((sal '()) (rgl args))
     (cond
      ((null? rgl) (alist->hashq-table sal))
-     ((null? (cdr rgl)) (nx-error "expecting even number"))
+     ((null? (cdr rgl)) (nx-error "struct: key and value"))
      ((symbol? (car rgl)) (loop (acons (car rgl) (cadr rgl) sal) (cddr rgl)))
-     (else (error "expecting symbol")))))
+     (else (error "struct: expecting symbol")))))
 
 (define-public tsh:isstruct (nx-C-predicate hash-table?))
 
@@ -180,9 +179,11 @@
     ("vlen" . ,(xlib-ref 'tsh:vlen))
     ("vtype" . ,(xlib-ref 'tsh:vtype))
     #|
+    |#
     ;;
     ("struct" . ,(xlib-ref 'tsh:struct))
     ("isstruct" . ,(xlib-ref 'tsh:isstruct))
+    #|
     ("box" . ,(xlib-ref 'tsh:box))
     ("unbox" . ,(xlib-ref 'tsh:unbox))
     ("isbox" . ,(xlib-ref 'tsh:isbox))

@@ -1,6 +1,6 @@
 ;;; nyacc/lang/nx-util.scm - utilities for Guile extension languages
 
-;; Copyright (C) 2018,2021,2023 Matthew Wette
+;; Copyright (C) 2018,2021,2023,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -75,7 +75,7 @@
 ;; 2. Include modules
 
 ;;  used like this
-;;    [local] -> (@F) -> [return] -> (@P -> [global])
+;;    [locals] -> (@F . "foo") -> [args+return] -> (@P -> [global])
 ;;
 ;;  TODO: discuss @M for modules
 ;;    ((@env . #<directory (guile-user) 7fdad962cc80>)
@@ -382,8 +382,8 @@
     (cond
      ((null? dict) #f)
      ((equal? name (caar dict))
-      (let ((ref (cdar dict)))
-        (and (eq? 'lexical (car ref)) ref)))
+      ;;(let ((ref (cdar dict))) (and (eq? 'lexical (car ref)) ref)))
+      (cdar dict))
      ((eq? '@P (caar dict))
       (loop (cdar dict)))
      ((eq? tag (caar dict))
@@ -411,7 +411,8 @@
 ;; @xdeffn nx-ensure/tagged dict name tag => dict
 ;; @xdeffn nx-ensure/global dict name => dict
 ;; Ensure @var{name} is defined in the table, scope, (tagged) frame,
-;; or global.  If not existing, add to local scope.
+;; or global.  If not existing, add to local scope.  For the tagged
+;; form, add to the tag, if it exists, otherwise the toplevel.
 ;; A mutated dict may be returned in the @code{/} forms.
 ;; @end deffn
 (define (nx-ensure dict name)
@@ -766,8 +767,8 @@
 ;; TODO #:key (break "break") (continue "continue")
 (define* (make-loop expr body dict ilsym tbody)
   (let* ((olsym (genxsym "oloop"))
-         (bsym (nx-lexical-ref "break" dict))
-         (csym (nx-lexical-ref "continue" dict))
+         (bsym (nx-lexical-ref dict "break"))
+         (csym (nx-lexical-ref dict "continue"))
          (icall `(call (lexical iloop ,ilsym)))
          (ocall `(call (lexical oloop ,olsym)))
          (iloop (make-thunk `(seq ,body (if ,expr ,icall (void))) #:name 'iloop))

@@ -6,303 +6,269 @@
 ;; modify it under the terms of the GNU Lesser General Public
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
-;; See the file COPYING included with the this distribution.
+;; See the file LICENSE included with the this distribution.
 
 (define tsh-stmt-act-v
   (vector
-   ;; 0. $start => item
+   ;; 0. $start => user-stmt
    (lambda ($1 . $rest) $1)
    ;; 1. top => script
    (lambda ($1 . $rest) $1)
    ;; 2. script => script-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 3. script-1 => item
+   ;; 3. script-1 => script-stmt
    (lambda ($1 . $rest) (make-tl 'script $1))
-   ;; 4. script-1 => script-1 item
+   ;; 4. script-1 => script-1 script-stmt
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 5. item => topl-decl term
-   (lambda ($2 $1 . $rest) $1)
-   ;; 6. item => stmt term
-   (lambda ($2 $1 . $rest) $1)
-   ;; 7. topl-decl => "source" string
+   ;; 5. script-stmt => user-stmt
+   (lambda ($1 . $rest) $1)
+   ;; 6. script-stmt => lone-comm
+   (lambda ($1 . $rest) $1)
+   ;; 7. user-stmt => "source" string
    (lambda ($2 $1 . $rest) `(source ,$2))
-   ;; 8. topl-decl => "use" path
+   ;; 8. user-stmt => "use" path
    (lambda ($2 $1 . $rest) `(use ,@(cdr $2)))
-   ;; 9. stmt => decl-stmt
+   ;; 9. user-stmt => stmt term
+   (lambda ($2 $1 . $rest) $1)
+   ;; 10. stmt => decl-stmt
    (lambda ($1 . $rest) $1)
-   ;; 10. stmt => exec-stmt
+   ;; 11. stmt => exec-stmt
    (lambda ($1 . $rest) $1)
-   ;; 11. stmt => fill-stmt
-   (lambda ($1 . $rest) $1)
-   ;; 12. proc-stmt-list => fill-stmt-list/term decl-stmt-list/term exec-stmt-list
-   (lambda ($3 $2 $1 . $rest) `(stmt-list ,@(cdr $1) ,@(cdr $2) ,@(cdr $3)))
-   ;; 13. proc-stmt-list => decl-stmt-list/term exec-stmt-list
-   (lambda ($2 $1 . $rest) `(stmt-list ,@(cdr $1) ,@(cdr $2)))
-   ;; 14. proc-stmt-list => fill-stmt-list/term exec-stmt-list
-   (lambda ($2 $1 . $rest) `(stmt-list ,@(cdr $1) ,@(cdr $2)))
-   ;; 15. proc-stmt-list => exec-stmt-list
-   (lambda ($1 . $rest) `(stmt-list ,@(cdr $1)))
-   ;; 16. proc-stmt-list => 
-   (lambda $rest `(stmt-list (empty-stmt)))
-   ;; 17. block-stmt-list => fill-stmt-list/term exec-stmt-list
-   (lambda ($2 $1 . $rest) `(stmt-list ,@(cdr $1) ,@(cdr $2)))
-   ;; 18. block-stmt-list => exec-stmt-list
-   (lambda ($1 . $rest) `(stmt-list ,@(cdr $1)))
-   ;; 19. fill-stmt => 
+   ;; 12. stmt => 
    (lambda $rest `(empty-stmt))
-   ;; 20. fill-stmt => '$lone-comm
-   (lambda ($1 . $rest) `(comment ,$1))
-   ;; 21. fill-stmt-list/term => fill-stmt-list/term-1
+   ;; 13. stmt-list => stmt-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 22. fill-stmt-list/term-1 => fill-stmt term
-   (lambda ($2 $1 . $rest) (make-tl `stmt-list $1))
-   ;; 23. fill-stmt-list/term-1 => fill-stmt-list/term-1 lone-comm term
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; 24. fill-stmt-list/term-1 => fill-stmt-list/term-1 term
-   (lambda ($2 $1 . $rest) $1)
-   ;; 25. decl-stmt-list/term => decl-stmt-list/term-1
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; 26. decl-stmt-list/term-1 => decl-stmt term
-   (lambda ($2 $1 . $rest) (make-tl 'stmt-list $1))
-   ;; 27. decl-stmt-list/term-1 => decl-stmt-list/term-1 decl-stmt term
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; 28. decl-stmt-list/term-1 => decl-stmt-list/term-1 lone-comm term
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; 29. decl-stmt-list/term-1 => decl-stmt-list/term-1 term
-   (lambda ($2 $1 . $rest) $1)
-   ;; 30. exec-stmt-list => exec-stmt-list-1
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; 31. exec-stmt-list-1 => exec-stmt
+   ;; 14. stmt-list-1 => stmt
    (lambda ($1 . $rest) (make-tl 'stmt-list $1))
-   ;; 32. exec-stmt-list-1 => exec-stmt-list-1 term exec-stmt
+   ;; 15. stmt-list-1 => stmt-list-1 term stmt
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 33. exec-stmt-list-1 => exec-stmt-list-1 term lone-comm
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 34. exec-stmt-list-1 => exec-stmt-list-1 term
-   (lambda ($2 $1 . $rest) $1)
-   ;; 35. decl-stmt => "proc" ident "(" arg-list ")" "{" proc-stmt-list "}"
+   ;; 16. decl-stmt => "proc" ident "(" arg-list ")" "{" stmt-list "}"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest) `(proc ,$2 ,$4 ,$7))
-   ;; 36. decl-stmt => "global" name-seq
+   ;; 17. decl-stmt => "global" name-seq
    (lambda ($2 $1 . $rest) `(global ,@(cdr $2)))
-   ;; 37. decl-stmt => "nonlocal" name-seq
+   ;; 18. decl-stmt => "nonlocal" name-seq
    (lambda ($2 $1 . $rest) `(nonlocal ,@(cdr $2)))
-   ;; 38. decl-stmt => "local" name-seq
+   ;; 19. decl-stmt => "local" name-seq
    (lambda ($2 $1 . $rest) `(local ,@(cdr $2)))
-   ;; 39. arg-list => 
+   ;; 20. arg-list => 
    (lambda $rest (make-tl 'arg-list))
-   ;; 40. arg-list => arg-list-1
+   ;; 21. arg-list => arg-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 41. arg-list-1 => ident
+   ;; 22. arg-list-1 => ident
    (lambda ($1 . $rest) (make-tl 'arg-list $1))
-   ;; 42. arg-list-1 => arg-list-1 "," ident
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 `(arg ,$3)))
-   ;; 43. name-seq => name-seq-1
+   ;; 23. arg-list-1 => arg-list-1 "," ident
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; 24. name-seq => name-seq-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 44. name-seq-1 => '$ident
+   ;; 25. name-seq-1 => '$ident
    (lambda ($1 . $rest) (make-tl 'name-seq $1))
-   ;; 45. name-seq-1 => name-seq-1 '$ident
+   ;; 26. name-seq-1 => name-seq-1 '$ident
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 46. exec-stmt => "set" ident unit-expr
+   ;; 27. exec-stmt => "set" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(set ,$2 ,$3))
-   ;; 47. exec-stmt => "set" '$deref/ix "(" expr-list ")" unit-expr
+   ;; 28. exec-stmt => "set" '$deref/ix "(" expr-list ")" unit-expr
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(set-indexed
        (ident ,$2)
        ,(if (eq? 'expr (sx-tag $4)) `(expr-list ,$4) $4)
        ,$6))
-   ;; 48. exec-stmt => ident expr-seq
+   ;; 29. exec-stmt => ident expr-seq
    (lambda ($2 $1 . $rest) `(call ,$1 ,@(cdr $2)))
-   ;; 49. exec-stmt => "lambda" "(" arg-list ")" "{" proc-stmt-list "}"
+   ;; 30. exec-stmt => "lambda" "(" arg-list ")" "{" stmt-list "}"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) `(lambda ,$3 ,$6))
-   ;; 50. exec-stmt => "(" expr-list ")"
+   ;; 31. exec-stmt => "(" expr-list ")"
    (lambda ($3 $2 $1 . $rest) `(last ,$2))
-   ;; 51. exec-stmt => if-stmt
+   ;; 32. exec-stmt => if-stmt
    (lambda ($1 . $rest) $1)
-   ;; 52. exec-stmt => "switch" unit-expr "{" case-list "}"
+   ;; 33. exec-stmt => "switch" unit-expr "{" case-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest) `(switch ,$2 ,@(cdr $4)))
-   ;; 53. exec-stmt => "while" unit-expr "{" block-stmt-list "}"
+   ;; 34. exec-stmt => "while" unit-expr "{" stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest) `(while ,$2 ,$4))
-   ;; 54. exec-stmt => "for" "{" block-stmt-list "}" "{" unit-expr "}" "{" bloc...
+   ;; 35. exec-stmt => "for" "{" stmt-list "}" "{" unit-expr "}" "{" stmt-list ...
    (lambda ($13 $12 $11 $10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$3 ,$6 ,$9 ,$12))
-   ;; 55. exec-stmt => "format" expr-seq
+   ;; 36. exec-stmt => "format" expr-seq
    (lambda ($2 $1 . $rest) `(format unquote (cdr $2)))
-   ;; 56. exec-stmt => "return"
+   ;; 37. exec-stmt => "return"
    (lambda ($1 . $rest) `(return))
-   ;; 57. exec-stmt => "return" unit-expr
+   ;; 38. exec-stmt => "return" unit-expr
    (lambda ($2 $1 . $rest) `(return ,$2))
-   ;; 58. exec-stmt => "incr" ident
+   ;; 39. exec-stmt => "incr" ident
    (lambda ($2 $1 . $rest) `(incr ,$2))
-   ;; 59. exec-stmt => "incr" ident unit-expr
+   ;; 40. exec-stmt => "incr" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(incr ,$2 ,$3))
-   ;; 60. if-stmt => "if" unit-expr "{" block-stmt-list "}"
+   ;; 41. if-stmt => "if" unit-expr "{" stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$2 ,$4))
-   ;; 61. if-stmt => "if" unit-expr "{" block-stmt-list "}" "else" "{" block-st...
+   ;; 42. if-stmt => "if" unit-expr "{" stmt-list "}" "else" "{" stmt-list "}"
    (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest) `(if ,$2 ,$4 (else ,$8)))
-   ;; 62. if-stmt => "if" unit-expr "{" block-stmt-list "}" elseif-list
+   ;; 43. if-stmt => "if" unit-expr "{" stmt-list "}" elseif-list
    (lambda ($6 $5 $4 $3 $2 $1 . $rest) `(if ,$2 ,$4 ,@(sx-tail $6)))
-   ;; 63. if-stmt => "if" unit-expr "{" block-stmt-list "}" elseif-list "else" ...
+   ;; 44. if-stmt => "if" unit-expr "{" stmt-list "}" elseif-list "else" "{" st...
    (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,$4 ,@(sx-tail $6) (else ,$9)))
-   ;; 64. elseif-list => elseif-list-1
+   ;; 45. elseif-list => elseif-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 65. elseif-list-1 => "elseif" unit-expr "{" block-stmt-list "}"
+   ;; 46. elseif-list-1 => "elseif" unit-expr "{" stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (make-tl 'elseif-list `(elseif ,$2 ,$4)))
-   ;; 66. elseif-list-1 => elseif-list-1 "elseif" unit-expr "{" block-stmt-list...
+   ;; 47. elseif-list-1 => elseif-list-1 "elseif" unit-expr "{" stmt-list "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (tl-append $1 'elseif-list `(elseif ,$2 ,$4)))
-   ;; 67. case-list => case-list-1
+   ;; 48. case-list => case-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 68. case-list => case-list-1 default-case-expr
+   ;; 49. case-list => case-list-1 default-case-expr
    (lambda ($2 $1 . $rest) (append (tl->list $1) (list $2)))
-   ;; 69. case-list-1 => case-expr
+   ;; 50. case-list-1 => case-expr
    (lambda ($1 . $rest) (make-tl 'case-list $1))
-   ;; 70. case-list-1 => term
+   ;; 51. case-list-1 => term
    (lambda ($1 . $rest) (make-tl 'case-list))
-   ;; 71. case-list-1 => case-list-1 case-expr
+   ;; 52. case-list-1 => case-list-1 case-expr
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 72. case-list-1 => case-list-1 term
+   ;; 53. case-list-1 => case-list-1 term
    (lambda ($2 $1 . $rest) $1)
-   ;; 73. case-expr => unit-expr unit-expr
+   ;; 54. case-expr => unit-expr unit-expr
    (lambda ($2 $1 . $rest) `(case ,$1 ,$2))
-   ;; 74. case-expr => unit-expr "{" block-stmt-list "}"
+   ;; 55. case-expr => unit-expr "{" stmt-list "}"
    (lambda ($4 $3 $2 $1 . $rest) `(case ,$1 ,$3))
-   ;; 75. default-case-expr => "default" unit-expr
+   ;; 56. default-case-expr => "default" unit-expr
    (lambda ($2 $1 . $rest) `(case (default) ,$2))
-   ;; 76. unit-expr => primary-expression
+   ;; 57. unit-expr => primary-expression
    (lambda ($1 . $rest) `(expr ,$1))
-   ;; 77. expression => logical-or-expression
+   ;; 58. expression => logical-or-expression
    (lambda ($1 . $rest) $1)
-   ;; 78. logical-or-expression => logical-and-expression
+   ;; 59. logical-or-expression => logical-and-expression
    (lambda ($1 . $rest) $1)
-   ;; 79. logical-or-expression => logical-or-expression "||" logical-and-expre...
+   ;; 60. logical-or-expression => logical-or-expression "||" logical-and-expre...
    (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
-   ;; 80. logical-and-expression => bitwise-or-expression
+   ;; 61. logical-and-expression => bitwise-or-expression
    (lambda ($1 . $rest) $1)
-   ;; 81. logical-and-expression => logical-and-expression "&&" bitwise-or-expr...
+   ;; 62. logical-and-expression => logical-and-expression "&&" bitwise-or-expr...
    (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
-   ;; 82. bitwise-or-expression => bitwise-xor-expression
+   ;; 63. bitwise-or-expression => bitwise-xor-expression
    (lambda ($1 . $rest) $1)
-   ;; 83. bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expres...
+   ;; 64. bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expres...
    (lambda ($3 $2 $1 . $rest) `(bitwise-or ,$1 ,$3))
-   ;; 84. bitwise-xor-expression => bitwise-and-expression
+   ;; 65. bitwise-xor-expression => bitwise-and-expression
    (lambda ($1 . $rest) $1)
-   ;; 85. bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expr...
+   ;; 66. bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expr...
    (lambda ($3 $2 $1 . $rest) `(bitwise-xor ,$1 ,$3))
-   ;; 86. bitwise-and-expression => equality-expression
+   ;; 67. bitwise-and-expression => equality-expression
    (lambda ($1 . $rest) $1)
-   ;; 87. bitwise-and-expression => bitwise-and-expression "&" equality-expression
+   ;; 68. bitwise-and-expression => bitwise-and-expression "&" equality-expression
    (lambda ($3 $2 $1 . $rest) `(bitwise-and ,$1 ,$3))
-   ;; 88. equality-expression => relational-expression
+   ;; 69. equality-expression => relational-expression
    (lambda ($1 . $rest) $1)
-   ;; 89. equality-expression => equality-expression "==" relational-expression
+   ;; 70. equality-expression => equality-expression "==" relational-expression
    (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
-   ;; 90. equality-expression => equality-expression "!=" relational-expression
+   ;; 71. equality-expression => equality-expression "!=" relational-expression
    (lambda ($3 $2 $1 . $rest) `(ne ,$1 ,$3))
-   ;; 91. relational-expression => shift-expression
+   ;; 72. relational-expression => shift-expression
    (lambda ($1 . $rest) $1)
-   ;; 92. relational-expression => relational-expression "<" shift-expression
+   ;; 73. relational-expression => relational-expression "<" shift-expression
    (lambda ($3 $2 $1 . $rest) `(lt ,$1 ,$3))
-   ;; 93. relational-expression => relational-expression "<=" shift-expression
+   ;; 74. relational-expression => relational-expression "<=" shift-expression
    (lambda ($3 $2 $1 . $rest) `(le ,$1 ,$3))
-   ;; 94. relational-expression => relational-expression ">" shift-expression
+   ;; 75. relational-expression => relational-expression ">" shift-expression
    (lambda ($3 $2 $1 . $rest) `(gt ,$1 ,$3))
-   ;; 95. relational-expression => relational-expression ">=" shift-expression
+   ;; 76. relational-expression => relational-expression ">=" shift-expression
    (lambda ($3 $2 $1 . $rest) `(ge ,$1 ,$3))
-   ;; 96. shift-expression => additive-expression
+   ;; 77. shift-expression => additive-expression
    (lambda ($1 . $rest) $1)
-   ;; 97. shift-expression => shift-expression "<<" additive-expression
+   ;; 78. shift-expression => shift-expression "<<" additive-expression
    (lambda ($3 $2 $1 . $rest) `(lshift ,$1 ,$3))
-   ;; 98. shift-expression => shift-expression ">>" additive-expression
+   ;; 79. shift-expression => shift-expression ">>" additive-expression
    (lambda ($3 $2 $1 . $rest) `(rshift ,$1 ,$3))
-   ;; 99. additive-expression => multiplicative-expression
+   ;; 80. additive-expression => multiplicative-expression
    (lambda ($1 . $rest) $1)
-   ;; 100. additive-expression => additive-expression "+" multiplicative-expression
+   ;; 81. additive-expression => additive-expression "+" multiplicative-expression
    (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
-   ;; 101. additive-expression => additive-expression "-" multiplicative-expression
+   ;; 82. additive-expression => additive-expression "-" multiplicative-expression
    (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
-   ;; 102. multiplicative-expression => unary-expression
+   ;; 83. multiplicative-expression => unary-expression
    (lambda ($1 . $rest) $1)
-   ;; 103. multiplicative-expression => multiplicative-expression "*" unary-expr...
+   ;; 84. multiplicative-expression => multiplicative-expression "*" unary-expr...
    (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
-   ;; 104. multiplicative-expression => multiplicative-expression "/" unary-expr...
+   ;; 85. multiplicative-expression => multiplicative-expression "/" unary-expr...
    (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
-   ;; 105. multiplicative-expression => multiplicative-expression "%" unary-expr...
+   ;; 86. multiplicative-expression => multiplicative-expression "%" unary-expr...
    (lambda ($3 $2 $1 . $rest) `(mod ,$1 ,$3))
-   ;; 106. unary-expression => primary-expression
+   ;; 87. unary-expression => primary-expression
    (lambda ($1 . $rest) $1)
-   ;; 107. unary-expression => "-" unary-expression
+   ;; 88. unary-expression => "-" unary-expression
    (lambda ($2 $1 . $rest) `(neg ,$2))
-   ;; 108. unary-expression => "+" unary-expression
+   ;; 89. unary-expression => "+" unary-expression
    (lambda ($2 $1 . $rest) `(pos ,$2))
-   ;; 109. unary-expression => "!" unary-expression
+   ;; 90. unary-expression => "!" unary-expression
    (lambda ($2 $1 . $rest) `(not ,$2))
-   ;; 110. unary-expression => "~" unary-expression
+   ;; 91. unary-expression => "~" unary-expression
    (lambda ($2 $1 . $rest) `(bitwise-not ,$2))
-   ;; 111. primary-expression => '$deref
-   (lambda ($1 . $rest) `(deref ,$1))
-   ;; 112. primary-expression => '$deref/ix "(" expr-list ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(deref-indexed ,$1 ,$3))
-   ;; 113. primary-expression => fixed
+   ;; 92. primary-expression => "$" 'no-ws ident
+   (lambda ($3 $2 $1 . $rest) `(deref ,(sx-ref $3 1)))
+   ;; 93. primary-expression => "$" 'no-ws ident 'no-ws "(" expr-list ")"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(deref-indexed ,(sx-ref $3 1) ,$6))
+   ;; 94. primary-expression => "$" 'no-ws "(" unit-expr ")" 'no-ws "(" expr-li...
+   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(deref-indexed-expr ,$4 ,$8))
+   ;; 95. primary-expression => fixed
    (lambda ($1 . $rest) $1)
-   ;; 114. primary-expression => float
+   ;; 96. primary-expression => float
    (lambda ($1 . $rest) $1)
-   ;; 115. primary-expression => string
+   ;; 97. primary-expression => string
    (lambda ($1 . $rest) $1)
-   ;; 116. primary-expression => symbol
+   ;; 98. primary-expression => symbol
    (lambda ($1 . $rest) $1)
-   ;; 117. primary-expression => keychar
+   ;; 99. primary-expression => keychar
    (lambda ($1 . $rest) $1)
-   ;; 118. primary-expression => keyword
+   ;; 100. primary-expression => keyword
    (lambda ($1 . $rest) $1)
-   ;; 119. primary-expression => "(" expr-list ")"
+   ;; 101. primary-expression => "(" expr-list ")"
    (lambda ($3 $2 $1 . $rest) `(last ,$2))
-   ;; 120. primary-expression => "[" exec-stmt "]"
+   ;; 102. primary-expression => "[" exec-stmt "]"
    (lambda ($3 $2 $1 . $rest) `(eval ,$2))
-   ;; 121. expr-list => expr-list-1
+   ;; 103. expr-list => expr-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 122. expr-list => expr-list-1 ","
+   ;; 104. expr-list => expr-list-1 ","
    (lambda ($2 $1 . $rest) (tl->list $1))
-   ;; 123. expr-list-1 => expression
+   ;; 105. expr-list-1 => expression
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
-   ;; 124. expr-list-1 => expr-list-1 "," expression
+   ;; 106. expr-list-1 => expr-list-1 "," expression
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; 125. expr-seq => expr-seq-1
+   ;; 107. expr-seq => expr-seq-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 126. expr-seq-1 => 
+   ;; 108. expr-seq-1 => 
    (lambda $rest (make-tl 'seq-list))
-   ;; 127. expr-seq-1 => expr-seq-1 primary-expression
+   ;; 109. expr-seq-1 => expr-seq-1 primary-expression
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; 128. path => path-1
+   ;; 110. path => path-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; 129. path-1 => '$ident
+   ;; 111. path-1 => '$ident
    (lambda ($1 . $rest) (make-tl 'path $1))
-   ;; 130. path-1 => '$string
+   ;; 112. path-1 => '$string
    (lambda ($1 . $rest) (make-tl 'path $1))
-   ;; 131. path-1 => path-1 'no-ws "::" 'no-ws '$ident
+   ;; 113. path-1 => path-1 'no-ws "::" 'no-ws '$ident
    (lambda ($5 $4 $3 $2 $1 . $rest) (tl-append $1 $5))
-   ;; 132. path-1 => path-1 'no-ws "::" 'no-ws '$string
+   ;; 114. path-1 => path-1 'no-ws "::" 'no-ws '$string
    (lambda ($5 $4 $3 $2 $1 . $rest) (tl-append $1 $5))
-   ;; 133. ident => '$ident
+   ;; 115. ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; 134. fixed => '$fixed
+   ;; 116. fixed => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; 135. float => '$float
+   ;; 117. float => '$float
    (lambda ($1 . $rest) `(float ,$1))
-   ;; 136. string => '$string
+   ;; 118. string => '$string
    (lambda ($1 . $rest) `(string ,$1))
-   ;; 137. symbol => ident
+   ;; 119. symbol => ident
    (lambda ($1 . $rest) $1)
-   ;; 138. keychar => '$keychar
+   ;; 120. keychar => '$keychar
    (lambda ($1 . $rest) `(keychar ,$1))
-   ;; 139. keyword => '$keyword
+   ;; 121. keyword => '$keyword
    (lambda ($1 . $rest) `(keyword ,$1))
-   ;; 140. lone-comm => '$lone-comm
+   ;; 122. lone-comm => '$lone-comm
    (lambda ($1 . $rest) `(comment ,$1))
-   ;; 141. term => ";"
+   ;; 123. term => ";"
    (lambda ($1 . $rest) $1)
-   ;; 142. term => "\n"
+   ;; 124. term => "\n"
    (lambda ($1 . $rest) $1)
    ))
 

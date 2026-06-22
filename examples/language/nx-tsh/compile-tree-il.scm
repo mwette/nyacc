@@ -47,8 +47,8 @@
 (define (xlib-ref name)
   `(@@ (language nx-tsh xlib) ,name))
 
-(define (op-call op kseed)
-  (rev/repl 'call (xlib-ref op) kseed))
+(define (op-call op args)
+  `(call ,(xlib-ref op) ,@args))
 
 
 ;; @deffn {Procedure} sxml->xtil exp env opts
@@ -66,38 +66,19 @@
       ;; optimizations
       ((last (expr-list ,unit))
        (values unit '() dict))
-      ;; ---
+      ;;
 
-      ((keychar ,sval)
-       (values '() (+SP `(const ,(string->keyword sval))) dict))
-
-      ((keyword ,sval)
-       (values '() (+SP `(const ,(string->keyword sval))) dict))
-
-      ((string ,sval)
-       (values '() (+SP `(const ,sval)) dict))
-
-      ((float ,sval)
-       (values '() (+SP `(const ,(string->number sval))) dict))
-
-      ((fixed ,sval)
-       (values '() (+SP `(const ,(string->number sval))) dict))
-
-      ((ident ,sval)
-       (values '() (+SP `(const ,(string->symbol sval))) dict))
-
-      ((eval . ,stmts)
+      ((eval . ,_)
        (values tree '() (nx-add-at-scope (nx-push-scope dict) "return")))
 
-      ((switch . ,stmts)
-       (values tree '()
-               (nx-add-at-scope* (nx-push-scope dict) "swx~val")))
+      ((switch . ,_)
+       (values tree '() (nx-add-at-scope* (nx-push-scope dict) "swx~val")))
 
-      ((for . ,stmts)
+      ((for . ,_)
        (values tree '()
                (nx-add-at-scope* (nx-push-scope dict) "continue" "break")))
 
-      ((while . ,stmts)
+      ((while . ,_)
        (values tree '()
                (nx-add-at-scope* (nx-push-scope dict) "continue" "break")))
 
@@ -105,20 +86,18 @@
        (let ((form `(set (ident ,name) (lambda (@ (name ,name)) ,args ,body))))
          (fD (+SP form) '() dict)))
 
-      ((lambda (arg-list . ,args) ,body)
-       (let* ((arg-name (lambda (x) (cadadr x)))
-              (dict (nx-push-scope dict))
+      ((lambda (@ . ,attrd) (arg-list . ,args) ,body)
+       ;; we convert to arg-list understood by nx-util's make-arity
+       (let* ((dict (nx-push-scope dict))
 	      (dict (nx-add-at-scope dict "return"))
-              (dict (fold               ; add args to local scope
-                     (lambda (a d) (nx-add-at-scope d (arg-name a)))
-                     dict args))
-	      (args (fold-right         ; ident -> lexical
-		     (lambda (a l)
-                       (let ((ref (nx-lookup dict (arg-name a))))
-		         (cons (cons* (car a) ref (cddr a)) l)))
+              (args (map cadr args))
+              (dict (fold (lambda (a d) (nx-add-at-scope d a)) dict args))
+              (args (fold-right
+                     (lambda (a l) (cons `(arg ,(nx-lookup dict a)) l))
                      '() args))
-              (form `(lambda (arg-list . ,args) ,body)))
-	 (values (+SP form) '() (nx-add-tag dict '@F "*anon*"))))
+              (form (+SP `(lambda (arg-list . ,args) ,body)))
+              (name (or (and=> (assq-ref attrd 'name) car) "*anon*")))
+	 (values form '() (nx-add-tag dict '@F name))))
 
       ((incr (ident ,var) ,val)
        (values (+SP `(incr ,var ,val)) '() dict))
@@ -142,10 +121,10 @@
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((set (ident ,name) ,value)
-       ;;(sferr "fD/set: name=~S dict:\n" name) (pperr dict)
        (let* ((dict (nx-ensure/tagged dict '@F name))
               (nref (nx-lookup dict name)))
-         ;;(sferr "fD/set: name=~S dict\n" name) (pperr dict)
+         ;;(sferr "dict:\n") (pperr dict)
+         ;;(sferr "fD/set: name=~S nref=~S\n" name nref)
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
       ((nonlocal . ,names)
@@ -155,7 +134,7 @@
       ((global . ,names)
        (values '() '() (nx-insert-nonlocals dict names)))
 
-      ((use . ,strpath)
+      ((Use . ,strpath)
        (let* ((sympath (map string->symbol strpath))
               (path (map (lambda (sym) `(const ,sym)) sympath))
               (parg `(primcall list ,@path))
@@ -163,16 +142,16 @@
               (dict (hash-fold
                      (lambda (key val dict) (nx-add-toplevel dict key))
                      dict (module-obarray (resolve-interface sympath)))))
-         (values '() (+SP stmt) dict)))
+         (values '() (+SP (reverse stmt)) dict)))
 
       ((script . ,stmts)
        (values tree '() (nx-add-at-scope (nx-push-scope dict) "sreturn")))
 
       ((@@ ,module ,symbol)             ; don't process resolved references
-       (values '() tree dict))
+       (values '() (reverse tree) dict))
 
-      ((@ . _)                          ; don't process attributes
-       (values '() tree dict))
+      ((@ . ,_)                          ; don't process attributes
+       (values '() (reverse tree) dict))
 
       (,_
        (values tree '() dict))))
@@ -182,19 +161,20 @@
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
     (define +SP (make-+SP tree))
-    (define pass-through '(@@ toplevel lexical abort
-                           arg-list arg opt-arg rest-arg))
-    ;;(sferr "fU tree=:\n") (pperr tree)
-    (if
-     (null? tree)
-     (if (null? kseed)
-	 (values seed kdict)
-	 (values (cons kseed seed) kdict))
+    (define (cons/src head tail)
+      (set-source-properties! head (source-properties tree))
+      (cons head tail))
+    (define pass-through
+      '(@@ toplevel lexical set! const abort
+                    elseif else arg-list arg opt-arg rest-arg))
+    
+    (let ((form (reverse kseed)))
+      ;;(sferr "fU: tree,form:\n") (pperr tree) (pperr form)
+      (match form
+        ('() (values seed kdict))
 
-     (case (car tree)
-
-       ;; before leaving add a call to make sure all toplevels are defined
-       ((*TOP*)
+        ;; before leaving add a call to make sure all toplevels are defined
+        (`(*TOP* . ,_)
         (values
          (let loop ((form (if (null? (cdr kseed)) '(void) (car kseed)))
                     (dict kdict))
@@ -205,41 +185,38 @@
                      (cdr dict))))
          kdict))
 
-       ((script)
-        (let* ((ptag (nx-lookup kdict "sreturn"))
-               (form (with-escape/arg ptag (block (rtail kseed)))))
-	  (values (cons form seed) (nx-pop-scope kdict))))
+        (`(script . ,_)
+         (let* ((ptag (nx-lookup kdict "sreturn"))
+                (form (with-escape/arg ptag (block (rtail kseed)))))
+	   (values (cons form seed) (nx-pop-scope kdict))))
 
-       ((stmt-list)
-        (let* ((stmtl (rtail kseed))
-               (blk (block stmtl))
-               (blk (+SP blk)))
-	  (values (cons blk seed) kdict)))
+        (`(stmt-list . ,_)
+         (let* ((stmtl (rtail kseed))
+                (blk (block stmtl))
+                (blk (+SP blk)))
+	   (values (cons blk seed) kdict)))
 
-       ((comment)
-	(values seed kdict))
+        (`(comment . ,_)
+	 (values seed kdict))
 
-       ((lambda)
-	(let* ((tail (rtail kseed))
-               (attr (and (pair? (car tail)) (eq? '@ (caar tail)) (car tail)))
-	       (argl (list-ref tail (if attr 1 0)))
-	       (body (block (list-tail tail (if attr 2 1))))
-	       (ptag (nx-lookup kdict "return"))
-	       (arity (make-arity argl))
-               (body (wrap-locals body kdict))
-	       (body (with-escape/arg ptag body))
-               (name (and attr (assq-ref (cdr attr) 'name)))
-	       (form (make-function name 'nx-tsh arity body)))
-	  (values (cons form seed) (nx-pop-scope kdict))))
+        (`(lambda ,argl ,body)
+	 (let* ((body (block body))
+	        (ptag (nx-lookup kdict "return"))
+	        (arity (make-arity argl))
+                (body (wrap-locals body kdict))
+	        (body (with-escape/arg ptag body))
+                (name (or (and=> (assoc-ref kdict '@F) string->symbol) 'unknown))
+	        (form (make-function name 'nx-tsh arity body)))
+	   (values (cons form seed) (nx-pop-scope kdict))))
 
-       ((return)
+       (`(return . ,_)
 	(let ((ret `(abort ,(nx-lookup kdict "return")
 			   (,(if (> (length kseed) 1) (car kseed) '(void)))
 			   (const ()))))
 	  (values (cons (+SP ret) seed) kdict)))
 
        ;; conditional: elseif and else are translated by the default case
-       ((if)
+       (`(if . ,_)
 	(let* ((tail (rtail kseed))
 	       (cond-expr `(primcall not (primcall zero? ,(list-ref tail 0))))
 	       (then-expr (list-ref tail 1))
@@ -253,12 +230,10 @@
 		     `(if (primcall not (primcall zero? ,cond-part))
 			  ,body-part
 			  ,(loop (cdr rest-part)))))))
-	       (stmt (+SP `(if ,cond-expr ,then-expr ,rest-expr))))
-	  (values (cons stmt seed) kdict)))
-       ((elseif else)
-	(values (cons (reverse kseed) seed) kdict))
+	       (stmt `(if ,cond-expr ,then-expr ,rest-expr)))
+	  (values (cons/src stmt seed) kdict)))
 
-       ((switch)
+       (`(switch . ,_)
         ;; no break
 	(let* ((val (nx-lookup kdict "swx~val"))
 	       (sw (if (eq? (caar kseed) 'default)
@@ -266,7 +241,7 @@
 		       (make-switch val kseed '(void)))))
 	  (values (cons (+SP sw) seed) (nx-pop-scope kdict))))
 
-       ((case)
+       (`(case . ,_)
 	(let ((val (+SP (reverse kseed))))
 	  (values
 	   (if (and (pair? seed) (eq? (caar seed) 'default))
@@ -275,45 +250,45 @@
 	   kdict)))
 
        ;; for allows continue and break
-       ((for)
+       (`(for . ,_)
         (let* ((body (list-ref kseed 0))
                (next (list-ref kseed 1))
                (test `(primcall not (primcall zero? ,(list-ref kseed 2))))
                (init (list-ref kseed 3))
                (form (make-for init test next body kdict)))
-	  (values (cons (+SP form) seed) (nx-pop-scope kdict))))
+	  (values (cons/src form seed) (nx-pop-scope kdict))))
 
-       ((while)
+       (`(while . ,_)
 	(let* ((test `(primcall not (primcall zero? ,(list-ref kseed 1))))
 	       (body (list-ref kseed 0))
 	       (form (make-while test body kdict)))
-	  (values (cons (+SP form) seed) (nx-pop-scope kdict))))
+	  (values (cons/src form seed) (nx-pop-scope kdict))))
 
-       ((continue)
+       (`(continue . ,_)
         (values
          (cons `(abort ,(nx-lookup kdict "continue") () (const ())) seed)
          kdict))
 
-       ((break)
+       (`(break . ,_)
         (values
          (cons `(abort ,(nx-lookup kdict "break") '() (const ())) seed)
          kdict))
 
-       ((set)
+       (`(set . ,_)
 	(let* ((value (car kseed))
 	       (nref (cadr kseed))
 	       (form `(set! ,nref ,value)))
           ;;(sferr "fU/set:\n") (pperr kseed)
-	  (values (cons (+SP form) seed) kdict)))
+	  (values (cons/src form seed) kdict)))
 
-       ((set-indexed)
+       (`(set-indexed . ,_)
 	(let* ((value (car kseed))
 	       (indx (cadr kseed))
 	       (nref (caddr kseed))
 	       (val `(call ,(xlib-ref 'tsh:indexed-set!) ,nref ,indx ,value)))
-	  (values (cons (+SP val) seed) kdict)))
+	  (values (cons/src val seed) kdict)))
 
-       ((call)
+       (`(call . ,_)
         ;; TODO: check for lone symbol
         #;(let ((proc (car (rtail kseed))))
           (pperr (rtail kseed))
@@ -321,14 +296,14 @@
             (lambda (val) (sferr "call ~s\n" val))))
 	(values (cons (+SP `(call . ,(rtail kseed))) seed) kdict))
 
-       ((eval)
+       (`(eval . ,_)
 	(let ((body (with-escape/arg (nx-lookup kdict "return") (car kseed))))
  	  (values (cons (+SP body) seed) (nx-pop-scope kdict))))
 
-       ((empty-stmt)
+       (`(empty-stmt . ,_)
 	(values seed kdict))
 
-       ((incr)
+       (`(incr . ,_)
 	(let* ((tail (rtail kseed))
 	       (name (car tail))
 	       (expr (cadr tail))
@@ -336,61 +311,63 @@
 	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
 	  (values (cons (+SP stmt) seed) kdict)))
 
-       ((source)
+       (`(source . ,_)
 	(let ((stmt `(call ,(xlib-ref 'tsh:source) ,(car kseed))))
 	  (values (cons (+SP stmt) seed) kdict)))
 
-       ((format)
+       (`(format . ,_)
         ;; This could be made more efficient for literal format strings
         ;; using the parse-format-string procedure from nx-printf module.
 	(let* ((tail (rtail kseed))
 	       (stmt `(call ,(xlib-ref 'tsh:format) . ,tail)))
 	  (values (cons (+SP stmt) seed) kdict)))
 
-       ((expr-list)
+       (`(expr-list . ,_)
         (values (cons (+SP `(primcall list ,@(rtail kseed))) seed) kdict))
 
-       ((last)
+       (`(last . ,_)
         (values (cons (+SP `(begin . ,(rtail kseed))) seed) kdict))
 
-       ((expr)
+       (`(expr . ,_)
 	;;(sferr "expr:~S\n" kseed)
 	(values (cons (+SP (car kseed)) seed) kdict))
 
        ;; pos neg ~ not
-       ((pos) (values (+SP (cons (op-call 'tsh:pos kseed) seed)) kdict))
-       ((neg) (values (+SP (cons (op-call 'tsh:neg kseed) seed)) kdict))
-       ((lognot) (values (+SP (cons (op-call 'tsh:lognot kseed) seed)) kdict))
-       ((not) (values (+SP (cons (op-call 'tsh:not kseed) seed)) kdict))
+       (`(pos . ,args) (values (cons/src (op-call 'tsh:pos args) seed) kdict))
+       (`(neg . ,args) (values (cons/src (op-call 'tsh:neg args) seed) kdict))
+       (`(lognot . ,args)
+        (values (cons/src (op-call 'tsh:lognot args) seed) kdict))
+       (`(not . ,args) (values (cons/src (op-call 'tsh:not args) seed) kdict))
 
        ;; mul div mod add sub
-       ((mul) (values (+SP (cons (op-call 'tsh:* kseed) seed)) kdict))
-       ((div) (values (+SP (cons (op-call 'tsh:/ kseed) seed)) kdict))
-       ((mod) (values (+SP (cons (op-call 'tsh:% kseed) seed)) kdict))
-       ((add) (values (+SP (cons (op-call 'tsh:+ kseed) seed)) kdict))
-       ((sub) (values (+SP (cons (op-call 'tsh:- kseed) seed)) kdict))
+       (`(mul . ,args) (values (cons/src (op-call 'tsh:* args) seed) kdict))
+       (`(div . ,args) (values (cons/src (op-call 'tsh:/ args) seed) kdict))
+       (`(mod . ,args) (values (cons/src (op-call 'tsh:% args) seed) kdict))
+       (`(add . ,args) (values (cons/src (op-call 'tsh:+ args) seed) kdict))
+       (`(sub . ,args) (values (cons/src (op-call 'tsh:- args) seed) kdict))
 
        ;; lshift rshift rrshift
-       ((lshift) (values (+SP (cons (op-call 'tsh:lshift kseed) seed)) kdict))
-       ((rshift) (values (+SP (cons (op-call 'tsh:rshift kseed) seed)) kdict))
+       (`(lshift . ,args)
+        (values (cons/src (op-call 'tsh:lshift args) seed) kdict))
+       (`(rshift . ,args)
+        (values (cons/src (op-call 'tsh:rshift args) seed) kdict))
 
        ;; lt gt le ge
-       ((eq) (values (+SP (cons (op-call 'tsh:eq kseed) seed)) kdict))
-       ((ne) (values (+SP (cons (op-call 'tsh:ne kseed) seed)) kdict))
-       ((lt) (values (+SP (cons (op-call 'tsh:lt kseed) seed)) kdict))
-       ((gt) (values (+SP (cons (op-call 'tsh:gt kseed) seed)) kdict))
-       ((le) (values (+SP (cons (op-call 'tsh:le kseed) seed)) kdict))
-       ((ge) (values (+SP (cons (op-call 'tsh:ge kseed) seed)) kdict))
+       (`(eq . ,args) (values (cons/src (op-call 'tsh:eq args) seed) kdict))
+       (`(ne . ,args) (values (cons/src (op-call 'tsh:ne args) seed) kdict))
+       (`(lt . ,args) (values (cons/src (op-call 'tsh:lt args) seed) kdict))
+       (`(gt . ,args) (values (cons/src (op-call 'tsh:gt args) seed) kdict))
+       (`(le . ,args) (values (cons/src (op-call 'tsh:le args) seed) kdict))
+       (`(ge . ,args) (values (cons/src (op-call 'tsh:ge args) seed) kdict))
 
-       ((deref)
+       (`(deref ,name)
         ;;(sferr "fU.deref: name=~s, kdict:\n" (car kseed)) (pperr kdict)
-        (let* ((name (car kseed))
-               (ref (or (nx-lookup kdict name)
-                        '(@@ (guile-user) ,(string->symbol name)))))
+        (let* ((ref (or (nx-lookup kdict name)
+                        `(@@ (guile-user) ,(string->symbol name)))))
 	  (unless ref (nx-error "undefined variable: ~A" name))
           (values (+SP (cons ref seed)) kdict)))
 
-       ((deref-indexed)
+       (`(deref-indexed . ,_)
         (let* ((tail (rtail kseed))
                (name (car tail))
                (ref (nx-lookup kdict name))
@@ -398,16 +375,38 @@
                (proc (xlib-ref 'tsh:indexed-ref)))
 	  (unless ref (nx-error "undefined variable: ~A" name))
 	  (values (+SP (cons `(call ,proc ,ref ,@args) seed)) kdict)))
+       #|
+       |#
 
-       ((const)
-        (values (+SP (cons (reverse kseed) seed)) kdict))
+       ;;(`(deref-indexed-expr ,expr)
+       ;; (if (symbol? expr) lookup
+       ;; (error "missed"))
+        
+       #;(`(const . ,_)
+        (values (+SP (cons form seed)) kdict))
 
-       (else
-	(unless (member (car tree) pass-through)
+       (`(keychar ,sval)
+        (values (cons/src `(const ,(string->keyword sval)) seed) kdict))
+
+       (`(keyword ,sval)
+        (values (cons/src `(const ,(string->keyword sval)) seed) kdict))
+
+       (`(string ,sval)
+        (values (cons/src `(const ,sval) seed) kdict))
+
+       (`(float ,sval)
+        (values (cons/src `(const ,(string->number sval)) seed) kdict))
+
+       (`(fixed ,sval)
+        (values (cons/src `(const ,(string->number sval)) seed) kdict))
+
+       (`(ident ,sval)
+        (values (cons/src `(const ,(string->symbol sval)) seed) kdict))
+
+       (_
+	(unless (member (car form) pass-through)
 	  (sferr "MISSED: ~S\n" (car tree)))
-	(cond
-	 ((null? seed) (values (reverse kseed) kdict))
-	 (else (values (cons (reverse kseed) seed) kdict)))))))
+	(values (cons/src form seed) kdict)))))
 
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))

@@ -65,46 +65,6 @@
          (let ((ch (read-char)))
            `($keychar . ,(string ch)))))))
 
-#|
-(define (read-path)
-  (define (return path chl)
-    (reverse (if (pair? chl) (cons (rls chl) path) path)))
-  (let loop ((path '()) (chl '()) (st 0) (ch (read-char)))
-    (case st
-      ((0)
-       (cond
-        ((memq ch '(#\space #\tab #\return)) (loop path chl st (read-char)))
-        (else (loop path chl 1 ch))))
-      ((1)
-       (cond
-        ((char=? #\newline ch) (unread-char ch) (return path chl))
-        ((char=? #\return ch) (return path chl))
-        ((char=? #\: ch) (loop path chl 2 (read-char)))
-        (else (loop path (cons ch chl) 1 (read-char)))))
-      ((2)
-       (cond
-        ((char=? #\newline ch) (unread-char ch) (return path chl))
-        ((char=? #\return ch) (return path chl))
-        ((char=? #\: ch) (loop (cons (rls chl) path) '() 1 (read-char)))
-        (else (loop path (cons ch chl) 1 ch)))))))
-|#
-
-(define (read-$-form ch)
-  (and
-   (char=? ch #\$)
-   (let loop ((chl '()) (st 0) (ch (read-char)))
-     (case st
-       ((0)
-        (cond
-         ((char-set-contains? c:if ch) (loop (cons ch chl) 1 (read-char)))
-         (else (error "bad ident")))) ;; FIXME
-       ((1)
-        (cond
-         ((eof-object? ch) (cons '$deref (rls chl)))
-         ((char-set-contains? c:ir ch) (loop (cons ch chl) st (read-char)))
-         ((char=? ch #\() (unread-char ch) (cons '$deref/ix (rls chl)))
-         (else (unread-char ch) (cons '$deref (rls chl)))))))))
-
 (define (make-tsh-lexer-generator match-table)
   (let* ((tsh-mtab match-table)
 	 (space-cs (string->char-set " \t\r\f"))
@@ -143,11 +103,11 @@
 	      ((char-set-contains? space-cs ch)
                (set! nws #f) (loop (read-char)))
               #;((and bol (not wss) (char=? ch #\%)) ;; %if 0 ... %endif
-              (preprocessor-insn))
+               (preprocessor-insn))
               (nws (unread-char ch) (set! nws #f) (assc-$ `(no-ws . "")))
               ((begin (set! nws #t) #f))
 	      ((read-comm ch bol) => assc-$)
-              ((read-$-form ch) => assc-$)
+              ;;((read-$-form ch) => assc-$)
               ((and (or (zero? plev) (> blev plev)) (read-key ch)) => assc-$)
 	      ((read-c-num ch) => (lambda (p) (assc-$ p)))
 	      ((read-tsh-symbol ch))
@@ -206,10 +166,8 @@
 	  (lambda () (set-current-input-port port))
 	  (lambda ()
 	    (catch 'nyacc-error
-	      (lambda () (raw-ia-parser lexer #:debug #t))
+	      (lambda () (raw-ia-parser lexer #:debug #f))
 	      (lambda (key fmt . args)
-		;;(apply simple-format (current-error-port) fmt args)
-		;;(newline (current-error-port))
                 (simple-format (current-error-port)
                                "parse failed on input ~S\n" (cadddr args))
                 ;;(apply throw 'syntax-error (cdddr args))
