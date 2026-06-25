@@ -98,27 +98,27 @@
 (define-public (tsh:avec . args) (list->typed-vec #t args))
 (define-public tsh:vlen array-length)
 
-(define-public (tsh:indexed-ref obj indx)
+(define-public (tsh:indexed-ref obj idxl)
   (cond
-   ((null? indx) obj)
+   ((null? idxl) obj)
    ((hash-table? obj)
-    (unless (symbol? (car indx)) (nx-error "expecting symbol"))
-    (let ((val (hashq-ref obj (car indx))))
-      (unless val (nx-error "field does not exist: ~S" (car indx)))
-      (tsh:indexed-ref val (cdr indx))))
+    (unless (symbol? (car idxl)) (nx-error "expecting symbol"))
+    (let ((val (hashq-ref obj (car idxl))))
+      (unless val (nx-error "field does not exist: ~S" (car idxl)))
+      (tsh:indexed-ref val (cdr idxl))))
    ((array? obj)
     (let ((rk (array-rank obj))
-          (nx (length indx)))
+          (nx (length idxl)))
       (unless (<= rk nx) (nx-error "no shared-arrays (yet)"))
       (call-with-values
-          (lambda () (split-at indx rk))
-        (lambda (indx rest)
-          (tsh:indexed-ref (apply array-ref obj indx) rest)))))
+          (lambda () (split-at idxl rk))
+        (lambda (idxl rest)
+          (tsh:indexed-ref (apply array-ref obj idxl) rest)))))
    (else (nx-error "indexed-ref on non-array, non-struct"))))
 
-(define-public (tsh:indexed-set! obj indx val)
+(define-public (tsh:indexed-set! obj idxl val)
   ;; complicated : from end get symbol or longest string of ints
-  (let loop ((l1 '()) (l2 '()) (l3 indx))
+  (let loop ((l1 '()) (l2 '()) (l3 idxl))
     (cond
      ((null? l3)
       (let ((obj (tsh:indexed-ref obj (reverse l1))))
@@ -189,13 +189,11 @@
     ("isbox" . ,(xlib-ref 'tsh:isbox))
     ("setbox" . ,(xlib-ref 'tsh:setbox))
     ;;
+    |#
     ("show_sxml" . ,(xlib-ref 'tsh:show_sxml))
     ("hide_sxml" . ,(xlib-ref 'tsh:hide_sxml))
     ("show_xtil" . ,(xlib-ref 'tsh:show_xtil))
     ("hide_xtil" . ,(xlib-ref 'tsh:hide_xtil))
-    |#
-    ("show_sxml" . ,(xlib-ref 'tsh:show_sxml))
-    ("show_xtil" . ,(xlib-ref 'tsh:show_xtil))
     ))
 
 ;; --- last line ---

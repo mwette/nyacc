@@ -202,14 +202,12 @@
    (lambda ($2 $1 . $rest) `(not ,$2))
    ;; 91. unary-expression => "~" unary-expression
    (lambda ($2 $1 . $rest) `(bitwise-not ,$2))
-   ;; 92. primary-expression => "$" 'no-ws ident
-   (lambda ($3 $2 $1 . $rest) `(deref ,(sx-ref $3 1)))
-   ;; 93. primary-expression => "$" 'no-ws ident 'no-ws "(" expr-list ")"
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(deref-indexed ,(sx-ref $3 1) ,$6))
-   ;; 94. primary-expression => "$" 'no-ws "(" unit-expr ")" 'no-ws "(" expr-li...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(deref-indexed-expr ,$4 ,$8))
+   ;; 92. primary-expression => "$" 'no-ws '$ident
+   (lambda ($3 $2 $1 . $rest) `(deref ,$3))
+   ;; 93. primary-expression => "$" 'no-ws '$ident/ix "(" expr-list ")"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest) `(deref-indexed ,$3 ,$5))
+   ;; 94. primary-expression => "$" 'no-ws "(" unit-expr ")(" expr-list ")"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) `(deref-indexed-expr ,$4 ,$6))
    ;; 95. primary-expression => fixed
    (lambda ($1 . $rest) $1)
    ;; 96. primary-expression => float

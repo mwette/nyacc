@@ -45,9 +45,14 @@
 ;; expr-list: ( ... )
 ;; expr-arry: @( ... )
 
-;; symbol: abc                ($ident )
-;; keysym: -abc               ($ident/key ) ???
+;; symbol:    abc              ($ident )
+;; keysym:   -abc              ($ident/key ) ???
+;; keycode: --abc              ($ident/key ) ???
 ;; indexed-symbol: abc(...)   ($ident/ix ...)
+
+;; preprocessor ?
+;; %if ([defined foo] && ($foo == "YES"))
+;; %endif
 
 (define cs:keyword (char-set-adjoin char-set:letter+digit #\_))
 
@@ -76,12 +81,13 @@
 	 (rd-str (make-string-reader #\" (assq-ref tsh-mtab '$string)))
  	 (rd-sym (make-string-reader #\' (assq-ref tsh-mtab '$symbol)))
 	 (read-comm (make-comm-reader '(("#" . "\n")) #:eat-newline #f))
-	 (read-tsh-symbol (make-ident-keyword-reader read-c-ident match-table))
+	 (read-tsh-symbol (make-ident-keyword-reader read-c-ident tsh-mtab))
          (nl-val (assoc-ref chrseq "\n"))
 	 (lparen (assoc-ref chrseq "("))
 	 (rparen (assoc-ref chrseq ")"))
 	 (lbrack (assoc-ref chrseq "["))
 	 (rbrack (assoc-ref chrseq "]"))
+         ($ident/ix (assoc-ref tsh-mtab '$ident/ix))
          (use (assoc-ref match-table "use"))
  	 (assc-$ (lambda (p) (cons (assq-ref symtab (car p)) (cdr p)))))
     (define (add-src-prop pair)
@@ -102,22 +108,23 @@
 	      ((eqv? ch #\newline) (set! bol #t) (cons nl-val "\n"))
 	      ((char-set-contains? space-cs ch)
                (set! nws #f) (loop (read-char)))
-              #;((and bol (not wss) (char=? ch #\%)) ;; %if 0 ... %endif
-               (preprocessor-insn))
+              #;((and bol (not wss) (char=? ch #\%)) (preprocessor-insn))
               (nws (unread-char ch) (set! nws #f) (assc-$ `(no-ws . "")))
               ((begin (set! nws #t) #f))
 	      ((read-comm ch bol) => assc-$)
-              ;;((read-$-form ch) => assc-$)
               ((and (or (zero? plev) (> blev plev)) (read-key ch)) => assc-$)
 	      ((read-c-num ch) => (lambda (p) (assc-$ p)))
-	      ((read-tsh-symbol ch))
+	      ((read-tsh-symbol ch) =>
+               (lambda (p) ;; if next char is `(' $index/ix : bit o' kludge
+                 (let ((ch (peek-char)))
+                   (if (eq? ch #\() (cons $ident/ix (cdr p)) p))))
+	      ((read-chseq ch))
 	      ((char=? #\( ch) (set! plev (1+ plev)) (cons lparen "("))
 	      ((char=? #\) ch) (set! plev (1- plev)) (cons rparen ")"))
 	      ((char=? #\[ ch) (set! blev (1+ blev)) (cons lbrack "["))
 	      ((char=? #\] ch) (set! blev (1- blev)) (cons rbrack "]"))
-	      ((rd-str ch))
 	      ((rd-sym ch))
-	      ((read-chseq ch))
+	      ((rd-str ch))
 	      (else (cons ch (string ch)))))))))))
 
 (include-from-path "language/nx-tsh/mach.d/tsh-file-tab.scm")
@@ -144,7 +151,7 @@
   (let ((prev (current-input-port)))
     (dynamic-wind
       (lambda () (set-current-input-port port))
-      (lambda () (parse-tsh #:debug debug))
+      (lambda () (parse-tsh #:debug #f))
       (lambda () (set-current-input-port prev)))))
 
 (include-from-path "language/nx-tsh/mach.d/tsh-stmt-tab.scm")
@@ -169,9 +176,15 @@
 	      (lambda () (raw-ia-parser lexer #:debug #f))
 	      (lambda (key fmt . args)
                 (simple-format (current-error-port)
-                               "parse failed on input ~S\n" (cadddr args))
-                ;;(apply throw 'syntax-error (cdddr args))
-                (if #f #f))))
+                               "*** parse failed on input ~S\n" (cadddr args))
+                ;;(drain-input (current-input-port))
+                (sferr "NEXT: ~s\n" (peek-char))
+                (let lp ((ch (read-char)))
+                  (unless (or (eof-object? ch) (char=? #\newline ch))
+                    (lp (read-char))))
+                ;; ^ does not work, probably need to clear readline ?
+                (if #f #f)
+                )))
 	  (lambda () (set-current-input-port prev)))))))
 
 ;; --- last line ---

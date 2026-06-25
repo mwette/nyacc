@@ -134,7 +134,7 @@
       ((global . ,names)
        (values '() '() (nx-insert-nonlocals dict names)))
 
-      ((Use . ,strpath)
+      ((use . ,strpath)
        (let* ((sympath (map string->symbol strpath))
               (path (map (lambda (sym) `(const ,sym)) sympath))
               (parg `(primcall list ,@path))
@@ -288,13 +288,13 @@
 	       (val `(call ,(xlib-ref 'tsh:indexed-set!) ,nref ,indx ,value)))
 	  (values (cons/src val seed) kdict)))
 
-       (`(call . ,_)
-        ;; TODO: check for lone symbol
+       (`(call . ,args)
+        ;; TODO: check for ftn value: if not lambda assume want puts 
         #;(let ((proc (car (rtail kseed))))
           (pperr (rtail kseed))
           (and=> (match proc (`(const ,name) (nx-lookup dict name)) (_ #f))
             (lambda (val) (sferr "call ~s\n" val))))
-	(values (cons (+SP `(call . ,(rtail kseed))) seed) kdict))
+	(values (cons (+SP `(call . ,args)) seed) kdict))
 
        (`(eval . ,_)
 	(let ((body (with-escape/arg (nx-lookup kdict "return") (car kseed))))
@@ -303,11 +303,8 @@
        (`(empty-stmt . ,_)
 	(values seed kdict))
 
-       (`(incr . ,_)
-	(let* ((tail (rtail kseed))
-	       (name (car tail))
-	       (expr (cadr tail))
-	       (vref (nx-lookup kdict name))
+       (`(incr ,name ,expr)
+	(let* ((vref (nx-lookup kdict name))
 	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
 	  (values (cons (+SP stmt) seed) kdict)))
 
@@ -315,15 +312,15 @@
 	(let ((stmt `(call ,(xlib-ref 'tsh:source) ,(car kseed))))
 	  (values (cons (+SP stmt) seed) kdict)))
 
-       (`(format . ,_)
+       (`(format . ,args)
         ;; This could be made more efficient for literal format strings
         ;; using the parse-format-string procedure from nx-printf module.
 	(let* ((tail (rtail kseed))
-	       (stmt `(call ,(xlib-ref 'tsh:format) . ,tail)))
+	       (stmt `(call ,(xlib-ref 'tsh:format) . ,args)))
 	  (values (cons (+SP stmt) seed) kdict)))
 
-       (`(expr-list . ,_)
-        (values (cons (+SP `(primcall list ,@(rtail kseed))) seed) kdict))
+       (`(expr-list . ,expl)
+        (values (cons (+SP `(primcall list ,@expl)) seed) kdict))
 
        (`(last . ,_)
         (values (cons (+SP `(begin . ,(rtail kseed))) seed) kdict))
@@ -367,20 +364,22 @@
 	  (unless ref (nx-error "undefined variable: ~A" name))
           (values (+SP (cons ref seed)) kdict)))
 
-       (`(deref-indexed . ,_)
-        (let* ((tail (rtail kseed))
-               (name (car tail))
-               (ref (nx-lookup kdict name))
-               (args (cdr tail))
+       (`(deref-indexed ,name ,expl)
+        (let* (;;(tail (rtail kseed))
+               ;;(name (car tail))
+               (x (sferr "di: ~s\n" (nx-lookup kdict name)))
+               (ref (or (nx-lookup kdict name)
+                        `(@@ (guile-user) ,(string->symbol name))))
+               ;;(args (cdr tail))
+               ;;(args expl)
                (proc (xlib-ref 'tsh:indexed-ref)))
 	  (unless ref (nx-error "undefined variable: ~A" name))
-	  (values (+SP (cons `(call ,proc ,ref ,@args) seed)) kdict)))
-       #|
-       |#
+	  (values (+SP (cons `(call ,proc ,ref ,expl) seed)) kdict)))
 
-       ;;(`(deref-indexed-expr ,expr)
-       ;; (if (symbol? expr) lookup
-       ;; (error "missed"))
+       (`(deref-indexed-expr ,expr)
+        ;; The issue here is that the result should be a symbol but no
+        ;; symbol table at run-time (i.e., need dynamic scoping)
+        (sferr "WORK TO GO deref-indexed-expr"))
         
        #;(`(const . ,_)
         (values (+SP (cons form seed)) kdict))
@@ -405,7 +404,7 @@
 
        (_
 	(unless (member (car form) pass-through)
-	  (sferr "MISSED: ~S\n" (car tree)))
+	  (sferr "MISSED: ~S\n" (car tree)) (pperr form))
 	(values (cons/src form seed) kdict)))))
 
   (define (fH leaf seed dict)
@@ -418,9 +417,9 @@
 	     (string-append "*** tsh: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #t)
+(define show-sxml #f)
 (define (show-tsh-sxml v) (set! show-sxml v))
-(define show-xtil #t)
+(define show-xtil #f)
 (define (show-tsh-xtil v) (set! show-xtil v))
 (define* (debug-tsh #:optional (arg #t))
   (set! show-sxml arg) (set! show-xtil arg))

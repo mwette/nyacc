@@ -86,7 +86,7 @@
       ($$ `(proc ,$2 ,$4 ,$7)))
      ("global" name-seq ($$ `(global ,@(cdr $2))))
      ("nonlocal" name-seq ($$ `(nonlocal ,@(cdr $2))))
-     ("local" name-seq ($$ `(local ,@(cdr $2)))))
+     ("local" name-seq ($$ `(local ,@(cdr $2))))) ; for dynamic binding ?
 
     (arg-list
      ($empty ($$ (make-tl 'arg-list)))
@@ -219,24 +219,17 @@
      ("!" unary-expression ($$ `(not ,$2)))
      ("~" unary-expression ($$ `(bitwise-not ,$2))))
     (primary-expression
-     ;; change to ("$" 'no-ws ident
-     #|
-     ($deref ($$ `(deref ,$1)))
-     ($deref/ix "(" expr-list ")" ($$ `(deref-indexed ,$1 ,$3)))
-     ($deref/ex "(" unit-expr ")" 'no-ws "(" expr-list ")"
-     ($$ `(deref-indexed-expr ,$3 ,$7)))
-     |#
-     ("$" 'no-ws ident
-      ($$ `(deref ,(sx-ref $3 1))))
-     ("$" 'no-ws ident 'no-ws "(" expr-list ")"
-      ($$ `(deref-indexed ,(sx-ref $3 1) ,$6)))
-     ("$" 'no-ws "(" unit-expr ")" 'no-ws "(" expr-list ")"
-      ($$ `(deref-indexed-expr ,$4 ,$8)))
+     ("$" 'no-ws $ident
+      ($$ `(deref ,$3)))
+     ("$" 'no-ws $ident/ix "(" expr-list ")"
+      ($$ `(deref-indexed ,$3 ,$5)))
+     ("$" 'no-ws "(" unit-expr ")(" expr-list ")"
+      ($$ `(deref-indexed-expr ,$4 ,$6)))
      ;;
      (fixed)
      (float)
      (string)
-     (symbol) 
+     (symbol)
      (keychar)
      (keyword)
      ;;($chlit ($$ `(char ,$1)))
