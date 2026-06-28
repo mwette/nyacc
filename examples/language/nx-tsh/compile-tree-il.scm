@@ -69,18 +69,18 @@
       ;;
 
       ((eval . ,_)
-       (values tree '() (nx-add-at-scope (nx-push-scope dict) "return")))
+       (values tree '() (nx-add-var/scope "return" (nx-push-scope dict))))
 
       ((switch . ,_)
-       (values tree '() (nx-add-at-scope* (nx-push-scope dict) "swx~val")))
+       (values tree '() (nx-add-var/scope "swx~val" (nx-push-scope dict))))
 
       ((for . ,_)
-       (values tree '()
-               (nx-add-at-scope* (nx-push-scope dict) "continue" "break")))
+       (values tree '() (fold nx-add-var/scope (nx-push-scope dict)
+                              '("continue" "break"))))
 
       ((while . ,_)
-       (values tree '()
-               (nx-add-at-scope* (nx-push-scope dict) "continue" "break")))
+       (values tree '() (fold nx-add-var/scope (nx-push-scope dict)
+                              '("continue" "break"))))
 
       ((proc (ident ,name) ,args ,body)
        (let ((form `(set (ident ,name) (lambda (@ (name ,name)) ,args ,body))))
@@ -89,9 +89,9 @@
       ((lambda (@ . ,attrd) (arg-list . ,args) ,body)
        ;; we convert to arg-list understood by nx-util's make-arity
        (let* ((dict (nx-push-scope dict))
-	      (dict (nx-add-at-scope dict "return"))
+	      (dict (nx-add-var/scope "return" dict))
               (args (map cadr args))
-              (dict (fold (lambda (a d) (nx-add-at-scope d a)) dict args))
+              (dict (fold (lambda (a d) (nx-add-var/scope a d)) dict args))
               (args (fold-right
                      (lambda (a l) (cons `(arg ,(nx-lookup dict a)) l))
                      '() args))
@@ -121,18 +121,21 @@
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((set (ident ,name) ,value)
-       (let* ((dict (nx-ensure/tagged dict '@F name))
+       ;;(sferr "dict:\n") (pperr dict)
+       (let* ((dict (or (nx-ensure/taglev name '@F dict)
+                        (nx-ensure/global name dict)))
               (nref (nx-lookup dict name)))
-         ;;(sferr "dict:\n") (pperr dict)
-         ;;(sferr "fD/set: name=~S nref=~S\n" name nref)
+         ;;(sferr "fD/set: name=~S nref=~S\n" name nref) (pperr dict)
+         ;;(if (string=? name "y") (quit))
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
       ((nonlocal . ,names)
-       (values '() '() (nx-insert-nonlocals dict names)))
+       ;;(values '() '() (nx-insert-nonlocals dict names)))
+       (values '() '() (fold nx-add-var/global dict names)))
 
       ;; since tsh has no lexical scope besides procedures, this works:
       ((global . ,names)
-       (values '() '() (nx-insert-nonlocals dict names)))
+       (values '() '() (fold nx-add-var/global dict names)))
 
       ((use . ,strpath)
        (let* ((sympath (map string->symbol strpath))
@@ -140,12 +143,12 @@
               (parg `(primcall list ,@path))
               (stmt `(call (@@ (nyacc lang nx-lib) nx-use-module) ,parg))
               (dict (hash-fold
-                     (lambda (key val dict) (nx-add-toplevel dict key))
+                     (lambda (key val dict) (nx-add-var/global key dict))
                      dict (module-obarray (resolve-interface sympath)))))
          (values '() (+SP (reverse stmt)) dict)))
 
       ((script . ,stmts)
-       (values tree '() (nx-add-at-scope (nx-push-scope dict) "sreturn")))
+       (values tree '() (nx-add-var/scope "sreturn" (nx-push-scope dict))))
 
       ((@@ ,module ,symbol)             ; don't process resolved references
        (values '() (reverse tree) dict))
@@ -188,6 +191,7 @@
         (`(script . ,_)
          (let* ((ptag (nx-lookup kdict "sreturn"))
                 (form (with-escape/arg ptag (block (rtail kseed)))))
+           ;;(sferr "sreturn: ptag=~s, form:" ptag) (pperr form)
 	   (values (cons form seed) (nx-pop-scope kdict))))
 
         (`(stmt-list . ,_)
@@ -288,13 +292,14 @@
 	       (val `(call ,(xlib-ref 'tsh:indexed-set!) ,nref ,indx ,value)))
 	  (values (cons/src val seed) kdict)))
 
-       (`(call . ,args)
+       (`(call ,proc . ,args)
+        ;;(sferr "call ~s\n" proc)
         ;; TODO: check for ftn value: if not lambda assume want puts 
         #;(let ((proc (car (rtail kseed))))
           (pperr (rtail kseed))
           (and=> (match proc (`(const ,name) (nx-lookup dict name)) (_ #f))
             (lambda (val) (sferr "call ~s\n" val))))
-	(values (cons (+SP `(call . ,args)) seed) kdict))
+	(values (cons (+SP `(call ,proc ,@args)) seed) kdict))
 
        (`(eval . ,_)
 	(let ((body (with-escape/arg (nx-lookup kdict "return") (car kseed))))
@@ -358,20 +363,18 @@
        (`(ge . ,args) (values (cons/src (op-call 'tsh:ge args) seed) kdict))
 
        (`(deref ,name)
-        ;;(sferr "fU.deref: name=~s, kdict:\n" (car kseed)) (pperr kdict)
         (let* ((ref (or (nx-lookup kdict name)
                         `(@@ (guile-user) ,(string->symbol name)))))
+          ;;(sferr "fU.deref: name=~s => ~s\n" name ref)
 	  (unless ref (nx-error "undefined variable: ~A" name))
           (values (+SP (cons ref seed)) kdict)))
 
        (`(deref-indexed ,name ,expl)
-        (let* (;;(tail (rtail kseed))
-               ;;(name (car tail))
-               (x (sferr "di: ~s\n" (nx-lookup kdict name)))
-               (ref (or (nx-lookup kdict name)
+        ;;(sferr "deref-indexed name=~s => ~s\n" name (nx-lookup kdict name))
+        ;;(pperr kdict)
+        ;;(quit)
+        (let* ((ref (or (nx-lookup kdict name)
                         `(@@ (guile-user) ,(string->symbol name))))
-               ;;(args (cdr tail))
-               ;;(args expl)
                (proc (xlib-ref 'tsh:indexed-ref)))
 	  (unless ref (nx-error "undefined variable: ~A" name))
 	  (values (+SP (cons `(call ,proc ,ref ,expl) seed)) kdict)))
@@ -417,7 +420,7 @@
 	     (string-append "*** tsh: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #f)
+(define show-sxml #t)
 (define (show-tsh-sxml v) (set! show-sxml v))
 (define show-xtil #f)
 (define (show-tsh-xtil v) (set! show-xtil v))
