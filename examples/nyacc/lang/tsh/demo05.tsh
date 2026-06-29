@@ -3,7 +3,7 @@
 set a [fvec 1.0 2.0 3.0]
 set b [fvec 4.0 5.0 6.0]
 
-proc ddot {x y} {
+proc ddot (x, y) {
     set n [vlen $x]
     set res 0.0
     for {set i 0} {($i < $n)} {incr i} { 

@@ -420,7 +420,7 @@
 	     (string-append "*** tsh: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #t)
+(define show-sxml #f)
 (define (show-tsh-sxml v) (set! show-sxml v))
 (define show-xtil #f)
 (define (show-tsh-xtil v) (set! show-xtil v))
@@ -438,12 +438,8 @@
 	(call-with-values
 	    (lambda () (sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    (when show-xtil
-              (sferr "tree-il:\n") (pperr exp)
-              (force-output (current-error-port)))
-	    ;;(values (parse-tree-il '(void)) env cenv)
-	    (values (parse-tree-il exp) env cenv)
-            ))
+	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
+	    (values (parse-tree-il exp) env cenv)))
 	(values (parse-tree-il '(void)) env cenv))))
 
 ;; --- last line ---

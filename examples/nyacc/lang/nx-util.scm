@@ -402,6 +402,13 @@
       (assoc-ref (cdr dict) name))
      (else (loop (cdr dict))))))
 
+(define (nx-lookup/global dict name)
+  (cond
+   ((null? dict) #f)
+   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup dict name)))
+   ((assoc-ref dict name))
+   (else #f)))
+
 ;; @deffn nx-lookup dict name
 ;; needs documentation @*
 ;; for nonlocals either push between

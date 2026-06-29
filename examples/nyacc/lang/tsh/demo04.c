@@ -18,8 +18,22 @@
 
 for FFI only
 
+typedef enum {
+  TSH_T_I8,
+  TSH_T_U8,
+  TSH_T_I16,
+  TSH_T_U16,
+  TSH_T_I32,
+  TSH_T_U32,
+  TSH_T_I64,
+  TSH_T_U64,
+  TSH_T_F32,
+  TSH_T_F64,
+  TSH_T_STR,
+} tsh_type_t;
+
 typedef struct {
-  enum _key;
+  tsh_type_t key;
   union {
     int8_t i8;
     uint8_t u8;
@@ -28,13 +42,14 @@ typedef struct {
     int32_t i32;
     uint32_t u32;
     int64_t i64;
+    uint64_t u64;
     float f32;
     double f64;
     char *str;
-    TshErr *err;
-  };
-} TshVal;
+    //tsh_err_t *err;
+  } val;
+} tsh_val_t;
 
-TshVal vsum(TshInterp *tsh, int argc, TshVal argv[]) {
-  
+tsh_val_t vsum(tsh_interp_t *tsh, int argc, tsh_val_t *argv[]) {
 }
+

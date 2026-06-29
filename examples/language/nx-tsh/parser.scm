@@ -177,14 +177,10 @@
 	      (lambda (key fmt . args)
                 (simple-format (current-error-port)
                                "*** parse failed on input ~S\n" (cadddr args))
-                ;;(drain-input (current-input-port))
-                (sferr "NEXT: ~s\n" (peek-char))
                 (let lp ((ch (read-char)))
                   (unless (or (eof-object? ch) (char=? #\newline ch))
                     (lp (read-char))))
-                ;; ^ does not work, probably need to clear readline ?
-                (if #f #f)
-                )))
+                (if #f #f))))
 	  (lambda () (set-current-input-port prev)))))))
 
 ;; --- last line ---

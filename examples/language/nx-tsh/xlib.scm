@@ -71,7 +71,7 @@
       (pperr sx)
       (sferr "  src-prop:\n")
       (pperr (add-src-prop-attr sx)))
-    (compile tx #:from 'tree-il #:to 'value #:env env)
+    (eval (compile tx #:from 'tree-il #:to 'value #:env env) env)
     (if #f #f)))
 
 ;; puts object
