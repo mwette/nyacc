@@ -338,10 +338,12 @@
 ;; === C preprocessor macro expansion =========================================
 ;; Macro expansion is hairy, with lots of corner cases.
 
-(define (mknox tokl)
+(define (mknox expd last)
   (map (lambda (tok)
-         (if (eq? (car tok) '$ident) `($idnox . ,(cdr tok)) tok))
-       tokl))
+         (if (eq? (car tok) '$ident)
+             (if (eq? tok last) tok `($idnox . ,(cdr tok)))
+             tok))
+       expd))
 
 ;; @deffn {Procedure} cpp-expand tokl defs [used [seed]]
 ;; Process the token list @var{tokl}, using alist of macro definitions
@@ -372,7 +374,7 @@
            (cond
             ((null? rhs)
              (loop osq rest))
-            ((or (null? (car rhs)) (string? (caar rhs)))
+            ((or (null? (car rhs)) (string? (caar rhs))) ; function
              (call-with-values (lambda () (get-args (car rhs) rest))
                (lambda (argd rest)
                  (if argd
@@ -444,7 +446,11 @@
         (cond
          ((member ident used) (cons `($idnox . ,ident) osq))
          ((assoc-ref argd ident) =>
-          (lambda (rpl) (append (mknox (cpp-expand rpl defs used)) osq)))
+          ;; kludgey but works I hope
+          (lambda (rpl)
+            (let ((expd (cpp-expand rpl defs used))) 
+              (append (mknox expd (car (last-pair rpl))) osq)))
+          )
          (else (cons (car isq) osq)))
         rest))
 
