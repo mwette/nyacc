@@ -427,8 +427,13 @@
                          (rddef "MACRO_VALUE(value) value"))))
         (macro-expand-text "MACRO(VALUE)(MACRO(VALUE)(i))" defs))
       "i")
+    (equal?                             ; issue # 74
+     (let* ((defs (list (rddef "APPLY(PROC,ARG) PROC(ARG)")
+                        (rddef "DECL(V) int V;"))))
+       (macro-expand-text "APPLY(DECL,foo)" defs))
+     "int foo;")
+    
      #t))
-  
   #t)
 
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
