@@ -338,14 +338,14 @@
 ;; === C preprocessor macro expansion =========================================
 ;; Macro expansion is hairy, with lots of corner cases.
 
-(define (mknox expd last)
+(define (mknox expd used)
   (map (lambda (tok)
-         (if (eq? (car tok) '$ident)
-             (if (eq? tok last) tok `($idnox . ,(cdr tok)))
+         (if (and (eq? (car tok) '$ident) (member (cdr tok) used))
+             `($idnox . ,(cdr tok))
              tok))
        expd))
 
-;; @deffn {Procedure} cpp-expand tokl defs [used [seed]]
+;; @deffn {Procedure} cpp-expand tokl defs [used [seed]] => tokl used
 ;; Process the token list @var{tokl}, using alist of macro definitions
 ;; @var{defs}.  The list of strings @var{used} defined macros already used.
 ;; Return the result as a list of reversed tokens, prepened to @var{seed}
@@ -364,7 +364,8 @@
 
   (let loop ((osq (or seed '())) (isq tokl))
     (match isq
-      ('() osq)
+      ;;('() osq)
+      ('() (values osq used))
       (`(($ident . ,ident) . ,rest)
        (cond
         ((member ident used)
@@ -374,14 +375,16 @@
            (cond
             ((null? rhs)
              (loop osq rest))
-            ((or (null? (car rhs)) (string? (caar rhs))) ; function
+            ((or (null? (car rhs)) (string? (caar rhs))) ; function macro
              (call-with-values (lambda () (get-args (car rhs) rest))
                (lambda (argd rest)
                  (if argd
+                     ;; found `(' => macro function call
                      (let* ((tkl (cpp-subst (cdr rhs) argd defs used))
                             (csq (cpp-expand tkl defs (cons ident used) #f))
                             (rest (append-reverse csq rest)))
                        (loop osq rest))
+                     ;; plain ident: don't expand, not used
                      (loop (cons (car isq) osq) (cdr isq))))))
             (else
              (let* ((tkl (cpp-subst rhs '() defs used))
@@ -446,16 +449,16 @@
         (cond
          ((member ident used) (cons `($idnox . ,ident) osq))
          ((assoc-ref argd ident) =>
-          ;; kludgey but works I hope
           (lambda (rpl)
-            (let ((expd (cpp-expand rpl defs used))) 
-              (append (mknox expd (car (last-pair rpl))) osq)))
-          )
+            (call-with-values (lambda () (cpp-expand rpl defs used))
+              (lambda (expd arg-used) (append (mknox expd arg-used) osq)))))
          (else (cons (car isq) osq)))
         rest))
 
       (`(($hash . ,_1) . ,_2) (throw 'cpp-error "bad #"))
       (_ (loop (cons (car isq) osq) (cdr isq))))))
+
+(display "cpp.scm: FIXME: subst ident->idnox\n")
 
 
 ;;.@deffn {Procedure} collect-args argl tokl
