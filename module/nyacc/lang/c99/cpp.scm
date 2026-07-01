@@ -364,7 +364,6 @@
 
   (let loop ((osq (or seed '())) (isq tokl))
     (match isq
-      ;;('() osq)
       ('() (values osq used))
       (`(($ident . ,ident) . ,rest)
        (cond
@@ -457,8 +456,6 @@
 
       (`(($hash . ,_1) . ,_2) (throw 'cpp-error "bad #"))
       (_ (loop (cons (car isq) osq) (cdr isq))))))
-
-(display "cpp.scm: FIXME: subst ident->idnox\n")
 
 
 ;;.@deffn {Procedure} collect-args argl tokl
