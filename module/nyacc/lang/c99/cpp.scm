@@ -740,39 +740,4 @@
       (throw 'c99-error "CPP error"))))
 
 
-;; =============================================================================
-;; deprecated code
-
-;; @deffn {Procedure} expand-cpp-name name defs [sp]=> repl | #f
-;; Calls @code{expand-cpp-macro-ref} with null input string (w/o further
-;; input).  If @var{name} is has a function definition @code{#f} is returned.
-;; @var{sp} is optional source properties
-;; @end deffn
-(define (expand-cpp-name name defs sp)
-  (with-input-from-string ""
-    (lambda () (expand-cpp-macro-ref name defs))))
-
-;; @deffn {Procedure} skip-cpp-macro-ref name defs
-;; Like @code{expand-cpp-macro-ref} but skip over the reference.
-;; @* may not catch strings w/ non-matching parens
-;; @end deffn
-(define (skip-cpp-macro-ref name defs)
-  "- Procedure: skip-cpp-macro-ref name defs
-     Like ‘expand-cpp-macro-ref’ but skip over the reference.
-     may not catch strings w/ non-matching parens"
-  (let ((rval (lookup-def defs name)))
-    (and
-     (pair? rval)
-     (let loop ((ch (read-char)))
-       (cond ((eof-object? ch) (throw 'c99-error "eof when expecting `('"))
-             ((char-whitespace? ch) (loop (read-char)))
-             ((char=? ch #\() #t)
-             (else (unread-char ch) #f)))
-     (let loop ((lv 0) (ch (read-char)))
-       (cond ((eof-object? ch) (throw 'c99-error "expecting `)'"))
-             ((char=? #\( ch) (loop (1+ lv) (read-char)))
-             ((char=? #\) ch) (if (zero? lv) #f (loop (1- lv) (read-char))))
-             (else (loop lv (read-char))))))))
-
-
 ;; --- last line ---
