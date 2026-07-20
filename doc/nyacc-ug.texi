@@ -1088,7 +1088,7 @@ analyzer.  To use integers instead, use the procedure
 Indicate if the machine has been compacted.
 @end deffn
 
-o@subheading Creating a Parser
+@subheading Creating a Parser
 
 To create a parser import the module @code{(nyacc parser)} and
 use the procedure @{make-lalr-parser}, which has the following specification
