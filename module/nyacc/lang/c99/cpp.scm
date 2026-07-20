@@ -599,9 +599,10 @@
   (and
    (let loop1 ((sp #f) (ch (read-char)))
      (cond
-      ((eof-object? ch) (if sp (unread-char #\space)) #f)
-      ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
-      ((not (char=? #\( ch)) (unread-char ch) (if sp (unread-char #\space)) #f)))
+      ((eof-object? ch) (if sp (unread-char sp)) #f)
+      ((char=? #\newline ch) (loop1 #\newline (read-char))) ; for bol
+      ((char-set-contains? c:ws ch) (loop1 #\space (read-char)))
+      ((not (char=? #\( ch)) (unread-char ch) (if sp (unread-char sp)) #f)))
    ;; found #\(
    (let loop2 ((argd '()) (ch #\() (argl argl))
      (cond
