@@ -169,7 +169,11 @@ clean:
 
 .PHONY: dist-files
 dist-files:
-	@true
+	mkdir -p nyacc/lang/c99/mach.d
+	$(GUILE) -L . -c \
+	  '((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
+	$(GUILE) -L . -c \
+	  '((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
 
 nyacc/lang/c99/munge.go: nyacc/lang/c99/munge.scm \
 	nyacc/lang/c99/cxeval.go \
