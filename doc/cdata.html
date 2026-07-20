@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 7.1.1, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2024-2025 - Matthew Wette
@@ -55,12 +55,10 @@ Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previou
 </p>
 
 <hr>
-<a class="node" id="Introduction"></a><div class="nav-panel">
-</div>
-<h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
+<a class="node" id="Introduction"></a><h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
 
-<p>The <em class="emph">cdata</em> module (<code class="code">(nyacc foreign cdata)</code> and its
-partner <em class="emph">arch-info</em> (<code class="code">(nyacc foreign arch-info)</code> provide a
+<p>The <em class="emph">cdata</em> module (<code class="code">(nyacc foreign cdata)</code> along with its
+partner <em class="emph">arch-info</em> <code class="code">(nyacc foreign arch-info)</code>) provide a
 way to work with data originating from C libraries.  We hope the module
 is reasonably easy to understand and use.  Size and alignment is
 tracked for all types.  Types are classified into the following kinds:
@@ -116,8 +114,8 @@ time: 1719062561 676365
 <p>This section provides an introduction to procedures you are likely to
 want on your first approach.
 </p>
-<dl class="first-deffn">
-<dt class="deffn" id="index-cbase"><span class="category-def">Procedure: </span><span><strong class="def-name">cbase</strong> <var class="def-var-arguments">name =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cbase"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cbase"><span class="category-def">Procedure: </span><span><strong class="def-name">cbase</strong> <var class="def-var-arguments">name =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cbase"> &para;</a></span></dt>
 <dd><p>Given symbolic <var class="var">name</var>, generate a base ctype.   The name can
 be something like <code class="code">unsigned</code>, <code class="code">double</code>, or can be a
 <em class="emph">cdata</em> machine type like <code class="code">u64le</code>.  For example,
@@ -127,8 +125,8 @@ be something like <code class="code">unsigned</code>, <code class="code">double<
 <p>There is a pseudo-type <code class="code">void</code>.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cpointer"><span class="category-def">Procedure: </span><span><strong class="def-name">cpointer</strong> <var class="def-var-arguments">type =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cpointer"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cpointer"><span class="category-def">Procedure: </span><span><strong class="def-name">cpointer</strong> <var class="def-var-arguments">type =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cpointer"> &para;</a></span></dt>
 <dd><p>Generate a C pointer type for <var class="var">type</var>. To reference or de-reference
 cdata object see <code class="code">cdata&amp;</code> and <code class="code">cdata*</code>.  <var class="var">type</var> can be
 the symbol <code class="code">void</code> or a symbolic name used as argument to <code class="code">cbase</code>.
@@ -138,8 +136,8 @@ the symbol <code class="code">void</code> or a symbolic name used as argument to
 </pre></div>
 </dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cstruct"><span class="category-def">Procedure: </span><span><strong class="def-name">cstruct</strong> <var class="def-var-arguments">fields [packed] =&gt; ctype</var><a class="copiable-link" href="#index-cstruct"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cstruct"><span class="category-def">Procedure: </span><span><strong class="def-name">cstruct</strong> <var class="def-var-arguments">fields [packed] =&gt; ctype</var><a class="copiable-link" href="#index-cstruct"> &para;</a></span></dt>
 <dd><p>Construct a struct ctype with given <var class="var">fields</var>.  If <var class="var">packed</var>,
 <code class="code">#f</code> by default, is <code class="code">#t</code>, create a packed structure.
 <var class="var">fields</var> is a list with entries of the form <code class="code">(name type)</code> or
@@ -149,21 +147,21 @@ object or a symbol for a base type and <code class="code">length</code> is the l
 of the associated bitfield.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cunion"><span class="category-def">Procedure: </span><span><strong class="def-name">cunion</strong> <var class="def-var-arguments">fields =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cunion"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cunion"><span class="category-def">Procedure: </span><span><strong class="def-name">cunion</strong> <var class="def-var-arguments">fields =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cunion"> &para;</a></span></dt>
 <dd><p>Construct a ctype union type with given <var class="var">fields</var>.
 See <em class="emph">cstruct</em> for a description of the <var class="var">fields</var> argument.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-carray"><span class="category-def">Procedure: </span><span><strong class="def-name">carray</strong> <var class="def-var-arguments">type n =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-carray"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-carray"><span class="category-def">Procedure: </span><span><strong class="def-name">carray</strong> <var class="def-var-arguments">type n =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-carray"> &para;</a></span></dt>
 <dd><p>Create an array of <var class="var">type</var> with <var class="var">length</var>.
 If <var class="var">length</var> is zero, the array length is unbounded: it&rsquo;s length
 can be specified as argument to <code class="code">make-cdata</code>.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cenum"><span class="category-def">Procedure: </span><span><strong class="def-name">cenum</strong> <var class="def-var-arguments">enum-list [packed] =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cenum"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cenum"><span class="category-def">Procedure: </span><span><strong class="def-name">cenum</strong> <var class="def-var-arguments">enum-list [packed] =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cenum"> &para;</a></span></dt>
 <dd><p><var class="var">enum-list</var> is a list of name or name-value pairs
 </p><div class="example">
 <pre class="example-preformatted">(cenum '((a 1) b (c 4))
@@ -172,8 +170,8 @@ can be specified as argument to <code class="code">make-cdata</code>.
 as if defined in C with <code class="code">__attribute__((packed))</code>.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cfunction"><span class="category-def">Procedure: </span><span><strong class="def-name">cfunction</strong> <var class="def-var-arguments">proc-&gt;ptr ptr-&gt;proc [variadic?] =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cfunction"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cfunction"><span class="category-def">Procedure: </span><span><strong class="def-name">cfunction</strong> <var class="def-var-arguments">proc-&gt;ptr ptr-&gt;proc [variadic?] =&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-cfunction"> &para;</a></span></dt>
 <dd><p>Generate a C function type to be used with <code class="code">cpointer</code>. The arguments
 <var class="var">proc-&gt;ptr</var> and <var class="var">ptr-&gt;proc</var> are procedures that convert a
 procedure to a pointer, and pointer to procedure, respectively.  The
@@ -192,8 +190,8 @@ C function in memory, with a getter and setter to read from or write
 to memory.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value]</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-make_002dcdata"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata</strong> <var class="def-var-arguments">type [value]</var><a class="copiable-link" href="#index-make_002dcdata"> &para;</a></span></dt>
 <dd><p>Generate a <em class="emph">cdata</em> object of type <var class="var">type</var> with optional <var class="var">value</var>.
 If <var class="var">value</var> is not provided, the object is zeroed.
 As a special case, a positive integer arg to a zero-sized array type will
@@ -201,15 +199,15 @@ allocate storage for that many items, associating it with an array type of
 that size.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-make_002dcdata_002f_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata/*</strong> <var class="def-var-arguments">type pointer</var><a class="copiable-link" href="#index-make_002dcdata_002f_002a"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-make_002dcdata_002f_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata/*</strong> <var class="def-var-arguments">type pointer</var><a class="copiable-link" href="#index-make_002dcdata_002f_002a"> &para;</a></span></dt>
 <dd><p>Make a cdata object from a pointer.   That is, instead of creating a
 bytevector to hold the data use the memory at the pointer using
 <code class="code">pointer-&gt;bytevector</code>.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-ref</strong> <var class="def-var-arguments">data [tag ...] =&gt; value</var><a class="copiable-link" href="#index-cdata_002dref"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-ref</strong> <var class="def-var-arguments">data [tag ...] =&gt; value</var><a class="copiable-link" href="#index-cdata_002dref"> &para;</a></span></dt>
 <dd><p>Return the Scheme (scalar) slot value for selected <var class="var">tag ...</var> with
 respect to the cdata object <var class="var">data</var>.
 </p><div class="example">
@@ -222,8 +220,8 @@ are freshly allocated copies. If want a cdata object, use <code class="code">cda
 </p></dd></dl>
 
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_002dset_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-set!</strong> <var class="def-var-arguments">data value [tag ...]</var><a class="copiable-link" href="#index-cdata_002dset_0021"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_002dset_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-set!</strong> <var class="def-var-arguments">data value [tag ...]</var><a class="copiable-link" href="#index-cdata_002dset_0021"> &para;</a></span></dt>
 <dd><p>Set slot for selcted <var class="var">tag ...</var> with respect to cdata <var class="var">data</var> to
 <var class="var">value</var>.  Example:
 </p><div class="example">
@@ -281,14 +279,14 @@ $5 = #(((x . 1.5) (y . 2.0)) ((x . 3.0) (y . 4.0)) ((x . 2.0) (y . 5.0)))
 
 
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_0026"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata&amp;</strong> <var class="def-var-arguments">data =&gt; cdata</var><a class="copiable-link" href="#index-cdata_0026"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_0026"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata&amp;</strong> <var class="def-var-arguments">data =&gt; cdata</var><a class="copiable-link" href="#index-cdata_0026"> &para;</a></span></dt>
 <dd><p>Generate a reference (i.e., cpointer) to the contents in the underlying
 bytevector.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata*</strong> <var class="def-var-arguments">data =&gt; cdata</var><a class="copiable-link" href="#index-cdata_002a"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_002a"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata*</strong> <var class="def-var-arguments">data =&gt; cdata</var><a class="copiable-link" href="#index-cdata_002a"> &para;</a></span></dt>
 <dd><p>De-reference a pointer.  Returns a <em class="emph">cdata</em> object representing the
 contents at the address in the underlying bytevector.
 </p></dd></dl>
@@ -312,8 +310,8 @@ the following way keep intermediate values from being collected.
 
 <h3 class="heading" id="Going-Further"><span>Going Further<a class="copiable-link" href="#Going-Further"> &para;</a></span></h3>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_002dsel"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-sel</strong> <var class="def-var-arguments">data tag ... =&gt; cdata</var><a class="copiable-link" href="#index-cdata_002dsel"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_002dsel"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-sel</strong> <var class="def-var-arguments">data tag ... =&gt; cdata</var><a class="copiable-link" href="#index-cdata_002dsel"> &para;</a></span></dt>
 <dd><p>Return a new <code class="code">cdata</code> object representing the associated selection.
 Note this is different from <code class="code">cdata-ref</code>: it always returns a cdata
 object.  For example,
@@ -328,14 +326,14 @@ $2 = 42
 </pre></div>
 </dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_0026_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata&amp;-ref</strong> <var class="def-var-arguments">data [tag ...] =&gt; value</var><a class="copiable-link" href="#index-cdata_0026_002dref"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_0026_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata&amp;-ref</strong> <var class="def-var-arguments">data [tag ...] =&gt; value</var><a class="copiable-link" href="#index-cdata_0026_002dref"> &para;</a></span></dt>
 <dd><p>Shortcut for <code class="code">(cdata-ref (cdata&amp; data tag ...))</code>
 This always returns a Guile <em class="emph">pointer</em>.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_002a_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata*-ref</strong> <var class="def-var-arguments">data [tag ...] =&gt; value</var><a class="copiable-link" href="#index-cdata_002a_002dref"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_002a_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata*-ref</strong> <var class="def-var-arguments">data [tag ...] =&gt; value</var><a class="copiable-link" href="#index-cdata_002a_002dref"> &para;</a></span></dt>
 <dd><p>Shortcut for <code class="code">(cdata-ref (cdata* data tag ...))</code>
 </p></dd></dl>
 
@@ -345,20 +343,20 @@ deconstructed triple.  The following two procedures are
 provided for working at that level, in addition to the <code class="code">ctype-sel</code>
 procedure described below.
 </p>
-<dl class="first-deffn">
-<dt class="deffn" id="index-Xcdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">Xcdata-ref</strong> <var class="def-var-arguments">bv ix ct -&gt; value</var><a class="copiable-link" href="#index-Xcdata_002dref"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-Xcdata_002dref"><span class="category-def">Procedure: </span><span><strong class="def-name">Xcdata-ref</strong> <var class="def-var-arguments">bv ix ct -&gt; value</var><a class="copiable-link" href="#index-Xcdata_002dref"> &para;</a></span></dt>
 <dd><p>Reference a deconstructed cdata object. See <em class="emph">cdata-ref</em>.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-Xcdata_002dset_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">Xcdata-set!</strong> <var class="def-var-arguments">bv ix ct value</var><a class="copiable-link" href="#index-Xcdata_002dset_0021"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-Xcdata_002dset_0021"><span class="category-def">Procedure: </span><span><strong class="def-name">Xcdata-set!</strong> <var class="def-var-arguments">bv ix ct value</var><a class="copiable-link" href="#index-Xcdata_002dset_0021"> &para;</a></span></dt>
 <dd><p>Set the value of a deconstructed cdata object. See <em class="emph">cdata-set!</em>.
 </p></dd></dl>
 
 <h3 class="heading" id="Working-with-Types"><span>Working with Types<a class="copiable-link" href="#Working-with-Types"> &para;</a></span></h3>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-name_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">name-ctype</strong> <var class="def-var-arguments">name type -&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-name_002dctype"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-name_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">name-ctype</strong> <var class="def-var-arguments">name type -&gt; &lt;ctype&gt;</var><a class="copiable-link" href="#index-name_002dctype"> &para;</a></span></dt>
 <dd><p>Create a new named version of the type.  The name is useful when the type
 is printed.  This procedure does not mutate: a new type object is created.
 If a specific type is used by multiple names the names can share
@@ -377,9 +375,9 @@ can have two names:
 so that <code class="code">pretty-print-ctype</code> will use names effectively.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-ctype_002deqv_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-eqv?</strong> <var class="def-var-arguments">a b =&gt; #t|#f</var><a class="copiable-link" href="#index-ctype_002deqv_003f"> &para;</a></span></dt>
-<dt class="deffnx def-cmd-deffn" id="index-ctype_002dequal_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-equal?</strong> <var class="def-var-arguments">a b =&gt; #t|#f</var><a class="copiable-link" href="#index-ctype_002dequal_003f"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-ctype_002deqv_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-eqv?</strong> <var class="def-var-arguments">a b =&gt; #t|#f</var><a class="copiable-link" href="#index-ctype_002deqv_003f"> &para;</a></span></dt>
+<dt class="deffnx def-cmd-deffn def-line" id="index-ctype_002dequal_003f"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-equal?</strong> <var class="def-var-arguments">a b =&gt; #t|#f</var><a class="copiable-link" href="#index-ctype_002dequal_003f"> &para;</a></span></dt>
 <dd><p>The <code class="code">ctype-eqv?</code> and <code class="code">ctype-equal?</code> predicates assesses equality
 of their arguments.  Two types are considered equvalent if they have the
 same size, alignment, kind, and eqivalent kind-specific properties.  For
@@ -391,13 +389,13 @@ they are pointer types with delays.  The implementation of
 <code class="code">ctype-eqv?</code>.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-ctype_002dprimary"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-primary</strong> <var class="def-var-arguments">type =&gt; type</var><a class="copiable-link" href="#index-ctype_002dprimary"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-ctype_002dprimary"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-primary</strong> <var class="def-var-arguments">type =&gt; type</var><a class="copiable-link" href="#index-ctype_002dprimary"> &para;</a></span></dt>
 <dd><p>Returns the primary type for pointers and arrays.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-ctype_002dsel"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-sel</strong> <var class="def-var-arguments">type ix [tag ...] =&gt; ((ix . ct) (ix . ct) ...)</var><a class="copiable-link" href="#index-ctype_002dsel"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-ctype_002dsel"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-sel</strong> <var class="def-var-arguments">type ix [tag ...] =&gt; ((ix . ct) (ix . ct) ...)</var><a class="copiable-link" href="#index-ctype_002dsel"> &para;</a></span></dt>
 <dd><p>This generate a list of (offset, type) pairs for a type.  The result is
 used to create getters and setter for foreign machine architectures.
 See <em class="emph">make-cdata-getter</em> and <em class="emph">make-cdata-setter</em>.
@@ -426,8 +424,8 @@ low-level procedure <code class="code">%make-cdata</code> as in
 <br> TODO: Create a similar procedure that uses case-lambda to do both.
 </p>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-make_002dcdata_002dgetter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata-getter</strong> <var class="def-var-arguments">sel [offset] =&gt; lambda</var><a class="copiable-link" href="#index-make_002dcdata_002dgetter"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-make_002dcdata_002dgetter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata-getter</strong> <var class="def-var-arguments">sel [offset] =&gt; lambda</var><a class="copiable-link" href="#index-make_002dcdata_002dgetter"> &para;</a></span></dt>
 <dd><p>Genererate a procedure that given a cdata object will fetch the value
 at indicated by the <var class="var">sel</var>, generated by <code class="code">ctype-sel</code>.
 The procedure takes one argument: <code class="code">(proc data [tag ...])</code>.
@@ -436,8 +434,8 @@ The optional <var class="var">offset</var> argument (default 0), is used for cro
 target use: it is the offset of the address in the host context.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-make_002dcdata_002dsetter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata-setter</strong> <var class="def-var-arguments">sel [offset] =&gt; lambda</var><a class="copiable-link" href="#index-make_002dcdata_002dsetter"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-make_002dcdata_002dsetter"><span class="category-def">Procedure: </span><span><strong class="def-name">make-cdata-setter</strong> <var class="def-var-arguments">sel [offset] =&gt; lambda</var><a class="copiable-link" href="#index-make_002dcdata_002dsetter"> &para;</a></span></dt>
 <dd><p>Genererate a procedure that given a cdata object will set the value
 at the offset given the selector, generated by <code class="code">ctype-sel</code>.
 The procedure takes two arguments: <code class="code">(proc data value [tag ...])</code>.
@@ -446,8 +444,8 @@ The optional <var class="var">offset</var> argument (default 0), is used for cro
 target use: it is the offset of the address in the host context.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-_003fmake_002dcdata_002daccessor"><span class="category-def">Procedure: </span><span><strong class="def-name">?make-cdata-accessor</strong> <var class="def-var-arguments">sel [offset]</var><a class="copiable-link" href="#index-_003fmake_002dcdata_002daccessor"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-_003fmake_002dcdata_002daccessor"><span class="category-def">Procedure: </span><span><strong class="def-name">?make-cdata-accessor</strong> <var class="def-var-arguments">sel [offset]</var><a class="copiable-link" href="#index-_003fmake_002dcdata_002daccessor"> &para;</a></span></dt>
 <dd><p>This procedure (not final) is similar to <code class="code">make-cdata-getter</code> and
 <code class="code">make-cdata-setter</code> but the resulting procedure accepts
 no tag sequence.  Called with one arg, it&rsquo;s a getter;
@@ -469,8 +467,8 @@ $1 = 42
 <em class="emph">pointer-&gt;procedure</em>.  It generates an appropriate
 <code class="code">(system foreign)</code> ffi-type for the given cdata type.
 </p>
-<dl class="first-deffn">
-<dt class="deffn" id="index-ccast"><span class="category-def">Procedure: </span><span><strong class="def-name">ccast</strong> <var class="def-var-arguments">type data [do-check] =&gt; &lt;cdata&gt;</var><a class="copiable-link" href="#index-ccast"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-ccast"><span class="category-def">Procedure: </span><span><strong class="def-name">ccast</strong> <var class="def-var-arguments">type data [do-check] =&gt; &lt;cdata&gt;</var><a class="copiable-link" href="#index-ccast"> &para;</a></span></dt>
 <dd><p>Cast a cdata object of one (pointer) type to another (pointer) type.
 This routine creates a new cdata object with the target type, but
 same bytevector and index.
@@ -490,8 +488,8 @@ $3 = 42
 </pre></div>
 </dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-arg_002d_003enumber"><span class="category-def">Procedure: </span><span><strong class="def-name">arg-&gt;number</strong> <var class="def-var-arguments">arg =&gt; number</var><a class="copiable-link" href="#index-arg_002d_003enumber"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-arg_002d_003enumber"><span class="category-def">Procedure: </span><span><strong class="def-name">arg-&gt;number</strong> <var class="def-var-arguments">arg =&gt; number</var><a class="copiable-link" href="#index-arg_002d_003enumber"> &para;</a></span></dt>
 <dd><p>Convert an argument to numeric form for a ffi procedure call.
 This will reference a cdata object or pass a number through.
 </p></dd></dl>
@@ -499,8 +497,8 @@ This will reference a cdata object or pass a number through.
 <p>The above procedure was previously called <code class="code">unwrap-number</code>.
 </p>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-arg_002d_003epointer"><span class="category-def">Procedure: </span><span><strong class="def-name">arg-&gt;pointer</strong> <var class="def-var-arguments">arg [hint] =&gt; pointer</var><a class="copiable-link" href="#index-arg_002d_003epointer"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-arg_002d_003epointer"><span class="category-def">Procedure: </span><span><strong class="def-name">arg-&gt;pointer</strong> <var class="def-var-arguments">arg [hint] =&gt; pointer</var><a class="copiable-link" href="#index-arg_002d_003epointer"> &para;</a></span></dt>
 <dd><p>Convert an argument to a Guile pointer for a ffi procedure call.
 This will reference a cdata object or pass a number through.
 If the argument is a function, it will attempt to convert that
@@ -511,8 +509,8 @@ pointer type <var class="var">hint</var>.
 <p>The above procedure used to be called <code class="code">unwrap-pointer</code>.  It is
 also used to implement the old <code class="code">unwrap-array</code>.
 </p>
-<dl class="first-deffn">
-<dt class="deffn" id="index-ctype_002d_003effi"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi</strong> <var class="def-var-arguments">ctype =&gt; ffi-type</var><a class="copiable-link" href="#index-ctype_002d_003effi"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-ctype_002d_003effi"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi</strong> <var class="def-var-arguments">ctype =&gt; ffi-type</var><a class="copiable-link" href="#index-ctype_002d_003effi"> &para;</a></span></dt>
 <dd><p>Generate a argument spec for Guile&rsquo;s ffi interface.
 Example:
 </p><div class="example">
@@ -694,14 +692,14 @@ ppc32, ppc64, riscv32, riscv64, sparc32, sparc64, x86_64.
 
 <h3 class="heading" id="CData-Utilities"><span>CData Utilities<a class="copiable-link" href="#CData-Utilities"> &para;</a></span></h3>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-pretty_002dprint_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">pretty-print-ctype</strong> <var class="def-var-arguments">type [port]</var><a class="copiable-link" href="#index-pretty_002dprint_002dctype"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-pretty_002dprint_002dctype"><span class="category-def">Procedure: </span><span><strong class="def-name">pretty-print-ctype</strong> <var class="def-var-arguments">type [port]</var><a class="copiable-link" href="#index-pretty_002dprint_002dctype"> &para;</a></span></dt>
 <dd><p>Converts type to a literal tree and uses Guile&rsquo;s pretty-print function
 to display it.  The default port is the current output port.
 </p></dd></dl>
 
-<dl class="first-deffn">
-<dt class="deffn" id="index-cdata_002dkind"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-kind</strong> <var class="def-var-arguments">data</var><a class="copiable-link" href="#index-cdata_002dkind"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-cdata_002dkind"><span class="category-def">Procedure: </span><span><strong class="def-name">cdata-kind</strong> <var class="def-var-arguments">data</var><a class="copiable-link" href="#index-cdata_002dkind"> &para;</a></span></dt>
 <dd><p>Return the kind of <var class="var">data</var>: pointer, base, struct, ...
 </p></dd></dl>
 
@@ -735,8 +733,8 @@ to see the shorted variant, here &ldquo;long long&rdquo;.   Likewise, use
 
 <p>More to come.
 </p>
-<dl class="first-deffn">
-<dt class="deffn" id="index-ctype_002d_003effi_002dtype"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi-type</strong> <var class="def-var-arguments">type</var><a class="copiable-link" href="#index-ctype_002d_003effi_002dtype"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-ctype_002d_003effi_002dtype"><span class="category-def">Procedure: </span><span><strong class="def-name">ctype-&gt;ffi-type</strong> <var class="def-var-arguments">type</var><a class="copiable-link" href="#index-ctype_002d_003effi_002dtype"> &para;</a></span></dt>
 <dd><p>Convert a <em class="emph">ctype</em> to the (integer) code for the associated FFI
 type.
 </p></dd></dl>

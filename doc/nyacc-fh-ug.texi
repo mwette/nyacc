@@ -23,16 +23,16 @@ Matt Wette
 April 2026
 @end format
 
+@dircategory Software development
+@direntry 
+* NYACC FFI Helper User Guide: (nyacc).    The NYACC FFI Helper user guide.
+@end direntry
+
 @ifnottex
-@node Top, Introduction, (dir), (dir)
+@node Top
 @top NYACC FFI Helper Guide
 This is a user guide for the NYACC FFI Helper.
 @end ifnottex
-
-@dircategory Software development
-@direntry 
-* NYACC FFI Helper Guide: (nyacc).    The NYACC FFI Helper guide.
-@end direntry
 
 @c ======================================
 

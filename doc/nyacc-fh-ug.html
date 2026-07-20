@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 7.1.1, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2017-2026 - Matthew Wette.
@@ -20,9 +20,6 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <link href="#Top" rel="start" title="Top">
-<link href="dir.html#Top" rel="up" title="(dir)">
-<link href="#Introduction" rel="next" title="Introduction">
-<link href="dir.html#Top" rel="prev" title="(dir)">
 <style type="text/css">
 <!--
 a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
@@ -48,20 +45,14 @@ Matt Wette
 April 2026
 </pre></div>
 
+
 <div class="top-level-extent" id="Top">
-<div class="nav-panel">
-<p>
-Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
-</div>
 <h1 class="top" id="NYACC-FFI-Helper-Guide"><span>NYACC FFI Helper Guide<a class="copiable-link" href="#NYACC-FFI-Helper-Guide"> &para;</a></span></h1>
 <p>This is a user guide for the NYACC FFI Helper.
 </p>
 
-
 <hr>
-<a class="node" id="Introduction"></a><div class="nav-panel">
-</div>
-<h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
+<a class="node" id="Introduction"></a><h3 class="heading" id="Introduction-1"><span>Introduction<a class="copiable-link" href="#Introduction-1"> &para;</a></span></h3>
 
 <p>NOTE: Parts of this manual are obsololete: the update for version 2
 is not complete.
@@ -100,7 +91,7 @@ backend implementation.
 <p>To generate Guile Scheme for smaller C code units one can
 write a ffi-module with the <code class="code">#:api-code</code> or import the
 <code class="code">ffi-help</code> module an use the functions <code class="code">load-include-file</code>,
-<code class="code">ccode-&gt;sexp</code>.   The latter functions are not well tested, though.
+<code class="code">ccode-&gt;sexp</code>.   The latter functions are exhaustively.
 </p>
 <p>The compiler for the FFI Helper (FH) is based on the C parser and utilities
 which are included in the <a class="uref" href="https://www.nongnu.org/nyacc"><small class="sc">NYACC</small></a>
@@ -319,6 +310,18 @@ guile&gt; (eval sx (current-module))
 guile&gt; struct-foo
 $5 = #&lt;ctype struct struct-foo 0x73af1fc95480&gt;
 </pre></div>
+
+<p>Note: the helper now uses <code class="code">define</code> and <code class="code">export</code> in liu
+of <code class="code">define-public</code>.
+</p>
+<h4 class="subheading" id="TODO"><span>TODO<a class="copiable-link" href="#TODO"> &para;</a></span></h4>
+
+<p>This document needs an explanation that wrapped C functions that return
+structs or unions will instead pass &lsquo;cdata&rsquo; data for pointers to
+those types.
+</p>
+<p>This document needs an explanation of the backend capability.
+</p>
 
 
 <h3 class="heading" id="Common-Errors"><span>Common Errors<a class="copiable-link" href="#Common-Errors"> &para;</a></span></h3>
@@ -675,8 +678,8 @@ preprocessor macro definitions that should be included in the output.
 
 <p>Work to go here:
 </p>
-<dl class="first-deffn">
-<dt class="deffn" id="index-load_002dinclude_002dfile"><span class="category-def">Procedure: </span><span><strong class="def-name">load-include-file</strong> <var class="def-var-arguments">filename [#pkg-config pkg]</var><a class="copiable-link" href="#index-load_002dinclude_002dfile"> &para;</a></span></dt>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-load_002dinclude_002dfile"><span class="category-def">Procedure: </span><span><strong class="def-name">load-include-file</strong> <var class="def-var-arguments">filename [#pkg-config pkg]</var><a class="copiable-link" href="#index-load_002dinclude_002dfile"> &para;</a></span></dt>
 <dd><p>This is the functionality that Ludo was asking for: to be at guile
 prompt and be able to issue
 </p><div class="example">

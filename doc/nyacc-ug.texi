@@ -21,16 +21,21 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @everyfooting @| @thispage @|
 
 @format
-NYACC User's Guide
+NYACC User Guide
 Matt Wette
 April 2026
 @end format
 
 @c @clear skip
 
+@dircategory Software development
+@direntry 
+* NYACC User Guide: (nyacc).    The NYACC FFI Helper guide.
+@end direntry
+
 @ifnottex
-@node Top, Demonstration, (dir), (dir)
-@top NYACC User's Guide
+@node Top
+@top NYACC User Guide
 @end ifnottex
 
 @menu
@@ -1091,7 +1096,8 @@ Indicate if the machine has been compacted.
 @subheading Creating a Parser
 
 To create a parser import the module @code{(nyacc parser)} and
-use the procedure @{make-lalr-parser}, which has the following specification
+use the procedure @code{make-lalr-parser}, which has the following 
+specification
 
 @deffn {Procedure} make-lalr-parser mach [options] => parser
 Generate a procedure for parsing a language, where @var{mach} is

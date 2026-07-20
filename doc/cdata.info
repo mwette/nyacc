@@ -1,4 +1,4 @@
-This is cdata.info, produced by makeinfo version 7.1.1 from cdata.texi.
+This is cdata.info, produced by makeinfo version 7.2 from cdata.texi.
 
 Copyright (C) 2024-2025 - Matthew Wette
 
@@ -34,11 +34,11 @@ File: cdata.info,  Node: Introduction,  Up: Top
 Introduction
 ============
 
-The _cdata_ module (‘(nyacc foreign cdata)’ and its partner _arch-info_
-(‘(nyacc foreign arch-info)’ provide a way to work with data originating
-from C libraries.  We hope the module is reasonably easy to understand
-and use.  Size and alignment is tracked for all types.  Types are
-classified into the following kinds: base, struct, union, array,
+The _cdata_ module (‘(nyacc foreign cdata)’ along with its partner
+_arch-info_ ‘(nyacc foreign arch-info)’) provide a way to work with data
+originating from C libraries.  We hope the module is reasonably easy to
+understand and use.  Size and alignment is tracked for all types.  Types
+are classified into the following kinds: base, struct, union, array,
 pointer, enum and function.  The procedures ‘cbase’, ‘cstruct’,
 ‘cunion’, ‘cpointer’, ‘carray’, ‘cenum’ and ‘cfunction’ generate _ctype_
 objects, and the procedure ‘make-cdata’ will generate data objects based
@@ -612,11 +612,10 @@ References
   2. Scheme Bytestructures:
      <https://github.com/TaylanUB/scheme-bytestructures>
 
-
 
 Tag Table:
-Node: Top599
-Node: Introduction833
+Node: Top597
+Node: Introduction831
 
 End Tag Table
 
