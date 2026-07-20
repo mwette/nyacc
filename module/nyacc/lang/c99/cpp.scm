@@ -739,5 +739,4 @@
       (report-error fmt args)
       (throw 'c99-error "CPP error"))))
 
-
 ;; --- last line ---
