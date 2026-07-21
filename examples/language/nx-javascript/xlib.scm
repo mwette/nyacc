@@ -30,12 +30,12 @@
 
 (define (mkref name) `(@@ (language nx-javascript jslib) ,name))
 
-;; TODO: add console object
 (define JSdict
   `(
-    (js:+ ,(mkref 'js:+))
-    (js-ooa-get ,(mkref 'js-ooa-get))
-    (js-ooa-put ,(mkref 'js-ooa-put))
+    (js:+ . ,(mkref 'js:+))
+    (js-ooa-get . ,(mkref 'js-ooa-get))
+    (js-ooa-put . ,(mkref 'js-ooa-put))
+    ("js_format" . ,(mkref 'js_format))
     ))
 
 ;; this should throw an Error object

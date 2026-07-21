@@ -1,6 +1,6 @@
 ;; compile javascript sxml from parser to tree-il
 
-;; Copyright (C) 2015-2018,2024 Matthew Wette
+;; Copyright (C) 2015-2018,2024,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -82,8 +82,7 @@
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module ((srfi srfi-1) #:select (fold append-reverse))
   #:use-module (language tree-il)
-  #:use-module (ice-9 match)
-  )
+  #:use-module (ice-9 match))
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
@@ -177,8 +176,11 @@
 (define push-scope nx-push-scope)
 (define pop-scope nx-pop-scope)
 (define top-level? nx-top-level?)
-(define add-toplevel nx-add-toplevel)
-
+(define add-toplevel nx-add-var/global)
+(define (lookup name dict) (nx-lookup dict name))
+(define (add-lexical dict name) (nx-add-var/scope name dict))
+(define (add-lexicals dict . vars) (fold nx-add-var/scope dict vars))
+(define (add-symbol name dict) (nx-add-var name dict))
 
 ;; === codegen procedures =============
 
@@ -966,7 +968,7 @@
                        (`((seq . ,def) (let . ,B-clz))
                         (block (cons `(let . ,B-clz) def)))
                        (`((let . ,A-clz)) `(let . ,A-clz))))
-               (vsym (nx-lexical-ref "swx~val" kdict))
+               (vsym (nx-add-var/scope "swx~val" kdict))
                (body `(let (swx~val) (,vsym) (,expr) ,body))
                (body (with-escape (lookup "break" kdict) body)))
           (values (cons body seed) (pop-scope kdict))))
@@ -1027,7 +1029,7 @@
        ((TryStatement)
         (let* ((rseed (rtail kseed))
                (try-stmts (car rseed))
-               (ctag (nx-lexical-ref "catch" kdict))
+               (ctag (nx-add-var/scope "catch" kdict))
                (catch (match (cdr rseed)
                         ((`(catch ,hdlr) . rest) hdlr)
                         (otherwise (make-handler '() '(void)))))
@@ -1046,7 +1048,7 @@
        ((Catch)
         (let* ((arg-name (cadr (cadr tree)))     ; arg name as string
                (a-sym (string->symbol arg-name)) ; as symbol
-               (a-gsym (nx-lexical-ref arg-name kdict)) ; its gensym
+               (a-gsym (nx-add-var/scope arg-name kdict)) ; its gensym
                (jcatch `(lambda ()
                           (lambda-case (((k ,a-sym) #f #f #f ()
                                          (,(jsym) ,a-gsym)) ,(car kseed))))))
@@ -1127,8 +1129,9 @@
 
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
-  (let ((cenv (if (module? env)
-                  (cons* '(@top . #t) `(@env. ,env) JSdict))))
+  (let ((cenv (cons '(@top . #t)
+                    (if (module? env) (cons* `(@env. ,env) JSdict) '()))))
+    (pperr (nx-lookup cenv "js_format"))
     (if exp 
         (call-with-values
             (lambda () (xlang-sxml->xtil exp cenv opts))
