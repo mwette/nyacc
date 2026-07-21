@@ -1835,9 +1835,7 @@ fi
   test -n "$GUILE" && break
 done
 
-  if test -z "$GUILE"; then
-    as_fn_error $? "guile required but not found" "$LINENO" 5
-  fi
+  if test -z "$GUILE"; then as_fn_error $? "guile required but not found" "$LINENO" 5; fi
 fi
 GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
 guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
@@ -1875,8 +1873,8 @@ fi
 
 
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if (foreign cdata) is available" >&5
-printf %s "checking if (foreign cdata) is available... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if guile-cdata is installed" >&5
+printf %s "checking if guile-cdata is installed... " >&6; }
 if $GUILE -c "(use-modules (foreign cdata)) (exit ((lambda () 0)))" \
 	>/dev/null 2>&1; then
   res=yes;
@@ -1889,6 +1887,10 @@ else
 fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $res" >&5
 printf "%s\n" "$res" >&6; }
+if test "$res" == "no"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Without guile-cdata, some features will not be available." >&5
+printf "%s\n" "$as_me: WARNING: Without guile-cdata, some features will not be available." >&2;};
+fi
 
 
 

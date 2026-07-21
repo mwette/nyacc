@@ -25,9 +25,7 @@ if test "_$with_guile" != "_unspecified"; then
   GUILE=$with_guile
 else
   AC_PATH_PROGS(GUILE,[guile guile-3.0 guile-2.2 guile-2.0])
-  if test -z "$GUILE"; then
-    AC_MSG_ERROR([guile required but not found])
-  fi
+  if test -z "$GUILE"; then AC_MSG_ERROR([guile required but not found]); fi
 fi
 GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
 guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
@@ -65,7 +63,7 @@ AC_SUBST([GUILE_DATA])
 AC_SUBST([GUILE_LOAD_PATH])
 AC_SUBST([GUILE_LOAD_COMPILED_PATH])
 
-AC_MSG_CHECKING([if (foreign cdata) is available])
+AC_MSG_CHECKING([if guile-cdata is installed])
 if $GUILE -c "(use-modules (foreign cdata)) (exit ((lambda () 0)))" \
 	>/dev/null 2>&1; then
   res=yes;
@@ -77,6 +75,9 @@ else
   TESTS_W_CD=''
 fi
 AC_MSG_RESULT($res)
+if test "$res" == "no"; then
+  AC_MSG_WARN([Without guile-cdata, some features will not be available.]);
+fi
 AC_SUBST([NYACC_C99_CD_BINS])
 AC_SUBST([TESTS_W_CD])
 
