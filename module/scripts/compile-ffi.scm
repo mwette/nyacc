@@ -28,7 +28,7 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right lset-union every))
   #:use-module (srfi srfi-37)
-  #:use-module (nyacc foreign arch-info)
+  #:use-module (foreign arch-info)
   #:use-module ((nyacc lang c99 ffi-help)
                 #:select (compile-ffi-file *fh-backend*))
   #:version (3 04 6))
