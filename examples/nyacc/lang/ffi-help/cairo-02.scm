@@ -1,6 +1,6 @@
 ;; cairo-02.scm - try key
 
-;; Copyright (C) 2017,2024 Matthew Wette
+;; Copyright (C) 2017,2024,2026 Matthew Wette
 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -9,7 +9,7 @@
 
 (use-modules (ffi cairo))               ; auto-generated from cairo.h etc
 (use-modules (system foreign))          ; pointer<->scm
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
 (define cr (cairo_create srf))

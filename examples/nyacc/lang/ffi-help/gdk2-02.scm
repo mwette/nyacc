@@ -1,6 +1,6 @@
 ;; gdk2-ex02.scm
 
-;; Copyright (C) 2018,2024 Matthew Wette
+;; Copyright (C) 2018,2024,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -16,7 +16,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 (use-modules (ffi gdk2))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 

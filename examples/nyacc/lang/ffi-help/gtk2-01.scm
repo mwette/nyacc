@@ -1,7 +1,7 @@
 ;; gtk2-01.scm
 ;;   https://developer.gnome.org/gtk-tutorial/stable/c39.html#SEC-HELLOWORLD
 
-;; Copyright (C) 2018,2024 Matthew Wette
+;; Copyright (C) 2018,2024,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or modify it under
 ;; the terms of the GNU Lesser General Public License as published by the Free
@@ -16,7 +16,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 (use-modules (ffi glib))
 (use-modules (ffi gobject))
 (use-modules (ffi gtk2))

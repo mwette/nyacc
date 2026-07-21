@@ -1,6 +1,6 @@
 ;; nyacc/lang/ffi-help/dbus-03.scm - peer-to-peer over the session bus
 
-;; Copyright (C) 2018,2020,2024 Matthew Wette
+;; Copyright (C) 2018,2020,2024,2026 Matthew Wette
 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -29,7 +29,7 @@
 (add-to-load-path (getcwd))
 
 (use-modules (system foreign))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 (use-modules (ffi dbus))
 (use-modules (system dbus))
 

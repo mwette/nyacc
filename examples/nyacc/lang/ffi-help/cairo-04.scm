@@ -1,7 +1,7 @@
 ;; cairo-04.scm - text demo from cairographics.org:
 ;;   https://www.cairographics.org/samples/text_align_center/
 
-;; Copyright (C) 2017,2024 Matthew Wette
+;; Copyright (C) 2017,2024,2026 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -9,7 +9,7 @@
 ;; without any warranty.
 
 (use-modules (ffi cairo))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 256 256))
 (define cr (cairo_create srf))

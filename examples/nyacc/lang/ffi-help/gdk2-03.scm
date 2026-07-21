@@ -2,7 +2,7 @@
 
 ;; https://www.manpagez.com/html/gdk2/gdk2-2.24.28/
 
-;; Copyright (C) 2022 Matthew R. Wette
+;; Copyright (C) 2022,2026 Matthew Wette
 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -11,7 +11,7 @@
 
 (use-modules (ffi gdk2))
 (use-modules (ffi cairo))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 (use-modules (system foreign))
 (define GDK gdk-symval)
 

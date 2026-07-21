@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/ffi-help/dbus-02.scm - mainloop example
 
-;; Copyright (C) 2018,2024 Matthew Wette
+;; Copyright (C) 2018,2024,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -27,7 +27,7 @@
 
 (use-modules (ice-9 pretty-print))
 (use-modules (system foreign))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 (use-modules (ffi dbus))
 (use-modules (system dbus))
 

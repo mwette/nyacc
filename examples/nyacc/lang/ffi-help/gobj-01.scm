@@ -1,6 +1,6 @@
 ;; gobj-01.scm
 
-;; Copyright (C) 2025 Matthew Wette
+;; Copyright (C) 2025,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or modify it under
 ;; the terms of the GNU Lesser General Public License as published by the Free
@@ -20,7 +20,7 @@
 
 (use-modules (srfi srfi-9))
 (use-modules (rnrs bytevectors))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (ffi gobject))
 

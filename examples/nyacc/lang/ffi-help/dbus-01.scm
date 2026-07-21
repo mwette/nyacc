@@ -1,7 +1,7 @@
 ;; dbus-01.scm - dbus
 ;; see http://www.matthew.ath.cx/misc/dbus
 
-;; Copyright (C) 2018,2024 Matthew Wette
+;; Copyright (C) 2018,2024,2026 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,7 @@
 (use-modules (ffi dbus))
 (use-modules (system dbus))
 (use-modules (system foreign))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (use-modules (ice-9 pretty-print))

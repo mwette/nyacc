@@ -1,6 +1,6 @@
 ;; gdk-ex1.scm
 
-;; Copyright (C) 2018,2024 Matthew Wette
+;; Copyright (C) 2018,2024,2026 Matthew Wette
 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -8,7 +8,7 @@
 ;; without any warranty.
 
 (use-modules (ffi gdk2))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign cdata))
 
 ;; Initialize.
 (gdk_init NULL NULL)
