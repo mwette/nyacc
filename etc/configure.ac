@@ -70,12 +70,15 @@ if $GUILE -c "(use-modules (foreign cdata)) (exit ((lambda () 0)))" \
 	>/dev/null 2>&1; then
   res=yes;
   NYACC_C99_CD_BINS='$(NYACC_CD_BINS)'
+  TESTS_W_CD='$(TESTS_W_CD)'
 else
   res=no;
   NYACC_C99_CD_BINS=''
+  TESTS_W_CD=''
 fi
 AC_MSG_RESULT($res)
 AC_SUBST([NYACC_CD_BINS])
+AC_SUBST([TESTS_W_CD])
 
 dnl needed by etc/guild:
 AC_SUBST([installed_guile],$GUILE)

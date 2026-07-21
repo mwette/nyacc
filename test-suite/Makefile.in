@@ -34,13 +34,15 @@ TESTS = \
 	nyacc/lang/c99/c99-04.test			\
 	nyacc/lang/c99/c99-05.test			\
 	nyacc/lang/c99/c99-06.test			\
+	@TESTS_W_CD@
+
+TESTS_W_CD = \
 	nyacc/lang/c99/c99-07.test			\
 	nyacc/lang/c99/c99-08.test			
 
-
 .PHONY: check
 check:
-	@(RES="ALL PASS"; export RES; \
+	@(RES="ALL PASS"; \
 	  for test in $(TESTS); do \
 	   (cd $(SCMDIR)/`dirname $${test}`; $(TESTENV) `basename $${test}`); \
 	   if test $$? -ne 0; then RES="SOMETHING FAILED"; fi; \

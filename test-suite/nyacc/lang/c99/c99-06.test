@@ -1,324 +1,93 @@
 ;; nyacc/lang/c99/c99-06.test           -*- scheme -*-
 ;;
-;; Copyright (C) 2017,2019-2021,2023,2024 Matthew Wette
-;;
+;; Copyright (C) 2022,2026 Matthew Wette
+;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-;; test C99 munge utilities
+;; misc bugs
 
 (define-module (c99-06)
-  #:use-module (ice-9 vlist)
-  #:use-module ((sxml xpath) #:select (sxpath))
-  #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 util)
-  #:use-module (nyacc lang c99 munge)
-  #:use-module (nyacc lang c99 pprint)
-  #:use-module (nyacc lang c99 cxeval)
   #:use-module (test-suite lib))
-
-(define cep current-error-port)
-(define (sferr fmt . args) (apply simple-format (cep) fmt args))
-(use-modules (ice-9 pretty-print))
-(define (pperr exp) (pretty-print exp (cep) #:per-line-prefix "  "))
-(define (ppe99 sx) (pretty-print-c99 sx (cep) #:per-line-prefix "  "))
-
-(define (fold p s l)
-  (let loop ((s s) (l l))
-    (if (null? l) s (loop (p (car l) s) (cdr l)))))
 
 (define incs '("exam.d"))
 
-(define* (parse-string str #:optional (tyns '()))
+(define (parse-string str)
   (with-input-from-string str
     (lambda ()
-      (parse-c99 tyns #:inc-dirs incs #:mode 'decl))))
+      (parse-c99 #:inc-dirs incs #:mode 'file))))
 
 (define (parse-file file)
   (with-input-from-file file
     (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'decl))))
-
-(define (c99pp sx)
-  (with-output-to-string
-    (lambda ()
-      (pretty-print-c99 sx))))
-
-(define (test-expand-typerefs-1 src-code indx exp-code)
-  (let* ((stree (parse-string src-code))
-         (sdecl (sx-ref* stree indx))
-         (udict (c99-trans-unit->udict stree))
-         (tdecl (expand-typerefs sdecl udict))
-         (xtree (parse-string exp-code))
-         (xdecl (sx-ref* xtree 1)))
-    (when #f
-      (sferr "\n  ~A\n=>\n" src-code)
-      (ppe99 tdecl)
-      (sferr "vs\n  ~A\n" exp-code))
-    (equal? tdecl xdecl)))
-
-(define (test-expand-typerefs-2 src-code keep exp-code)
-  (let* ((stree (parse-string src-code))
-         (sdict (c99-trans-unit->udict stree))
-         (sdecl (assoc-ref sdict "x"))
-         (tdecl (expand-typerefs sdecl sdict keep))
-         (xtree (parse-string exp-code '("foo_t")))
-         (xdict (c99-trans-unit->udict xtree))
-         (xdecl (assoc-ref xdict "x")))
-    (when #f
-      (sferr "\n  ~A\n  // keep ~S\n=>\n" src-code keep)
-      (ppe99 tdecl)
-      (sferr "vs\n  ~A\n" exp-code))
-    (equal? tdecl xdecl)))
-
+      (parse-c99 #:inc-dirs incs #:mode 'file))))
 
 (define ctr
   (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
 (register-reporter full-reporter)
 
-(with-test-prefix "nyacc/c99-06, munging"
+;; parser test
+(with-test-prefix "nyacc/c99-06, fixed bugs"
 
-  (pass-if "expand-typerefs set 1"
-    (fold
-     (lambda (spec status)
-       (and status (apply test-expand-typerefs-1 spec)))
-     #t
-     `(("enum foo x;" 1 "int x;")
-       ("typedef enum _foo foo_t; foo_t x;" 2 "int x;")
-       ("struct foo { int a; double b; }; struct foo x;"
-        2 "struct { int a; double b; } x;")
-       (,(string-append "typedef int *foo_t; typedef double hmm_t[3];"
-                        "int bar(foo_t (*baz)(hmm_t y));")
-        3 "int bar(int *(*baz)(double y[3]));\n")
-       )))
+  ;; parse with include file
+  (pass-if "unterminated #if (bug #63283)"
+    (not
+     (catch 'c99-error
+       (lambda ()
+         (with-error-to-port (%make-void-port "w")
+           (lambda ()
+             (with-input-from-file "exam.d/ex22.c"
+               (lambda () (parse-c99 #:inc-dirs incs #:mode 'code))))))
+       (lambda args #f))))
 
-  (pass-if "expand-typerefs, set 2"
-    (fold
-     (lambda (spec status)
-       (and status (apply test-expand-typerefs-2 spec)))
-     #t
-     '(("typedef int foo; foo x;" () "int x;")
-       ("typedef int *foo; foo x;" () "int *x;")
-       ("typedef int *foo; foo *x;" () "int **x;")
-       ("typedef int *foo; int x(foo*);" () "int x(int **);")
-       ("typedef int *foo[2]; foo x;" () "int *x[2];")
-       ("typedef int *foo[2]; foo *x;" () "int *(*x)[2];")
-       ("typedef int *foo[2]; int (*x)(foo*x);" () "int (*x)(int *(*x)[2]);")
-       ("typedef int *foo[2]; int (*x)(foo*);" () "int (*x)(int *(*)[2]);")
-       ("typedef const int foo_t; const foo_t x;" () "const int x;"))))
+  ;; typedef as ident
+  (pass-if "typedef as ident (bug #67201)"
+    (and
+     (let* ((code "typedef struct S S; struct S { S* S; } s;"))
+       (with-input-from-string code parse-c99))
+     #t))
 
-  (pass-if "expand-typerefs, set 3"
-    (fold
-     (lambda (spec status)
-       (and status (apply test-expand-typerefs-2 spec)))
-     #t
-     '(("typedef struct foo foo_t; foo_t *x;" ((pointer . "foo_t"))
-        "foo_t *x;")
-       ("typedef struct foo foo_t; foo_t *x;" ((struct-pointer . "foo"))
-        "struct foo *x;")
-       ("typedef struct foo foo_t; foo_t *x;" #f
-        "void *x;")
-       ("struct foo { int a; }; typedef struct foo foo_t; const foo_t x;" ()
-        "const struct { int a; } x;")
-       ("typedef union foo foo_t; foo_t *x;" ((pointer . "foo_t"))
-        "foo_t *x;")
-       ("typedef union foo foo_t; foo_t *x;" ((union-pointer . "foo"))
-        "union foo *x;")
-       ("typedef union foo foo_t; foo_t *x;" ()
-        "void *x;")
-       ("union foo { int a; }; typedef union foo foo_t; const foo_t x;" ()
-        "const union { int a; } x;")
-       ("struct foo { int a; }; struct foo x;" ((struct . "foo"))
-        "struct foo x;")
-       ("struct foo { int a; }; struct foo x;" ()
-        "struct { int a; } x;")
-       ("union foo { int a; }; union foo x;" ((union . "foo"))
-        "union foo x;")
-       ("union foo { int a; }; union foo x;" ()
-        "union { int a; } x;"))))
+  (pass-if "typedef as ident in function arg" 
+    (and
+     (let* ((code "typedef int foo; int f(foo foo);"))
+       (with-input-from-string code parse-c99))
+     #t))
+  (pass-if "typedef scope w/ enum" 
+    (and
+     (let* ((code "typedef enum foo { FOO } foo_t; foo_t x;"))
+       (with-input-from-string code parse-c99))
+     #t))
+  
+  ;; typedef as ident
+  (pass-if "typedef in function"
+    (and
+     (let* ((code (string-append "typedef unsigned bar;"
+                                 "float f2(int x) {"
+                                 " typedef float bar;"
+                                 " bar y = 1.0;"
+                                 " return x + y;"
+                                 " }")))
+       (with-input-from-string code parse-c99))
+     #t))
 
-  (pass-if "knarly expand-typeref case"
-    (test-expand-typerefs-1
-     "typedef int *bla_t[2]; bla_t foo(bla_t (*)(bla_t));"
-     2 "int *foo(int *(*)(int *[2])[2])[2];\n"))
+  (pass-if "typedef w/ cast"
+    (and
+     (let* ((code (string-append "typedef int foo_t;"
+                                 "foo_t foo(foo_t x) {"
+                                 "  foo_t *y = (foo_t *)x;"
+                                 "  return *x;"
+                                 "}")))
+       (with-input-from-string code parse-c99))
+     #t))
 
-  (pass-if "expand-typerefs w/ missing typedef"
-    (let* ((code "typedef int foo_t; foo_t x;")
-           (tree (parse-string code))
-           (decl (sx-ref tree 2)))
-      (catch 'c99-error
-        (lambda () (expand-typerefs decl '() '()) #f)
-        (lambda (key fmt . rest)
-          (string=? (apply simple-format #f fmt rest)
-                    "typedef not found for: \"foo_t\"")))))
-
-  (pass-if "misc expand-typeref cases"
-    (let* ((code
-            (string-append
-             "typedef struct { int l; int m; } foo_t;"
-             "foo_t p;"
-             "foo_t* q = (foo_t*)0;"
-             "int r(foo_t);"
-             "foo_t s = (foo_t)0;"
-             "int t(foo_t*);"
-             "\n"))
-           (tree (parse-string code))
-           (udict (c99-trans-unit->udict tree))
-           (udecl (assoc-ref udict "foo_t"))
-           (udecl1 (assoc-ref udict "p"))
-           (tdecl1 (expand-typerefs udecl1 udict))
-           (udecl2 (sx-ref* (assoc-ref udict "q") 2 2 1 1))
-           (tdecl2 (expand-typerefs udecl2 udict))
-           (udecl3 (sx-ref* (assoc-ref udict "r") 2 1 2 1))
-           (tdecl3 (expand-typerefs udecl3 udict))
-           (udecl4 (sx-ref* (assoc-ref udict "s") 2 2 1 1))
-           (tdecl4 (expand-typerefs udecl4 udict))
-           (udecl5 (assoc-ref udict "t"))
-           (tdecl5 (expand-typerefs udecl5 udict))
-           (xdecl1 '(udecl
-                     (decl-spec-list
-                      (type-spec
-                       (struct-def
-                        (field-list
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "l"))))
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "m"))))))))
-                     (init-declr (ident "p"))))
-           (xdecl2 '(type-name
-                     (decl-spec-list
-                      (type-spec
-                       (struct-def
-                        (field-list
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "l"))))
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "m"))))))))
-                     (abs-ptr-declr (pointer))))
-           (xdecl3 '(param-decl
-                     (decl-spec-list
-                      (type-spec
-                       (struct-def
-                        (field-list
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "l"))))
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "m"))))))))))
-           (xdecl4 '(type-name
-                     (decl-spec-list
-                      (type-spec
-                       (struct-def
-                        (field-list
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "l"))))
-                         (comp-decl
-                          (decl-spec-list (type-spec (fixed-type "int")))
-                          (comp-declr-list (comp-declr (ident "m"))))))))))
-           (xdecl5 '(udecl
-                     (decl-spec-list (type-spec (fixed-type "int")))
-                     (init-declr
-                      (ftn-declr
-                       (ident "t")
-                       (param-list
-                        (param-decl
-                         (decl-spec-list
-                          (type-spec
-                           (struct-def
-                            (field-list
-                             (comp-decl
-                              (decl-spec-list (type-spec (fixed-type "int")))
-                              (comp-declr-list (comp-declr (ident "l"))))
-                             (comp-decl
-                              (decl-spec-list (type-spec (fixed-type "int")))
-                              (comp-declr-list (comp-declr (ident "m"))))))))
-                         (param-declr (abs-ptr-declr (pointer))))))))))
-      (and
-       (equal? tdecl1 xdecl1)
-       (equal? tdecl2 xdecl2)
-       (equal? tdecl3 xdecl3)
-       (equal? tdecl4 xdecl4)
-        (equal? tdecl5 xdecl5))))
-
-  (pass-if "udecl->mdecl/concrete"
-    (fold
-     (lambda (pair status)
-       (let* ((tree (parse-string (car pair)))
-              (udict (c99-trans-unit->udict tree))
-              (udecl (assoc-ref udict "foo"))
-              (mdecl (udecl->mdecl udecl)))
-         (and status (equal? mdecl (cdr pair)))))
-     #t
-     '(("int foo;" . ("foo" (fixed-type "int")))
-       ("int **foo;" . ("foo" (pointer-to) (pointer-to) (fixed-type "int")))
-       ("int foo();" . ("foo" (function-returning (param-list))
-                        (fixed-type "int"))))))
-
-  (pass-if "udecl->mdecl/abstract"
-    (fold
-     (lambda (spec status)
-       (let* ((namer (lambda () "@"))
-              (tree (parse-string (car spec)))
-              (udict (c99-trans-unit->udict tree))
-              (udecl (assoc-ref udict "foo"))
-              (udecl (sx-ref* udecl 2 1 2 1))
-              (mdecl (udecl->mdecl udecl #:namer namer)))
-         (and status (equal? mdecl (cdr spec)))))
-     #t
-     `(("int foo(int);" . ("@" (fixed-type "int")))
-       ("int foo(int*);" . ("@" (pointer-to) (fixed-type "int")))
-       ("int foo(int**);" . ("@" (pointer-to) (pointer-to) (fixed-type "int")))
-       ("int foo(int[]);" . ("@" (array-of) (fixed-type "int")))
-       ("int foo(int*[]);" . ("@" (array-of) (pointer-to) (fixed-type "int")))
-       ("int foo(int(*)()[]);" . ("@" (pointer-to)  ;; ???
-                                  (function-returning (param-list))
-                                  (array-of) (fixed-type "int"))))))
-
-  (pass-if "evaluate sizeof(type)"
-    (fold
-     (lambda (case status)
-       (let* ((code (string-append (car case) " int x = sizeof(foo_t);"))
-              (tree (parse-string code))
-              (udict (c99-trans-unit->udict tree))
-              (udecl (assoc-ref udict "x"))
-              (sotex (sx-ref* udecl 2 2 1)) ; (sizeof-type (type-name ...))
-              (tname (sx-ref sotex 1)))
-         (call-with-values
-             (lambda () (size-and-align-of-type tname udict))
-           (lambda (size align)
-             (and status (= size (cadr case)) (= align (cddr case)))))))
-     #t
-     '(("typedef int foo_t;" . (4 . 4))
-       ("typedef long foo_t;" . (8 . 8))
-       ("typedef int foo_t[5];" . (20 . 4))
-       ("typedef struct { int x; } foo_t;" . (4 . 4))
-       ("typedef struct { int x,y; } foo_t;" . (8 . 4))
-       ("typedef struct { int x; double y; } foo_t;" . (16 . 8))
-       ("typedef struct { double x; int y; } foo_t;" . (16 . 8))
-       ("typedef struct { int x,y; double z; } foo_t;" . (16 . 8))
-       ("typedef struct { int x; double z; void *p; } foo_t;" . (24 . 8))
-       ("typedef union { double x; int y; } foo_t;" . (8 . 8))
-       ("typedef union { double x; int y[3]; } foo_t;" . (16 . 8))
-       ("typedef enum { FOO=1, BAR=2 } foo_t;" . (4 . 4)))))
-
-  (pass-if "canize-enum-def-list"
-    (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
-           (tree (parse-string code))
-           (udict (c99-trans-unit->udict tree))
-           (ddict (c99-trans-unit->ddict tree))
-           (ddict (udict-enums->ddict udict ddict)))
-      (and (string= "1" (or (and=> (vhash-assoc "FOO" ddict) cdr) "X"))
-           (string= "2" (or (and=> (vhash-assoc "BAR" ddict) cdr) "X")))))
   )
+
+;;(with-input-from-file "exam.d/ex22.c"
+;;  (lambda () (parse-c99 #:inc-dirs incs #:mode 'code)))
 
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

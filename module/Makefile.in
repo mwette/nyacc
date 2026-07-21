@@ -62,11 +62,11 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/pprint.go		\
 	nyacc/lang/c99/util.go			\
 	nyacc/lang/c99/munge-base.go		\
-	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
 	@NYACC_C99_CD_BINS@
 
 NYACC_C99_CD_BINS =				\
+	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxeval.go		\
 	nyacc/lang/c99/ffi-help.go		\
 	scripts/compile-ffi.go
@@ -90,8 +90,14 @@ BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 SOURCES = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 
 C99MACH_SRCS = \
-	cpp-act.scm cpp-tab.scm c99-act.scm c99-tab.scm \
-	c99x-act.scm c99x-tab.scm c99cx-act.scm c99cx-tab.scm
+	nyacc/lang/c99/mach.d/cpp-act.scm	\
+	nyacc/lang/c99/mach.d/cpp-tab.scm	\
+	nyacc/lang/c99/mach.d/c99-act.scm	\
+	nyacc/lang/c99/mach.d/c99-tab.scm	\
+	nyacc/lang/c99/mach.d/c99x-act.scm	\
+	nyacc/lang/c99/mach.d/c99x-tab.scm	\
+	nyacc/lang/c99/mach.d/c99cx-act.scm	\
+	nyacc/lang/c99/mach.d/c99cx-tab.scm
 
 all: nyacc-bins
 
@@ -124,11 +130,10 @@ install-srcs: install-c99mach-srcs
 	@cp $(TOPDIR)/README $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
 
 .PHONY: install-c99mach-srcs
-install-c99mach-srcs:
+install-c99mach-srcs: $(C99MACH_SRCS)
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/nyacc/lang/c99/mach.d
 	@for file in $(C99MACH_SRCS); do \
-	  cp $(GODIR)/nyacc/lang/c99/mach.d/$$file \
-	  $(DESTDIR)$(SITE_SCM_DIR)/nyacc/lang/c99/mach.d/$$file; \
+	  cp $(GODIR)/$${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 
 .PHONY: install-bins
