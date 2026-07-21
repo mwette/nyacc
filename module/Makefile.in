@@ -55,8 +55,6 @@ NYACC_BASE_SRCS =				\
 	nyacc/lang/util.scm
 
 NYACC_C99_BINS =				\
-	nyacc/foreign/arch-info.go		\
-	nyacc/foreign/cdata.go			\
 	nyacc/lang/c99/cppmach.go		\
 	nyacc/lang/c99/cpp.go			\
 	nyacc/lang/c99/mach.go			\
@@ -66,13 +64,14 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/munge-base.go		\
 	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
+	@NYACC_C99_CD_BINS@
+
+NYACC_C99_CD_BINS =				\
 	nyacc/lang/c99/cxeval.go		\
 	nyacc/lang/c99/ffi-help.go		\
 	scripts/compile-ffi.go
 
 NYACC_C99_SRCS =				\
-	nyacc/foreign/arch-info.scm		\
-	nyacc/foreign/cdata.scm			\
 	nyacc/lang/c99/cppmach.scm		\
 	nyacc/lang/c99/cpp.scm			\
 	nyacc/lang/c99/mach.scm			\

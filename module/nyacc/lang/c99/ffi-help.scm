@@ -61,7 +61,7 @@
   #:use-module ((nyacc lang util) #:select (cintstr->scm))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
-  #:use-module (nyacc foreign arch-info)
+  #:use-module (foreign arch-info)
   #:re-export (*nyacc-version*)
   #:version (3 04 6))
 
@@ -371,7 +371,7 @@
     (else (fherr "can't make unsigned-long-long FFI type\n"))))
 
 (define ffi-typemap
-  ;; see system/foreign.scm and nyacc/foreign/arch-info.scm
+  ;; see system/foreign.scm and foreign/arch-info.scm
   `(("void" . ffi:void)
     ;;
     ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
@@ -426,9 +426,7 @@
 
 (define (cdata-header)
   `(begin
-     ,(if (assq-ref (*options*) 'ext-cdata)
-         '(use-modules (foreign cdata))
-         '(use-modules (nyacc foreign cdata)))
+     (use-modules (foreign cdata))
      (define arg->number cdata-arg->number)
      (define arg->pointer cdata-arg->pointer)
      (define (extern-ref obj) (cdata-sel obj '*))
@@ -1960,8 +1958,8 @@
                     (use-modules ((nyacc lang c99 ffi-help)
                                   #:select (define-ffi-module)))
                     (define ffi-arch
-                      (let ((aname (@ (nyacc foreign arch-info) arch-name)))
-                        (aname ((@ (nyacc foreign arch-info) *arch*))))))
+                      (let ((aname (@ (foreign arch-info) arch-name)))
+                        (aname ((@ (foreign arch-info) *arch*))))))
                  env)
                 (let loop ((exp (read iport)))
                   (cond

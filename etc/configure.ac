@@ -65,6 +65,18 @@ AC_SUBST([GUILE_DATA])
 AC_SUBST([GUILE_LOAD_PATH])
 AC_SUBST([GUILE_LOAD_COMPILED_PATH])
 
+AC_MSG_CHECKING([if (foreign cdata) is available])
+if $GUILE -c "(use-modules (foreign cdata)) (exit ((lambda () 0)))" \
+	>/dev/null 2>&1; then
+  res=yes;
+  NYACC_C99_CD_BINS='$(NYACC_CD_BINS)'
+else
+  res=no;
+  NYACC_C99_CD_BINS=''
+fi
+AC_MSG_RESULT($res)
+AC_SUBST([NYACC_CD_BINS])
+
 dnl needed by etc/guild:
 AC_SUBST([installed_guile],$GUILE)
 

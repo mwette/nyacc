@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2026-XX-XX  V3.05.0
+2026-XX-XX  V4.0.0
         * c99/parser,ffi-help: converted cpp-define dict from alist to vhash,
 	  resulting in 75% reduction in compile-ffi time on gtk2.ffi and deps
 	* removed c99 "helper" concept which would was originally used for
@@ -28,6 +28,7 @@ without any warranty.
 	* c99: instead of return-defs, pass a parameter for defs
         * c99: move move-attributes from util.scm to parser.scm
 	* c99: reworked attribute handling
+        * remove nyacc foreign: use guile-cdata
 
 2026-03-29  V3.04.6
         * nyacc/util.scm(atomize-terminal): remove "$:" prefix, to 

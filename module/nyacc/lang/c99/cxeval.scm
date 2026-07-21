@@ -44,7 +44,7 @@
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang c99 munge-base)
-  #:use-module (nyacc foreign arch-info))
+  #:use-module (foreign arch-info))
 
 
 (use-modules (ice-9 pretty-print))
