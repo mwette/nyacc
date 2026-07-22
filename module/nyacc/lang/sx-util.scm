@@ -40,11 +40,6 @@
             sx-join sx-join*
             )
   #:use-module ((srfi srfi-1) #:select (find fold fold-right append-reverse)))
-(cond-expand
-  (mes)
-  (guile-2)
-  (guile (use-modules (srfi srfi-16)))
-  (else))
 
 ;; === sx ==============================
 ;; @section SXML Utility Procedures
