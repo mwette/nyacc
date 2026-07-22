@@ -98,6 +98,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -x, --external-cdata  for cdata backend, use external cdata package
 
 See the FFI-Helper User's Manual for help generating a .ffi file.
+To use the bytestructures backend, use `-b ffi-bkend/bytestructures'.
 Report bugs to https://github.com/mwette/nyacc/issues.\n"))
 
 (define options

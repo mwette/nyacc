@@ -64,10 +64,11 @@ foreign)}.
 Since version 2.00, the FFI Helper uses it's own backend for using
 bytevectors to handle C data.  In previous versions, the module
 @code{(bytestructures guile)} was used.   The bytestructures 
-implementation is still available by passing  @code{-b bytestructures} to
+implementation is still available by passing 
+@code{-b ffi-bkend/bytestructures} to
 @code{guild compile-ffi}, or by setting the environment variable
-@code{FFI_HELP_BACKEND=bytestructures}.  The bytestructures backend uses the
-@emph{scheme-bytestructures} package, available from
+@code{FFI_HELP_BACKEND=ffi-bkend/bytestructures}.  The bytestructures 
+backend uses the @emph{scheme-bytestructures} package, available from
 @uref{https://github.com/TaylanUB/scheme-bytestructures}.  Releases
 are available at
 @uref{https://github.com/TaylanUB/scheme-bytestructures/releases}.
