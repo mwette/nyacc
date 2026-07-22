@@ -51,10 +51,10 @@ Cairo library are provided in 100% Guile Scheme via ‘(system foreign)’.
    Since version 2.00, the FFI Helper uses it's own backend for using
 bytevectors to handle C data.  In previous versions, the module
 ‘(bytestructures guile)’ was used.  The bytestructures implementation is
-still available by passing ‘-b fh-bkend/bytestructures’ to ‘guild
+still available by passing ‘-b nyacc/ffi-bkend/bytestructures’ to ‘guild
 compile-ffi’, or by setting the environment variable
-‘FFI_HELP_BACKEND=fh-bkend/bytestructures’.  The bytestructures backend
-uses the _scheme-bytestructures_ package, available from
+‘FFI_HELP_BACKEND=nyacc/ffi-bkend/bytestructures’.  The bytestructures
+backend uses the _scheme-bytestructures_ package, available from
 <https://github.com/TaylanUB/scheme-bytestructures>.  Releases are
 available at
 <https://github.com/TaylanUB/scheme-bytestructures/releases>.  In this

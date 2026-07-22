@@ -83,8 +83,8 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/cxmach.scm		\
 	nyacc/lang/c99/cxeval.scm		\
 	nyacc/lang/c99/ffi-help.scm		\
-	ffi-bkend/bstructs.scm			\
-	ffi-bkend/bytestructures.scm		\
+	nyacc/ffi-bkend/bstructs.scm		\
+	nyacc/ffi-bkend/bytestructures.scm	\
 	scripts/compile-ffi.scm
 
 BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
