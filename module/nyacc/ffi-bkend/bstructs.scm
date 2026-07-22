@@ -27,7 +27,7 @@
 ;; thing to a bstruct.
 
 ;; To convert a struct
-;;   (use-modules (fhbe bstructs))
+;;   (use-modules (nyacc ffi-bkend bstructs))
 ;;   (ccode->bstructs-sexp "typedef struct { int x; int y;} foo_t;")
 ;; => 
 ;;   (begin
@@ -37,7 +37,7 @@
 
 ;;; Code:
 
-(define-module (ffi-bkend bstructs)
+(define-module (nyacc ffi-bkend bstructs)
   #:export (backend ccode->bstructs-sexp)
   #:use-module (bstructs)
   #:use-module (ice-9 match)
@@ -122,14 +122,13 @@
      (define-syntax-rule (arg->number arg)
        (cond ((number? arg) arg)
              ;;((bstruct? arg) (bstruct-ref (obj-type arg) arg)) nope
-             (else (error "fhbe/bstruct: arg->number: bad arg:" arg))))
+             (else (error "ffi-bkend/bstruct: arg->number: bad arg:" arg))))
      (define-syntax arg->pointer
        (syntax-rules ()
          ((_ arg)
           (cond ((ffi:pointer? arg) arg)
                 ((string? arg) (ffi:string->pointer arg))
                 ((equal? 0 arg) ffi:%null-pointer)
-                ;;(else (error "fhbe/bstruct: arg->pointer: bad arg:" arg))))
                 (else arg)))
          ((_ arg hint) (arg->pointer arg))))
      (define-syntax-rule (extern-ref obj)
@@ -145,7 +144,7 @@
         ((number? arg) arg)
         ((symbol? arg) (,sym->val arg))
         ;;((bstruct? arg) (bstruct-ref arg)) nope
-        (else (error "fhbe/bstruct: type mismatch"))))))
+        (else (error "ffi-bkend/bstruct: type mismatch"))))))
 
 (define (ctype->bstruct ctype)
   (define (ifor gap)
@@ -290,7 +289,7 @@
 ;; Convert @var{ccode}, a string of C code, to a s-expression of
 ;; @emph{bstructs} code, for use in Guile.  For example,
 ;; @example
-;; (use-modules (fhbe bstructs))
+;; (use-modules (nyacc ffi-bkend bstructs))
 ;; (ccode->bstructs-sexp "typedef struct @{ int x; int y; @} foo_t;")
 ;; =>
 ;; (begin
@@ -305,7 +304,7 @@
   "- Procedure: ccode->bstructs-sexp code [attrs] => sexp
      Convert CCODE, a string of C code, to a s-expression of _bstructs_
      code, for use in Guile.  For example,
-          (use-modules (fhbe bstructs))
+          (use-modules (nyacc ffi-bkend bstructs))
           (ccode->bstructs-sexp \"typedef struct { int x; int y; } foo_t;\")
           =>
           (begin

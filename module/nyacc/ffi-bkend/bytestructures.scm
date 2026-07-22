@@ -17,7 +17,7 @@
 
 ;;; Notes:
 ;; To convert a struct
-;;   (use-modules (fhbe bytestructures))
+;;   (use-modules (nyacc ffi-bkend bytestructures))
 ;;   (ccode->bytestructures-sexp "typedef struct { int x; int y; } foo_t;")
 ;; => 
 ;;   (begin
@@ -27,7 +27,7 @@
 
 ;;; Code:
 
-(define-module (ffi-bkend bytestructures)
+(define-module (nyacc ffi-bkend bytestructures)
   #:export (backend ccode->bytestructures-sexp)
   #:use-module (ice-9 match)
   #:use-module ((system foreign) #:prefix ffi:)
@@ -165,7 +165,7 @@
 ;; Convert @var{ccode}, a string of C code, to a s-expression of
 ;; @emph{bstructs} code, for use in Guile.  For example,
 ;; @example
-;; (use-modules (fhbe bytestructures))
+;; (use-modules (nyacc ffi-bkend bytestructures))
 ;; (ccode->bytestructures-sexp "typedef struct @{ int x; int y; @} foo_t;")
 ;; => 
 ;; (begin
@@ -180,7 +180,7 @@
   "- Procedure: ccode->bytestructures-sexp code [attrs] => sexp
      Convert CCODE, a string of C code, to a s-expression of _bstructs_
      code, for use in Guile.  For example,
-          (use-modules (fhbe bytestructures))
+          (use-modules (nyacc ffi-bkend bytestructures))
           (ccode->bytestructures-sexp \"typedef struct { int x; int y; } foo_t;\")
           =>
           (begin
