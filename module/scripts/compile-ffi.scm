@@ -31,9 +31,9 @@
   #:use-module (foreign arch-info)
   #:use-module ((nyacc lang c99 ffi-help)
                 #:select (compile-ffi-file *fh-backend*))
-  #:version (3 04 6))
+  #:version (4 0 0))
 
-(define *ffi-help-version* "3.04.6")
+(define *ffi-help-version* "4.0.0")
 
 (define (compile-scm file)
   (compile-file file

@@ -1,5 +1,5 @@
 
-Copyright (C) 2015-2019,2024 Matthew Wette
+Copyright (C) 2015-2019,2024,2026 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -12,10 +12,6 @@ To play with example code and try modifications without installing:
 
   $ cd examples
   $ source env.sh
-  $ cd ../module/nyacc/lang/c99
-  $ mkdir mach.d
-  $ ./mach.gen
-  $ cd ../../../..
 
 === Hacking on the C99 parser ====
 
@@ -33,6 +29,7 @@ files in the subdirectory mach.d.  To do this execute the script
 @code{mach.gen} in @path{modules/lang/c99/}.
 
 === Nyacc eXtension languages (or not-exactly languages)
+THIS AREA IS CURRENTLY UNDER REWORK
 
   $ guile
   ...
@@ -41,8 +38,8 @@ files in the subdirectory mach.d.  To do this execute the script
   nx-javascript@(guile-user)> var a = 1;
   nx-javascript@(guile-user)> ,L nx-mlang
   Happy hacking with nx-mlang!  To switch back, type `,L nx-javascript'.
-  nx-octave@(guile-user)> b = 2;
-  nx-octave@(guile-user)> ,L nx-tsh
+  nx-mlang@(guile-user)> b = 2;
+  nx-mlang@(guile-user)> ,L nx-tsh
   Happy hacking with nx-tsh!  To switch back, type `,L nx-mlang'.
   nx-tsh@(guile-user)> set c ($a + $b)
   nx-tsh@(guile-user)> ,L scheme
@@ -58,6 +55,13 @@ files in the subdirectory mach.d.  To do this execute the script
   $ cd examples
   $ source env.sh 			# if you haven't done so previously
   $ guild compile-ffi ffi/cairo.ffi
-  $ cd nyacc/lang/c99/ffi-exam
-  $ guile demo-cairo.scm		# should generate demo-cairo.png
+  $ cd nyacc/lang/ffi-help
+  $ guile cairo-01.scm		# should generate cairo-01.png
 
+Or, assuming you have gtk2 and dep's installed:
+
+  $ cd examples
+  $ source env.sh 		# if you haven't done so previously
+  $ guild compile-ffi ffi/gtk2.ffi
+  $ cd nyacc/lang/ffi-help
+  $ guile gtk2-01.scm		# should display a `Hello' widgit.

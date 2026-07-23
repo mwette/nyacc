@@ -63,7 +63,7 @@
   #:use-module ((nyacc util) #:select (ugly-print))
   #:use-module (foreign arch-info)
   #:re-export (*nyacc-version*)
-  #:version (3 04 6))
+  #:version (4 0 0))
 
 (define default-renamer (lambda (name ctxt) name))
 

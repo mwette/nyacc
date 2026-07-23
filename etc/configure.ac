@@ -7,7 +7,7 @@ dnl are permitted in any medium without royalty provided the copyright
 dnl notice and this notice are preserved.  This file is offered as-is,
 dnl without any warranty.
 
-AC_INIT([nyacc], [3.04.6], [], [], [https://github.com/mwette/nyacc])
+AC_INIT([nyacc], [4.0.0], [], [], [https://github.com/mwette/nyacc])
 AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
@@ -76,7 +76,7 @@ else
 fi
 AC_MSG_RESULT($res)
 if test "$res" == "no"; then
-  AC_MSG_WARN([Without guile-cdata, some features will not be available.]);
+  AC_MSG_WARN([Without guile-cdata some features will not be available.]);
 fi
 AC_SUBST([NYACC_C99_CD_BINS])
 AC_SUBST([TESTS_W_CD])

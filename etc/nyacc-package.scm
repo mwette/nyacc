@@ -51,9 +51,7 @@
    (build-system gnu-build-system)
    (arguments '(#:strip-binaries? #f #:parallel-build? #f))
    (native-inputs (list guile-3.0))
-   ;; Use of ffi-helper may need gcc, but let the user do that?
-   ;; See nyacc/lang/c99/util.scm.
-   ;;(propagated-inputs (list gcc))
+   (inputs (list guile-cdata))
    (home-page "https://github.com/mwette/nyacc")
    (synopsis "Parser generator, C parser and FFI-helper for Guile")
    (license lgpl3+)
