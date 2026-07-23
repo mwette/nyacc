@@ -52,9 +52,9 @@
 ;; compose w/ scheme easily), we process type declarations with
 ;; cdata and then convert at the end.
 
-(use-modules ((nyacc foreign arch-info)))
-(use-modules ((nyacc foreign cdata)))
-(define %cpointer-type (@@ (nyacc foreign cdata) %cpointer-type))
+(use-modules ((foreign arch-info)))
+(use-modules ((foreign cdata)))
+(define %cpointer-type (@@ (foreign cdata) %cpointer-type))
 (define *mod* (make-parameter #f))
 
 (define (base name)
@@ -107,7 +107,7 @@
 (define (header)
   (*mod* (make-fresh-user-module))
   (let ((mod (*mod*)))
-    (eval '(use-modules (nyacc foreign cdata)) mod)
+    (eval '(use-modules (foreign cdata)) mod)
     (for-each
      (lambda (name)
        ;;(eval `(define ,name (name-ctype ',name (cbase ',name))) mod))
@@ -316,7 +316,7 @@
   (parameterize ((*fh-backend* backend)
                  (*mod* (make-fresh-user-module)))
     (let ((mod (*mod*)))
-      (eval '(use-modules (nyacc foreign cdata)) mod)
+      (eval '(use-modules (foreign cdata)) mod)
       (for-each
        (lambda (name)
          ;;(eval `(define ,name (name-ctype ',name (cbase ',name))) mod))
