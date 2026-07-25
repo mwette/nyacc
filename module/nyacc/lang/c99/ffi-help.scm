@@ -89,7 +89,7 @@
   (make-fh-backend name header trailer
                    mt-base mt-array mt-pointer mt-struct
                    mt-bitfield mt-union mt-function mt-enum
-                   make-type-defn make-object)
+                   make-typedef make-object)
   fhbe-impl?
   (name fhbe-name)
   (header fhbe-header)
@@ -102,7 +102,7 @@
   (mt-union fhbe-union)
   (mt-function fhbe-function)
   (mt-enum fhbe-enum)
-  (make-type-defn fhbe-typedef)
+  (make-typedef fhbe-typedef)
   (make-object fhbe-makeobj))
 ;; make-obj/ptr fhbe-make/ptr
 
@@ -472,11 +472,10 @@
      `(cfunction ,pr->pc ,pc->pr))
    (lambda* (alist #:optional packed)   ; enum
      (if packed `(cenum ,alist #t) `(cenum ,alist)))
-   (lambda (name type)                  ; make-type-defn
+   (lambda (name type)                  ; make-typedef
      `(define ,name (name-ctype ',name ,type)))
    (lambda* (type #:optional value)     ; make-object
-     (if value `(make-cdata ,type ,value) `(make-cdata ,type)))
-   ))
+     (if value `(make-cdata ,type ,value) `(make-cdata ,type)))))
 
 (*fh-backend* cdata-backend)
 
@@ -676,8 +675,7 @@
                 (lambda () (function*-wraps return params))
               (lambda (pr pc)
                 (let ((pc '(lambda (p) 'unused))) ; only proc->ptr is used
-                  `(arg->pointer
-                    ,mname ,(be-pointer (be-function pr pc))))))))
+                  `(arg->pointer ,mname ,(be-pointer (be-function pr pc))))))))
          (`((pointer-to) . ,_)
           `(arg->pointer ,mname))))
       (`(function-returning . _)
@@ -1153,7 +1151,7 @@
                         (be-typedef type (mtail->be-type mtail))
                         `(export ,type))))
 
-             ((enum-def ,enum-def-list)
+             ((enum-def (@ . ,attr) ,enum-def-list)
               (let* ((defs (canize-enum-def-list enum-def-list udict (*ddict*)))
                      (enums (enum-def-list->dlist defs))
                      (dl-name (sfsym "~a-dlist" name))
@@ -1166,7 +1164,9 @@
                    `(define ,dl-name ',enums)
                    `(define ,al-name (map (lambda (l) (cons (car l) (cadr l)))
                                           ,dl-name))
-                   (be-typedef type (be-enum dl-name))
+                   (if (packed? attr)
+                       (be-typedef type (be-enum dl-name) #t)
+                       (be-typedef type (be-enum dl-name)))
                    `(define ,uw-name
                       (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                    `(define ,wr-name
@@ -1174,7 +1174,7 @@
                         (lambda (arg) (or (assq-ref ral arg) arg))))
                    `(export ,type ,al-name ,uw-name ,wr-name)))))
 
-             ((enum-def (ident ,enum-name) ,enum-def-list)
+             ((enum-def (@ . ,attr) (ident ,enum-name) ,enum-def-list)
               (let* ((enum-name (rename enum-name 'type))
                      (defs (canize-enum-def-list enum-def-list udict (*ddict*)))
                      (enums (enum-def-list->dlist defs))
@@ -1188,7 +1188,9 @@
                    `(define ,dl-name ',enums)
                    `(define ,al-name (map (lambda (l) (cons (car l) (cadr l)))
                                           ,dl-name))
-                   (be-typedef type (be-enum dl-name))
+                   (if (packed? attr)
+                       (be-typedef type (be-enum dl-name) #t)
+                       (be-typedef type (be-enum dl-name)))
                    `(define ,uw-name
                       (lambda (arg) (or (assq-ref ,al-name arg) arg)))
                    `(define ,wr-name
