@@ -847,8 +847,8 @@
             (lambda (,@names . ~rest)
               (let ((~proc (ffi:pointer->procedure
                             ,decl-ret ~fptr
-                            (cons* ,@decl-par (map car ~rest)))
-                           ,@urap-par))
+                            (cons* ,@decl-par (map car ~rest))))
+                    ,@urap-par)
                 ,(if exec-ret `((lambda (~ret) ,exec-ret) ,va-call) va-call))))
          ;; pointer->procedure
          `(lambda (~fptr)
