@@ -674,8 +674,11 @@
             (call-with-values
                 (lambda () (function*-wraps return params))
               (lambda (pr pc)
-                (let ((pc '(lambda (p) 'unused))) ; only proc->ptr is used
-                  `(arg->pointer ,mname ,(be-pointer (be-function pr pc))))))))
+                ;; only proc->ptr is used
+                (let ((pc '(lambda (p) 'unused)) (tn 'hint))
+                  `(let () ;; hack to make work for bstructs
+                     ,(be-typedef tn (be-pointer (be-function pr pc)))
+                     (arg->pointer ,mname ,tn)))))))
          (`((pointer-to) . ,_)
           `(arg->pointer ,mname))))
       (`(function-returning . _)
