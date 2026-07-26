@@ -100,6 +100,19 @@
     ((unsigned-__int128) #f)
     (else #f)))
 
+(define (for-mtype mtype)
+  (case mtype
+    ((s8) 'int8)
+    ((s16le s16be) 'int16)
+    ((s32le s32be) 'int32)
+    ((s64le s64be) 'int64)
+    ((u8) 'uint8)
+    ((u16le u16be) 'uint16)
+    ((u32le u32be) 'uint32)
+    ((u64le u64be) 'uint64)
+    ((f32le f32be) 'float)
+    ((f64le f64be) 'double)))
+
 (define qq 'quasiquote)
 (define uq 'unquote)
 
@@ -110,18 +123,16 @@
     (eval '(use-modules (foreign cdata)) mod)
     (for-each
      (lambda (name)
-       ;;(eval `(define ,name (name-ctype ',name (cbase ',name))) mod))
-       (eval `(define ,name (name-ctype ',(base name) (cbase ',name))) mod))
+       (module-define! mod name (name-ctype (base name) (cbase name))))
      (cdr base-type-symbol-list))
-    (eval '(define void (name-ctype 'void (cbase 'void))) mod)
-    (eval '(define void* (name-ctype 'void* (cpointer 'void))) mod))
+    (module-define! mod 'void (name-ctype 'void (cbase 'void)))
+    (module-define! mod 'void* (name-ctype 'void (cpointer (cbase 'void)))))
   `(begin
      (use-modules (bstructs))
      (define (obj-type obj)
        ((@@ (bstructs) bstruct-descriptor-name) (struct-vtable obj)))
      (define-syntax-rule (arg->number arg)
        (cond ((number? arg) arg)
-             ;;((bstruct? arg) (bstruct-ref (obj-type arg) arg)) nope
              (else (error "ffi-bkend/bstruct: arg->number: bad arg:" arg))))
      (define-syntax arg->pointer
        (syntax-rules ()
@@ -202,50 +213,43 @@
      (else
       (let ((info (ctype-info type)))
         (case (ctype-kind type)
-          ((base) (if (eq? info 'void) 'void (error "oops")))
+          ((base) (for-mtype (ctype-info type)))
           ((struct) `(struct ,@(cnvt-aggr type (cstruct-fields info))))
           ((union) `(union ,@(cnvt-aggr type (cunion-fields info))))
           ((pointer)
-           (let* ((ptype (%cpointer-type info)) (pname (ctype-name ptype)))
+           (let ((ptype (%cpointer-type info)))
              (cond
               ((promise? ptype) `(* void))
-              (pname `(* ,pname))
+              ((ctype-name ptype) => (lambda (n) `(* ,n)))
               (else `(* ,(cnvt ptype))))))
           ((array) `(vector ,(carray-length info) ,(cnvt (carray-type info))))
-          ((enum) (base 'int))
+          ((enum) `(base ,(for-mtype (cenum-mtype info))))
           ((function) (base 'void))
           (else (error "ctype->bstruct: needs work:" (ctype-kind type))))))))
-  
-    (cnvt ctype))
-(export ctype->bstruct)
 
-(define (as-ctype type)
-  (cond
-   ((ctype? type) type)
-   ((symbol? type) (module-ref (*mod*) type))
-   ;;((and (pair? type) (eq? 'delay (car type)))
-   (else
-    (sf "type: ~s\n" type)
-    (error "coding error"))))
+  (cnvt ctype))
 
 (define (deftype name type)
-  (let ((rtype (if (ctype? type) type (module-ref (*mod*) type)))
-        (cm #f))
-    (module-define! (*mod*) name (name-ctype name rtype))
+  (let ((cm #f))
     (dynamic-wind
       (lambda () (set! cm (set-current-module (*mod*))))
-      (lambda () `(define-bstruct ,name ,(ctype->bstruct rtype)))
+      (lambda ()
+        (define rtype (eval type (current-module)))
+        (module-define! (current-module) name (name-ctype name rtype))
+        (if (eq? (ctype-info rtype) 'void)
+            `(define-bstruct ,name int)
+            `(define-bstruct ,name ,(ctype->bstruct rtype))))
       (lambda () (set-current-module cm)))))
 
 (define (makeobj typename . args)
   ;;`(bstruct-alloc ,typename ,@args))
   `(identity ,@args))
 
-
 (define (fix-flds fields)
-  (map (lambda (f) (match f
-                     (`(,uq (,n (cbitfield ,t ,s))) `(,n ,(as-ctype t) ,s))
-                     (`(,qq (,n (,uq ,t))) `(,n ,(as-ctype t)))))
+  (map (lambda (f)
+         (match f
+           (`(,qq (,n (,uq (cbitfield ,t ,s)))) `(,qq (,n (,uq ,t) ,s)))
+           (`(,qq (,n (,uq ,t))) f)))
        fields))
 
 (define backend
@@ -254,35 +258,28 @@
    header
    trailer
    (lambda (name)                       ; base
-     ;;(cbase name))
-     name)
+     `(cbase ',name))
    (lambda (type dim)                   ; array
-     (carray (as-ctype type) dim))
+     `(carray ,type ,dim))
    (lambda (type)                       ; pointer
-     (cond
-      ((and (pair? type) (eq? 'delay (car type)))
-       (cpointer (cbase 'void)))
-      ((symbol? type) (cpointer (module-ref (*mod*) type)))
-      (else (error "be-pointer failed"))))
+     `(cpointer ,type))
    (lambda* (flds #:optional packed)    ; struct
-     (cstruct (fix-flds flds) packed))
+     (if packed
+         `(cstruct (list ,@(fix-flds flds)) #t)
+         `(cstruct (list ,@(fix-flds flds)))))
    (lambda (type size)                  ; bitfield
-     `(cbitfield ,(as-ctype type) ,size))
+     `(cbitfield ,type ,size))
    (lambda (flds)                       ; union
-     (cunion (fix-flds flds)))
+     `(cunion (list ,@flds)))
    (lambda (pr->pc pc->pr)              ; function
-     (cfunction pr->pc pc->pr))
+     `(cfunction ,pr->pc ,pc->pr))
    (lambda* (alist #:optional packed)   ; enum
-     (let ((etype (cenum alist packed)))
-       (if packed 
-           (case (cenum-mtype (ctype-info etype))
-             ((s8) (cbase 'int8_t)) ((u8) (cbase 'uint8_t))
-             ((s16) (cbase 'int16_t)) ((u16) (cbase 'uint16_t))
-             ((s32) (cbase 'int32_t)) ((u32) (cbase 'uint32_t))
-             ((s64) (cbase 'int64_t)) ((u64) (cbase 'uint64_t)))
-           (cbase 'int))))
+     (if packed
+         (fherr "ffi/bstructs: WARNING: packed enums not supported")
+         `(cbase 'int)))
    deftype
    makeobj))
+
 
 
 ;; @deffn {Procedure} ccode->bstructs-sexp code [attrs] => sexp
@@ -319,11 +316,10 @@
       (eval '(use-modules (foreign cdata)) mod)
       (for-each
        (lambda (name)
-         ;;(eval `(define ,name (name-ctype ',name (cbase ',name))) mod))
-         (eval `(define ,name (name-ctype ',(base name) (cbase ',name))) mod))
+         (module-define! mod name (name-ctype (base name) (cbase name))))
        (cdr base-type-symbol-list))
-      (eval '(define void (name-ctype 'void (cbase 'void))) mod)
-      (eval '(define void* (name-ctype 'void* (cpointer 'void))) mod))
+      (module-define! mod 'void (name-ctype 'void (cbase 'void)))
+      (module-define! mod 'void* (name-ctype 'void (cpointer (cbase 'void)))))
     (ccode->sexp ccode attrs)))
 
 ;; --- last line ---
