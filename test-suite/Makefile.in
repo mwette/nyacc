@@ -8,7 +8,7 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-GUILE = @GUILE@
+GUILE = @GUILE@ --no-auto-compile
 GUILD = @abs_top_builddir@/etc/guild
 
 SITE_SCM_DIR = @GUILE_GLOBAL_SITE@
@@ -18,7 +18,7 @@ SHELL = @SHELL@
 SCMDIR = @abs_top_srcdir@/test-suite
 GODIR = @abs_top_builddir@/module
 
-TESTENV = GUILE_AUTO_COMPILE=0 $(GUILE) -L $(SCMDIR) -C $(GODIR) 2>/dev/null
+TESTENV = $(GUILE) -L $(SCMDIR) -C $(GODIR) 2>/dev/null
 
 TESTS = \
 	nyacc/lex-01.test				\

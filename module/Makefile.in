@@ -12,7 +12,7 @@
 #       parse tables need to be generated, by the gen-XXX-files routines
 #       in cppmach, mach and cxmach.
 
-GUILE = @GUILE@
+GUILE = @GUILE@ --no-auto-compile
 GUILD = @abs_top_builddir@/etc/guild
 
 GUILE_TARGET ?= @GUILE_TARGET@
@@ -172,9 +172,9 @@ clean:
 .PHONY: dist-files
 dist-files:
 	mkdir -p nyacc/lang/c99/mach.d
-	$(GUILE) -L . -c \
+	$(GUILE) -L $(SCMDIR) -c \
 	  '((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
-	$(GUILE) -L . -c \
+	$(GUILE) -L $(SCMDIR) -c \
 	  '((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
 
 nyacc/lang/c99/munge.go: nyacc/lang/c99/munge.scm \
