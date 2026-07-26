@@ -28,12 +28,12 @@
 
 ;; To convert a struct
 ;;   (use-modules (nyacc ffi-bkend bstructs))
-;;   (ccode->bstructs-sexp "typedef struct { int x; int y;} foo_t;")
+;;   (ccode->bstructs-sexp "typedef struct { int x; int y; } foo_t;")
 ;; => 
 ;;   (begin
-;;     (define-bstruct struct-foo (struct (x int) (y int)))
-;;     (define-bstruct struct-foo* (* struct-foo))
-;;     (export struct-foo struct-foo*))
+;;     (define-bstruct foo_t (struct (x int) (y int)))
+;;     (define-bstruct foo_t* (* foo_t))
+;;     (export foo_t foo_t*))
 
 ;;; Code:
 
@@ -290,9 +290,9 @@
 ;; (ccode->bstructs-sexp "typedef struct @{ int x; int y; @} foo_t;")
 ;; =>
 ;; (begin
-;;   (define-bstruct struct-foo (struct (x int) (y int)))
-;;   (define-bstruct struct-foo* (* struct-foo))
-;;   (export struct-foo struct-foo*))
+;;   (define-bstruct foo_t (struct (x int) (y int)))
+;;   (define-bstruct foo_t* (* foo_t))
+;;   (export foo_t foo_t*))
 ;; @end example
 ;; See nyacc documentation for @code{ccode->sexp} to obtain information
 ;; on the @var{attrs} argument.
@@ -305,9 +305,9 @@
           (ccode->bstructs-sexp \"typedef struct { int x; int y; } foo_t;\")
           =>
           (begin
-            (define-bstruct struct-foo (struct (x int) (y int)))
-            (define-bstruct struct-foo* (* struct-foo))
-            (export struct-foo struct-foo*))
+            (define-bstruct foo_t (struct (x int) (y int)))
+            (define-bstruct foo_t* (* foo_t))
+            (export foo_t foo_t*))
      See nyacc documentation for ‘ccode->sexp’ to obtain information on
      the ATTRS argument."
   (parameterize ((*fh-backend* backend)

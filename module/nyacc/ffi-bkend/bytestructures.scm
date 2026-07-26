@@ -21,9 +21,9 @@
 ;;   (ccode->bytestructures-sexp "typedef struct { int x; int y; } foo_t;")
 ;; => 
 ;;   (begin
-;;     (define struct-foo (bs:struct (list `(x ,int) `(y ,int))))
-;;     (define struct-foo* (bs:pointer struct-foo))
-;;     (export struct-foo struct-foo*))
+;;     (define foo_t (bs:struct (list `(x ,int) `(y ,int))))
+;;     (define foo_t* (bs:pointer foo_t))
+;;     (export foo_t foo_t*))
 
 ;;; Code:
 
@@ -171,9 +171,9 @@
 ;; (ccode->bytestructures-sexp "typedef struct @{ int x; int y; @} foo_t;")
 ;; => 
 ;; (begin
-;;   (define struct-foo (bs:struct (list `(x ,int) `(y ,int))))
-;;   (define struct-foo* (bs:pointer struct-foo))
-;;   (export struct-foo struct-foo*))
+;;   (define foo_t (bs:struct (list `(x ,int) `(y ,int))))
+;;   (define foo_t* (bs:pointer foo_t))
+;;   (export foo_t foo_t*))
 ;; @end example
 ;; See nyacc documentation for @code{ccode->sexp} to obtain information
 ;; on the @var{attrs} argument.
@@ -186,9 +186,9 @@
           (ccode->bytestructures-sexp \"typedef struct { int x; int y; } foo_t;\")
           =>
           (begin
-            (define struct-foo (bs:struct (list `(x ,int) `(y ,int))))
-            (define struct-foo* (bs:pointer struct-foo))
-            (export struct-foo struct-foo*))
+            (define foo_t (bs:struct (list `(x ,int) `(y ,int))))
+            (define foo_t* (bs:pointer foo_t))
+            (export foo_t foo_t*))
      See nyacc documentation for ‘ccode->sexp’ to obtain information on
      the ATTRS argument."
   (parameterize ((*fh-backend* backend))
