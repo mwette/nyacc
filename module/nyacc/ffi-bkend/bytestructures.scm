@@ -155,6 +155,8 @@
    (lambda (pr->pc pc->pr)              ; function
      ''void)
    (lambda* (alist #:optional packed)   ; enum
+     (if packed
+         (fherr "ffi/bytestructures: WARNING: packed enums not supported"))
      'int)
    (lambda (name type)                  ; deftype
      `(define ,name ,type))
