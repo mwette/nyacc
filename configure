@@ -611,8 +611,6 @@ LIBOBJS
 installed_guile
 TESTS_W_CD
 NYACC_C99_CD_BINS
-GUILE_LOAD_COMPILED_PATH
-GUILE_LOAD_PATH
 GUILE_DATA
 GUILE_SITE_CCACHE
 GUILE_GLOBAL_SITE
@@ -1863,9 +1861,6 @@ if test "_$debug" != "_unspecified"; then
 else
   GUILE_DEBUG=
 fi
-
-
-
 
 
 

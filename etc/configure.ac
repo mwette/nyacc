@@ -60,9 +60,6 @@ AC_SUBST([GUILE_GLOBAL_SITE])
 AC_SUBST([GUILE_SITE_CCACHE])
 AC_SUBST([GUILE_DATA])
 
-AC_SUBST([GUILE_LOAD_PATH])
-AC_SUBST([GUILE_LOAD_COMPILED_PATH])
-
 AC_MSG_CHECKING([if guile-cdata is installed])
 if $GUILE -c "(use-modules (foreign cdata)) (exit ((lambda () 0)))" \
 	>/dev/null 2>&1; then
