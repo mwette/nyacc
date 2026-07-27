@@ -164,7 +164,7 @@
      (if value `(bytestructure ,type ,value) `(bytestructure ,type)))))
 
 ;; @deffn {Procedure} ccode->bytestructures-sexp code [attrs] => sexp
-;; Convert @var{ccode}, a string of C code, to a s-expression of
+;; Convert @var{code}, a string of C code, to a s-expression of
 ;; @emph{bstructs} code, for use in Guile.  For example,
 ;; @example
 ;; (use-modules (nyacc ffi-bkend bytestructures))
@@ -180,7 +180,7 @@
 ;; @end deffn
 (define* (ccode->bytestructures-sexp ccode #:optional (attrs '()))
   "- Procedure: ccode->bytestructures-sexp code [attrs] => sexp
-     Convert CCODE, a string of C code, to a s-expression of _bstructs_
+     Convert CODE, a string of C code, to a s-expression of _bstructs_
      code, for use in Guile.  For example,
           (use-modules (nyacc ffi-bkend bytestructures))
           (ccode->bytestructures-sexp \"typedef struct { int x; int y; } foo_t;\")
