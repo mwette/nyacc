@@ -33,7 +33,7 @@ without any warranty.
             $ guild compile-ffi -b ffi-bkend/bytestructures foo.ffi
           Note that bstructs and bytestructures do not provide complete
           support for C types: e.g., function pointers.
-	
+
 2026-03-29  V3.04.6
         * nyacc/util.scm(atomize-terminal): remove "$:" prefix, to 
           (hopefully) save lots of allocations; this may mean one cannot
@@ -49,11 +49,11 @@ without any warranty.
 
 2026-03-14  V3.04.4 - pi release
         * lex.scm(read-c-number): change behavior, if "illegal" trailing
-	  character for C, just stop parsing and return instead of issuing
-	  error; this makes the token-based cpp work.  Since no legal
-	  C code has number followed by ident, I think it should be OK.
-	* c99/cpp.scm(cpp-subst): reworked this for ## so that entire macro
-	  argument is pasted and then retokenized.
+          character for C, just stop parsing and return instead of issuing
+          error; this makes the token-based cpp work.  Since no legal
+          C code has number followed by ident, I think it should be OK.
+        * c99/cpp.scm(cpp-subst): reworked this for ## so that entire macro
+          argument is pasted and then retokenized.
 
 2026-03-13  V3.04.3
         * add lang/c99/cpp.scm fixes for mescc on tinycc
