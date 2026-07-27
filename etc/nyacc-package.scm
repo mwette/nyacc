@@ -85,15 +85,15 @@ parsers to allow execution with Guile as extension languages.")))
 ;; -- development versions
 
 (define nyacc-dev-sha256-base32-map
-  '(("9.99.99" . "marker - do not delete")
-    ("3.03.03" . "0h9m3mszc2wrhvxacm9wphci5ip2g8cw3k6k677lx4mfrfys49xk")
-    ("0.00.00" . "marker - do not delete")))
+  '(("9.9-9" . "marker - do not delete")
+    ("4.0-1" . "0j1w4lig54jx7h37dcwmgxj973prnsbkq8jc4r07hhn8jrfv2w1x")
+    ("0.0-0" . "marker - do not delete")))
 
 (define-public nyacc-dev
   (package
    (inherit nyacc-base)
    (name "nyacc-dev")
-   (version "4.0.0")
+   (version "4.0-1")
    (source 
     (origin
      (method git-fetch)
