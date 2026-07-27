@@ -258,7 +258,7 @@
    header
    trailer
    (lambda (name)                       ; base
-     `(cbase ',name))
+     `(name-ctype ',name (cbase ',name)))
    (lambda (type dim)                   ; array
      `(carray ,type ,dim))
    (lambda (type)                       ; pointer
