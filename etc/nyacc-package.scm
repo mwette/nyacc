@@ -24,7 +24,8 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages gcc)
-  #:use-module (gnu packages guile))
+  #:use-module (gnu packages guile)
+  #:use-module (gnu packages guile-xyz))
 
 
 (define nyacc-sha256-base32-map
