@@ -21,7 +21,7 @@
   #:use-module (guix git)
   #:use-module (guix git-download)
   #:use-module (guix build-system gnu)
-  #:use-module (guix licenses)
+  #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages gcc)
   #:use-module (gnu packages guile))
@@ -29,17 +29,17 @@
 
 (define nyacc-sha256-base32-map
   '(("9.99.9" . "marker - do not delete")
+    ("4.0.0" . "0j1w4lig54jx7h37dcwmgxj973prnsbkq8jc4r07hhn8jrfv2w1x")
     ("3.04.6" . "1i51qwsid6vx5na83glc2lnvjp30an0phwkl57a15wlqjp8l6mpc")
     ("3.03.0" . "08ldrvs8igp9701jx6s7lgic5qlv399khwld5i5z1qaw1nqy8p1d")
     ("3.02.1" . "1lf2ajzl9prv11splvv0yjppcz6myys2y8vlib1417ygi5151p49")
-    ("3.02.0" . "0lkjc52x7q04ris0vndn32cylfnzfrqqj2m3s8m0kbbj5rl2ggyh")
     ("3.00.0" . "066wg0hvr7272bdxbn8b2ahn4yqrphfir8f9w9qd222s4ipd0iqa")
     ("0.00.0" . "marker - do not delete")))
 
 (define nyacc-base
   (package
    (name "nyacc-base")
-   (version "3.00.0")
+   (version "4.0.0")
    (source 
     (origin
      (method git-fetch)
@@ -52,6 +52,7 @@
    (arguments '(#:strip-binaries? #f #:parallel-build? #f))
    (native-inputs (list guile-3.0))
    (inputs (list guile-cdata))
+   (propagated-inputs (list guile-3.0 guile-cdata))
    (home-page "https://github.com/mwette/nyacc")
    (synopsis "Parser generator, C parser and FFI-helper for Guile")
    (license lgpl3+)
@@ -80,6 +81,7 @@ parsers to allow execution with Guile as extension languages.")))
      (file-name (string-append "nyacc-" version))
      (sha256 (base32 (assoc-ref nyacc-sha256-base32-map version)))))))
 
+
 ;; -- development versions
 
 (define nyacc-dev-sha256-base32-map
@@ -91,7 +93,7 @@ parsers to allow execution with Guile as extension languages.")))
   (package
    (inherit nyacc-base)
    (name "nyacc-dev")
-   (version "3.03.03")
+   (version "4.0.0")
    (source 
     (origin
      (method git-fetch)
@@ -116,7 +118,7 @@ parsers to allow execution with Guile as extension languages.")))
    (source
     (local-file ".." "nyacc-local" #:recursive? #t #:select? vcs-file?))))
 
+
 nyacc-local
-;;nyacc-next
 
 ;; --- last line ---
