@@ -55,7 +55,7 @@
    (propagated-inputs (list guile-3.0 guile-cdata))
    (home-page "https://github.com/mwette/nyacc")
    (synopsis "Parser generator, C parser and FFI-helper for Guile")
-   (license lgpl3+)
+   (license license:lgpl3+)
    (description
     "NYACC, for Not Yet Another Compiler Compiler, is set of guile modules for
 generating parsers and lexical analyzers.  It also provides sample parsers
