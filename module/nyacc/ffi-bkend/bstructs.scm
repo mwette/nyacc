@@ -22,9 +22,7 @@
 ;; bstruct keywords and type symbols, nothing else.  Creating a direct
 ;; converter is going to be tricky.  This implementation instead
 ;; creates cdata types (i.e., ctypes) and then feeds them to a
-;; ctype->bstruct converter.  The be-routines procude ctype directly
-;; (instead of sexp's) and the deftype method converts the whole
-;; thing to a bstruct.
+;; ctype->bstruct converter.
 
 ;; To convert a struct
 ;;   (use-modules (nyacc ffi-bkend bstructs))
