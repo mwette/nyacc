@@ -167,7 +167,7 @@
        (case (length (cdr oputs))
          ((0) #f)
          ((1) (ppxin oputs) (sf " = "))
-         ((else) (sf "[") (ppxin oputs) (sf "] = ")))
+         (else (sf "[") (ppxin oputs) (sf "] = ")))
        (sf "~A(" name) (ppxin iputs) (sf ")\n")
        (for-each ppxin (sx-tail coml 1))
        (push-il) (ppxin stmt-list) (pop-il) (sf "end\n"))
@@ -176,7 +176,7 @@
        (case (length (cdr oputs))
          ((0) #f)
          ((1) (ppxin oputs) (sf " = "))
-         ((else) (sf "[") (ppxin oputs) (sf "] = ")))
+         (else (sf "[") (ppxin oputs) (sf "] = ")))
        (sf "~A(" name) (ppxin iputs) (sf ")\n")
        (push-il) (ppxin stmt-list) (pop-il) (sf "end\n"))
 
