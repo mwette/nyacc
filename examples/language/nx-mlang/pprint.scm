@@ -180,6 +180,9 @@
        (sf "~A(" name) (ppxin iputs) (sf ")\n")
        (push-il) (ppxin stmt-list) (pop-il) (sf "end\n"))
 
+      ((local (ident ,name))            ; added to il for processing
+       (sf "%: local ~A\n" name))
+
       ((comm ,text)
        (sf "%~A\n" text))
 
