@@ -217,4 +217,6 @@ nyacc/lang/c99/mach.d/c99cx-tab.scm : nyacc/lang/c99/cxmach.go
 	$(GUILE) -L $(SCMDIR) -C $(GODIR) -c \
 	  '((@ (nyacc lang c99 cxmach) gen-c99cx-files) "nyacc/lang/c99")'
 
+.NOTPARALLEL:
+
 # --- last line ---
