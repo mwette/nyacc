@@ -20,7 +20,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 @format
 FFI Helper User Guide
 Matt Wette
-April 2026
+September 2026
 @end format
 
 @dircategory Software development
@@ -39,39 +39,40 @@ This is a user guide for the NYACC FFI Helper.
 @node Introduction
 @heading Introduction
 
-NOTE: Parts of this manual are obsololete: the update for version 2
-is not complete.
-
-The acronym FFI stands for ``Foreign Function Interface''.  It refers
-to the Guile facility for binding functions and variables from C source
-libraries into Guile programs.  This distribution provides utilities
-for generating a loadable Guile module from a set of C declarations
-and associated libraries.  The C declarations can, and conventionally
-do, come from naming a set of C include files.  The
-nominal method for use is to write a @emph{ffi-module} specification
-in a file which includes a @code{define-ffi-module} declaration, and
-then use the command @code{guild compile-ffi} to produce an associated
-file of Guile Scheme code.
+The acronym FFI stands for ``Foreign Function Interface''.  It refers to
+Guile's facility for binding functions and variables from C-source libraries
+into Guile programs.  This distribution provides utilities for generating a
+loadable Guile module from a set of C declarations and associated libraries.
+The C declarations can, and conventionally do, come from naming a set of C
+include files.  The nominal method for use is to write a @emph{ffi-module}
+specification in a file which includes a @code{define-ffi-module} declaration,
+and then use the command @code{guild compile-ffi} to produce an associated
+file of Guile Scheme code.  For example,
 @example
 $ guild compile-ffi ffi/cairo.ffi
 wrote `ffi/cairo.scm'
 @end example
 @noindent
-The FH does not generate C code.  The hooks to access functions in the
-Cairo library are provided in 100% Guile Scheme via @code{(system
-foreign)}.
+The ffi-helper (FH) does not generate C code.  The hooks to access functions
+in the Cairo library are provided in 100% Guile Scheme via @code{(system
+foreign)} and @code{(system foreign-library)}.
 
-Since version 2.00, the FFI Helper uses it's own backend for using
-bytevectors to handle C data.  In previous versions, the module
-@code{(bytestructures guile)} was used.   The bytestructures 
-implementation is still available by passing 
+Since version 2.00, the FFI Helper uses it's own backend called @emph{cdata}
+for using bytevectors to handle C data.  Since version 4.0 the cdata module
+is distributed separately, since it is the only non-Guile module needed for
+runtime execution of FH-generated code.  In previous versions, the module
+@code{(bytestructures guile)} was used.   An experimental bytestructures 
+implementation is available by passing
 @code{-b nyacc/ffi-bkend/bytestructures} to
-@code{guild compile-ffi}, or by setting the environment variable
+@code{guild compile-ffi}, or by setting the
+environment variable 
 @code{FFI_HELP_BACKEND=nyacc/ffi-bkend/bytestructures}.  The bytestructures 
 backend uses the @emph{scheme-bytestructures} package, available from
 @uref{https://github.com/TaylanUB/scheme-bytestructures}.  Releases
 are available at
 @uref{https://github.com/TaylanUB/scheme-bytestructures/releases}.
+In addition experimental backend support for ``bstructs'' is available by 
+passing the argument @code{-b nyacc/ffi-bkend/bstructs}.
 In this manual we only discuss use of the default @emph{cdata} 
 backend implementation.
 
@@ -80,9 +81,14 @@ write a ffi-module with the @code{#:api-code} or import the
 @code{ffi-help} module an use the functions @code{load-include-file},
 @code{ccode->sexp}.   The latter functions are exhaustively.
 
+In addition the module @code{(nyacc c99 ffi-help)} exports a procedure
+@code{ccode->sexp} to convert C code snippets as a string into associated
+Scheme s-expressions that could be evaluated to implement the api.
+
 The compiler for the FFI Helper (FH) is based on the C parser and utilities
-which are included in the @uref{https://www.nongnu.org/nyacc,@sc{NYACC}}
-package.  Within the @sc{NYACC} distribution, there are a number of
+which are included in this
+@uref{https://github.com/mwette/nyacc,@sc{NYACC}} package.
+Within the @sc{NYACC} distribution, there are a number of
 example dot-ffi files in the directory @file{examples/ffi}.
 
 At runtime, after the FFI Helper has been used to create Scheme code,
@@ -103,9 +109,6 @@ are an avid Guile user and want to be able to use Cairo in Guile.
 On most systems Cairo comes with the associated
 @emph{pkg-config} support files; this demo depends on that support.
 
-Warning: The FFI Helper package is under active development and there
-is some chance the following example will cease to work in the future.
-
 If you want to follow along and are working in the distribution
 tree, you should source the file @file{env.sh} in the @file{examples}
 directory.
@@ -118,7 +121,7 @@ following contents:
 @example
 (define-ffi-module (ffi cairo)
   #:pkg-config "cairo"
-  #:include '("cairo.h" "cairo-pdf.h" "cairo-svg.h"))
+  #:include '("cairo.h"))
 @end example
 
 @noindent
@@ -139,25 +142,30 @@ something like the following:
 
 @example
 (define-module (ffi cairo)
-  #:export (M_PI M_2PI make-cairo-unit-matrix)
   #:use-module (system foreign-library)
   #:use-module ((system foreign) #:prefix ffi:))
 
 (begin
-  (use-modules (nyacc foreign cdata))
+  (use-modules (foreign cdata))
+  (define arg->number cdata-arg->number)
+  (define arg->pointer cdata-arg->pointer)
+  (define (extern-ref obj) (cdata-sel obj '*))
+  (define (extern-set! obj val) (cdata-set! obj '* val)))
+  
 @dots{}
 
 ;; extern int cairo_version(void);
-(define-public cairo_version
+(define cairo_version
   (let ((~proc (delay (ffi:pointer->procedure
                         ffi:int
                         (foreign-pointer-search "cairo_version")
                         (list)))))
     (lambda () (let () ((force ~proc))))))
+(export cairo_version)    
 
 @dots{}
 
-(define-public cairo_matrix_t
+(define cairo_matrix_t
   (name-ctype
     'cairo_matrix_t
     (cstruct
@@ -182,11 +190,10 @@ something like the following:
     @dots{} @i{more constants} @dots{}
     ))
 (define ffi-cairo-symbol-val
-  (lambda (k)
-    (or (assq-ref ffi-cairo-symbol-tab k))))
+  (lambda (k) (or (assq-ref ffi-cairo-symbol-tab k))))
 (export ffi-cairo-symbol-val)
 
-@dots{} @i{more} @dots{}
+@dots{}
 
 @end example
 
@@ -198,18 +205,9 @@ as well as those defined by enums, are provided in a lookup function
 
 @example
 guile> (use-modules (ffi cairo))
-;;; ffi/cairo.scm:6112:11: warning:
-    possibly unbound variable `cairo_raster_source_acquire_func_t*'
-;;; ffi/cairo.scm:6115:11: warning:
-    possibly unbound variable `cairo_raster_source_release_func_t*'
 guile> (ffi-cairo-symbol-val 'CAIRO_FORMAT_ARGB32))
 $1 = 0
 @end example
-
-@noindent
-We will discuss the warnings later.  They are signals that extra code
-needs to be added to the ffi module.  But you see how the constants
-(but not CPP function macros) can be accessed.
 
 Let's try something more useful: a real program.  Create the following
 code in a file, say @code{cairo-demo.scm}, then fire up a Guile session
@@ -257,18 +255,18 @@ $5 = #<cdata cairo_t* 0x7fda54828800>
 @end example
 
 @noindent
-Note that the FH keeps track of the C types you use.  This can be
+Note that the FH keeps track of the C type names you use.  This can be
 useful for debugging (at a potential cost of bloating the namespace).
 The constants you see are the pointer values.  But it goes further.
 Let's generate a matrix type:
 
 @example
-guile> (use-modules (nyacc foreign cdata))
+guile> (use-modules (foreign cdata))
 guile> (define m (make-cdata cairo_matrix_t))
 guile> m
 $6 = #<cdata cairo_matrix_t 0x7056028777a0>
 guile> (cdata& m)
-$7 = #<cdata cairo_matrix_t* 0x7055f7da7b30>
+$7 = #<cdata pointer 0x7055f7da7b30>
 @end example
 
 @noindent
@@ -283,8 +281,7 @@ $8 = 1.0
 @end example
 
 But the FFI helper can also be used on a per declaration basis, but
-you must first import the proper modules and libraries.  This
-functionality is still under development.
+you must first import the proper modules and libraries.
 
 The following example shows how to convert to scheme code using
 the procedure @code{ccode->sexp}:
@@ -294,19 +291,17 @@ guile> (use-modules (nyacc lang c99 ffi-help))
 guile> (define sx (ccode->sexp "struct foo @{ int x; @};"))
 guile> ,pp sx
 $4 = (begin
-  (define-public struct-foo
+  (define struct-foo
     (name-ctype
       'struct-foo
       (cstruct (list `(x ,(cbase 'int))))))
   (define-public struct-foo*
-    (name-ctype 'struct-foo* (cpointer struct-foo))))
+    (name-ctype 'struct-foo* (cpointer struct-foo)))
+    (exprot struct-foo stuct-foo*))
 guile> (eval sx (current-module))    
 guile> struct-foo
 $5 = #<ctype struct struct-foo 0x73af1fc95480>
 @end example
-
-Note: the helper now uses @code{define} and @code{export} in liu
-of @code{define-public}.
 
 @subheading TODO
 
@@ -395,42 +390,200 @@ FH attempts to be even more forgiving, allowing one to pass symbols
 where C enums (i.e., integers) are expected.
 
 As mentioned, access to libraries not compiled into Guile is
-accomplished via @code{foreign-library-pointer}.
-@*FIXME: update this.
-@*To link the
-shared library @file{libfoo.so} into Guile one would write something
-like the following:
-@example
-(define foo-lib (dynamic-link "libfoo"))
-@end example
-@noindent
-Note that Guile takes care of dealing with the file extension (e.g.,
-@file{.so}).  Where Guile looks for libraries is system dependent,
-but usually it will find shared objects in the following
-@itemize
-@item @code{(assq-ref %guile-build-info 'libdir)}
-@item @code{(assq-ref %guile-build-info 'extensiondir)}
-@item @file{/usr/lib} on GNU/Linux and macOS
-@item $DYLD_LIBRARY_PATH on GNU/Linux and macOS
-@item directories listed in /etc/ld.so.conf on GNU/Linux
-@end itemize
-@noindent
-When used with no argument @code{dynamic-link} returns a handle for
-objects already linked with Guile.  The procedure @code{dynamic-link}
-returns a library handle for acquiring function and variable handles,
-or pointers, for objects (e.g., a pointer for a function) in the
-library.  Theoretically, once a library has been dynamically linked
-into Guile, the expression @code{(dynamic-link)} (with no argument)
-should suffice to provide a handle to acquire object handles, but I
-have found this is not always the case.  The FH will try all
-library handles defined by a ffi module to acquire object pointers.
-
+accomplished via @code{load-foreign-library}.  (FFI-modules 
+typically use @code{pkg-config} to locate includes and get a list
+of libraries.  Since a particular C function might be in one of many
+libraries compiled ffi modules will search through all of them
+to find the necessary binding.)
 
 @c ======================================
 
 @heading The C-data Module
 
-Explanation of the C-data module is provided in a separate document.
+The @emph{cdata} module (@code{(foreign cdata)} and its
+partner @emph{arch-info} (@code{(foreign arch-info)} provide a
+way to work with data originating from C libraries.
+
+Size and alignment is
+tracked for all types.  Types are classified into the following kinds:
+base, struct, union, array, pointer, enum and function.  The procedures
+@code{cbase}, @code{cstruct}, @code{cunion}, @code{cpointer},
+@code{carray}, @code{cenum} and @code{cfunction} generate @emph{ctype}
+objects, and the procedure @code{make-cdata} will generate data
+objects based on these.  The underlying bits of data are stored in Scheme
+bytevectors.  Access to component data is provided by the
+@code{cdata-ref} procedure and mutation is
+accomplished via the @code{cdata-set!} procedure.
+The modules support non-native machine architectures via the
+global parameter @code{*arch*}.
+
+The following are the basic procedures used:
+
+@deffn {Procedure} cbase name => <ctype>
+Given symbolic @var{name}, generate a base ctype.   The name can
+be something like @code{unsigned}, @code{double}, or can be a
+@emph{cdata} machine type like @code{u64le}.  For example,
+@example
+(define double-type (cbase 'double))
+@end example
+There is a pseudo-type @code{void}.
+@end deffn
+
+@deffn {Procedure} cpointer type => <ctype>
+Generate a C pointer type for @var{type}. To reference or de-reference
+cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
+the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
+@example
+(define foo_t (cbase 'int))
+(cpointer (delay foo_t))
+@end example
+@end deffn
+
+@deffn {Procedure} cstruct fields [packed] => ctype
+Construct a struct ctype with given @var{fields}.  If @var{packed},
+@code{#f} by default, is @code{#t}, create a packed structure.
+@var{fields} is a list with entries of the form @code{(name type)} or
+@code{(name type lenth)} where @code{name} is a symbol or @code{#f}
+(for anonymous structs and unions), @code{type} is a @code{<ctype>}
+object or a symbol for a base type and @code{length} is the length
+of the associated bitfield.
+@end deffn
+
+@deffn {Procedure} cunion fields => <ctype>
+Construct a ctype union type with given @var{fields}.
+See @emph{cstruct} for a description of the @var{fields} argument.
+@end deffn
+
+@deffn {Procedure} carray type n => <ctype>
+Create an array of @var{type} with @var{length}.
+If @var{length} is zero, the array length is unbounded: it's length
+can be specified as argument to @code{make-cdata}.
+@end deffn
+
+@deffn {Procedure} cenum enum-list [packed] => <ctype>
+@var{enum-list} is a list of name or name-value pairs
+@example
+(cenum '((a 1) b (c 4))
+@end example
+If @var{packed} is @code{#t} the size will be smallest that can hold it,
+as if defined in C with @code{__attribute__((packed))}.
+@end deffn
+
+@deffn {Procedure} cfunction proc->ptr ptr->proc [variadic?] => <ctype>
+Generate a C function type to be used with @code{cpointer}. The arguments
+@var{proc->ptr} and @var{ptr->proc} are procedures that convert a
+procedure to a pointer, and pointer to procedure, respectively.  The
+optional argument @var{#:variadic}, if @code{#t},  indicates the function
+uses variadic arguments.  For this case (I need to add documention).
+ Here is an example:
+@example
+(define (f-proc->ptr proc)
+  (ffi:procedure->pointer ffi:void proc (list)))
+(define (f-ptr->proc fptr)
+  (ffi:pointer->procedure ffi:void fptr (list)))
+(define ftype (cpointer (cfunction f-proc->ptr f-ptr->proc)))
+@end example
+The thinking here is that a @code{cfunction} type is a proxy for a
+C function in memory, with a getter and setter to read from or write
+to memory.
+@end deffn
+
+@deffn {Procedure} make-cdata type [value]
+Generate a @emph{cdata} object of type @var{type} with optional @var{value}.
+If @var{value} is not provided, the object is zeroed.
+As a special case, a positive integer arg to a zero-sized array type will
+allocate storage for that many items, associating it with an array type of
+that size.
+@end deffn
+
+@deffn {Procedure} make-cdata/* type pointer
+Make a cdata object from a pointer.   That is, instead of creating a
+bytevector to hold the data use the memory at the pointer using
+@code{pointer->bytevector}.
+@end deffn
+
+@deffn {Procedure} cdata-ref data [tag ...] => value
+Return the Scheme (scalar) slot value for selected @var{tag ...} with
+respect to the cdata object @var{data}.
+@example
+(cdata-ref my-struct-value 'a 'b 'c))
+@end example
+This procedure returns Guile values for cdata kinds @emph{base},
+@emph{pointer}, @emph{procedure}, @emph{array} (an array) and @emph{struct}
+(an alist).  For @emph{union} an exception is raised.   The returned values
+are freshly allocated copies. If want a cdata object, use @code{cdata-sel}.
+@end deffn
+
+@deffn {Procedure} cdata-set! data value [tag ...]
+Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
+@var{value}.  Example:
+@example
+(cdata-set! my-struct-data 42 'a 'b 'c))
+@end example
+If @var{value} is a @code{<cdata>} object then copy that (if types match).
+@*The @var{value} argument can be a Scheme procedure when the associated
+ctype is a pointer to function.
+@end deffn
+
+Values accepted by @code{cdata-set!} and @code{make-cdata} are as follows,
+based on the cdata target ctype.
+@enumerate
+@item
+If the type is a base machine type, then the argument must be an associated
+Scheme numeric type.
+@item
+If the type is a pointer type, the value can be a Guile pointer, an integer
+(address), a string, or a procedure (for the case where the type is a function
+pointer).
+@item
+If the type is an array type, TO BE CONTINUED.
+@item
+If the type is a function type, then an error is returned.  See above
+for pointer (to function) types.
+@item
+If a struct, and the value is
+@end enumerate
+In addition, if the value is of ctype, a copy of the underlying bytevector
+contents will be performed.  An error will be thrown if the types are not equal.
+Also, if the value argument to @code{make-cdata} is an integer and
+the type argument is an array of length zero, then space is allocated to
+accomodate that length array.  Here are some examples:
+@example
+> (define tri1-t (carray (carray (cbase 'double) 2) 3))
+> (define tval1 (make-cdata tri1-t #2f64((1.0 2.0) (3.0 4.0) (5.0 6.0))))
+> (cdata-ref tval1)
+$1 = #2f64((1.0 2.0) (3.0 4.0) (5.0 6.0))
+> (cdata-set! tval1 1.5 0 1)
+> (cdata-ref tval1)
+$2 = #2f64((1.0 1.5) (3.0 4.0) (5.0 6.0))
+>
+@end example
+and
+@example
+> (define loc-t (cstruct `((x double) (y double))) 3)
+> (define tri2-t (carray loc-t 3))
+> (define tval2 (make-cdata tri2-t (vector '((x . 1.0) (y . 2.0))
+                                           '((x . 3.0) (y . 4.0))
+                                           '((x . 2.0) (y . 5.0)))))
+> tval2
+$3 = #<cdata array 0x79ae9a077200>
+> (cdata-ref tval2)
+$4 = #(((x . 1.0) (y . 2.0)) ((x . 3.0) (y . 4.0)) ((x . 2.0) (y . 5.0)))
+> (cdata-set! tval2 1.5 0 'x)
+> (cdata-ref tval2)
+$5 = #(((x . 1.5) (y . 2.0)) ((x . 3.0) (y . 4.0)) ((x . 2.0) (y . 5.0)))
+@end example
+
+
+@deffn {Procedure} cdata& data => cdata
+Generate a reference (i.e., cpointer) to the contents in the underlying
+bytevector.
+@end deffn
+
+@deffn {Procedure} cdata* data => cdata
+De-reference a pointer.  Returns a @emph{cdata} object representing the
+contents at the address in the underlying bytevector.
+@end deffn
 
 
 @c ======================================
@@ -443,23 +596,21 @@ Explanation of the C-data module is provided in a separate document.
 @c * the issue with passing unions to functions
 
 
-In this section we hope to provide some insight into the FH works.
-The FH specification, via the dot-ffi file, determines the set of
-declarations which will be included in the target Guile module.  If
-there is no declartion filter, then all the declarations from the
-specified set of include files are targeted.  With the use of a declaration
-filter, this set can be reduced.  By declaration we mean typedefs,
-aggregate definitions (i.e., structs and unions), function
-declarations, and external variables.
+In this section we hope to provide some insight into the FH works.  The FH
+specification, via the dot-ffi file, determines the set of declarations which
+will be included in the target Guile module.  If there is no declartion
+filter, then all the declarations from the specified set of include files are
+targeted.  With the use of a declaration filter, this set can be reduced.  By
+declaration we mean typedefs, aggregate definitions (i.e., structs and
+unions), function declarations, and external variables.
 
-In the C language typedefs define type aliases, so there is no harm in
-expanding typedefs which appear outside the specification.  For
-example, say the file @file{foo.h} includes a declaration for the
-typedef @code{foo_t} and the file @file{bar.h} includes a declaration
-for the typedef @code{bar_t}.  Furthermore, suppose @code{foo_t} is a
-struct that references @code{bar_t}.  Then the FH will preserve the
-typedef @code{foo_t} but expand @code{bar_t}.  That is, if the
-declarations are
+In the C language a typedef does not declare a new type, but an alias, so
+there is no harm in expanding typedefs which appear outside the specification.
+For example, say the file @file{foo.h} includes a declaration for the typedef
+@code{foo_t} and the file @file{bar.h} includes a declaration for the typedef
+@code{bar_t}.  Furthermore, suppose @code{foo_t} is a struct that references
+@code{bar_t}.  Then the FH will preserve the typedef @code{foo_t} but expand
+@code{bar_t}.  That is, if the declarations are
 
 @example
 typedef int bar_t;   /* from bar.h */
@@ -473,546 +624,20 @@ then the FH will treat @code{foo_t} as if it had been declared as
 typedef struct @{ int x; double y; @} foo_t; /* from foo.h */
 @end example
 
-When it comes to handling C types in Scheme the FH tries to leave base
-types (i.e., numeric types) alone and uses its own type system, based
-on Guiles @emph{structs} and associated @emph{vtables}, for structs,
-unions, function types and pointer types.  Enum types are handled
-specially as described below.  The FH type system associates with each
-type a number of procedures.  One of these is the printer procedure
-which provided the association of type with output seen in the demo above.
-
 One of the challenges in automating C-Scheme type conversion is that C
-code uses a lot of pointers.  So as the FH generates types for
+code nominally uses pointer to type alot.  So, as the FH generates types for
 aggregates, it will automatically generate types for associated
 pointers.  For example, in the case above with @code{foo_t} the FH will
 generate an aggregate type named @code{foo_t} and a pointer type named
-@code{foo_t*}.  In addition the FH generates code to link these two
-together so that, given an object @code{f1} of type @code{foo_t}, the
-expression @code{(cdata& f1)} will generate an object of type
-@code{foo_t*}.  This makes the task of generating an object value in
+@code{foo_t*}.  When the FH sees a pointer to type declaration in C
+it makes an attempt to use the declared @code{foo_t*} type instead of
+@code{(cpointer foo_t)}.  This makes the task of generating an object value in
 Scheme, and then passing the pointer to that value as an argument to a
 FFI-generated procedure, easy.  The inverse operation @code{(cdata* f1*}
 is also provided.  Note that sometimes the C code needs to work with
-pointer pointer types.  The FH does not produce double-pointers and in
-that case, the user must add code to the FH module defintion to
-support the required additional type (e.g., @code{foo_t**}).
+pointer pointer types.
 
-@*FIXME: Need to re-write this.
-
-In addition, the FH type system provides unwrap and wrap procedures
-used internal to ffi-generated modules for function calls.  These
-convert FH types to and from objects of type expected by Guile's FFI
-interface.  For example, the unwrap procedure associated with the FH
-pointer type @code{foo_t*} will convert an @code{foo_t*} object to a
-Guile @code{pointer}.  Similarly, on return the wrap procedure are
-applied to convert to FH types.  When the FH generates a type, for
-example @code{foo_t} it also generates an exported procedure
-@code{make-foo_t} that users can use to build an object of that type.
-The FH also generates a predicate @code{foo_t?} to determine if an
-object is of that type.  The @code{(system ffi-help-rt)} module
-provides a procedure @code{fh-object-ref} to convert an object of type
-@code{foo_t} to the underlying bytevector representation.  For
-numeric and pointer types, this will generate a number and for
-aggregate types, a bytestructure.  Additional arguments to
-@code{fh-object-ref} for aggregates work as with the bytestructures
-package and enable selection of components of the aggregate.  Note
-that the underlying type for a bytestructure pointer is an integer.
-
-Enums are handled specially.  In C, enums are represented by integers.
-The FH does not generate types for C enums or C enum
-typedefs.  Instead, the FH defines unwrap and wrap procedures to
-convert Scheme values to and from integers, where the Scheme values
-can be integers or symbols.  For example, if, in C, the enum typedef
-@code{baz_t} has element @code{OPTION_A} with value 1, a procedure
-expecting an argument of type @code{baz_t} will accept the symbol
-@code{'OPTION_A} or the integer @code{1}.
-
-Where the FH generates types, the underlying representation is a
-@emph{bytestructure descriptor}.  That is, the FH types are
-essentially a layer on top of a bytestructure.  The layer provides
-identification seen at the Guile REPL, unwrap and wrap procedures
-which are used in function handling (not normally visible to the user)
-and procedures to convert types to and from pointier-types.
-
-For base types (e.g., @code{int}, @code{double}) the FH uses the
-associated Scheme values or the associated bytestructures values.
-(I think this is all bytestructure values now.)
-
-The underlying representation of bytestructure values is
-@emph{bytevectors}.  See the Guile Reference Manual for more
-information on this datatype.
-
-The following routines are user-level procedures provided by the
-
-@c STOPPED HERE STOPPED HERE STOPPED HERE STOPPED HERE STOPPED HERE
-
-@c cover @code{fh-find-symbol-addr}
-
-You can pass a bytestructure struct value:
-@example
-guile> (make-ENTRY `((key 0) (data 0)))
-#<ENTRY 0x18a10b0>
-@end example
-
-TODO: should we support @code{(make-ENTRY 0 0)} ?
-
-@ifset no-skip
-@c work on the runtime design:
-@c * types
-@c   fh-type?
-@c * functions
-@c * externs => (g_foo_bar) => bytestructure
-
-For an external variable @code{foo} declared in a header the code
-@code{(foo)} will return the module bytestructure that maps to the
-associated memory in the library.  This means modifications to the
-bytestructure are to the code in the library.
-
-@subheading Type Support
-
-For @code{bytestructures}, arguments to setters and return values
-from getters are Scheme values for numerical types and bytestructures
-for other types (e.g., structs and unions).
-
-In FH C object types are either ``wrapped'' or ``defined''.  If a type
-is wrapped then we provide a wrap and unwrap function for that type.
-Numeric types and enum's are wrapped.  Other types are defined as FH
-types.  The FH types have a wrapper and unwrapper properties.  These
-properties are procedures and
-can be accessed with
-@code{(fht-unwrap type)} and @code{(fht-wrap type)}
-or executed with
-@code{(fh-unwrap object)} and @code{(fh-wrap object)}.
-
-@deffn {Procedure} fh-type? type
-This predicate tests for FH types.
-@end deffn
-
-@deffn {Procedure} fh-object? obj
-This predicate tests for FH objects.
-@end deffn
-
-@deffn {Syntax} define-fh-aggregate-type name desc
-@deffnx {Syntax} define-fh-aggregate-type/p name desc
-@deffnx {Syntax} define-fh-aggregate-type/pp name desc
-The first form generates an FY aggregate type based on a bytestructure
-descriptor.  The second and third forms will build, in addition,
-pointer-to type and pointer-to-pointer-to type.  The primary form
-will generate and export the following:
-@table @code
-@item type
-a Guile (vtable) struct representing the type
-@item type?
-a predicate to test an object to be of type
-@item make
-a procedure to wrap based on args provided to the @code{bytestructure}
-procedure
-@item wrap
-same as @code{make} with one bytevector argument
-@item unwrap
-a procedure to produce a Scheme bytevector
-@end table
-@end deffn
-
-We want a closed type system with accessors and setters.  We rely on
-@emph{bytestrutures} for compound types, vectors, etc.  For base C
-types we will keep xxx.  Enums are a speial case.
-Let use the following convention
-@table @code
-@item objS
-FH object with scheme type representation
-@item objB
-FH object with underying bytestructure representation
-@item valGS
-A Guile Scheme value: number, xxx
-@item valGP
-A Guile Pointer (@code{#<pointer ...>})
-@item valBS
-A bytestructure: @code{#<bytestructure ...>}.
-@item valBV
-A bytevector @code{#<bytevector ...>}.
-@end table
-@noindent
-There will be FH types for structs, unions, vectors, pointers, but not
-for enums, scalar integer or floating types.  Strings will be handled
-as pointers.
-
-Consider working with the following C types
-@table @code
-@item foo_t
-a compount type
-@item bar_t
-a typedef for a doulble
-@item int
-base type
-@item who_t
-an enum
-@end table
-
-The user use cases are generate variable
-@itemize
-@item
-Generate type w/ any content:
-@code{(make foo_t)}
-@item
-
-@code{(make foo_t objGS)}
-@item
-@code{(make foo_t objBS)}
-@end itemize
-
-@itemize
-@item
-Pass pointer to data to C function:
-@example
-(define v (make-double))
-(c_funtion (pointer-to v))
-(fh-object-ref v) => number
-@end example
-@end itemize
-
-@code{bar_t} that is a @code{double} and an enum type @code{baz_t}.
-In the items below, @code{foo_t} is a type and @code{bar} is a wrap/unwrap.
-@itemize
-@item
-(make-foo_t) => #<foo_t valS> | #<foo_t valX>
-@item
-(make-foo_t valS) => #<foo_t valS|valX>
-@item
-(fh-object-ref objS) => valS
-@item
-(fh-object-ref objX) => valX
-@item
-(fh-object-ref objX 'sel) => valX | valS
-@end itemize
-@noindent
-We need a (somewhat?) closed type system.  In the FFI Helper we choose
-to classify the following
-@table @asis
-@item compound
-structs, unions and arrays (Scheme does not have arrays)
-@item simple
-fixed and float scalars
-@item special
-special are enums and pointers
-@end table
-
-The FFI Helper uses the Guile struct-vtable constructs to deal with
-types.  In addition to the builtin name and printer fields, each type
-includes
-@table @asis
-@item wrapper
-a procedure to convert a (raw) Scheme object into a FH type
-@item un-wrapper
-(sloppy) procedure to convert a FH type (or simpilar) into a (raw)
-scheme object
-@item pointer-to
-the FH type describing a pointer to this type, or @code{#f}
-@item points-to
-the FH type describing the dereferened pointer type, or @code{#f}
-@end table
-
-Think of wrapper as @code{ffi->scm} and unwrapper as @code{scm->ffi}.
-
-@itemize
-@item
-For vectors, structs and unions the raw Scheme object type is
-`bytevector'.
-@item
-For numeric types, the raw Scheme object type is a Scheme numeric type.
-@end itemize
-
-
-The following shows that we can store a procedure as a bogus
-bytevector.
-@example
-(use-modules ((system foreign) #:prefix ffi:))
-(define (foo arg) arg)
-(define foo-ptr (ffi:procedure->pointer ffi:int foo (list ffi:int)))
-(define foo-bv (ffi:pointer->bytevector foo-ptr (ffi:sizeof '*)))
-(define foo-bv-ptr (ffi:bytevector->pointer foo-bv))
-(define foo-echo (ffi:pointer->procedure ffi:int foo-bv-ptr (list ffi:int)))
-@end example
-@noindent
-But we won't use this.
-
-@deffn {Syntax} define-fh-enum-type name sv-map
-Generate an enum type.  Exports wrap, unwrap, type? but no make.
-@end deffn
-
-@deffn {Syntax} define-fh-pointer-type name [desc]
-Generate a pointer type.  With (bytestructure @code{bs:pointer})
-descriptor @var{desc} generates a bytestructe-based type.  Otherwise,
-generates a Guile FFI pointer based type.
-@end deffn
-
-@subheading Base Types
-
-
-@subheading Bytestructure Function Type
-We need to add bytestructure function (pointer) type.  Now C is a bit
-odd about function and function pointers.  They are treated as the
-same.  We will work functions as follows, where @code{f-bs} represents
-a pointer to a function bytestructure
-@example
-(fh-object-ref f-bs) => #<pointer ...>
-(fh-object-ref f-bs '*) => #<procedure ...>
-@end example
-@noindent
-On the other hand, setters can take either.  Any of these will get
-the desired behavior:
-@example
-(fh-object-set! f-bs #<pointer ...>)
-(fh-object-set! f-bs #<number>) ;; aka pointer-address
-(fh-object-set! f-bs #<procedure ...>)
-@end example
-@noindent
-We still have to deal with @code{ref<->deref!}.  I think this should
-be self referencing.  That is
-@example
-(pointer-to f-bs) => f-bs
-@end example
-
-This descriptor includes fields
-@enumerate
-@item return descriptor
-@item parameter list
-@end enumerate
-@noindent
-Elements of parameter list may be
-@itemize
-@item descriptor
-@item a pair: symbolic name and descriptor
-@item the ellipsis symbol: @code{'...}
-@end itemize
-
-When @code{bs:function} is called to create a descriptor, either the
-descriptor for the return type, or the list of descriptors for the
-parameters can be a promise.  That is
-@example
-(define f-desc (bs:function (delay ret-desc) (delay (list int xxx xxx))))
-@end example
-@noindent
-
-@subheading Support for Aggregate Types
-
-As mentioned @code{scheme-bytestructures} is used to support structs
-and unions.  Here is a segment of generated code to illustrate:
-@example
-;; typedef union _cairo_path_data_t cairo_path_data_t;
-;; union _cairo_path_data_t @{
-;;   struct @{
-;;     cairo_path_data_type_t type;
-;;     int length;
-;;   @} header;
-;;   struct @{
-;;     double x, y;
-;;   @} point;
-;; @};
-(define union-_cairo_path_data_t-desc
-  (bs:union
-    (list `(header
-             ,(bs:struct
-                (list `(type ,cairo_path_data_type_t-desc)
-                      `(length ,int))))
-          `(point ,(bs:struct (list `(y ,double) `(x ,double)))))))
-(define cairo_path_data_t-desc union-_cairo_path_data_t-desc)
-@end example
-@noindent
-Note that forward references are swapped around.
-
-@subsubheading Forward Feferences
-
-Here we do it but store @code{GObject}
-@example
-;; typedef struct _GObject GObject;
-(define-public GObject-desc 'void)
-(define-public GObject*-desc (bs:pointer (delay GObject-desc)))
-(define-fh-pointer-type GObject* GObject*-desc
-                        GObject*? make-GObject*)
-(export GObject* GObject*? make-GObject*)
-@end example
-
-@example
-;; typedef struct _GObject GInitiallyUnowned;
-(define-public GInitiallyUnowned-desc 'void)
-(define-public GInitiallyUnowned*-desc
-  (bs:pointer (delay GInitiallyUnowned-desc)))
-(define-fh-pointer-type GInitiallyUnowned* GInitiallyUnowned*-desc
-                        GInitiallyUnowned*? make-GInitiallyUnowned*)
-(export GInitiallyUnowned* GInitiallyUnowned*? make-GInitiallyUnowned*)
-@end example
-
-@example
-;; struct _GObject @{
-;;   GTypeInstance g_type_instance;
-;;   /*< private >*/
-;;   volatile guint ref_count;
-;;   GData *qdata;
-;; @};
-(define-public struct-_GObject-desc
-  (bs:struct
-    (list `(g_type_instance ,GTypeInstance-desc)
-          `(ref_count ,unsigned-int)
-          `(qdata ,(bs:pointer GData-desc)))))
-(define-fh-compound-type struct-_GObject struct-_GObject-desc struct-_GObject?
- make-struct-_GObject)
-(export struct-_GObject struct-_GObject? make-struct-_GObject)
-(define-public struct-_GObject*-desc
-  (bs:pointer struct-_GObject-desc))
-(define-fh-pointer-type struct-_GObject* struct-_GObject*-desc
- struct-_GObject*? make-struct-_GObject*)
-(export struct-_GObject* struct-_GObject*? make-struct-_GObject*)
-(ref<->deref! struct-_GObject* make-struct-_GObject*
-              struct-_GObject make-struct-_GObject)
-(set! GObject-desc struct-_GObject-desc)
-(define-fh-compound-type GObject GObject-desc GObject? make-GObject)
-(export GObject GObject? make-GObject)
-@end example
-
-@subheading Vectors
-
-@example
-foo_t vec[10];
-bar(vec, 10);
-@end example
-should be translated as
-@example
-(let ((vec (make-foo_t-vec 10)))
-  (bar (pointer-to vec) 10))
-@end example
-@noindent
-where we have performed
-@example
-(define-fh-unsized-vector-type foo_t-vec foo_t-desc ...)
-(fh-ref<->deref! foo_t* make-foo_t* foo_t-vec #f)
-@end example
-
-@subheading Enumerations and CPP-defined Symbols
-
-The FH runtime has a procedure to help dealing with symbols.
-
-Often a
-package for ``foo'' will include constant symbols, defined with enums
-and CPP defines, that have a common prefix -- for example, @code{FOO_} in
-
-@example
-#define FOO_ON 1
-#define FOO_OFF 2
-@end example
-
-@noindent
-For these cases the user may wish to add an expression
-like the following at the end of the dot-ffi file:
-@example
-(define-public FOO (make-symtab-function ffi-foo-symbol-tab "FOO_"))
-@end example
-@noindent
-so that in client code the following will render the constants
-@example
-guile> (+ (FOO ON) (FOO OFF))
-$1 = 3
-@end example
-
-Note that C functions returning enum types actually return integers.
-If the function is declared to return enums the FH will convert these
-to symbols; if the function is declared to return int you will get
-int.  So, you may want to take care that you know whether to expect
-the symbolic form or the numberic form.
-
-
-@subheading Unwrapping and Wrapping
-
-For functions we use @emph{unwrappers} and @emph{wrappers}.  Arguments
-to a function are unwrapped before being passed to the routine
-generated by @code{pointer->procedure}.  The end user will nominally not be
-using these procedures.  If an argument is a pointer
-to a type with a typedef (e.g., a struct type) then the type unwrapper
-is called
-@example
-((fht-unwrap <type>) arg) => ~arg
-@end example
-@noindent
-If the argument is not associated with a defined type (e.g., enums)
-then the associated unwrapper will be called:
-@example
-(unwrap-enum-foo arg) => ~arg
-(unwrap~float arg) => ~arg
-OR
-(unwrap-enum-foo 'FOO_TRUE) => 1
-(unwrap~float 1) => 1.0
-@end example
-
-In @file{ffi-help.scm}, the code generator, we convert structs, unions and
-their associated typedefs to defined types, but enums and enum
-typedefs are only provided with unwrappers and wrappers.
-
-@subheading Functions
-
-Here are the FFI simple types:
-@verbatim
-  short unsigned-short int unsigned-int long unsigned-long
-  int8 uint8  int16 uint16 int32 uint32 uint64
-  size_t ssize_t ptrdiff_t
-  float double
-  void
-@end verbatim
-
-Here are the BS simple types:
-@verbatim
-  short unsigned-short int unsigned-int long unsigned-long
-  long-long unsigned-long-long
-  int8 uint8  int16 uint16 int32 uint32 uint64
-  size_t ssize_t ptrdiff_t intptr_t uintptr_t
-  float double complex64 complex128
-@end verbatim
-
-The C standard says
-@quotation
-A declaration of a parameter as ‘‘function returning type’’ shall be
-adjusted to ‘‘pointer to function returning type.’’
-@end quotation
-I'm guessing this goes for struct fields as well.
-
-C says bitfields are (signed) int, unsigned int, or _Bool.
-
-C says if function parameter declared as arrays should be interpreted
-as pointers.
-
-@subheading Extern Variables
-
-Access to externs is provide through access procedure:
-@example
-;; C header says: extern int foo_errno;
-;; So we use:
-(foo_errno)
-@end example
-
-@subheading Current Assumptions
-
-We generate types for all C types and their pointers.  This makes
-working C types convenient, I think, at the cost of bloating the
-namespace.
-
-Here is a list of assumptions
-@enumerate
-@item
-no raw aggregates get passed to C functions
-@end enumerate
-
-@subheading Caveats
-
-@enumerate
-@item
-Forward references are handled by lookup.
-@item
-Function pointer types as fields in structures are just turned into
-pointers to @code{intptr_t}.
-@item
-How the hell do I deal with varargs?  Skip for now.
-@end enumerate
-
-@end ifset
+TODO: More on the design at a later time.
 
 @c ======================================
 
@@ -1021,6 +646,21 @@ How the hell do I deal with varargs?  Skip for now.
 @example
 (define ffi-module @var{module-name} ...)
 @end example
+
+*#:pkg-config
+*#:include
+*#:inc-filter
+*#:decl-filter
+*#:api-code
+*#:library
+*#:cpp-defs
+
+*#:inc-dirs
+*#:lib-dirs
+#:renamer
+#:use-ffi-module
+
+#:def-keepers undocumented
 
 @table @code
 @item #:pkg-config
@@ -1032,6 +672,7 @@ files to be processed at the top level.  Without use of the
 @code{#:inc-filter} form, only declarations in these files will be
 output.  To constrain the set of declarations output use the
 @code{#:decl-filter} form.
+
 @item #:inc-filter
 This form, with predicate procedure argument taking the form
 @code{(proc file-spec path-spec)}, is used to indicate which includes
@@ -1040,37 +681,41 @@ output.  The @code{file-spec} argument is a string as parsed from
 @code{#include} statements in the C code, including brackets or double
 quotes (e.g., @code{"<stdio.h>"}, @code{"\"foo.h\""}).  The
 @code{path-spec} is the full path to the file.
-@item #:use-ffi-module
-This form, with literal module-type argument (e.g., @code{(ffi
-glib)}), indicates dependency on declarations from another processed
-ffi module.  For example, the ffi-module for @code{(ffi gobject)}
-includes the form @code{#:use-ffi-module (ffi glib)}.
 @item #:decl-filter
 This form, with a predicate procedure argument, is used to restrict
 which declarations should be processed for output.  The single
 argument is either a string or a pair.  The string form is used for
 simple identifiers and the pair is used for struct, union and enum
 forms from the C code (e.g., @code{(struct . "foo")}).
+
+@item #:use-ffi-module
+This form, with literal module-type argument (e.g., @code{(ffi
+glib)}), indicates dependency on declarations from another processed
+ffi module.  For example, the ffi-module for @code{(ffi gobject)}
+includes the form @code{#:use-ffi-module (ffi glib)}.
+
 @item #:library
 This form, with a list of strings, indicates which (shared object)
 libraries need to be loaded.  The formmat of each string in the list
 should be as provided to the @code{dynamic-link} form in Guile.
+
 @item #:renamer
-The argument is a procedure of the form @code{proc name ctxt)} where
+The argument is a procedure called as @code{(proc name ctxt)} where
 @var{name} is a string for the name being translated and @var{ctxt} is
-the context.  The context can be
+the context as a symbol, one of the following:
 @table @code
-@item field
+@item 'field
 field in a struct or union
-@item enum
+@item 'enum
 name of an enum
-@item type
+@item 'type
 name of a typedef, struct, union or enum definition
-@item function
+@item 'function
 name of a function
-@item variable
+@item 'variable
 name of an extern variable
 @end table
+
 @item #:cpp-defs
 This form, with a list of strings, provides extra C preprodessor
 definitions to be used in processing the header files.  The defines
@@ -1078,48 +723,20 @@ take the form @code{"SYM=}@var{val}@code{"}.
 @item #:inc-dirs
 This form, with a list of strings, provides extra directories
 in which to search for include files.
-@item #:inc-help
-todo
+@item #:lib-dirs
+This form, with a list of strings, provides extra directories
+in which to search for libraries.
+
 @item #:api-code
-todo
+This, in lieu of using @code{#:include} is a string of C code that will
+be translated.  In the string of code, any @code{#include} based code
+will not be translated unless explicitly directed so via the
+@code{#inc-filter} option.
+
 @item #:def-keepers
 This form, with a list of strings, provides extra (non-function) C
 preprocessor macro definitions that should be included in the output.
 @end table
-
-@example
-  #:library '("libcairo" "libmisc")
-  #:inc-dirs '("/opt/local/include/cairo" "/opt/local/include")
-  #:renamer (string-renamer
-	     (lambda (n)
-	       (if (string=? "cairo" (substring n 0 5)) n
-		   (string-append "cairo-" n))))
-  #:pkg-config "cairo"
-  #:include '("cairo.h" "cairo-svg.h")
-  #:inc-help (cond
-              ((string-contains %host-type "darwin")
-               '(("__builtin" "__builtin_va_list=void*")
-                 ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")))
-              (else '()))
-  #:decl-filter (string-member-proc
-  		 "cairo_t" "cairo_status_t" "cairo_surface_t"
-                 "cairo_create" "cairo_svg_surface_create"
-                 "cairo_destroy" "cairo_surface_destroy")
-  #:export (make-cairo-unit-matrix)
-@end example
-
-Another decl-filter, useful for debugging.
-@example
-  #:decl-filter (lambda (k)
-                  (cond
-                   ((member k '(
-                                "cairo_t" "cairo_status_t"
-                                "cairo_glyph_t" "cairo_path_data_t"
-				)) #t)
-                   ((equal? k '(union . "union-_cairo_glyph_t")) #t)
-                   (else #f)))
-@end example
-
 
 @heading Direct Usage
 
@@ -1157,32 +774,6 @@ compile -O0 the resulting scm file
 @item
 guile -c '(use-modules (ffi mymod))'
 @end enumerate
-
-@subheading @code{MAX_HEAP_SECTS}
-
-The message is
-@quotation
-Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
-@end quotation
-The message comes from the garbage collector.  It means you've run out
-of memory.  I found that this actually came from a bug in the ff-compiler
-which generated this code:
-@example
-  (bs:struct
-    (list ...
-          `(compose_buffer ,(bs:vector #f unsigned-int))
-@end example
-@noindent
-The original C declaration was
-@example
-struct _GtkIMContextSimple @{
-  ...
-  guint compose_buffer[7 + 1];
-  ...
-@};
-@end example
-@noindent
-This bug, failure to evaluate @code{7+1} to an integer, was fixed.
 
 @subheading Trimming Things Down
 
@@ -1232,178 +823,24 @@ own types or echo the typedefs from the package headers
 
 @end example
 
-@subheading Warning: Possibly Unbound Variable
-
-@smallexample
-;;; ffi/gtk2+.scm:3564:5: warning:
-    possibly unbound variable `GtkEnumValue*'
-;;; ffi/gtk2+.scm:3581:5: warning:
-    possibly unbound variable `GtkFlagValue*'
-;;; ffi/gtk2+.scm:10717:11: warning:
-    possibly unbound variable `GtkAllocation*'
-;;; ffi/gtk2+.scm:15107:15: warning:
-    possibly unbound variable `GdkNativeWindow'
-;;; ffi/gtk2+.scm:15122:15: warning:
-    possibly unbound variable `GdkNativeWindow'
-;;; ffi/gtk2+.scm:26522:11: warning:
-    possibly unbound variable `GSignalCMarshaller'
-;;; ffi/gtk2+.scm:62440:11: warning:
-    possibly unbound variable `GdkNativeWindow'
-;;; ffi/gtk2+.scm:62453:5: warning:
-    possibly unbound variable `GdkNativeWindow'
-@end smallexample
-
-When I see this I check the scm file and see one of many things
-@table @code
-@item (fht-unwrap GtkAllocation*)
-This usually means that @code{GtkAllocation} was somehow defined
-but not the pointer type.
-@end table
-
-@subheading Other
-
-User is responsible for calling string->pointer and pointer->string.
-
-By definition: wrap is c->scm; unwrap is scm->c.
-
-@code{define-ffi-module} options:
-@table @code
-@item #:decl-filter proc
-proc is a prodicate taking a key of the form @code{"name"},
-@code{(struct . "name")}, @code{(union . "name")} or @code{(enum . "name")}.
-@item #:inc-filter proc
-@item #:include expr
-expr is string or list or procecure that evaluates to string or list
-@item #:library expr
-expr is string or list or procecure that evaluates to string or list
-@item #:pkg-config string
-@item #:renamer proc
-procdure
-@end table
-
-Here are the type of hacks I need to parse inside @file{/usr/include}
-with NYACC's C99 parser.  There is no such thing as a working C standard.
-@example
-(define cpp-defs
-  (cond
-   ((string-contains %host-type "darwin")
-    '("__GNUC__=6")
-    (remove (lambda (s)
-	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	    (get-gcc-cpp-defs)))
-   (else '())))
-(define fh-inc-dirs
-  (append
-   `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
-   (get-gcc-inc-dirs)))
-(define fh-inc-help
-  (cond
-   ((string-contains %host-type "darwin")
-    '(("__builtin"
-       "__builtin_va_list=void*"
-       "__attribute__(X)="
-       "__inline=" "__inline__="
-       "__asm(X)=" "__asm__(X)="
-       "__has_include(X)=__has_include__(X)"
-       "__extension__="
-       "__signed=signed"
-       )))
-   (else
-    '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)="
-       "__inline=" "__inline__="
-       "__asm(X)=" "__asm__(X)="
-       "__has_include(X)=__has_include__(X)"
-       "__extension__="
-       )))))
-@end example
-
-@c ======================================
-
-@heading The Run-time Module @code{(system ffi-help-rt)}
-
-Here we provide details of the run-time support module.
-
-
-@c ======================================
-
-@heading Work to Go
-
-@table @asis
-@item 02
-if need foo_t pointer then I gen wrapper for foo_t* but add
-foo_t to *wrappers* so if I later run into need for foo_t may be prob
-@item 03
-allow user to specify #:renamer (lambda (n) "make_goo" => "make-goo")
-@item 04
-Now the hard part if we want to reference other ffi-modules for types
-or other c-routines.  Say ffi-module foo defines foo_t
-now in ffi-module bar we want to reference, but redefine, foo_t
-@example
-(define-ffi-module (cairo cairo) ...)
-(define-ffi-module (cairo cairo-svg) #:use-ffi-module (cairo cairo)
-@end example
-@item 05
-Should setters for @code{bs:struct} enum fields check for symbolic
-arg?
-@item 06
-Use guardians for @code{cairo_destroy} and
-@code{cairo_surface_destroy}?
-@item 07
-What about vectors? If @code{foo(foo_t x[]},
-@enumerate
-@item user must make vector of foo_t
-@item ffi-module author should generate a make-foo_t-vector procedure
-@end enumerate
-@end table
-
-@subheading Completed
-@table @asis
-@item 01
-@example
-enum-wrap 0 => 'CAIRO_STATUS_SUCCESS
-enum-unwrap 'CAIRO_STATUS_SUCCESS => 0
-@end example
-@end table
-
-@c ======================================
-
 @heading Administrative Items
 
 @subheading Installation
 
 @example
-./configure --prefix=xxx
-make install
+$ ./configure
+$ make
+$ make check
+$ make install
 @end example
 
 @subheading Reporting Bugs
 Please report bugs by navigating with your browser to
-@indicateurl{https://savannah.nongnu.org/projects/nyacc} and select
-the ``Submit New'' item under the ``Bugs'' menu.  Alternatively,
-ask on the Guile user's mailing list @email{guile-user@@gnu.org}.
-
-@subheading Notes
-
-@enumerate
-@item
-The following situation is a bit tricky for me.
-@example
-typedef struct foo foo_t;
-typedef foo_t bar_t;
-struct foo @{ int a; @};
-int baz(foo_t *x);
-@end example
-Right now, on the first declaration I assign @code{foo_t} the type
-@code{fh-void}.  The second declaration is handled as a type-alias.
-When I get to the third declaration I define the
-@code{struct foo} compound type, then re-define the @code{foo_t} as
-a compound type, and it's pointer type (missed this first time).
-@end enumerate
+@indicateurl{https://github.com.org/mwette/nyacc/issues}.
 
 @subheading Copyright
 
-Copyright (C) 2017-2024 -- Matthew Wette.
+Copyright (C) 2017-2026 -- Matthew Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or

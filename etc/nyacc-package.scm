@@ -66,7 +66,9 @@ It provides a decent C parser and a `FFI Helper' tool to help create
 Guile Scheme bindings for C-based libraries.
 
 It provides (partially implemented) compilers based on above mentioned
-parsers to allow execution with Guile as extension languages.")))
+parsers to allow execution with Guile as extension languages.
+
+Note that running the ffi compiler requires gcc and pkg-config.")))
 
 (define-public nyacc-next
   (package
