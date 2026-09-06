@@ -5,34 +5,36 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2026-XX-XX  V4.0.0
-        * c99/parser,ffi-help: converted cpp-define dict from alist to vhash,
-	  resulting in 75% reduction in compile-ffi time on gtk2.ffi and deps
-	* removed c99 "helper" concept which would was originally used for
-          short-cutting include files.  Not needed because nyacc can now 
-	  parse /usr/include with good reliability.
-        * ffi-help.scm(udecl->sexp): track function decl's in defined list
-        * ffi-help.scm(udecl->sexp): replace define-public with define+export
-        * ffi-help #:pkg-config now takes string or list of strings
+2026-09-06  v4.0.0
+        * Adopt semantic versioning.
+        * Remove (nyacc foreign {arch-info,cdata}): use external (foreign ...).
+	  See https://github.com/mwette/guile-cdata.
+        * c99/parser,ffi-help: Convert cpp-define dict from alist to vhash,
+          resulting in 75% reduction in compile-ffi time on gtk2.ffi and deps.
+        * Remove c99 "inc-help" which would was originally used for
+          short-cutting include files.  Not needed anymore since nyacc c99
+	  can now parse /usr/include with good reliability.
+        * ffi-help #:pkg-config now takes string or list of strings.
         * all Makefile.in: add target `uninstall'
-        * ffi-help.scm(udecl->sexp,mtail->be-type): for struct foo *v include
-          the (w/struct-* "foo") in declared, for unions too, and use them
-        * cdata.scm(ctype-primary): new procedure to return primary type for
-          pointers and arrays
-        * ffi-help.scm: fix missing stdint types (e.g. int64_t), which are not
-          intrinsic to C but in the backends, so call (be-base 'int64_t)
-        * Eliminated use of (nyacc lang c99 fh-utils); merged into ffi-help:
-          A separate package `guile-fhbe' on github now provides:
+        * ffi-help.scm: Fix missing stdint types (e.g. int64_t), which are not
+          intrinsic to C but in the backends, so call (be-base 'int64_t).
+        * Eliminate use of (nyacc lang c99 fh-utils); merged into ffi-help.
+        * Add FFI bstructs and bytestructure backends from guile-fhbe.
+          code in module/nyacc/ffi-bkend now provides:
           + ccode->bstructs-sexp
           + ccode->bytestructures-sexp
-	* c99: instead of return-defs, pass a parameter for defs
-        * c99: move move-attributes from util.scm to parser.scm
-	* c99: reworked attribute handling
-        * remove nyacc foreign: use guile-cdata
-        * added FFI bstructs and bytestructure backends from guile-fhbe.
-            $ guild compile-ffi -b ffi-bkend/bytestructures foo.ffi
+	  and the ffi compiler supports theses backends.  example:
+            $ guild compile-ffi -b nyacc/ffi-bkend/bytestructures foo.ffi
           Note that bstructs and bytestructures do not provide complete
           support for C types: e.g., function pointers.
+ 	* ffi-help.scm(udecl->sexp): Track function decl's in defined list.
+        * ffi-help.scm(udecl->sexp): Replace define-public with define+export.
+        * ffi-help.scm(udecl->sexp,mtail->be-type): for struct foo *v include
+          the (w/struct-* "foo"), and unions too,  in `defined' and use them
+        * c99: instead of return-defs, pass a parameter for defs
+        * c99: move move-attributes from util.scm to parser.scm
+        * c99: reworked attribute handling
+        * Update ffi-helper user guide.
 
 2026-03-29  V3.04.6
         * nyacc/util.scm(atomize-terminal): remove "$:" prefix, to 
