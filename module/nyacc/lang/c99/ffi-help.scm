@@ -530,7 +530,7 @@
       (`((bit-field ,size) . ,rest)
        (be-bitfield (mtail->be-type rest) (const-expr->number size)))
       (`((extern) . ,rest) (mtail->be-type rest))
-      (__
+      (_
        (sx-match (car mtail)
          ((typename ,name)
           (let ((name (rename name 'type)))
@@ -631,7 +631,7 @@
   (match mtail
     (`((array-of ,dim) . ,rest) ''*)
     (`((array-of) . ,rest) ''*)
-    (__ (cnvt mtail))))
+    (_ (cnvt mtail))))
 
 (define* (defined-type-unwrapper name mname)
   (let* ((udecl (expand-typerefs
@@ -645,7 +645,7 @@
       (`((float-type ,name)) `(arg->number ,mname))
       (`((enum-def . ,_)) `(unwrap-enum ,mname))
       (`((enum-ref . ,_)) `(unwrap-enum ,mname))
-      (__ #f))))
+      (_ #f))))
 
 (define (unwrap-mdecl mdecl)
   (let ((defined (*defined*))
@@ -1046,7 +1046,7 @@
               (be-typedef type (mtail->be-type mtail))
               `(export ,type))))
 
-          (__
+          (_
            (sx-match (car mtail)
 
              ((struct-def (@ . ,attr) (ident ,agname) ,_)
