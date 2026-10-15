@@ -23,8 +23,8 @@
 
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
-(use-modules (nyacc foreign arch-info))
-(use-modules (nyacc foreign cdata))
+(use-modules (foreign arch-info))
+(use-modules (foreign cdata))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang c99 ffi-help))
