@@ -1047,13 +1047,12 @@
          ((last-item? (car la-item)) seed)
          ((terminal? (looking-at (car la-item))) seed)
          (else
-          (let loop ((seed seed) (pr (prule-range symb)))
-            (cond
-             ((null? pr) seed)
-             (else
-              (loop (merge-la-item seed (first-item (car pr))
-                                   (first-following item toks))
-                    (range-next pr)))))))))
+          (let* ((pr (prule-range symb))
+                 (following (and (pair? pr) (first-following item toks))))
+            (let loop ((seed seed) (pr pr))
+              (if (null? pr) seed
+                  (loop (merge-la-item seed (first-item (car pr)) following)
+                        (range-next pr)))))))))
     la-item-l)))
 
 ;; @deffn {Procedure} kit-add kit-v tokens sx item
