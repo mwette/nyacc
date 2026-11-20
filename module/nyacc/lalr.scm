@@ -532,22 +532,38 @@
 ;; This record holds the minimum data from the grammar needed to build the
 ;; machine from the grammar specification.
 (define-record-type lalr-core-type
-  (make-lalr-core non-terms terminals lhs-v rhs-v eps-l)
+  (make-lalr-core non-terms terminals lhs-v rhs-v eps-l ranges)
   lalr-core-type?
   (non-terms core-non-terms)          ; list of non-terminals
   (terminals core-terminals)          ; list of non-terminals
   (lhs-v core-lhs-v)                  ; vec of left hand sides
   (rhs-v core-rhs-v)                  ; vec of right hand sides
-  (eps-l core-eps-l))                 ; non-terms w/ eps prod's
+  (eps-l core-eps-l)                  ; non-terms w/ eps prod's
+  (ranges core-ranges))               ; see gen-prule-ranges
+
+;; @deffn {Procedure} gen-prule-ranges lhs-v => a-list
+;; Generate an a-list of LHS symbol to index range -- (first . last) --
+;; in lhs-v, where LHS symbols are contiguous.
+;; @end deffn
+(define (gen-prule-ranges lhs-v)
+  (let loop ((end (vector-length lhs-v)) (ranges '()))
+    (if (= end 0) ranges
+        (let ((lhs (vector-ref lhs-v (1- end))))
+          (let start ((i (1- end)))
+            (if (and (> i 0) (eqv? lhs (vector-ref lhs-v (1- i))))
+                (start (1- i))
+                (loop i (acons lhs (cons i end) ranges))))))))
 
 ;; @deffn {Procedure} make-core spec => lalr-core-type
 ;; @end deffn
 (define (make-core spec)
-  (make-lalr-core (assq-ref spec 'non-terms)
-                  (assq-ref spec 'terminals)
-                  (assq-ref spec 'lhs-v)
-                  (assq-ref spec 'rhs-v)
-                  '()))
+  (let ((lhs-v (assq-ref spec 'lhs-v)))
+    (make-lalr-core (assq-ref spec 'non-terms)
+                    (assq-ref spec 'terminals)
+                    lhs-v
+                    (assq-ref spec 'rhs-v)
+                    '()
+                    (gen-prule-ranges lhs-v))))
 
 ;; @deffn {Procedure} make-core/extras spec => lalr-core-type
 ;; Add list of symbols with epsilon productions.
@@ -558,7 +574,8 @@
         (lhs-v (assq-ref spec 'lhs-v))
         (rhs-v (assq-ref spec 'rhs-v)))
     (make-lalr-core non-terms terminals lhs-v rhs-v
-                    (find-eps non-terms lhs-v rhs-v))))
+                    (find-eps non-terms lhs-v rhs-v)
+                    (gen-prule-ranges lhs-v))))
 
 ;; @section Routines
 
@@ -612,26 +629,8 @@
 ;; If not found raise error.
 ;; @end deffn
 (define (prule-range lhs)
-  ;; If this needs to be really fast then we move to where lhs is an integer
-  ;; and that used to index into a table that provides the ranges.
-  (let* ((core (fluid-ref *lalr-core*))
-         (lhs-v (core-lhs-v core))
-         (n (vector-length lhs-v))
-         (match? (lambda (ix symb) (eqv? (vector-ref lhs-v ix) symb))))
-    (cond
-     ((terminal? lhs) '())
-     ((eq? lhs '$epsilon) '())
-     (else
-      (let loop-st ((st 0))
-        ;; Iterate to find the start index.
-        (if (= st n) '()                ; not found
-            (if (match? st lhs)
-                ;; Start found, now iteratate to find end index.
-                (let loop-nd ((nd st))
-                  (if (= nd n) (cons st nd)
-                      (if (not (match? nd lhs)) (cons st nd)
-                          (loop-nd (1+ nd)))))
-                (loop-st (1+ st)))))))))
+  (if (or (terminal? lhs) (eqv? lhs '$epsilon)) '()
+      (or (assq-ref (core-ranges (fluid-ref *lalr-core*)) lhs) '())))
 
 ;; @deffn {Procedure} range-next rng -> rng
 ;; Given a range in the form of @code{(cons start (1+ end))} return the next
