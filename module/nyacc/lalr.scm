@@ -17,6 +17,11 @@
 
 ;;; Notes:
 
+;; The algorithms to compute the parsing tables in the procedure 
+;; `make-lalr-machine' are derived from `Compilers: Principles,
+;; Techniques, and Tools', by Alfred Aho and Jeffrey Ullman, 1977.
+;; This is referred to as the Dragon Book, or DB.
+
 ;; I need to find way to preserve srconf, rrconf after hashify.
 ;; compact needs to deal with it ...
 
