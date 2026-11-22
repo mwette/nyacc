@@ -840,6 +840,15 @@
      (else
       rslt))))
 
+;; @deffn {Procedure} itemset-bucket items => index
+;; Hash a kernel itemset without depending on item order.
+;; @end deffn
+(define (itemset-bucket items)
+  (let loop ((items items) (sum 0))
+    (if (null? items) (modulo sum 257)
+        (let ((item (car items)))
+          (loop (cdr items) (+ sum (* 31 (car item)) (cdr item) 1))))))
+
 ;; @deffn {Procedure} step1 [input-a-list] => p-mach-1
 ;; Compute the sets of LR(0) kernel items and the transitions associated with
 ;; spec.  These are returned as vectors in the alist with keys @code{'kis-v}
@@ -856,7 +865,9 @@
   (let* ((al-in (if (pair? rest) (car rest) '()))
          (add-kset (lambda (upd kstz)   ; give upd a ks-ix and add to kstz
                      (acons (1+ (caar kstz)) upd kstz)))
-         (init '(0 (0 . 0))))
+         (init '(0 (0 . 0)))
+         (buckets (make-vector 257 '())))
+    (vector-set! buckets (itemset-bucket (cdr init)) (list init))
     (let loop ((ksets (list init))      ; w/ index
                (ktrnz '())              ; ((symb src dst) (symb src dst) ...)
                (next '())               ; w/ index
@@ -867,12 +878,15 @@
        ((pair? trans)
         ;; Check next symbol for transitions (symb . (item1 item2 ...)).
         (let* ((dst (cdar trans))              ; destination item
-               (dst-ix (its-member dst ksets)) ; return ix else #f
+               (bucket (itemset-bucket dst))
+               (candidates (vector-ref buckets bucket))
+               (dst-ix (its-member dst candidates)) ; return ix else #f
                (upd (if dst-ix '() (cons (1+ (caar ksets)) dst)))
                (ksets1 (if dst-ix ksets (cons upd ksets)))
                (next1 (if dst-ix next (cons upd next)))
                (dsx (if dst-ix dst-ix (car upd))) ; dest state index
                (ktrnz1 (cons (list (caar trans) curr dsx) ktrnz)))
+          (if (not dst-ix) (vector-set! buckets bucket (cons upd candidates)))
           (loop ksets1 ktrnz1 next1 todo curr (cdr trans))))
        ((pair? todo)
         ;; Process the next state (aka itemset).
