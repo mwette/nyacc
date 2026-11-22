@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2026-XX-XX  v4.0.1
+        * ~15% speed up of make-lalr-machine (in lalr.scm), by siraben
+
 2026-09-06  v4.0.0
         * Adopt semantic versioning.
         * Remove (nyacc foreign {arch-info,cdata}): use external (foreign ...).
